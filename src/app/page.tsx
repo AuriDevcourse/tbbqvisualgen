@@ -20,6 +20,7 @@ import { DynamicTemplate } from "@/components/templates/DynamicTemplate";
 import { useExport } from "@/hooks/useExport";
 import { FORMAT_DIMENSIONS, DEFAULT_DESIGN } from "@/types/template";
 import type { PlatformFormat, DesignConfig, CollageLayout } from "@/types/template";
+import { FeedbackButton } from "@/components/FeedbackButton";
 import { compressImage } from "@/lib/utils";
 
 interface ChatAttachment {
@@ -363,6 +364,9 @@ export default function Home() {
           <div>
             <h1 className="text-lg font-semibold">Visual Generator</h1>
             <p className="text-xs text-white/50">Describe your visual — AI builds it</p>
+          </div>
+          <div className="ml-auto">
+            <FeedbackButton />
           </div>
         </div>
 
