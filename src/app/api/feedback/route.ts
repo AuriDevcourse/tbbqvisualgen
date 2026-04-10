@@ -8,7 +8,7 @@ export async function POST(req: Request) {
   }
 
   const apiKey = process.env.RESEND_API_KEY;
-  const toEmail = process.env.FEEDBACK_EMAIL || "aurimas@techbbq.org";
+  const toEmail = process.env.FEEDBACK_EMAIL || "baciauskas.aurimas@gmail.com";
 
   if (!apiKey) {
     console.error("Missing RESEND_API_KEY");
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        from: "TechBBQ Visual Generator <feedback@resend.dev>",
+        from: "TechBBQ Visual Generator <onboarding@resend.dev>",
         to: toEmail,
         subject: "Visual Generator Feedback",
         text: `New feedback from TechBBQ Visual Generator:\n\n${message.trim()}\n\n---\nSent at ${new Date().toISOString()}`,
