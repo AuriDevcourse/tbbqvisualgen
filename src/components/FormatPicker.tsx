@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Monitor, Square, Smartphone, Facebook, Twitter, Ruler } from "lucide-react";
+import { Monitor, Square, Smartphone, Facebook, Twitter, Ruler, Linkedin, Presentation } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { PlatformFormat } from "@/types/template";
 
@@ -16,9 +16,10 @@ interface FormatPickerProps {
 const formats = [
   { id: "instagram" as const, label: "Instagram", sublabel: "1080×1080", icon: Square },
   { id: "story" as const, label: "Story", sublabel: "1080×1920", icon: Smartphone },
-  { id: "linkedin" as const, label: "LinkedIn", sublabel: "1200×627", icon: Monitor },
+  { id: "linkedin" as const, label: "LinkedIn", sublabel: "1200×627", icon: Linkedin },
   { id: "facebook" as const, label: "Facebook", sublabel: "1200×630", icon: Facebook },
   { id: "twitter" as const, label: "Twitter/X", sublabel: "1600×900", icon: Twitter },
+  { id: "presentation" as const, label: "Presentation", sublabel: "1920×1080", icon: Presentation },
   { id: "custom" as const, label: "Custom", sublabel: "", icon: Ruler },
 ];
 

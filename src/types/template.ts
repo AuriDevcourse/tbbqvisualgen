@@ -1,4 +1,4 @@
-export type PlatformFormat = "linkedin" | "instagram" | "story" | "facebook" | "twitter" | "custom";
+export type PlatformFormat = "linkedin" | "instagram" | "story" | "facebook" | "twitter" | "presentation" | "custom";
 
 export interface FormatDimensions {
   width: number;
@@ -12,6 +12,7 @@ export const FORMAT_DIMENSIONS: Record<PlatformFormat, FormatDimensions> = {
   linkedin: { width: 1200, height: 627, label: "LinkedIn (1200×627)" },
   facebook: { width: 1200, height: 630, label: "Facebook (1200×630)" },
   twitter: { width: 1600, height: 900, label: "Twitter/X (1600×900)" },
+  presentation: { width: 1920, height: 1080, label: "Presentation (1920×1080)" },
   custom: { width: 1080, height: 1080, label: "Custom" },
 };
 
@@ -22,6 +23,12 @@ export const BACKGROUND_OPTIONS = [
   { id: "lm4", label: "Energetic Copper" },
   { id: "lm5", label: "Bold Red-Gold" },
   { id: "lm6", label: "Deep Copper" },
+  { id: "lm7", label: "Crimson Ember" },
+  { id: "lm8", label: "Midnight Gold" },
+  { id: "lm9", label: "Volcanic" },
+  { id: "lm10", label: "Dark Flame" },
+  { id: "lm11", label: "Amber Noir" },
+  { id: "lm12", label: "Scarlet Edge" },
 ];
 
 export interface DesignConfig {

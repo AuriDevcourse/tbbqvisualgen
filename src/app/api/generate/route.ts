@@ -128,6 +128,12 @@ Keep it MINIMAL. Less is more.
 - lm4: Energetic copper — diagonal flow (high-energy stats, launches)
 - lm5: Bold red-gold — diamond (milestones, celebrations)
 - lm6: Deep copper — subtle (sophisticated, LP/investor content)
+- lm7: Crimson ember — deep red glow from darkness (dramatic, bold statements)
+- lm8: Midnight gold — sparse gold on near-black (premium, minimalist)
+- lm9: Volcanic — fiery orange veins on dark (high-impact, launches)
+- lm10: Dark flame — red-orange flicker in deep black (intense, urgent)
+- lm11: Amber noir — rich amber on blackout (luxurious, exclusive)
+- lm12: Scarlet edge — sharp red streaks on void (edgy, disruptive)
 
 ## LOGO
 - showLogo: true (almost always)

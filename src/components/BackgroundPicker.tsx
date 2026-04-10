@@ -12,7 +12,7 @@ interface BackgroundPickerProps {
 
 export function BackgroundPicker({ value, onChange }: BackgroundPickerProps) {
   return (
-    <div className="grid grid-cols-6 gap-1.5">
+    <div className="grid grid-cols-6 gap-1.5 max-h-[120px] overflow-y-auto">
       {BACKGROUND_OPTIONS.map((bg) => {
         const config = LIQUID_METAL_CONFIGS[bg.id];
         return (
