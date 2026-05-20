@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
+import { ColorPicker } from "./ColorPicker";
 
 interface OverlayPickerProps {
   color: string | undefined;
@@ -39,41 +40,28 @@ export function OverlayPicker({
         <button
           onClick={() => onColorChange(undefined)}
           title="No overlay"
+          aria-label="No overlay"
           className={cn(
-            "w-8 h-8 rounded-md border-2 transition-all duration-200 flex items-center justify-center shrink-0",
+            "h-9 w-9 rounded-lg border transition-all duration-200 flex items-center justify-center shrink-0",
             !isActive
-              ? "border-[#FF0028] shadow-[0_0_8px_rgba(255,0,40,0.3)]"
-              : "border-white/10 hover:border-white/30 opacity-60 hover:opacity-100"
+              ? "border-[#FF0028] text-[#FF6B00] bg-[#FF0028]/10"
+              : "border-white/10 text-white/50 hover:border-white/30 hover:bg-white/10"
           )}
         >
-          <X className="w-3.5 h-3.5 text-white/50" />
+          <X className="w-3.5 h-3.5" />
         </button>
 
-        {/* Native color wheel */}
-        <label
-          className={cn(
-            "w-8 h-8 rounded-md border-2 transition-all duration-200 shrink-0 cursor-pointer overflow-hidden relative",
-            isActive
-              ? "border-[#FF0028] shadow-[0_0_8px_rgba(255,0,40,0.3)]"
-              : "border-white/10 hover:border-white/30"
-          )}
-          style={{ backgroundColor: color || "#FF0028" }}
-        >
-          <input
-            type="color"
-            value={color || "#FF0028"}
-            onChange={(e) => {
-              onColorChange(e.target.value);
-              if (opacity === 0) onOpacityChange(0.4);
-            }}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-          />
-        </label>
-
-        {/* Current color hex */}
-        {color && (
-          <span className="text-[10px] text-white/40 font-mono">{color.toUpperCase()}</span>
-        )}
+        {/* Full color picker */}
+        <ColorPicker
+          color={color}
+          defaultColor="#FF0028"
+          onChange={(next) => {
+            onColorChange(next);
+            if (next && opacity === 0) onOpacityChange(0.4);
+          }}
+          ariaLabel="Overlay color"
+          allowClear
+        />
       </div>
 
       {/* Blend mode + opacity — only when color is active */}

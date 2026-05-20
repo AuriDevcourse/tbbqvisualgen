@@ -1,57 +1,598 @@
 "use client";
 
-import type { DesignConfig, PlatformFormat } from "@/types/template";
-import { FORMAT_DIMENSIONS } from "@/types/template";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { DesignConfig, PlatformFormat, TextElement, ShapeElement, ShapeBorderRadii } from "@/types/template";
+import { FORMAT_DIMENSIONS, reconcileLayerOrder } from "@/types/template";
 import { COLORS, FONTS, GRADIENT_TEXT_CSS, GRADIENT_BORDER_CSS } from "@/lib/constants";
-import { LiquidMetalBg } from "@/components/LiquidMetalBg";
+import { CanvasBackground } from "@/components/CanvasBackground";
 import type { CanvasImage } from "@/components/ImagePlacer";
+import { computeSnapTargets, snapBbox } from "@/lib/snap";
+import type { Bbox } from "@/lib/snap";
 
 interface DynamicTemplateProps {
   design: DesignConfig;
   format: PlatformFormat;
-  partnerLogo?: string | null;
+  customWidth?: number;
+  customHeight?: number;
   canvasImages?: CanvasImage[];
   paused?: boolean;
+  /** Click-to-edit a text element — flips it into inline edit mode. */
+  onEditText?: (textId: string) => void;
+  /** Inline-edit commits the new content for a text element. */
+  onTextContentChange?: (textId: string, content: string) => void;
+  /** Drag updates the TechBBQ logo's manual position (fractional center coords). */
+  onLogoPositionChange?: (position: { x: number; y: number }) => void;
+  /** Selection — IDs in layer format ("text:xyz"). Used for visual highlight. */
+  selectedIds?: Set<string>;
+  /** Id of the image currently in inline crop-edit mode (Google Slides–style).
+   *  When set, that image renders its full source extending beyond the frame
+   *  (dimmed) so the user can drag inside the frame to pan. */
+  cropEditingId?: string | null;
+  /** Crop update from inline pan. */
+  onCropChange?: (imageId: string, crop: { x: number; y: number; width: number; height: number }) => void;
+  /** Called on drag-start of a text element so the host can snapshot pre-drag
+   *  positions of every selected element for group translation. */
+  onBeginDrag?: (id: string) => void;
+  /** Called per tick with the (dx, dy) translation in fractional canvas coords. */
+  onMoveBy?: (dx: number, dy: number) => void;
+  /** Called on drag-end so the host can clear its drag-origin snapshot. */
+  onEndDrag?: () => void;
+  /** Currently-edited text id — gets a persistent orange ring. */
+  editingTextId?: string | null;
+  /** Called when any text layer overflows the canvas — host renders red side bars. */
+  onOverflowChange?: (sides: { left: boolean; right: boolean; top: boolean; bottom: boolean }) => void;
+  /** Live snap-guide coordinates (fractional). Host renders orange lines. */
+  onGuidesChange?: (guides: { x: number | null; y: number | null }) => void;
+  /** Called on drag-start (pointerdown) — host opens a history transaction. */
+  onEditStart?: () => void;
+  /** Called on drag-end (pointerup) — host closes the history transaction. */
+  onEditEnd?: () => void;
 }
 
-export function DynamicTemplate({ design, format, partnerLogo, canvasImages, paused }: DynamicTemplateProps) {
-  const dims = FORMAT_DIMENSIONS[format];
-  const isSquare = format === "instagram";
+// Tailwind classes for the hover/active states on canvas-interactive elements.
+// The base state has a transparent outline (no visible mark) so PNG exports
+// stay clean — the orange ring only appears on hover or while editing.
+const textEditableHoverClass =
+  "cursor-text rounded transition-[outline-color] outline outline-2 outline-offset-4 outline-transparent hover:outline-[#FF6B00]/70";
+const editingActiveClass =
+  "outline-[#FF6B00] outline-2 outline-offset-4";
+// Multi-select highlight is applied as an INLINE style so it overrides the
+// Tailwind utility outline width/style. Kept identical to the image overlay's
+// selected style for visual consistency.
+const SELECTED_INLINE_OUTLINE: React.CSSProperties = {
+  outline: "4px dashed #FF6B00",
+  outlineOffset: 4,
+  boxShadow: "0 0 0 2px rgba(255, 107, 0, 0.25)",
+};
 
-  const hasHeadline = !!design.headline?.trim();
-  const headlineLines = hasHeadline ? design.headline.split("\n") : [];
-  // Bigger base sizes — text should dominate the frame
-  const baseFontSize = isSquare ? 96 : 84;
-  const rawHeadlineFontSize = Math.round(baseFontSize * (design.headlineScale || 1));
-  const subHeadlineFontSize = isSquare ? 52 : 44;
+// ── Shape rendering ─────────────────────────────────────────────────────────
+// Standalone helper so the canvas template can render every shape with the
+// same code path. Positions / sizes are fractional; we convert to canvas
+// pixels here so the DOM matches the export resolution exactly.
 
-  // Auto-scale headline to fit container width — prevents text overflow
-  const longestLineChars = Math.max(...headlineLines.map(l => l.length), 1);
-  // Available width: glass card = maxWidth minus padding, direct = canvas minus padding
-  const glassCardContentWidth = isSquare ? (dims.width * 0.84 - 112) : (dims.width * 0.80 - 96);
-  const directContentWidth = dims.width - (isSquare ? 120 : 100);
-  const availableWidth = design.showGlassCard ? glassCardContentWidth : directContentWidth;
-  // Approximate character width factor: Host Grotesk ExtraBold Expanded ≈ 0.82em per char
-  const maxFontForFit = availableWidth / (longestLineChars * 0.82);
-  const headlineFontSize = Math.min(rawHeadlineFontSize, Math.round(maxFontForFit));
+function starPath(spikes: number, innerR: number, w: number, h: number): string {
+  const cx = w / 2;
+  const cy = h / 2;
+  const rOuter = Math.min(w, h) / 2;
+  const rInner = rOuter * Math.max(0.05, Math.min(0.95, innerR));
+  const points: string[] = [];
+  for (let i = 0; i < spikes * 2; i++) {
+    const r = i % 2 === 0 ? rOuter : rInner;
+    const angle = (Math.PI / spikes) * i - Math.PI / 2;
+    points.push(`${cx + r * Math.cos(angle)},${cy + r * Math.sin(angle)}`);
+  }
+  return points.join(" ");
+}
 
-  const useGradientHeadline = design.headlineGradient !== false;
+function radiusCSS(br: ShapeElement["borderRadius"], w: number, h: number): string {
+  if (br === undefined || br === 0) return "0";
+  const shorter = Math.min(w, h);
+  if (typeof br === "number") {
+    return `${Math.min(br, 0.5) * shorter}px`;
+  }
+  const r = br as ShapeBorderRadii;
+  const px = (v: number) => `${Math.min(v, 0.5) * shorter}px`;
+  return `${px(r.tl)} ${px(r.tr)} ${px(r.br)} ${px(r.bl)}`;
+}
 
-  const alignMap = { left: "flex-start", center: "center", right: "flex-end" };
-  const textAlignMap = { left: "left" as const, center: "center" as const, right: "right" as const };
-  const justifyMap = { top: "flex-start", center: "center", bottom: "flex-end" };
+function renderShapeElement(
+  s: ShapeElement,
+  dims: { width: number; height: number },
+  zOf: (id: string) => number,
+  selectedIds: Set<string> | undefined,
+): React.JSX.Element | null {
+  if (s.hidden) return null;
+  const isLine = s.type === "line";
+  const w = Math.max(1, Math.round(dims.width * s.width));
+  const h = isLine
+    ? Math.max(2, Math.round(dims.width * s.strokeWidth))
+    : Math.max(1, Math.round(dims.height * s.height));
+  const left = Math.round(s.x * dims.width - w / 2);
+  const top = Math.round(s.y * dims.height - h / 2);
+  const isSelected = selectedIds?.has(`shape:${s.id}`) ?? false;
+  const isOutline = s.fillType === "outline" && !isLine;
+  const strokeW = Math.max(1, Math.round(s.strokeWidth * dims.width));
 
-  // Glass card position mapping
-  const glassCardPositions: Record<string, React.CSSProperties> = {
-    center: { top: "50%", left: "50%", transform: "translate(-50%, -50%)" },
-    "top-center": { top: isSquare ? "8%" : "10%", left: "50%", transform: "translateX(-50%)" },
-    "bottom-center": { bottom: isSquare ? "8%" : "10%", left: "50%", transform: "translateX(-50%)" },
-    "center-left": { top: "50%", left: isSquare ? "8%" : "6%", transform: "translateY(-50%)" },
-    "center-right": { top: "50%", right: isSquare ? "8%" : "6%", transform: "translateY(-50%)" },
+  // Background / fill — solid color or 135° linear gradient.
+  const fillCSS = s.colorType === "gradient"
+    ? `linear-gradient(135deg, ${s.color1}, ${s.color2})`
+    : s.color1;
+
+  const baseStyle: React.CSSProperties = {
+    position: "absolute",
+    left,
+    top,
+    width: w,
+    height: h,
+    zIndex: zOf(`shape:${s.id}`),
+    opacity: s.opacity,
+    filter: s.blur > 0 ? `blur(${s.blur * dims.width}px)` : undefined,
+    transform: s.rotation ? `rotate(${s.rotation}deg)` : undefined,
+    transformOrigin: "center center",
+    pointerEvents: "none",
+    ...(isSelected ? SELECTED_INLINE_OUTLINE : {}),
+  };
+
+  const dataAttr: Record<string, string> = { "data-canvas-element": `shape:${s.id}` };
+  if (s.locked) dataAttr["data-locked"] = "true";
+
+  // Image-placeholder gets a subtle dashed border so the "drop zone" feel
+  // reads even before the Upload button is hovered. Label/icon live on the
+  // ShapeDragOverlay button (overlay-only), not in the exported pixels.
+  const placeholderBorder = s.imagePlaceholder
+    ? `${Math.max(2, Math.round(Math.min(w, h) * 0.012))}px dashed rgba(255,255,255,0.35)`
+    : undefined;
+
+  if (s.type === "rectangle") {
+    return (
+      <div
+        key={s.id}
+        {...dataAttr}
+        style={{
+          ...baseStyle,
+          background: isOutline ? "transparent" : fillCSS,
+          border: placeholderBorder ?? (isOutline ? `${strokeW}px solid ${s.color1}` : undefined),
+          borderRadius: radiusCSS(s.borderRadius, w, h),
+        }}
+      />
+    );
+  }
+  if (s.type === "circle") {
+    return (
+      <div
+        key={s.id}
+        {...dataAttr}
+        style={{
+          ...baseStyle,
+          background: isOutline ? "transparent" : fillCSS,
+          border: placeholderBorder ?? (isOutline ? `${strokeW}px solid ${s.color1}` : undefined),
+          borderRadius: "50%",
+        }}
+      />
+    );
+  }
+  if (s.type === "line") {
+    return (
+      <div
+        key={s.id}
+        {...dataAttr}
+        style={{
+          ...baseStyle,
+          background: fillCSS,
+          borderRadius: strokeW / 2,
+        }}
+      />
+    );
+  }
+  if (s.type === "star") {
+    const points = starPath(s.spikes ?? 5, s.innerRadius ?? 0.5, w, h);
+    const gradId = `grad-${s.id}`;
+    return (
+      <svg
+        key={s.id}
+        {...dataAttr}
+        viewBox={`0 0 ${w} ${h}`}
+        style={baseStyle}
+        preserveAspectRatio="none"
+      >
+        {s.colorType === "gradient" && (
+          <defs>
+            <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor={s.color1} />
+              <stop offset="100%" stopColor={s.color2} />
+            </linearGradient>
+          </defs>
+        )}
+        <polygon
+          points={points}
+          fill={isOutline ? "none" : s.colorType === "gradient" ? `url(#${gradId})` : s.color1}
+          stroke={isOutline ? s.color1 : "none"}
+          strokeWidth={isOutline ? strokeW : 0}
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
+  return null;
+}
+
+export function DynamicTemplate({
+  design,
+  format,
+  customWidth,
+  customHeight,
+  canvasImages,
+  paused,
+  onEditText,
+  onTextContentChange,
+  onLogoPositionChange,
+  editingTextId,
+  onOverflowChange,
+  onGuidesChange,
+  onEditStart,
+  onEditEnd,
+  selectedIds,
+  cropEditingId,
+  onCropChange,
+  onBeginDrag,
+  onMoveBy,
+  onEndDrag,
+}: DynamicTemplateProps) {
+  const canvasRootRef = useRef<HTMLDivElement>(null);
+  const editingDivRef = useRef<HTMLDivElement | null>(null);
+  const textRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const logoRef = useRef<HTMLDivElement | null>(null);
+  // Snapshot of the cropped image's render geometry, captured ONCE on crop
+  // entry. Used during crop-edit mode so the image stays at a fixed scale
+  // while the user pans / drags handles (matching Google Slides UX). Stored
+  // as state (not ref) so the freshly-set snapshot triggers a re-render.
+  const [cropSnapshot, setCropSnapshot] = useState<{
+    fullW: number; fullH: number; fullLeft: number; fullTop: number;
+    targetFracAspect: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!cropEditingId) {
+      setCropSnapshot(null);
+      return;
+    }
+    const ci = canvasImages?.find((c) => c.id === cropEditingId);
+    if (!ci) return;
+    const imgW = Math.round(dims.width * ci.width);
+    const imgH = Math.round(dims.height * ci.height);
+    const imgLeft = Math.round(ci.x * dims.width - imgW / 2);
+    const imgTop = Math.round(ci.y * dims.height - imgH / 2);
+    const cw = ci.crop?.width ?? 1;
+    const ch = ci.crop?.height ?? 1;
+    const cx = ci.crop?.x ?? 0;
+    const cy = ci.crop?.y ?? 0;
+    const fullW = imgW / cw;
+    const fullH = imgH / ch;
+    const fullLeft = imgLeft - cx * fullW;
+    const fullTop = imgTop - cy * fullH;
+    const frameAspect = ci.width / ci.height;
+    const sourceAspect = ci.naturalWidth && ci.naturalHeight
+      ? ci.naturalWidth / ci.naturalHeight
+      : frameAspect;
+    setCropSnapshot({
+      fullW, fullH, fullLeft, fullTop,
+      targetFracAspect: frameAspect / sourceAspect,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cropEditingId]);
+
+  // When a text enters inline-edit mode, focus its div and put the cursor at
+  // the end. Only runs on edit-state toggle, NOT on every keystroke (we read
+  // the value off the DOM directly on blur to avoid disrupting cursor state).
+  useEffect(() => {
+    if (!editingTextId) return;
+    const el = editingDivRef.current;
+    if (!el) return;
+    el.focus();
+    const range = document.createRange();
+    const sel = window.getSelection();
+    range.selectNodeContents(el);
+    range.collapse(false);
+    sel?.removeAllRanges();
+    sel?.addRange(range);
+  }, [editingTextId]);
+
+  // Measure each text layer against the canvas bbox so the host (page.tsx)
+  // can show red overflow bars on the canvas edges. Runs after every render
+  // via useLayoutEffect; bails before setState/callback if nothing changed.
+  const lastOverflowRef = useRef({ left: false, right: false, top: false, bottom: false });
+  useLayoutEffect(() => {
+    if (!onOverflowChange) return;
+    const canvasEl = canvasRootRef.current;
+    if (!canvasEl) return;
+    const canvasRect = canvasEl.getBoundingClientRect();
+    let left = false, right = false, top = false, bottom = false;
+    for (const text of design.texts) {
+      if (text.hidden) continue;
+      const el = textRefs.current.get(text.id);
+      if (!el) continue;
+      const rect = el.getBoundingClientRect();
+      if (rect.left < canvasRect.left - 0.5) left = true;
+      if (rect.right > canvasRect.right + 0.5) right = true;
+      if (rect.top < canvasRect.top - 0.5) top = true;
+      if (rect.bottom > canvasRect.bottom + 0.5) bottom = true;
+    }
+    const prev = lastOverflowRef.current;
+    if (prev.left === left && prev.right === right && prev.top === top && prev.bottom === bottom) return;
+    lastOverflowRef.current = { left, right, top, bottom };
+    onOverflowChange({ left, right, top, bottom });
+  });
+
+  // Format dimensions
+  const baseDims = FORMAT_DIMENSIONS[format] || FORMAT_DIMENSIONS.square;
+  const dims = format === "custom" && customWidth && customHeight
+    ? { width: customWidth, height: customHeight, label: baseDims.label }
+    : baseDims;
+  const isPortrait = dims.height > dims.width;
+
+  // Compute effective layer stack (bottom→top). Must include shapes — if any
+  // id is missing from this array, reconcileLayerOrder strips it from stored
+  // order too and zOf returns 0, which sends the element behind everything.
+  const defaultOrder = [
+    "overlay",
+    ...(canvasImages?.map((ci) => `image:${ci.id}`) ?? []),
+    ...((design.shapes ?? []).map((s) => `shape:${s.id}`)),
+    ...design.texts.map((t) => `text:${t.id}`),
+    "tbbqLogo",
+  ];
+  const effectiveOrder = reconcileLayerOrder(design.layerOrder, defaultOrder);
+  const zOf = (id: string) => {
+    const idx = effectiveOrder.indexOf(id);
+    return idx === -1 ? 0 : (idx + 1) * 10;
+  };
+
+  // Visibility helpers
+  const showOverlay = !!design.overlayColor && (design.overlayOpacity ?? 0) > 0 && !design.hideOverlay;
+
+  // ---- Click-vs-drag pointer handlers ----
+  // 4px movement threshold before a drag commits. Click without drag fires
+  // the editor; drag updates the element's manual position.
+  const makeTextPointerHandler = (textId: string): React.PointerEventHandler<HTMLDivElement> => (e) => {
+    if (!onEditText) return;
+    const isLocked = !!design.texts.find((t) => t.id === textId)?.locked;
+    e.stopPropagation();
+    const elementEl = e.currentTarget;
+    const canvasEl = canvasRootRef.current;
+    if (!canvasEl) {
+      onEditText(textId);
+      return;
+    }
+    const canvasRect = canvasEl.getBoundingClientRect();
+    const elementRect = elementEl.getBoundingClientRect();
+    const widthFrac = elementRect.width / canvasRect.width;
+    const heightFrac = elementRect.height / canvasRect.height;
+    const startFracX = (elementRect.left + elementRect.width / 2 - canvasRect.left) / canvasRect.width;
+    const startFracY = (elementRect.top + elementRect.height / 2 - canvasRect.top) / canvasRect.height;
+    const startClientX = e.clientX;
+    const startClientY = e.clientY;
+    let dragging = false;
+
+    // Build snap targets from every OTHER visible element on the canvas.
+    const otherBboxes: Bbox[] = [];
+    for (const ci of canvasImages ?? []) {
+      otherBboxes.push({ x: ci.x, y: ci.y, width: ci.width, height: ci.height });
+    }
+    for (const t of design.texts) {
+      if (t.id === textId || t.hidden) continue;
+      const ref = textRefs.current.get(t.id);
+      if (!ref) continue;
+      const r = ref.getBoundingClientRect();
+      otherBboxes.push({
+        x: (r.left + r.width / 2 - canvasRect.left) / canvasRect.width,
+        y: (r.top + r.height / 2 - canvasRect.top) / canvasRect.height,
+        width: r.width / canvasRect.width,
+        height: r.height / canvasRect.height,
+      });
+    }
+    const snapTargets = computeSnapTargets(otherBboxes);
+
+    const handleMove = (moveE: PointerEvent) => {
+      const dx = moveE.clientX - startClientX;
+      const dy = moveE.clientY - startClientY;
+      if (!dragging && Math.hypot(dx, dy) > 4) {
+        if (isLocked) return; // locked text: select-only, no drag
+        dragging = true;
+        document.body.style.cursor = "grabbing";
+        onEditStart?.();
+        onBeginDrag?.(`text:${textId}`);
+      }
+      if (dragging) {
+        const rawX = startFracX + dx / canvasRect.width;
+        const rawY = startFracY + dy / canvasRect.height;
+        const snapped = snapBbox({ x: rawX, y: rawY, width: widthFrac, height: heightFrac }, snapTargets);
+        const newX = Math.max(0, Math.min(1, snapped.cx));
+        const newY = Math.max(0, Math.min(1, snapped.cy));
+        onMoveBy?.(newX - startFracX, newY - startFracY);
+        onGuidesChange?.({ x: snapped.guideX, y: snapped.guideY });
+      }
+    };
+    const handleUp = () => {
+      document.removeEventListener("pointermove", handleMove);
+      document.removeEventListener("pointerup", handleUp);
+      document.body.style.cursor = "";
+      onGuidesChange?.({ x: null, y: null });
+      if (dragging) {
+        onEditEnd?.();
+        onEndDrag?.();
+      }
+      if (!dragging) onEditText(textId);
+    };
+    document.addEventListener("pointermove", handleMove);
+    document.addEventListener("pointerup", handleUp);
+  };
+
+  // Logo drag — same click-vs-drag pattern, no edit mode. Snaps against every
+  // other element on the canvas using the shared snap util.
+  const handleLogoPointerDown: React.PointerEventHandler<HTMLDivElement> = (e) => {
+    if (!onLogoPositionChange) return;
+    e.stopPropagation();
+    const elementEl = e.currentTarget;
+    const canvasEl = canvasRootRef.current;
+    if (!canvasEl) return;
+    const canvasRect = canvasEl.getBoundingClientRect();
+    const elementRect = elementEl.getBoundingClientRect();
+    const widthFrac = elementRect.width / canvasRect.width;
+    const heightFrac = elementRect.height / canvasRect.height;
+    const startFracX = (elementRect.left + elementRect.width / 2 - canvasRect.left) / canvasRect.width;
+    const startFracY = (elementRect.top + elementRect.height / 2 - canvasRect.top) / canvasRect.height;
+    const startClientX = e.clientX;
+    const startClientY = e.clientY;
+    let dragging = false;
+
+    const otherBboxes: Bbox[] = [];
+    for (const ci of canvasImages ?? []) {
+      otherBboxes.push({ x: ci.x, y: ci.y, width: ci.width, height: ci.height });
+    }
+    for (const t of design.texts) {
+      if (t.hidden) continue;
+      const ref = textRefs.current.get(t.id);
+      if (!ref) continue;
+      const r = ref.getBoundingClientRect();
+      otherBboxes.push({
+        x: (r.left + r.width / 2 - canvasRect.left) / canvasRect.width,
+        y: (r.top + r.height / 2 - canvasRect.top) / canvasRect.height,
+        width: r.width / canvasRect.width,
+        height: r.height / canvasRect.height,
+      });
+    }
+    const snapTargets = computeSnapTargets(otherBboxes);
+
+    const handleMove = (moveE: PointerEvent) => {
+      const dx = moveE.clientX - startClientX;
+      const dy = moveE.clientY - startClientY;
+      if (!dragging && Math.hypot(dx, dy) > 4) {
+        dragging = true;
+        document.body.style.cursor = "grabbing";
+        onEditStart?.();
+      }
+      if (dragging) {
+        const rawX = startFracX + dx / canvasRect.width;
+        const rawY = startFracY + dy / canvasRect.height;
+        const snapped = snapBbox({ x: rawX, y: rawY, width: widthFrac, height: heightFrac }, snapTargets);
+        onLogoPositionChange({
+          x: Math.max(0, Math.min(1, snapped.cx)),
+          y: Math.max(0, Math.min(1, snapped.cy)),
+        });
+        onGuidesChange?.({ x: snapped.guideX, y: snapped.guideY });
+      }
+    };
+    const handleUp = () => {
+      document.removeEventListener("pointermove", handleMove);
+      document.removeEventListener("pointerup", handleUp);
+      document.body.style.cursor = "";
+      onGuidesChange?.({ x: null, y: null });
+      if (dragging) onEditEnd?.();
+    };
+    document.addEventListener("pointermove", handleMove);
+    document.addEventListener("pointerup", handleUp);
+  };
+
+  // ---- Render helpers ----
+  const renderTextElement = (text: TextElement) => {
+    if (text.hidden) return null;
+    const useGradient = text.gradient === true;
+    const weight = text.weight ?? 700;
+    const isEditing = editingTextId === text.id;
+    const isSelected = selectedIds?.has(`text:${text.id}`) ?? false;
+
+    // On blur, parent receives the latest content and clears `editingTextId`.
+    const commitEdit = (el: HTMLDivElement) => {
+      const newContent = el.innerText;
+      onTextContentChange?.(text.id, newContent);
+    };
+
+    return (
+      <div
+        key={text.id}
+        ref={(node) => {
+          if (node) textRefs.current.set(text.id, node);
+          else textRefs.current.delete(text.id);
+          if (isEditing) editingDivRef.current = node;
+        }}
+        data-editable={`text:${text.id}`}
+        data-canvas-element={`text:${text.id}`}
+        data-locked={text.locked ? "true" : undefined}
+        contentEditable={isEditing || undefined}
+        suppressContentEditableWarning
+        spellCheck={isEditing}
+        onPointerDown={onEditText && !isEditing ? makeTextPointerHandler(text.id) : undefined}
+        onBlur={isEditing
+          ? (e) => commitEdit(e.currentTarget as HTMLDivElement)
+          : undefined}
+        onKeyDown={isEditing
+          ? (e) => {
+              if (e.key === "Escape") {
+                e.preventDefault();
+                (e.currentTarget as HTMLDivElement).blur();
+              } else if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                (e.currentTarget as HTMLDivElement).blur();
+              }
+            }
+          : undefined}
+        className={`${textEditableHoverClass} ${isEditing ? editingActiveClass : ""}`}
+        style={{
+          position: "absolute",
+          left: `${text.position.x * 100}%`,
+          top: `${text.position.y * 100}%`,
+          // Anchor follows alignment so x maps to the visible edge users
+          // expect: left-aligned text positions by its left edge, right by
+          // its right, center by its center.
+          transform: `translate(${text.align === "left" ? "0" : text.align === "right" ? "-100%" : "-50%"}, -50%)${text.rotation ? ` rotate(${text.rotation}deg)` : ""}`,
+          transformOrigin: text.align === "left" ? "left center" : text.align === "right" ? "right center" : "center center",
+          zIndex: zOf(`text:${text.id}`),
+          touchAction: "none",
+          // Box hugs the content exactly so the click/drag affordance matches
+          // what the user sees. NO maxWidth — long text intentionally overflows
+          // the canvas; the host renders red bars on overflowing edges as a
+          // warning. The canvas itself has `overflow: hidden` so PNG export
+          // clips correctly.
+          width: "max-content",
+          fontFamily: FONTS[text.font ?? "onest"],
+          fontWeight: weight,
+          fontStyle: text.italic ? "italic" : undefined,
+          fontSize: text.fontSize,
+          // Fixed at 1.0 globally — keeps the bbox hugging the glyphs as
+          // tightly as a font's own metrics allow. `text.lineHeight` is
+          // ignored intentionally; the field is preserved on the type for
+          // backwards-compat with saved docs but no longer user-editable.
+          lineHeight: 1.0,
+          textAlign: text.align ?? "center",
+          textTransform: text.uppercase ? "uppercase" : undefined,
+          letterSpacing: text.letterSpacing,
+          opacity: text.opacity,
+          filter: text.blur && text.blur > 0 ? `blur(${text.blur * dims.width}px)` : undefined,
+          // `pre` preserves explicit `\n` line breaks the user typed and
+          // never auto-wraps — long single-line content overflows the canvas
+          // which is what we want for the overflow indicator.
+          whiteSpace: "pre",
+          ...(useGradient
+            ? {
+                background: GRADIENT_TEXT_CSS,
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+                color: "transparent",
+              }
+            : { color: text.color ?? COLORS.text }),
+          // Inline style for the multi-select highlight — applied AFTER the
+          // utility-driven base outline so it wins regardless of class order.
+          ...(isSelected && !isEditing ? SELECTED_INLINE_OUTLINE : {}),
+        }}
+      >
+        {text.content}
+      </div>
+    );
   };
 
   return (
     <div
+      ref={canvasRootRef}
       style={{
         width: dims.width,
         height: dims.height,
@@ -62,14 +603,15 @@ export function DynamicTemplate({ design, format, partnerLogo, canvasImages, pau
       }}
     >
       {/* Background — liquid metal shader */}
-      <LiquidMetalBg mood={design.backgroundId} width={dims.width} height={dims.height} paused={paused} />
+      <CanvasBackground id={design.backgroundId} width={dims.width} height={dims.height} paused={paused} />
 
       {/* Color overlay */}
-      {design.overlayColor && (design.overlayOpacity ?? 0) > 0 && (
+      {showOverlay && (
         <div
           style={{
             position: "absolute",
             inset: 0,
+            zIndex: zOf("overlay"),
             backgroundColor: design.overlayColor,
             opacity: design.overlayOpacity,
             mixBlendMode: (design.overlayBlend || "multiply") as React.CSSProperties["mixBlendMode"],
@@ -77,25 +619,7 @@ export function DynamicTemplate({ design, format, partnerLogo, canvasImages, pau
         />
       )}
 
-      {/* Dark overlay — adapts to text position, only when there's content */}
-      {hasHeadline && !design.showGlassCard && (
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            background:
-              design.textPosition === "bottom"
-                ? "linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.3) 40%, rgba(0,0,0,0.8) 100%)"
-                : design.textPosition === "top"
-                  ? "linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.3) 60%, rgba(0,0,0,0.1) 100%)"
-                  : "linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.5) 100%)",
-          }}
-        />
-      )}
-
-      {/* === DECORATIVE ELEMENTS === */}
-
-      {/* Top bar — thin gradient strip */}
+      {/* Top bar — thin gradient strip, chrome element above the layer stack */}
       {design.showTopBar && (
         <div
           style={{
@@ -105,422 +629,384 @@ export function DynamicTemplate({ design, format, partnerLogo, canvasImages, pau
             right: 0,
             height: 4,
             background: GRADIENT_BORDER_CSS,
-            zIndex: 2,
+            zIndex: 9999,
           }}
         />
       )}
 
-      {/* === GLASS CARD — frosted dark container for text === */}
-      {design.showGlassCard && hasHeadline && (() => {
-        const pos = design.glassCardPosition || "center";
-        return (
-          <div
-            style={{
-              position: "absolute",
-              zIndex: 2,
-              ...glassCardPositions[pos],
-              maxWidth: isSquare ? "84%" : "80%",
-              padding: isSquare ? "48px 56px" : "40px 48px",
-              background: "rgba(0, 0, 0, 0.55)",
-              backdropFilter: "blur(24px)",
-              WebkitBackdropFilter: "blur(24px)",
-              borderRadius: 24,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: alignMap[design.alignment || "center"],
-              textAlign: textAlignMap[design.alignment || "center"],
-            }}
-          >
-            {/* 1px gradient border on glass card */}
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                borderRadius: 24,
-                border: "1px solid transparent",
-                background: `linear-gradient(135deg, rgba(255,208,0,0.4), rgba(255,107,0,0.3), rgba(255,0,40,0.4)) border-box`,
-                WebkitMask: "linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)",
-                WebkitMaskComposite: "xor",
-                mask: "linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)",
-                maskComposite: "exclude" as never,
-                pointerEvents: "none",
-              }}
-            />
-
-            {/* Headline */}
-            {headlineLines.map((line, i) => {
-              const isFirstLine = i === 0;
-              return (
-                <div
-                  key={i}
-                  style={{
-                    fontFamily: isFirstLine ? FONTS.headline : FONTS.subtitle,
-                    fontWeight: isFirstLine ? 800 : 700,
-                    fontStretch: isFirstLine ? "expanded" : "normal",
-                    fontSize: isFirstLine ? headlineFontSize : subHeadlineFontSize,
-                    lineHeight: 1.05,
-                    letterSpacing: isFirstLine ? "-1px" : "2px",
-                    textTransform: "uppercase" as const,
-                    marginTop: i > 0 ? 8 : 0,
-                    ...(isFirstLine && useGradientHeadline
-                      ? {
-                          background: GRADIENT_TEXT_CSS,
-                          WebkitBackgroundClip: "text",
-                          WebkitTextFillColor: "transparent",
-                          backgroundClip: "text",
-                        }
-                      : { color: COLORS.text }),
-                  }}
-                >
-                  {line}
-                </div>
-              );
-            })}
-
-            {/* Subtitle inside card */}
-            {design.subtitle && (
-              <div
-                style={{
-                  fontFamily: FONTS.body,
-                  fontSize: isSquare ? 22 : 20,
-                  color: COLORS.textMuted,
-                  marginTop: 20,
-                  letterSpacing: "1.5px",
-                  textTransform: "uppercase" as const,
-                }}
-              >
-                {design.subtitle}
-              </div>
-            )}
-
-            {/* Partner name pill inside card */}
-            {design.partnerName && (
-              <div
-                style={{
-                  display: "inline-block",
-                  position: "relative",
-                  marginTop: 20,
-                  padding: "8px 24px",
-                  background: "rgba(255, 255, 255, 0.06)",
-                  borderRadius: 8,
-                  fontFamily: FONTS.subtitle,
-                  fontWeight: 600,
-                  fontSize: isSquare ? 20 : 18,
-                  color: COLORS.text,
-                  letterSpacing: "1px",
-                  alignSelf:
-                    design.alignment === "left" ? "flex-start"
-                    : design.alignment === "right" ? "flex-end"
-                    : "center",
-                }}
-              >
-                {design.partnerName}
-                <div
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    borderRadius: 8,
-                    border: "1px solid transparent",
-                    background: `linear-gradient(135deg, #FFD000, #FF6B00, #FF0028) border-box`,
-                    WebkitMask: "linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)",
-                    WebkitMaskComposite: "xor",
-                    mask: "linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)",
-                    maskComposite: "exclude" as never,
-                    pointerEvents: "none",
-                  }}
-                />
-              </div>
-            )}
-
-            {/* Partner logo inside card */}
-            {partnerLogo && (
-              <div
-                style={{
-                  marginTop: 20,
-                  position: "relative",
-                  width: isSquare ? 180 : 160,
-                  height: isSquare ? 100 : 80,
-                  borderRadius: 12,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  background: "rgba(255, 255, 255, 0.06)",
-                  padding: 14,
-                  alignSelf:
-                    design.alignment === "left" ? "flex-start"
-                    : design.alignment === "right" ? "flex-end"
-                    : "center",
-                }}
-              >
-                <img
-                  src={partnerLogo}
-                  alt="Partner"
-                  style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
-                />
-                <div
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    borderRadius: 12,
-                    border: "1px solid transparent",
-                    background: `linear-gradient(135deg, #FFD000, #FF6B00, #FF0028) border-box`,
-                    WebkitMask: "linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)",
-                    WebkitMaskComposite: "xor",
-                    mask: "linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)",
-                    maskComposite: "exclude" as never,
-                    pointerEvents: "none",
-                  }}
-                />
-              </div>
-            )}
-          </div>
-        );
-      })()}
-
-      {/* === CANVAS IMAGES === */}
+      {/* Canvas images (photos placed by user) */}
       {canvasImages?.map((ci) => {
         const imgW = Math.round(dims.width * ci.width);
         const imgH = Math.round(dims.height * ci.height);
         const imgLeft = Math.round(ci.x * dims.width - imgW / 2);
         const imgTop = Math.round(ci.y * dims.height - imgH / 2);
-        const isCircle = ci.shape === "circle";
-        const radius = isCircle ? "50%" : 16;
-        return (
-          <div
-            key={ci.id}
-            style={{
-              position: "absolute",
-              zIndex: 2,
-              left: imgLeft,
-              top: imgTop,
-              width: imgW,
-              height: imgH,
-              borderRadius: radius,
-              overflow: "hidden",
-            }}
-          >
-            <img
-              src={ci.src}
-              alt=""
+        // Corner radius as % of the SHORTER dimension (not "% of each side"
+        // which would produce ellipses on non-square images). 50 = full
+        // circle/pill. Fallback for legacy CanvasImage entries that still
+        // carry `shape`.
+        const radiusPct = ci.cornerRadius ?? (ci.shape === "circle" ? 50 : 4);
+        const radius = `${(radiusPct / 100) * Math.min(imgW, imgH)}px`;
+        const hasCrop = ci.crop && (ci.crop.width < 1 || ci.crop.height < 1 || ci.crop.x > 0 || ci.crop.y > 0);
+
+        // ── Inline crop-edit mode (Google Slides parity) ──
+        // The user double-clicked this image. Image renders at the snapshot
+        // scale (taken at entry) — staying fixed while the user pans inside
+        // the orange crop window or drags corner handles to resize it.
+        if (cropEditingId === ci.id && cropSnapshot) {
+          const snap = cropSnapshot;
+          const cropX = ci.crop?.x ?? 0;
+          const cropY = ci.crop?.y ?? 0;
+          const cropW = ci.crop?.width ?? 1;
+          const cropH = ci.crop?.height ?? 1;
+          // Outline position INSIDE the snapshot container, in fractional
+          // coords (these track the current crop, not the snapshot).
+          const oLeft = cropX * 100;
+          const oTop = cropY * 100;
+          const oW = cropW * 100;
+          const oH = cropH * 100;
+
+          // Convert a screen-pixel delta to a source-fraction delta using the
+          // snapshot scale (so resize/pan math doesn't drift as crop changes).
+          const canvasEl = canvasRootRef.current;
+          const canvasRect = canvasEl?.getBoundingClientRect();
+          const screenPerSrcFracX = canvasRect ? (snap.fullW * canvasRect.width / dims.width) : snap.fullW;
+          const screenPerSrcFracY = canvasRect ? (snap.fullH * canvasRect.height / dims.height) : snap.fullH;
+
+          const MIN_CROP = 0.05;
+          const aspect = snap.targetFracAspect;
+
+          const handlePan = (e: React.PointerEvent<HTMLDivElement>) => {
+            e.stopPropagation();
+            e.preventDefault();
+            const startX = e.clientX;
+            const startY = e.clientY;
+            const startCropX = cropX;
+            const startCropY = cropY;
+            onEditStart?.();
+            const move = (moveE: PointerEvent) => {
+              let nx = startCropX + (moveE.clientX - startX) / screenPerSrcFracX;
+              let ny = startCropY + (moveE.clientY - startY) / screenPerSrcFracY;
+              nx = Math.max(0, Math.min(1 - cropW, nx));
+              ny = Math.max(0, Math.min(1 - cropH, ny));
+              onCropChange?.(ci.id, { x: nx, y: ny, width: cropW, height: cropH });
+            };
+            const up = () => {
+              document.removeEventListener("pointermove", move);
+              document.removeEventListener("pointerup", up);
+              onEditEnd?.();
+            };
+            document.addEventListener("pointermove", move);
+            document.addEventListener("pointerup", up);
+          };
+
+          // Corner resize. Aspect is locked to the snapshot's targetFracAspect
+          // so the crop never goes out of sync with the frame on canvas. The
+          // dimension with the larger fractional drag drives; the other is
+          // computed from aspect.
+          const handleCorner = (corner: "nw" | "ne" | "sw" | "se") => (e: React.PointerEvent<HTMLDivElement>) => {
+            e.stopPropagation();
+            e.preventDefault();
+            const startX = e.clientX;
+            const startY = e.clientY;
+            const s = { x: cropX, y: cropY, w: cropW, h: cropH };
+            const isW = corner === "nw" || corner === "sw";
+            const isN = corner === "nw" || corner === "ne";
+            onEditStart?.();
+            const move = (moveE: PointerEvent) => {
+              const dxF = (moveE.clientX - startX) / screenPerSrcFracX;
+              const dyF = (moveE.clientY - startY) / screenPerSrcFracY;
+              // Width delta: positive = grow.
+              const dW = isW ? -dxF : dxF;
+              const dH = isN ? -dyF : dyF;
+              // Use the dominant axis as driver, then derive the other via aspect.
+              let nw: number;
+              let nh: number;
+              if (Math.abs(dW) > Math.abs(dH * aspect)) {
+                nw = s.w + dW;
+                nh = nw / aspect;
+              } else {
+                nh = s.h + dH;
+                nw = nh * aspect;
+              }
+              // Clamp to MIN and to ≤ 1 (and re-derive partner to keep aspect).
+              if (nw < MIN_CROP) { nw = MIN_CROP; nh = nw / aspect; }
+              if (nh < MIN_CROP) { nh = MIN_CROP; nw = nh * aspect; }
+              if (nw > 1) { nw = 1; nh = nw / aspect; }
+              if (nh > 1) { nh = 1; nw = nh * aspect; }
+              // Reposition x/y so the OPPOSITE corner stays fixed.
+              const nx = isW ? (s.x + s.w - nw) : s.x;
+              const ny = isN ? (s.y + s.h - nh) : s.y;
+              // Clamp position into [0, 1 - size]. If clamping would shrink
+              // the size further, recompute via aspect to keep things stable.
+              let cx = Math.max(0, Math.min(1 - nw, nx));
+              let cy = Math.max(0, Math.min(1 - nh, ny));
+              onCropChange?.(ci.id, { x: cx, y: cy, width: nw, height: nh });
+            };
+            const up = () => {
+              document.removeEventListener("pointermove", move);
+              document.removeEventListener("pointerup", up);
+              onEditEnd?.();
+            };
+            document.addEventListener("pointermove", move);
+            document.addEventListener("pointerup", up);
+          };
+
+          const handleSize = 12;
+          const corners: { key: "nw" | "ne" | "sw" | "se"; left: string; top: string; cursor: string }[] = [
+            { key: "nw", left: `${oLeft}%`, top: `${oTop}%`, cursor: "nwse-resize" },
+            { key: "ne", left: `${oLeft + oW}%`, top: `${oTop}%`, cursor: "nesw-resize" },
+            { key: "sw", left: `${oLeft}%`, top: `${oTop + oH}%`, cursor: "nesw-resize" },
+            { key: "se", left: `${oLeft + oW}%`, top: `${oTop + oH}%`, cursor: "nwse-resize" },
+          ];
+
+          return (
+            <div
+              key={ci.id}
+              data-canvas-overlay="crop"
               style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                display: "block",
+                position: "absolute",
+                zIndex: zOf(`image:${ci.id}`) + 5,
+                left: snap.fullLeft,
+                top: snap.fullTop,
+                width: snap.fullW,
+                height: snap.fullH,
+                touchAction: "none",
               }}
-            />
-            {ci.border && (
+            >
+              <img
+                src={ci.src}
+                alt=""
+                draggable={false}
+                style={{ width: "100%", height: "100%", display: "block", userSelect: "none", pointerEvents: "none" }}
+              />
+              {/* Dim the four regions OUTSIDE the crop window. */}
+              {[
+                { left: 0, top: 0, right: 0, height: `${oTop}%` },
+                { left: 0, bottom: 0, right: 0, height: `${100 - oTop - oH}%` },
+                { left: 0, top: `${oTop}%`, width: `${oLeft}%`, height: `${oH}%` },
+                { right: 0, top: `${oTop}%`, width: `${100 - oLeft - oW}%`, height: `${oH}%` },
+              ].map((s, i) => (
+                <div key={i} style={{ position: "absolute", background: "rgba(0,0,0,0.55)", pointerEvents: "none", ...s }} />
+              ))}
+              {/* Pan area — clicking inside the crop window drags it. */}
+              <div
+                onPointerDown={handlePan}
+                style={{
+                  position: "absolute",
+                  left: `${oLeft}%`,
+                  top: `${oTop}%`,
+                  width: `${oW}%`,
+                  height: `${oH}%`,
+                  cursor: "move",
+                  pointerEvents: "auto",
+                }}
+              />
+              {/* Orange crop outline. */}
+              <div
+                style={{
+                  position: "absolute",
+                  left: `${oLeft}%`,
+                  top: `${oTop}%`,
+                  width: `${oW}%`,
+                  height: `${oH}%`,
+                  outline: "2px solid #FF6B00",
+                  outlineOffset: -1,
+                  boxSizing: "border-box",
+                  borderRadius: radius,
+                  pointerEvents: "none",
+                }}
+              />
+              {/* Corner resize handles. */}
+              {corners.map((c) => (
+                <div
+                  key={c.key}
+                  onPointerDown={handleCorner(c.key)}
+                  style={{
+                    position: "absolute",
+                    left: c.left,
+                    top: c.top,
+                    width: handleSize,
+                    height: handleSize,
+                    transform: "translate(-50%, -50%)",
+                    background: "#FF6B00",
+                    border: "2px solid white",
+                    borderRadius: 2,
+                    cursor: c.cursor,
+                    pointerEvents: "auto",
+                    boxShadow: "0 0 4px rgba(0,0,0,0.5)",
+                  }}
+                />
+              ))}
+            </div>
+          );
+        }
+
+        {
+          const paddingPx = ci.padding ? Math.max(0, Math.round(ci.padding * dims.width)) : 0;
+          const blurPx = ci.backdropBlur ? Math.max(0, Math.round(ci.backdropBlur * dims.width)) : 0;
+          const blurFilter = blurPx > 0 ? `blur(${blurPx}px)` : undefined;
+          // Outer wrapper — no overflow:hidden, no padding. Holds two
+          // children: an inner clip-wrapper for the image + backdrop +
+          // optional blur, and the border sibling that draws around the
+          // OUTER edge unaffected by padding or backdrop-filter.
+          return (
+            <div
+              key={ci.id}
+              style={{
+                position: "absolute",
+                zIndex: zOf(`image:${ci.id}`),
+                left: imgLeft,
+                top: imgTop,
+                width: imgW,
+                height: imgH,
+                borderRadius: radius,
+              }}
+            >
+              {/* Backdrop layer — solid fill + backdrop-filter blur (frosted
+               *  glass). Opacity dims only this layer. The `transform:
+               *  translate3d` here forces a compositing layer that makes
+               *  backdrop-filter actually sample the canvas content even
+               *  when an ancestor has a `transform: scale()` (the preview
+               *  wrapper), working around a long-standing Chrome/Safari
+               *  bug. */}
+              {(ci.backdropColor || blurFilter) && (
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    borderRadius: radius,
+                    background: ci.backdropColor || undefined,
+                    backdropFilter: blurFilter,
+                    WebkitBackdropFilter: blurFilter,
+                    opacity: ci.opacity ?? 1,
+                    pointerEvents: "none",
+                    transform: blurFilter ? "translate3d(0,0,0)" : undefined,
+                    willChange: blurFilter ? "backdrop-filter" : undefined,
+                  }}
+                />
+              )}
+              {/* Inner clip-wrapper — owns the padding + clip so the image
+               *  fits the rounded corners. Stays at full opacity so the
+               *  logo never fades with the backdrop. */}
               <div
                 style={{
                   position: "absolute",
                   inset: 0,
                   borderRadius: radius,
-                  border: "1px solid transparent",
-                  background: "linear-gradient(135deg, #FFD000, #FF6B00, #FF0028) border-box",
-                  WebkitMask: "linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)",
-                  WebkitMaskComposite: "xor",
-                  mask: "linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)",
-                  maskComposite: "exclude" as never,
-                  pointerEvents: "none",
-                }}
-              />
-            )}
-          </div>
-        );
-      })}
-
-      {/* === CONTENT (no glass card mode) === */}
-      {!design.showGlassCard && (
-        <div
-          style={{
-            position: "relative",
-            zIndex: 3,
-            width: "100%",
-            height: "100%",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: justifyMap[design.textPosition || "center"],
-            alignItems: alignMap[design.alignment || "center"],
-            padding: isSquare
-              ? design.alignment === "center" ? "80px 60px" : "80px 50px"
-              : design.alignment === "center" ? "50px 60px" : "50px 50px",
-            textAlign: textAlignMap[design.alignment || "center"],
-          }}
-        >
-          {/* Headline lines */}
-          {headlineLines.map((line, i) => {
-            const isFirstLine = i === 0;
-            return (
-              <div
-                key={i}
-                style={{
-                  fontFamily: isFirstLine ? FONTS.headline : FONTS.subtitle,
-                  fontWeight: isFirstLine ? 800 : 700,
-                  fontStretch: isFirstLine ? "expanded" : "normal",
-                  fontSize: isFirstLine ? headlineFontSize : subHeadlineFontSize,
-                  lineHeight: 1.05,
-                  letterSpacing: isFirstLine ? "-1px" : "2px",
-                  textTransform: "uppercase" as const,
-                  marginTop: i > 0 ? 8 : 0,
-                  ...(isFirstLine
-                    ? {
-                        background: GRADIENT_TEXT_CSS,
-                        WebkitBackgroundClip: "text",
-                        WebkitTextFillColor: "transparent",
-                        backgroundClip: "text",
-                      }
-                    : { color: COLORS.text }),
+                  overflow: "hidden",
+                  padding: paddingPx || undefined,
+                  boxSizing: "border-box",
                 }}
               >
-                {line}
+                <img
+                  src={ci.src}
+                  alt=""
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: ci.fit ?? "cover",
+                    display: "block",
+                    ...(hasCrop && ci.crop
+                      ? {
+                          objectViewBox: `inset(${(ci.crop.y * 100).toFixed(3)}% ${((1 - ci.crop.x - ci.crop.width) * 100).toFixed(3)}% ${((1 - ci.crop.y - ci.crop.height) * 100).toFixed(3)}% ${(ci.crop.x * 100).toFixed(3)}%)`,
+                        } as React.CSSProperties
+                      : null),
+                  }}
+                />
               </div>
-            );
-          })}
-
-          {/* Partner name pill */}
-          {design.partnerName && (
-            <div
-              style={{
-                display: "inline-block",
-                position: "relative",
-                marginTop: 24,
-                padding: "10px 28px",
-                background: "rgba(0, 0, 0, 0.7)",
-                borderRadius: 10,
-                fontFamily: FONTS.subtitle,
-                fontWeight: 600,
-                fontSize: isSquare ? 22 : 20,
-                color: COLORS.text,
-                letterSpacing: "1px",
-                alignSelf:
-                  design.alignment === "left" ? "flex-start"
-                  : design.alignment === "right" ? "flex-end"
-                  : "center",
-              }}
-            >
-              {design.partnerName}
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  borderRadius: 10,
-                  border: "1px solid transparent",
-                  background: `linear-gradient(135deg, #FFD000, #FF6B00, #FF0028) border-box`,
-                  WebkitMask: "linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)",
-                  WebkitMaskComposite: "xor",
-                  mask: "linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)",
-                  maskComposite: "exclude" as never,
-                  pointerEvents: "none",
-                }}
-              />
+              {/* Border — sibling of the clip-wrapper so it's not affected
+               *  by the clip-wrapper's overflow:hidden, padding, or
+               *  backdrop-filter. Draws on the OUTER bbox edge. */}
+              {ci.border && (() => {
+                const widthPx = Math.max(0, Math.round((ci.borderWidth ?? 0.003) * dims.width));
+                if (widthPx === 0) return null;
+                if (ci.borderColor) {
+                  return (
+                    <div
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        borderRadius: radius,
+                        border: `${widthPx}px solid ${ci.borderColor}`,
+                        pointerEvents: "none",
+                        boxSizing: "border-box",
+                      }}
+                    />
+                  );
+                }
+                return (
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      borderRadius: radius,
+                      border: `${widthPx}px solid transparent`,
+                      background: "linear-gradient(135deg, #FFD000, #FF6B00, #FF0028) border-box",
+                      WebkitMask: "linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)",
+                      WebkitMaskComposite: "xor",
+                      mask: "linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)",
+                      maskComposite: "exclude" as never,
+                      pointerEvents: "none",
+                    }}
+                  />
+                );
+              })()}
             </div>
-          )}
+          );
+        }
+      })}
 
-          {/* Partner logo */}
-          {partnerLogo && (
-            <div
-              style={{
-                marginTop: 20,
-                position: "relative",
-                width: isSquare ? 200 : 180,
-                height: isSquare ? 120 : 100,
-                borderRadius: 14,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "rgba(0, 0, 0, 0.6)",
-                padding: 16,
-                alignSelf:
-                  design.alignment === "left" ? "flex-start"
-                  : design.alignment === "right" ? "flex-end"
-                  : "center",
-              }}
-            >
-              <img
-                src={partnerLogo}
-                alt="Partner"
-                style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
-              />
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  borderRadius: 14,
-                  border: "1px solid transparent",
-                  background: `linear-gradient(135deg, #FFD000, #FF6B00, #FF0028) border-box`,
-                  WebkitMask: "linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)",
-                  WebkitMaskComposite: "xor",
-                  mask: "linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)",
-                  maskComposite: "exclude" as never,
-                  pointerEvents: "none",
-                }}
-              />
-            </div>
-          )}
+      {/* Shape elements (rectangle / circle / line / star). */}
+      {design.shapes?.map((s) => renderShapeElement(s, dims, zOf, selectedIds))}
 
-          {/* Additional text */}
-          {design.additionalText && (
-            <div
-              style={{
-                fontFamily: FONTS.body,
-                fontSize: isSquare ? 22 : 20,
-                color: COLORS.text,
-                marginTop: 16,
-                letterSpacing: "0.5px",
-              }}
-            >
-              {design.additionalText}
-            </div>
-          )}
+      {/* Text elements — each independently positioned, sized and styled. */}
+      {design.texts.map(renderTextElement)}
 
-          {/* Subtitle */}
-          {design.subtitle && (
-            <div
-              style={{
-                fontFamily: FONTS.body,
-                fontSize: isSquare ? 22 : 20,
-                color: COLORS.textMuted,
-                marginTop: design.additionalText ? 8 : 24,
-                letterSpacing: "1.5px",
-                textTransform: "uppercase" as const,
-              }}
-            >
-              {design.subtitle}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* TECHBBQ logo — configurable position */}
+      {/* TechBBQ logo — preset corner OR dragged custom position. */}
       {design.showLogo && (() => {
         const pos = design.logoPosition || "bottom-center";
-        const pad = isSquare ? 72 : 50;
-        const logoPos: React.CSSProperties = {
-          position: "absolute",
-          zIndex: 4,
-          ...(pos.startsWith("top") ? { top: pad } : { bottom: pad }),
-          ...(pos.endsWith("left")
-            ? { left: pad }
-            : pos.endsWith("right")
-              ? { right: pad }
-              : { left: "50%", transform: "translateX(-50%)" }),
-        };
-        const logoH = isSquare ? 28 : 24;
+        const scale = Math.max(0.3, Math.min(3.0, design.logoScale ?? 1));
+        const logoH = isPortrait
+          ? Math.round(dims.width * 0.07 * scale)
+          : Math.round(dims.height * 0.05 * scale);
+        const pad = isPortrait
+          ? Math.round(dims.width * 0.055)
+          : Math.round(dims.height * 0.05);
+        const custom = design.logoCustomPosition;
+        const logoPos: React.CSSProperties = custom
+          ? {
+              position: "absolute",
+              zIndex: zOf("tbbqLogo"),
+              left: `${custom.x * 100}%`,
+              top: `${custom.y * 100}%`,
+              transform: "translate(-50%, -50%)",
+            }
+          : {
+              position: "absolute",
+              zIndex: zOf("tbbqLogo"),
+              ...(pos.startsWith("top") ? { top: pad } : { bottom: pad }),
+              ...(pos.endsWith("left")
+                ? { left: pad }
+                : pos.endsWith("right")
+                  ? { right: pad }
+                  : { left: "50%", transform: "translateX(-50%)" }),
+            };
         const logoSrc =
           design.logoStyle === "gradient" ? "/TechBBQ Logo Gradient.png"
           : design.logoStyle === "white" ? "/TechBBQ Logo White.png"
           : "/TechBBQ Logo Red.png";
 
         return (
-          <div style={logoPos}>
+          <div
+            ref={logoRef}
+            style={{ ...logoPos, cursor: onLogoPositionChange ? "grab" : undefined, touchAction: "none" }}
+            onPointerDown={onLogoPositionChange ? handleLogoPointerDown : undefined}
+          >
             <img
               src={logoSrc}
               alt="TechBBQ"
-              style={{
-                height: logoH,
-                width: "auto",
-                objectFit: "contain",
-              }}
+              draggable={false}
+              style={{ height: logoH, width: "auto", objectFit: "contain", pointerEvents: "none", userSelect: "none" }}
             />
           </div>
         );

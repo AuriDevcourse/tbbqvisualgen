@@ -12,13 +12,19 @@ export const COLORS = {
 } as const;
 
 export const FONTS = {
-  // Archivo Expanded — used for big social media headlines
-  headline: "var(--font-archivo), 'Host Grotesk', system-ui, sans-serif",
-  // Host Grotesk — used for subtitles/secondary text
-  subtitle: "'Host Grotesk', system-ui, -apple-system, sans-serif",
-  // Inter — body text
+  // Two canvas-text choices the user can pick between in the Text step.
+  onest: "var(--font-onest), system-ui, -apple-system, sans-serif",
+  inter: "var(--font-inter), system-ui, -apple-system, sans-serif",
+  // App/UI body text.
   body: "var(--font-inter), system-ui, -apple-system, sans-serif",
 } as const;
+
+export type CanvasFont = "onest" | "inter";
+
+export const CANVAS_FONT_OPTIONS: { value: CanvasFont; label: string }[] = [
+  { value: "onest", label: "Onest" },
+  { value: "inter", label: "Inter" },
+];
 
 // CSS gradient for the signature TechBBQ headline text effect
 export const GRADIENT_TEXT_CSS = `linear-gradient(90deg, ${COLORS.gradientStart} 0%, ${COLORS.gradientMid} 50%, ${COLORS.gradientEnd} 100%)`;

@@ -2,43 +2,53 @@
 
 import { useCallback, useRef, useState, useEffect } from "react";
 import type { CanvasImage } from "./ImagePlacer";
+import { computeSnapTargets, snapBbox, type Bbox } from "@/lib/snap";
 
 type DragMode = "move" | "nw" | "ne" | "sw" | "se" | null;
 
 interface ImageDragOverlayProps {
   image: CanvasImage;
   otherImages?: CanvasImage[];
+  /** Extra bboxes (e.g. text layers) to snap against, in fractional coords. */
+  extraSnapBboxes?: Bbox[];
   canvasWidth: number;
   canvasHeight: number;
   selected: boolean;
+  /** When true, show the corner resize handles. Defaults to `selected`. Set
+   *  to false when the image is part of a multi-selection so the canvas isn't
+   *  cluttered with handles across every selected image. */
+  resizable?: boolean;
+  /** z-index for the overlay — should match the image's layer z so clicks
+   *  land on the bbox correctly relative to other layered elements. */
+  zIndex?: number;
   onSelect: () => void;
   onDeselect: () => void;
   onChange: (image: CanvasImage) => void;
+  /** Report active snap-guide positions (fractional) to the parent so the
+   *  parent can render unified orange guide lines outside the export root. */
+  onGuidesChange?: (guides: { x: number | null; y: number | null }) => void;
+  /** Called on drag-start so the host can open a history transaction. */
+  onEditStart?: () => void;
+  /** Called on drag-end so the host can close the history transaction. */
+  onEditEnd?: () => void;
+  /** Called when a move-drag starts so the host can snapshot pre-drag
+   *  positions of every selected element for group translation. */
+  onBeginDrag?: (id: string) => void;
+  /** Called per move tick with (dx, dy) in fractional canvas coords. The host
+   *  applies this delta to every snapshotted element. */
+  onMoveBy?: (dx: number, dy: number) => void;
+  /** Called on move-drag end. */
+  onEndDrag?: () => void;
+  /** Double-click on the image bbox — Google Slides–style enter-crop. */
+  onEnterCrop?: () => void;
   onDelete?: () => void;
   onDuplicate?: () => void;
 }
 
-// Snap configuration — center + thirds + other images
-const SNAP_THRESHOLD = 0.013;
-const GUIDE_TARGETS = [0.333, 0.5, 0.667];
-
-function snapAxis(val: number, extraTargets: number[] = []): { value: number; guide: number | null } {
-  const allTargets = [...GUIDE_TARGETS, ...extraTargets];
-  for (const t of allTargets) {
-    if (Math.abs(val - t) < SNAP_THRESHOLD) {
-      return { value: t, guide: t };
-    }
-  }
-  return { value: val, guide: null };
-}
-
 export function ImageDragOverlay({
-  image, otherImages, canvasWidth, canvasHeight, selected, onSelect, onDeselect, onChange, onDelete, onDuplicate,
+  image, otherImages, extraSnapBboxes, canvasWidth, canvasHeight, selected, resizable = selected, zIndex, onSelect, onDeselect, onChange, onGuidesChange, onEditStart, onEditEnd, onBeginDrag, onMoveBy, onEndDrag, onEnterCrop, onDelete, onDuplicate,
 }: ImageDragOverlayProps) {
   const [dragging, setDragging] = useState<DragMode>(null);
-  const [guideX, setGuideX] = useState<number | null>(null);
-  const [guideY, setGuideY] = useState<number | null>(null);
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const startRef = useRef({ mx: 0, my: 0, x: 0, y: 0, w: 0, h: 0 });
 
@@ -49,31 +59,21 @@ export function ImageDragOverlay({
 
   const handleSize = 24;
 
-  // Snap targets from other images
-  const otherSnapX = (otherImages || []).map((img) => img.x);
-  const otherSnapY = (otherImages || []).map((img) => img.y);
-
   // Clear guides when not dragging
   useEffect(() => {
     if (!dragging) {
-      setGuideX(null);
-      setGuideY(null);
+      onGuidesChange?.({ x: null, y: null });
     }
-  }, [dragging]);
-
-  // Close context menu on click elsewhere
-  useEffect(() => {
-    if (!contextMenu) return;
-    const handleClick = () => setContextMenu(null);
-    window.addEventListener("mousedown", handleClick);
-    return () => window.removeEventListener("mousedown", handleClick);
-  }, [contextMenu]);
+  }, [dragging, onGuidesChange]);
 
   const startDrag = useCallback((mode: DragMode, e: React.MouseEvent) => {
+    if (image.locked) return;
     e.preventDefault();
     e.stopPropagation();
     setDragging(mode);
-    setContextMenu(null);
+    onEditStart?.();
+    // Group-drag snapshot — only for move. Resize stays single-element.
+    if (mode === "move") onBeginDrag?.(`image:${image.id}`);
     startRef.current = {
       mx: e.clientX,
       my: e.clientY,
@@ -82,28 +82,39 @@ export function ImageDragOverlay({
       w: image.width,
       h: image.height,
     };
-  }, [image.x, image.y, image.width, image.height]);
+  }, [image.id, image.x, image.y, image.width, image.height, image.locked, onEditStart, onBeginDrag]);
 
   // Click on overlay background = deselect
   const handleBgClick = useCallback((e: React.MouseEvent) => {
-    if (e.target === e.currentTarget && selected) {
-      onDeselect();
-      setContextMenu(null);
-    }
+    if (e.target === e.currentTarget && selected) onDeselect();
   }, [selected, onDeselect]);
 
-  // Right-click context menu
-  const handleContextMenu = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  // Window-level deselect: click outside the image bbox while selected
+  useEffect(() => {
+    if (!selected) return;
+    const handleWindowMouseDown = (e: MouseEvent) => {
+      const rect = overlayRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const px = e.clientX - rect.left;
+      const py = e.clientY - rect.top;
+      // Outside canvas entirely — leave selection alone (user clicked sidebar)
+      if (px < 0 || py < 0 || px > rect.width || py > rect.height) return;
+      // Inside canvas: deselect if outside the image bbox + handle margin
+      const margin = handleSize;
+      const insideBbox =
+        px >= imgLeft - margin && px <= imgLeft + imgW + margin &&
+        py >= imgTop - margin && py <= imgTop + imgH + margin;
+      if (!insideBbox) onDeselect();
+    };
+    window.addEventListener("mousedown", handleWindowMouseDown);
+    return () => window.removeEventListener("mousedown", handleWindowMouseDown);
+  }, [selected, imgLeft, imgTop, imgW, imgH, handleSize, onDeselect]);
+
+  // Right-click on the image selects it (if not already) and then lets the
+  // event bubble up to the page-level context menu. We don't prevent default
+  // — the unified menu in page.tsx handles the actual menu UI.
+  const handleContextMenu = useCallback((_e: React.MouseEvent) => {
     if (!selected) onSelect();
-    const rect = overlayRef.current?.getBoundingClientRect();
-    if (rect) {
-      setContextMenu({
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
-      });
-    }
   }, [selected, onSelect]);
 
   useEffect(() => {
@@ -120,40 +131,94 @@ export function ImageDragOverlay({
         const rawX = startRef.current.x + dx;
         const rawY = startRef.current.y + dy;
 
-        const sx = snapAxis(rawX, otherSnapX);
-        const sy = snapAxis(rawY, otherSnapY);
-        setGuideX(sx.guide);
-        setGuideY(sy.guide);
+        // Build snap targets from other images' edges/center + any extra
+        // bboxes passed in (e.g. text layers). Shared util handles edge-to-edge
+        // alignment, not just center-to-center.
+        const otherBboxes: Bbox[] = [
+          ...(otherImages || []).map((o) => ({
+            x: o.x, y: o.y, width: o.width, height: o.height,
+          })),
+          ...(extraSnapBboxes || []),
+        ];
+        const targets = computeSnapTargets(otherBboxes);
+        const result = snapBbox(
+          { x: rawX, y: rawY, width: image.width, height: image.height },
+          targets,
+        );
+        onGuidesChange?.({ x: result.guideX, y: result.guideY });
 
-        onChange({
-          ...image,
-          x: Math.max(0, Math.min(1, sx.value)),
-          y: Math.max(0, Math.min(1, sy.value)),
-        });
+        // Emit delta from the pre-drag position; host applies it to all
+        // selected elements (so group-drag works).
+        const newX = Math.max(0, Math.min(1, result.cx));
+        const newY = Math.max(0, Math.min(1, result.cy));
+        onMoveBy?.(newX - startRef.current.x, newY - startRef.current.y);
         return;
       }
 
-      // Resize — opposite corner stays fixed
+      // ── Resize — Photoshop-style: the OPPOSITE corner stays exactly fixed
+      //    while the dragged corner follows the cursor. Modifiers:
+      //      Shift → lock aspect to the original ratio
+      //      Alt   → scale from CENTER instead of opposite corner
+      //      Shift + Alt → both
       const { x: sx, y: sy, w: sw, h: sh } = startRef.current;
-      let newW = sw, newH = sh, newX = sx, newY = sy;
+      const isW = dragging === "nw" || dragging === "sw";
+      const isN = dragging === "nw" || dragging === "ne";
 
-      if (dragging === "se") {
-        newW = sw + dx; newH = sh + dy; newX = sx + dx / 2; newY = sy + dy / 2;
-      } else if (dragging === "sw") {
-        newW = sw - dx; newH = sh + dy; newX = sx + dx / 2; newY = sy + dy / 2;
-      } else if (dragging === "ne") {
-        newW = sw + dx; newH = sh - dy; newX = sx + dx / 2; newY = sy + dy / 2;
-      } else if (dragging === "nw") {
-        newW = sw - dx; newH = sh - dy; newX = sx + dx / 2; newY = sy + dy / 2;
+      const fromCenter = e.altKey;
+      const lockAspect = e.shiftKey;
+
+      // Fixed point is the OPPOSITE corner (default) or the CENTER (Alt).
+      const fixedX = fromCenter ? sx : (isW ? sx + sw / 2 : sx - sw / 2);
+      const fixedY = fromCenter ? sy : (isN ? sy + sh / 2 : sy - sh / 2);
+      const draggedStartX = isW ? sx - sw / 2 : sx + sw / 2;
+      const draggedStartY = isN ? sy - sh / 2 : sy + sh / 2;
+
+      let newDraggedX = draggedStartX + dx;
+      let newDraggedY = draggedStartY + dy;
+
+      if (lockAspect) {
+        // Pick the dominant axis (largest proportional change) and project
+        // the other dimension onto the original aspect ratio.
+        const aspect = sw / sh;
+        const candW = Math.abs(newDraggedX - fixedX) * (fromCenter ? 2 : 1);
+        const candH = Math.abs(newDraggedY - fixedY) * (fromCenter ? 2 : 1);
+        if (candW / sw >= candH / sh) {
+          const newH = candW / aspect;
+          newDraggedY = fixedY + (isN ? -newH / (fromCenter ? 2 : 1) : newH / (fromCenter ? 2 : 1));
+        } else {
+          const newW = candH * aspect;
+          newDraggedX = fixedX + (isW ? -newW / (fromCenter ? 2 : 1) : newW / (fromCenter ? 2 : 1));
+        }
       }
 
-      newW = Math.max(0.05, Math.min(0.95, newW));
-      newH = Math.max(0.05, Math.min(0.95, newH));
-      newX = Math.max(0, Math.min(1, newX));
-      newY = Math.max(0, Math.min(1, newY));
+      const MIN = 0.05;
+      if (isW) newDraggedX = Math.max(0, Math.min(fixedX - MIN, newDraggedX));
+      else     newDraggedX = Math.min(1, Math.max(fixedX + MIN, newDraggedX));
+      if (isN) newDraggedY = Math.max(0, Math.min(fixedY - MIN, newDraggedY));
+      else     newDraggedY = Math.min(1, Math.max(fixedY + MIN, newDraggedY));
 
-      setGuideX(null);
-      setGuideY(null);
+      // Build bounds — for from-center, mirror across the center.
+      let newLeft: number, newRight: number, newTop: number, newBottom: number;
+      if (fromCenter) {
+        const halfW = Math.abs(newDraggedX - sx);
+        const halfH = Math.abs(newDraggedY - sy);
+        newLeft = sx - halfW;
+        newRight = sx + halfW;
+        newTop = sy - halfH;
+        newBottom = sy + halfH;
+      } else {
+        newLeft = Math.min(fixedX, newDraggedX);
+        newRight = Math.max(fixedX, newDraggedX);
+        newTop = Math.min(fixedY, newDraggedY);
+        newBottom = Math.max(fixedY, newDraggedY);
+      }
+
+      const newW = newRight - newLeft;
+      const newH = newBottom - newTop;
+      const newX = (newLeft + newRight) / 2;
+      const newY = (newTop + newBottom) / 2;
+
+      onGuidesChange?.({ x: null, y: null });
 
       onChange({
         ...image,
@@ -164,7 +229,15 @@ export function ImageDragOverlay({
       });
     };
 
-    const handleMouseUp = () => setDragging(null);
+    const handleMouseUp = () => {
+      const wasMove = dragging === "move";
+      setDragging(null);
+      onEditEnd?.();
+      // Always clear snap guides on release — last drag value would
+      // otherwise stay visible on canvas.
+      onGuidesChange?.({ x: null, y: null });
+      if (wasMove) onEndDrag?.();
+    };
 
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
@@ -172,7 +245,7 @@ export function ImageDragOverlay({
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [dragging, image, onChange, otherSnapX, otherSnapY]);
+  }, [dragging, image, onChange, otherImages, extraSnapBboxes, onGuidesChange, onEditEnd, onMoveBy, onEndDrag]);
 
   const corners: { key: DragMode; cx: number; cy: number; cursor: string }[] = [
     { key: "nw", cx: imgLeft, cy: imgTop, cursor: "nwse-resize" },
@@ -181,83 +254,73 @@ export function ImageDragOverlay({
     { key: "se", cx: imgLeft + imgW, cy: imgTop + imgH, cursor: "nwse-resize" },
   ];
 
-  // Guide line style — distinguish canvas guides from image-snap guides
-  const guideStyle = (pos: number): React.CSSProperties => {
-    const isCanvasGuide = GUIDE_TARGETS.includes(pos);
-    const isCenter = pos === 0.5;
-    return {
-      pointerEvents: "none",
-      zIndex: 12,
-      position: "absolute",
-      background: isCanvasGuide
-        ? (isCenter ? "rgba(255, 0, 120, 0.7)" : "rgba(255, 0, 120, 0.35)")
-        : "rgba(0, 180, 255, 0.6)", // blue for image-to-image snap
-    };
-  };
-
   return (
     <div
       ref={overlayRef}
       onMouseDown={handleBgClick}
+      data-canvas-overlay="image"
       style={{
         position: "absolute",
         inset: 0,
-        zIndex: 10,
-        pointerEvents: selected ? "auto" : "none",
+        // Container itself must not capture pointer events — otherwise it
+        // blocks clicks on other ImageDragOverlay siblings. Only the visible
+        // bounding-box and handles below opt back in via pointerEvents: "auto".
+        pointerEvents: "none",
+        // Track the image's actual layer z so the overlay's bbox sits just
+        // above the image (catches clicks) but still below higher-layer text
+        // when the user has put text on top of the photo.
+        zIndex: (zIndex ?? 10) + (selected ? 1 : 0),
         cursor: selected && !dragging ? "default" : undefined,
       }}
     >
-      {/* Vertical snap guide */}
-      {guideX !== null && (
-        <div style={{
-          ...guideStyle(guideX),
-          left: Math.round(canvasWidth * guideX) - 1,
-          top: 0,
-          width: 2,
-          height: canvasHeight,
-        }} />
-      )}
-
-      {/* Horizontal snap guide */}
-      {guideY !== null && (
-        <div style={{
-          ...guideStyle(guideY),
-          top: Math.round(canvasHeight * guideY) - 1,
-          left: 0,
-          height: 2,
-          width: canvasWidth,
-        }} />
-      )}
-
       {/* Image bounding box — always clickable */}
       <div
+        data-canvas-element={`image:${image.id}`}
+        data-locked={image.locked ? "true" : undefined}
         onMouseDown={(e) => {
           if (e.button === 2) return; // let contextmenu handle right-click
+          e.preventDefault();
           e.stopPropagation();
-          if (!selected) {
-            onSelect();
-          } else {
-            startDrag("move", e);
+          // Locked images are still selectable on click — just no drag.
+          if (image.locked) {
+            if (!selected) onSelect();
+            return;
           }
+          if (!selected) onSelect();
+          startDrag("move", e);
         }}
         onContextMenu={handleContextMenu}
+        onDoubleClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onEnterCrop?.();
+        }}
         style={{
           position: "absolute",
           left: imgLeft,
           top: imgTop,
           width: imgW,
           height: imgH,
-          cursor: selected ? (dragging === "move" ? "grabbing" : "grab") : "pointer",
-          border: selected ? "2px solid rgba(255, 0, 40, 0.6)" : "none",
-          borderRadius: image.shape === "circle" ? "50%" : 16,
+          cursor: image.locked ? "default" : selected ? (dragging === "move" ? "grabbing" : "grab") : "pointer",
+          // Outline (not border) — outline doesn't affect layout, sits OUTSIDE
+          // the box, and accepts dashed style. Solid for single-select (the
+          // resize-handle case), dashed for multi-select to match text.
+          outline: selected
+            ? resizable
+              ? "3px solid #FF6B00"
+              : "4px dashed #FF6B00"
+            : "none",
+          outlineOffset: selected ? 4 : 0,
+          boxShadow: selected && !resizable ? "0 0 0 2px rgba(255, 107, 0, 0.25)" : "none",
+          borderRadius: `${((image.cornerRadius ?? (image.shape === "circle" ? 50 : 4)) / 100) * Math.min(imgW, imgH)}px`,
           pointerEvents: "auto",
           boxSizing: "border-box",
-          transition: dragging ? "none" : "border 0.15s ease",
+          transition: dragging ? "none" : "outline 0.15s ease, box-shadow 0.15s ease",
         }}
       />
 
-      {/* Corner resize handles — only when selected */}
-      {selected && corners.map(({ key, cx, cy, cursor }) => (
+      {/* Corner resize handles — only when this image is the sole selection */}
+      {resizable && corners.map(({ key, cx, cy, cursor }) => (
         <div
           key={key}
           onMouseDown={(e) => startDrag(key, e)}
@@ -277,67 +340,6 @@ export function ImageDragOverlay({
         />
       ))}
 
-      {/* Right-click context menu */}
-      {contextMenu && selected && (
-        <div
-          onMouseDown={(e) => e.stopPropagation()}
-          style={{
-            position: "absolute",
-            left: contextMenu.x,
-            top: contextMenu.y,
-            zIndex: 20,
-            background: "rgba(0, 0, 0, 0.85)",
-            backdropFilter: "blur(12px)",
-            border: "1px solid rgba(255, 255, 255, 0.15)",
-            borderRadius: 8,
-            padding: 4,
-            minWidth: 140,
-          }}
-        >
-          {onDuplicate && (
-            <button
-              onClick={() => { onDuplicate(); setContextMenu(null); }}
-              style={{
-                display: "block",
-                width: "100%",
-                padding: "6px 12px",
-                background: "none",
-                border: "none",
-                color: "rgba(255, 255, 255, 0.8)",
-                fontSize: 13,
-                textAlign: "left",
-                cursor: "pointer",
-                borderRadius: 4,
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
-            >
-              Duplicate
-            </button>
-          )}
-          {onDelete && (
-            <button
-              onClick={() => { onDelete(); setContextMenu(null); }}
-              style={{
-                display: "block",
-                width: "100%",
-                padding: "6px 12px",
-                background: "none",
-                border: "none",
-                color: "rgba(255, 80, 80, 0.9)",
-                fontSize: 13,
-                textAlign: "left",
-                cursor: "pointer",
-                borderRadius: 4,
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255, 0, 40, 0.15)")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
-            >
-              Delete
-            </button>
-          )}
-        </div>
-      )}
     </div>
   );
 }

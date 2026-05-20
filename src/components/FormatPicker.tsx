@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Monitor, Square, Smartphone, Facebook, Twitter, Ruler, Linkedin, Presentation } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Square, Smartphone, Ruler, Presentation } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { PlatformFormat } from "@/types/template";
 
@@ -14,18 +14,19 @@ interface FormatPickerProps {
 }
 
 const formats = [
-  { id: "instagram" as const, label: "Instagram", sublabel: "1080×1080", icon: Square },
-  { id: "story" as const, label: "Story", sublabel: "1080×1920", icon: Smartphone },
-  { id: "linkedin" as const, label: "LinkedIn", sublabel: "1200×627", icon: Linkedin },
-  { id: "facebook" as const, label: "Facebook", sublabel: "1200×630", icon: Facebook },
-  { id: "twitter" as const, label: "Twitter/X", sublabel: "1600×900", icon: Twitter },
+  { id: "square" as const, label: "Square", sublabel: "1500×1500", icon: Square },
   { id: "presentation" as const, label: "Presentation", sublabel: "1920×1080", icon: Presentation },
+  { id: "story" as const, label: "Instagram Story", sublabel: "1080×1920", icon: Smartphone },
   { id: "custom" as const, label: "Custom", sublabel: "", icon: Ruler },
 ];
 
 export function FormatPicker({ value, onChange, customWidth, customHeight, onCustomSizeChange }: FormatPickerProps) {
   const [widthInput, setWidthInput] = useState(String(customWidth));
   const [heightInput, setHeightInput] = useState(String(customHeight));
+
+  // Keep local input state in sync if parent updates (e.g. on reset)
+  useEffect(() => { setWidthInput(String(customWidth)); }, [customWidth]);
+  useEffect(() => { setHeightInput(String(customHeight)); }, [customHeight]);
 
   const applyCustomSize = () => {
     const w = Math.max(100, Math.min(4096, parseInt(widthInput) || 1080));
@@ -42,6 +43,8 @@ export function FormatPicker({ value, onChange, customWidth, customHeight, onCus
           <button
             key={f.id}
             onClick={() => onChange(f.id)}
+            aria-label={`Set format to ${f.label}${f.sublabel ? ` ${f.sublabel}` : ""}`}
+            aria-pressed={value === f.id}
             className={cn(
               "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-all duration-200",
               value === f.id
@@ -67,6 +70,7 @@ export function FormatPicker({ value, onChange, customWidth, customHeight, onCus
             placeholder="Width"
             min={100}
             max={4096}
+            aria-label="Custom width in pixels"
             className="w-20 px-2 py-1.5 rounded-md bg-white/5 border border-white/10 text-white text-xs text-center focus:outline-none focus:border-[#FF0028]/50"
           />
           <span className="text-white/30 text-xs">×</span>
@@ -79,9 +83,11 @@ export function FormatPicker({ value, onChange, customWidth, customHeight, onCus
             placeholder="Height"
             min={100}
             max={4096}
+            aria-label="Custom height in pixels"
             className="w-20 px-2 py-1.5 rounded-md bg-white/5 border border-white/10 text-white text-xs text-center focus:outline-none focus:border-[#FF0028]/50"
           />
           <span className="text-white/40 text-xs">px</span>
+          <span className="text-[10px] text-white/30 ml-auto">Press Enter to apply</span>
         </div>
       )}
     </div>

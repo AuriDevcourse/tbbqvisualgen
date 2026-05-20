@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { toPng, toCanvas } from "html-to-image";
+import { toPng, toJpeg, toCanvas } from "html-to-image";
 import { toast } from "sonner";
+
+export type ExportFormat = "png" | "jpeg";
 
 export function useExport() {
   const exportRef = useRef<HTMLDivElement>(null);
@@ -10,7 +12,7 @@ export function useExport() {
   const [isExportingVideo, setIsExportingVideo] = useState(false);
   const [videoProgress, setVideoProgress] = useState(0);
 
-  const exportImage = useCallback(async (filename: string) => {
+  const exportImage = useCallback(async (filename: string, format: ExportFormat = "png") => {
     if (!exportRef.current) return;
     setIsExporting(true);
 
@@ -23,19 +25,25 @@ export function useExport() {
         pixelRatio: 1,
         cacheBust: true,
         skipFonts: false,
+        // JPEG has no alpha — flatten onto warm-black so transparent corners
+        // (e.g. behind the canvas-rounded preview) don't render as pure black.
+        backgroundColor: format === "jpeg" ? "#15110e" : undefined,
+        quality: 0.95,
       };
+
+      const render = format === "jpeg" ? toJpeg : toPng;
 
       // Double-render trick: first pass forces font loading into the canvas,
       // second pass captures with fonts properly rendered
-      await toPng(exportRef.current, opts);
+      await render(exportRef.current, opts);
       await new Promise((r) => setTimeout(r, 200));
-      const dataUrl = await toPng(exportRef.current, opts);
+      const dataUrl = await render(exportRef.current, opts);
 
       const link = document.createElement("a");
       link.download = filename;
       link.href = dataUrl;
       link.click();
-      toast.success("PNG exported");
+      toast.success(`${format === "jpeg" ? "JPG" : "PNG"} exported`);
     } catch (error) {
       console.error("Export failed:", error);
       toast.error("Export failed — try pausing the background first");

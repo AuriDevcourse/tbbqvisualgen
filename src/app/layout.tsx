@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Archivo } from "next/font/google";
+import { Inter, Onest } from "next/font/google";
 import { Toaster } from "sonner";
 import { AgentationOverlay } from "@/components/agentation";
 import "./globals.css";
@@ -9,10 +9,9 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
-const archivo = Archivo({
-  variable: "--font-archivo",
+const onest = Onest({
+  variable: "--font-onest",
   subsets: ["latin"],
-  axes: ["wdth"],
 });
 
 export const metadata: Metadata = {
@@ -27,7 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={`${inter.variable} ${archivo.variable} antialiased`}>
+      <body className={`${inter.variable} ${onest.variable} antialiased`}>
         {children}
         <Toaster
           theme="dark"

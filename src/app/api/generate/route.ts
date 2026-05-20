@@ -121,19 +121,23 @@ Keep it MINIMAL. Less is more.
 
 - showTopBar: Thin gradient strip along top. Subtle structure element. Use rarely.
 
-## BACKGROUNDS (liquid metal shaders)
-- lm1: Elegant gold — warm, flowing (professional announcements)
-- lm2: Warm amber — smooth (partner content, formal)
-- lm3: Creative magenta — organic shapes (creative/community)
-- lm4: Energetic copper — diagonal flow (high-energy stats, launches)
-- lm5: Bold red-gold — diamond (milestones, celebrations)
-- lm6: Deep copper — subtle (sophisticated, LP/investor content)
-- lm7: Crimson ember — deep red glow from darkness (dramatic, bold statements)
-- lm8: Midnight gold — sparse gold on near-black (premium, minimalist)
-- lm9: Volcanic — fiery orange veins on dark (high-impact, launches)
-- lm10: Dark flame — red-orange flicker in deep black (intense, urgent)
-- lm11: Amber noir — rich amber on blackout (luxurious, exclusive)
-- lm12: Scarlet edge — sharp red streaks on void (edgy, disruptive)
+## BACKGROUNDS (liquid metal gradients — 9 options, three themed groups)
+YELLOW group — warm, gold, optimistic. Use for: announcements, partner content, celebrations, premium feel.
+- lm1: Honey Glow — bright gold flow (default professional)
+- lm2: Sunbeam — pale soft yellow (light, airy, hopeful)
+- lm3: Amber Pulse — warm amber depth (stats, milestones)
+
+RED group — bold, energetic, urgent. Use for: launches, CTAs, big statements, brand-punch.
+- lm4: Crimson Flow — bright crimson sweep (high energy)
+- lm5: Ember Red — deep red glow (smouldering, premium)
+- lm6: Scarlet Tide — sharp red streaks (edgy, urgent)
+
+PURPLE group — creative, modern, distinctive. Use for: community/creative content, alternative tone, novelty.
+- lm7: Royal Plum — deep regal purple (sophisticated)
+- lm8: Twilight Violet — soft violet (calm, premium)
+- lm9: Mystic Magenta — magenta-purple (creative, vibrant)
+
+VARIETY RULE: rotate across the three groups depending on tone. Don't always pick yellow.
 
 ## LOGO
 - showLogo: true (almost always)
@@ -177,28 +181,28 @@ Available collageLayout values (add to JSON config when using USE_PHOTO):
 ## EXAMPLES — notice how each uses a DIFFERENT layout
 
 User: "Speaker announcement for TechBBQ 2026"
-→ showGlassCard: true, glassCardPosition: "center-left", headline: "SPEAKER\\nANNOUNCEMENT", subtitle: "TECHBBQ 2026", alignment: "left", scale: 1.1, backgroundId: "lm1", logoPosition: "bottom-right"
+→ showGlassCard: true, glassCardPosition: "center-left", headline: "SPEAKER\\nANNOUNCEMENT", subtitle: "TECHBBQ 2026", alignment: "left", headlineScale: 1.1, backgroundId: "lm1", logoPosition: "bottom-right"
 
 User: "We got 15 million DKK investment from Industriens Fond"
-→ showGlassCard: false, headline: "DKK 15M.\\nSECURED", subtitle: "FUELING THE NORDIC ECOSYSTEM", partnerName: "INDUSTRIENS FOND", scale: 1.3, alignment: "left", textPosition: "bottom", backgroundId: "lm4", logoPosition: "top-right"
+→ showGlassCard: false, headline: "DKK 15M.\\nSECURED", subtitle: "FUELING THE NORDIC ECOSYSTEM", partnerName: "INDUSTRIENS FOND", headlineScale: 1.3, alignment: "left", textPosition: "bottom", backgroundId: "lm4", logoPosition: "top-right"
 
 User: "Pre-register for the startup program"
-→ showGlassCard: true, glassCardPosition: "bottom-center", headline: "PRE-REGISTER", subtitle: "STARTUP PROGRAM — TECHBBQ 2026", scale: 1.2, backgroundId: "lm5", logoPosition: "top-left"
+→ showGlassCard: true, glassCardPosition: "bottom-center", headline: "PRE-REGISTER", subtitle: "STARTUP PROGRAM — TECHBBQ 2026", headlineScale: 1.2, backgroundId: "lm7", logoPosition: "top-left"
 
 User: "Last chance to pre-register, 50% discount, closes Sunday"
-→ showGlassCard: false, headline: "LAST CHANCE", subtitle: "PRE-REGISTRATION CLOSES SUNDAY — 50% DISCOUNT", scale: 1.3, alignment: "left", textPosition: "bottom", backgroundId: "lm3", logoPosition: "bottom-right"
+→ showGlassCard: false, headline: "LAST CHANCE", subtitle: "PRE-REGISTRATION CLOSES SUNDAY — 50% DISCOUNT", headlineScale: 1.3, alignment: "left", textPosition: "bottom", backgroundId: "lm6", logoPosition: "bottom-right"
 
 User: "1731 investors, 28% increase"
-→ showGlassCard: false, headline: "1,731\\nINVESTORS", subtitle: "28% INCREASE — OUR LARGEST GATHERING", scale: 1.5, alignment: "right", textPosition: "center", backgroundId: "lm4", logoPosition: "bottom-left"
+→ showGlassCard: false, headline: "1,731\\nINVESTORS", subtitle: "28% INCREASE — OUR LARGEST GATHERING", headlineScale: 1.5, alignment: "right", textPosition: "center", backgroundId: "lm3", logoPosition: "bottom-left"
 
 User: "LP Forum recap with HSBC"
-→ showGlassCard: true, glassCardPosition: "center-right", headline: "LP FORUM\\n2025", subtitle: "BUILDING THE VENTURE ECOSYSTEM", partnerName: "HSBC INNOVATION BANKING", alignment: "left", scale: 1.1, backgroundId: "lm6", logoPosition: "top-left"
+→ showGlassCard: true, glassCardPosition: "center-right", headline: "LP FORUM\\n2025", subtitle: "BUILDING THE VENTURE ECOSYSTEM", partnerName: "HSBC INNOVATION BANKING", alignment: "left", headlineScale: 1.1, backgroundId: "lm8", logoPosition: "top-left"
 
 User: "TechBBQ at TechArena Stockholm 2026"
-→ showGlassCard: true, glassCardPosition: "bottom-center", headline: "STOCKHOLM BOUND", subtitle: "TECHBBQ AT TECHARENA 2026 — FEB 11-12", scale: 1.2, backgroundId: "lm2", logoPosition: "top-right"
+→ showGlassCard: true, glassCardPosition: "bottom-center", headline: "STOCKHOLM BOUND", subtitle: "TECHBBQ AT TECHARENA 2026 — FEB 11-12", headlineScale: 1.2, backgroundId: "lm2", logoPosition: "top-right"
 
 User: [FULL POST] "Big news for TechBBQ 🚀 Our organisation has secured approximately DKK 34m..."
-→ showGlassCard: false, headline: "DKK 34M.\\nSECURED", subtitle: "SCALING EVENT & STARTUP ACTIVITIES", partnerName: null, scale: 1.3, alignment: "left", textPosition: "bottom", backgroundId: "lm5", logoPosition: "top-right"
+→ showGlassCard: false, headline: "DKK 34M.\\nSECURED", subtitle: "SCALING EVENT & STARTUP ACTIVITIES", partnerName: null, headlineScale: 1.3, alignment: "left", textPosition: "bottom", backgroundId: "lm5", logoPosition: "top-right"
 (Note: multiple partners mentioned — don't pick just one for the pill.)
 
 ## OUTPUT FORMAT
@@ -262,8 +266,13 @@ export async function POST(req: NextRequest) {
 
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
-    return NextResponse.json({ error: "Missing OPENROUTER_API_KEY" }, { status: 500 });
+    return NextResponse.json({ error: "AI service not configured (missing API key)" }, { status: 500 });
   }
+
+  const origin =
+    req.headers.get("origin") ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    "http://localhost:3000";
 
   try {
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -271,7 +280,7 @@ export async function POST(req: NextRequest) {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
-        "HTTP-Referer": "http://localhost:3000",
+        "HTTP-Referer": origin,
         "X-Title": "TechBBQ Visual Generator",
       },
       body: JSON.stringify({
@@ -287,25 +296,45 @@ export async function POST(req: NextRequest) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("OpenRouter error:", errorText);
-      return NextResponse.json({ error: "AI generation failed" }, { status: 500 });
+      console.error("OpenRouter error:", response.status, errorText);
+      const friendly =
+        response.status === 401 ? "AI auth failed — check API key" :
+        response.status === 429 ? "Rate limit hit — wait a moment and try again" :
+        response.status >= 500 ? "AI service is down — try again shortly" :
+        "AI generation failed";
+      return NextResponse.json({ error: friendly }, { status: 500 });
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || "";
+    const content: string = data.choices?.[0]?.message?.content || "";
 
-    // Try to extract JSON from the response (handle markdown code blocks)
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    // Prefer the fenced ```json ... ``` block; fall back to any {…} match.
+    const fenced = content.match(/```json\s*([\s\S]+?)\s*```/);
+    const jsonString = fenced
+      ? fenced[1].trim()
+      : content.match(/\{[\s\S]*\}/)?.[0] || null;
 
-    if (!jsonMatch) {
+    if (!jsonString) {
       // No JSON = AI is just chatting (asking questions, suggesting options)
       return NextResponse.json({ chatOnly: true, note: content.replace(/```json|```/g, "").trim() });
     }
 
-    const design = JSON.parse(jsonMatch[0]);
+    let design: Record<string, unknown>;
+    try {
+      design = JSON.parse(jsonString);
+    } catch (parseErr) {
+      console.error("JSON parse failed:", parseErr, "raw:", jsonString.slice(0, 500));
+      // Fall back to chat-only so the user still sees the model's reasoning
+      return NextResponse.json({
+        chatOnly: true,
+        note: content.replace(/```json|```/g, "").trim() || "I couldn't generate a valid design — try rephrasing.",
+      });
+    }
 
     // Extract creative brief (text outside JSON) for the chat
-    const note = content.replace(jsonMatch[0], "").replace(/```json|```/g, "").trim();
+    const note = fenced
+      ? content.replace(fenced[0], "").trim()
+      : content.replace(jsonString, "").replace(/```json|```/g, "").trim();
 
     // Extract logo suggestions like [SUGGEST_LOGO:Company Name]
     const logoSuggestions: string[] = [];
