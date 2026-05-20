@@ -1,4 +1,4 @@
-export type PlatformFormat = "linkedin" | "instagram" | "story" | "facebook" | "twitter" | "presentation" | "custom";
+export type PlatformFormat = "square" | "presentation" | "story" | "custom";
 
 export interface FormatDimensions {
   width: number;
@@ -7,73 +7,282 @@ export interface FormatDimensions {
 }
 
 export const FORMAT_DIMENSIONS: Record<PlatformFormat, FormatDimensions> = {
-  instagram: { width: 1080, height: 1080, label: "Instagram (1080×1080)" },
-  story: { width: 1080, height: 1920, label: "Story (1080×1920)" },
-  linkedin: { width: 1200, height: 627, label: "LinkedIn (1200×627)" },
-  facebook: { width: 1200, height: 630, label: "Facebook (1200×630)" },
-  twitter: { width: 1600, height: 900, label: "Twitter/X (1600×900)" },
+  square: { width: 1500, height: 1500, label: "Square (1500×1500)" },
   presentation: { width: 1920, height: 1080, label: "Presentation (1920×1080)" },
+  story: { width: 1080, height: 1920, label: "Instagram Story (1080×1920)" },
   custom: { width: 1080, height: 1080, label: "Custom" },
 };
 
-export const BACKGROUND_OPTIONS = [
-  { id: "lm1", label: "Elegant Gold" },
-  { id: "lm2", label: "Warm Amber" },
-  { id: "lm3", label: "Creative Magenta" },
-  { id: "lm4", label: "Energetic Copper" },
-  { id: "lm5", label: "Bold Red-Gold" },
-  { id: "lm6", label: "Deep Copper" },
-  { id: "lm7", label: "Crimson Ember" },
-  { id: "lm8", label: "Midnight Gold" },
-  { id: "lm9", label: "Volcanic" },
-  { id: "lm10", label: "Dark Flame" },
-  { id: "lm11", label: "Amber Noir" },
-  { id: "lm12", label: "Scarlet Edge" },
+// Background labels are kept in sync with the BG_REGISTRY in CanvasBackground.tsx.
+// This array preserves the picker order and is the source of truth for what
+// the user sees in the BackgroundPicker / Layers panel.
+export const BACKGROUND_OPTIONS: { id: string; label: string }[] = [
+  // Yellow / gold liquid-metal
+  { id: "lm1", label: "Honey Glow" },
+  { id: "lm2", label: "Sunbeam" },
+  { id: "lm3", label: "Amber Pulse" },
+  // Red / lava liquid-metal
+  { id: "lm4", label: "Crimson Flow" },
+  { id: "lm5", label: "Ember Red" },
+  { id: "lm6", label: "Scarlet Tide" },
+  // Purple / magenta liquid-metal
+  { id: "lm7", label: "Royal Plum" },
+  { id: "lm8", label: "Twilight Violet" },
+  { id: "lm9", label: "Mystic Magenta" },
+  // Shaped variants — same liquid-metal shader, different geometry.
+  { id: "lm10", label: "Lava Bloom" },
+  { id: "lm11", label: "Solar Crown" },
+  { id: "lm12", label: "Daisy Ember" },
+  { id: "lm13", label: "Diamond Ruby" },
+  // Cool palette for variety
+  { id: "lm14", label: "Cyber Teal" },
+  { id: "lm15", label: "Ocean Deep" },
+  { id: "lm16", label: "Forest Mist" },
+  { id: "lm17", label: "Rose Gold" },
+  { id: "lm18", label: "Midnight Sky" },
 ];
 
+/**
+ * A single piece of text on the canvas. Each TextElement is its own layer —
+ * the user can add as many as they want, each with its own content, size,
+ * color, weight and position. Replaces the old fixed headline/subtitle/etc.
+ */
+export interface TextElement {
+  id: string;
+  content: string;
+  /** Font size in px at canvas resolution. */
+  fontSize: number;
+  /** Position on canvas (0–1 fractional, center anchor). */
+  position: { x: number; y: number };
+  /** Optional color (CSS color string). When undefined and `gradient` is false, defaults to white. */
+  color?: string;
+  /** When true, the brand gold→red gradient overrides `color`. */
+  gradient?: boolean;
+  /** Font weight (400–900). Default 700. */
+  weight?: number;
+  /** Uppercase the rendered text. Default false. */
+  uppercase?: boolean;
+  /** Letter spacing in px. */
+  letterSpacing?: number;
+  /** Text alignment when content wraps across multiple lines. */
+  align?: "left" | "center" | "right";
+  /** Visibility flag — when true, the layer renders nothing on the canvas. */
+  hidden?: boolean;
+  /** When true the layer can't be selected via marquee or dragged on canvas
+   *  (still toggleable via the Layers panel). */
+  locked?: boolean;
+  /** Font face on the canvas. Defaults to "onest". */
+  font?: "onest" | "inter";
+  /** Line height as a multiple of font size. Default 1.1. */
+  lineHeight?: number;
+  /** Rotation in degrees. Default 0. */
+  rotation?: number;
+  /** Italic style. Default false. */
+  italic?: boolean;
+  /** 0–1 opacity. Default 1. */
+  opacity?: number;
+  /** Gaussian blur, fractional (multiplied by canvas width when rendered). */
+  blur?: number;
+  /** Shared group identifier — clicking any member selects the whole group. */
+  groupId?: string;
+}
+
+/** A vector shape on the canvas — rectangle / circle / line / star. */
+export type ShapeType = "rectangle" | "circle" | "line" | "star";
+
+export interface ShapeBorderRadii {
+  tl: number;
+  tr: number;
+  br: number;
+  bl: number;
+}
+
+export interface ShapeElement {
+  id: string;
+  type: ShapeType;
+  /** Center position in 0–1 fractional canvas coords. */
+  x: number;
+  y: number;
+  /** Size in 0–1 fractional canvas coords. */
+  width: number;
+  height: number;
+  /** Filled body or outline-only. */
+  fillType: "fill" | "outline";
+  /** Stroke width in 0–1 fractional (relative to canvas width). */
+  strokeWidth: number;
+  colorType: "solid" | "gradient";
+  /** Primary color (also the stroke color when `fillType === "outline"`). */
+  color1: string;
+  /** Secondary color, only used when `colorType === "gradient"`. */
+  color2: string;
+  /** 0–1. */
+  opacity: number;
+  /** Gaussian blur, fractional (multiplied by canvas width when rendered). */
+  blur: number;
+  /** Rotation in degrees. */
+  rotation: number;
+  /** Visibility flag — hidden shapes don't render. */
+  hidden?: boolean;
+  /** When true the shape can't be selected via marquee or dragged on canvas. */
+  locked?: boolean;
+  /** Shared group identifier — clicking any member selects the whole group. */
+  groupId?: string;
+  // ── Per-type ────────────────────────────────────────────────────────────
+  /** Rectangle only. Either a single radius (uniform) or per-corner. Stored
+   *  as a fraction of the shorter side: 0 = sharp, 0.5 = pill. */
+  borderRadius?: number | ShapeBorderRadii;
+  /** Star only. Number of points. */
+  spikes?: number;
+  /** Star only. Inner-radius ratio (0–1) — 0 = sharp spikes, 1 = circle. */
+  innerRadius?: number;
+  /** When set, the shape acts as an image-upload slot — clicking opens a file
+   *  picker, and on upload the shape is replaced with a CanvasImage at the
+   *  same position/size. Used by presets (e.g. "Fireside Chat" moderator &
+   *  speaker slots). The label is rendered centered inside the shape.
+   *
+   *  `mode` controls how the uploaded image fits the slot:
+   *    - "cover" (default): crops to fill — for headshots, hero photos
+   *    - "contain": fits whole image inside, no crop — for logos / any
+   *      asset with a non-matching aspect ratio you want fully visible */
+  imagePlaceholder?: { label: string; mode?: "cover" | "contain" };
+}
+
+/** Defaults for a freshly-added image-placeholder slot — rounded rect at
+ *  canvas center, sized as a typical portrait headshot. Renders with a dashed
+ *  border + "Upload photo" button; click swaps it for an uploaded image. */
+export function newImagePlaceholder(label = "PHOTO"): ShapeElement {
+  return {
+    id: `shape-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    type: "rectangle",
+    x: 0.5,
+    y: 0.5,
+    width: 0.18,
+    height: 0.26,
+    fillType: "fill",
+    strokeWidth: 0.004,
+    colorType: "solid",
+    color1: "rgba(255,255,255,0.08)",
+    color2: "#FF6B00",
+    opacity: 1,
+    blur: 0,
+    rotation: 0,
+    borderRadius: 0.06,
+    imagePlaceholder: { label },
+  };
+}
+
+/** Defaults for a freshly-added shape — placed at canvas center. */
+export function newShapeElement(type: ShapeType): ShapeElement {
+  const base: ShapeElement = {
+    id: `shape-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    type,
+    x: 0.5,
+    y: 0.5,
+    width: 0.25,
+    height: 0.25,
+    fillType: "fill",
+    strokeWidth: 0.004,
+    colorType: "solid",
+    color1: "#FFFFFF",
+    color2: "#FF6B00",
+    opacity: 1,
+    blur: 0,
+    rotation: 0,
+  };
+  if (type === "rectangle") return { ...base, borderRadius: 0 };
+  if (type === "line") return { ...base, height: 0.006 };
+  if (type === "star") return { ...base, spikes: 5, innerRadius: 0.5 };
+  return base;
+}
+
 export interface DesignConfig {
-  headline: string;
-  subtitle: string;
-  additionalText?: string;
   backgroundId: string;
-  partnerName?: string;
 
-  // Layout
-  alignment: "left" | "center" | "right";
-  textPosition: "center" | "bottom" | "top";
-  headlineScale: number;
+  /** Multiple text layers — each independently positioned, sized and styled. */
+  texts: TextElement[];
 
-  // Glass card — frosted dark container for text (premium look)
-  showGlassCard?: boolean;
-  glassCardPosition?: "center" | "top-center" | "bottom-center" | "center-left" | "center-right";
+  /** Vector shapes (rectangle / circle / line / star). */
+  shapes?: ShapeElement[];
 
   // Decorative elements
   showTopBar?: boolean;
 
-  // Logo
+  // TechBBQ Logo
   logoStyle?: "red" | "white" | "gradient";
   showLogo?: boolean;
   logoPosition?: "top-left" | "top-center" | "top-right" | "bottom-left" | "bottom-center" | "bottom-right";
+  /** When set, overrides `logoPosition`: fractional center-anchor coords from dragging. */
+  logoCustomPosition?: { x: number; y: number };
+  /** Multiplier applied to the logo's default rendered height. 1 = default,
+   *  0.5 = half size, 2 = double. Clamped to [0.3, 3.0] in the UI. */
+  logoScale?: number;
 
-  // Multi-image canvas layout (AI-controlled)
+  // Multi-image canvas layout (legacy AI field)
   collageLayout?: CollageLayout;
 
-  // Headline style
-  headlineGradient?: boolean; // true = gradient text, false = solid white (default: true)
-
-  // Overlay (manual only — AI doesn't control these)
+  // Overlay (manual)
   overlayColor?: string;
   overlayOpacity?: number;
   overlayBlend?: string;
+
+  // Layer-system flags
+  hideOverlay?: boolean;
+
+  /**
+   * Explicit layer stack order — bottom to top. Entries use stable ids:
+   *   - `overlay`, `tbbqLogo`
+   *   - `image:${canvasImage.id}` for each canvas image
+   *   - `text:${textElement.id}` for each text layer
+   */
+  layerOrder?: string[];
+}
+
+/**
+ * Reconcile a stored layerOrder with the currently-available layers:
+ *   - drop entries that no longer exist (e.g. a deleted image or text)
+ *   - insert new entries at their default stack position so a fresh text/photo
+ *     lands at a predictable place rather than always force-pushed to the top.
+ * Returns the effective order to use for rendering, bottom-to-top.
+ */
+export function reconcileLayerOrder(stored: string[] | undefined, available: string[]): string[] {
+  if (!stored?.length) return available;
+  const storedSet = new Set(stored);
+  const result = stored.filter((id) => available.includes(id));
+  for (let i = 0; i < available.length; i++) {
+    if (storedSet.has(available[i])) continue;
+    const missingId = available[i];
+    // Anchor: the next default-neighbor that already exists in `result`. Insert
+    // the missing layer just below that anchor (i.e. at the anchor's index).
+    let insertAt = result.length; // fallback: top of stack
+    for (let j = i + 1; j < available.length; j++) {
+      const idx = result.indexOf(available[j]);
+      if (idx !== -1) { insertAt = idx; break; }
+    }
+    result.splice(insertAt, 0, missingId);
+  }
+  return result;
 }
 
 export type CollageLayout = "single" | "side-by-side" | "grid-2x2" | "top-bottom" | "hero-with-thumbnails";
 
 export const DEFAULT_DESIGN: DesignConfig = {
-  headline: "",
-  subtitle: "",
   backgroundId: "lm1",
-  alignment: "center",
-  textPosition: "center",
-  headlineScale: 1.0,
+  texts: [],
+  showLogo: true,
+  logoPosition: "bottom-center",
+  logoStyle: "red",
 };
+
+/** Default values for a newly-created TextElement. */
+export function newTextElement(content = "TEXT"): TextElement {
+  return {
+    id: `text-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    content,
+    fontSize: 96,
+    position: { x: 0.5, y: 0.5 },
+    weight: 700,
+    uppercase: false,
+    align: "center",
+    gradient: false,
+  };
+}
