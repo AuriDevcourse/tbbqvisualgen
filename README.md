@@ -1,36 +1,41 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TechBBQ Visual Generator
 
-## Getting Started
+Internal tool for the TechBBQ team to generate on-brand social-media visuals through a chat with an AI creative director. The chat drives a live preview built from liquid-metal animated backgrounds, glass cards, text overlays, partner logos, and drag-able photos. Export the result as a PNG when you're happy.
 
-First, run the development server:
+## Quick start
 
 ```bash
+cp .env.example .env.local   # then fill in keys
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Var | Required | What it does |
+| --- | --- | --- |
+| `OPENROUTER_API_KEY` | yes | AI creative director (Claude via OpenRouter) |
+| `RESEND_API_KEY` | for feedback button | Routes in-app feedback to email |
+| `FEEDBACK_EMAIL` | no | Override feedback recipient (defaults to Auri's personal address) |
+| `NEXT_PUBLIC_APP_URL` | no, prod-only | Used as the `HTTP-Referer` on OpenRouter calls |
 
-## Learn More
+## Formats
 
-To learn more about Next.js, take a look at the following resources:
+Four canvas presets: Square 1500×1500, Presentation 1920×1080, Instagram Story 1080×1920, and Custom (any 100–4096px).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Keyboard shortcuts
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `⌘E` (or `Ctrl+E`) — export PNG
+- `⌘⇧R` (or `Ctrl+Shift+R`) — regenerate the last design
+- `Enter` — send chat message · `Shift+Enter` — newline
+- `Esc` — close the feedback dialog
 
-## Deploy on Vercel
+## Stack
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Next.js 16 (Turbopack, React 19), Tailwind v4, OpenRouter (`anthropic/claude-sonnet-4`), `@paper-design/shaders-react` for liquid-metal backgrounds, `html-to-image` for PNG export, Sonner for toasts.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Deployment
+
+Deployed on Vercel. Production branch is `master`. Set both env vars in the Vercel project settings.
