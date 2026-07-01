@@ -5,15 +5,14 @@ interface GlassCardProps {
   className?: string;
 }
 
-// Despite the legacy "Glass" name, the surface now matches the new TechBBQ
-// website style — solid dark card with a subtle warm tint and a faint warm
-// border (no translucent backdrop blur).
+// Despite the legacy "Glass" name, the surface follows the TechBBQ brand:
+// a flat dark panel (#131313, one surface step above the page) with no border
+// and no shadow. Depth comes from the surface step, not strokes.
 export function GlassCard({ children, className }: GlassCardProps) {
   return (
     <div
       className={cn(
-        "bg-[#15110e]/95 border border-[#ff6b00]/10 rounded-2xl p-8",
-        "shadow-[0_1px_0_rgba(255,255,255,0.04)_inset,0_30px_60px_-30px_rgba(0,0,0,0.6)]",
+        "bg-card rounded-2xl p-8",
         className
       )}
     >

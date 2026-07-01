@@ -46,9 +46,9 @@ function AlignBtn({ icon: Icon, label, onClick }: { icon: typeof AlignStartVerti
       onClick={onClick}
       title={label}
       aria-label={label}
-      className="flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-md text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+      className="flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-md text-muted hover:bg-white/10 hover:text-foreground transition-colors"
     >
-      <Icon className="w-3.5 h-3.5" />
+      <Icon className="w-3.5 h-3.5" strokeWidth={1.5} />
       <span className="text-[9px] uppercase tracking-wider">{label}</span>
     </button>
   );
@@ -59,6 +59,14 @@ const STEPS: StepDef[] = [
   { id: 2, label: "Text", icon: Type },
   { id: 3, label: "Images", icon: ImageIcon },
   { id: 4, label: "Shapes", icon: Shapes },
+];
+
+// Logo color options for the floating toolbar that appears when the logo is
+// selected on canvas. Swatches mirror the three TechBBQ logo PNGs.
+const LOGO_COLORS: { id: NonNullable<DesignConfig["logoStyle"]>; label: string; swatch: React.CSSProperties }[] = [
+  { id: "white", label: "White", swatch: { background: "#f2f2f2" } },
+  { id: "red", label: "Red", swatch: { background: "#ce0f2e" } },
+  { id: "gradient", label: "Gradient", swatch: { background: "linear-gradient(120deg, #fa7000 0%, #ff2600 45%, #ce0f2e 100%)" } },
 ];
 
 interface DocSnapshot {
@@ -321,6 +329,7 @@ export default function Home() {
     if (only.startsWith("text:")) setCurrentStep(2);
     else if (only.startsWith("image:")) setCurrentStep(3);
     else if (only.startsWith("shape:")) setCurrentStep(4);
+    else if (only === "tbbqLogo") setCurrentStep(1); // logo controls live in Canvas
   }, [selectedIds]);
 
   // Derive the focused id per category so step components can expand the
@@ -383,8 +392,8 @@ export default function Home() {
             const isPortrait = dims.height > dims.width;
             const scale = Math.max(0.3, Math.min(3.0, design.logoScale ?? 1));
             const logoH = isPortrait
-              ? Math.round(dims.width * 0.07 * scale)
-              : Math.round(dims.height * 0.05 * scale);
+              ? Math.round(dims.width * 0.052 * scale)
+              : Math.round(dims.height * 0.037 * scale);
             const pad = isPortrait
               ? Math.round(dims.width * 0.055)
               : Math.round(dims.height * 0.05);
@@ -1222,8 +1231,8 @@ export default function Home() {
         <div className="px-8 py-5 flex items-center gap-4">
           <img src="/TechBBQ Logo Red.png" alt="TechBBQ" className="h-8" />
           <div>
-            <h1 className="text-lg font-semibold tracking-tight">
-              Visual <span className="italic font-bold bg-gradient-to-r from-[#FFB840] via-[#FF6B00] to-[#FF0028] bg-clip-text text-transparent">Generator</span>
+            <h1 className="text-lg font-medium tracking-tight">
+              Visual <span className="text-tbbq-gradient font-semibold">Generator</span>
             </h1>
           </div>
           <div className="ml-auto flex items-center gap-2">
@@ -1231,12 +1240,12 @@ export default function Home() {
               onClick={() => setTemplatesOpen(true)}
               aria-label="Templates"
               title="Saved templates"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white/5 border border-white/10 text-white/50 hover:bg-white/10 hover:text-white/70 transition-colors"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium border border-surface/40 bg-transparent text-foreground hover:border-surface hover:bg-white/5 transition-colors"
             >
-              <LibraryBig className="w-3.5 h-3.5" />
+              <LibraryBig className="w-3.5 h-3.5" strokeWidth={1.5} />
               Templates
               {templates.length > 0 && (
-                <span className="ml-0.5 px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-[#FF6B00] text-white leading-none">
+                <span className="ml-0.5 px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-red text-surface leading-none">
                   {templates.length}
                 </span>
               )}
@@ -1245,9 +1254,9 @@ export default function Home() {
               onClick={handleReset}
               aria-label="Start over"
               title="Start over"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white/5 border border-white/10 text-white/50 hover:bg-white/10 hover:text-white/70 transition-colors"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium border border-surface/40 bg-transparent text-foreground hover:border-surface hover:bg-white/5 transition-colors"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
+              <RotateCcw className="w-3.5 h-3.5" strokeWidth={1.5} />
               New
             </button>
             <FeedbackButton />
@@ -1328,40 +1337,41 @@ export default function Home() {
           <div className="flex-1 flex flex-col min-h-0 min-w-0 gap-3">
             {/* Canvas controls strip — sits above the preview */}
             <div className="shrink-0 flex items-center justify-between gap-2">
-              <div className="text-[10px] font-medium text-white/40 uppercase tracking-[0.18em]">
-                ▪ {dims.label} · {Math.round(scale * 100)}%
+              <div className="flex items-center gap-2 text-[10px] font-medium text-muted uppercase tracking-[0.18em]">
+                <span className="inline-block size-1.5 rounded-full bg-red" />
+                {dims.label} · {Math.round(scale * 100)}%
               </div>
               {showEditTip && !editingTextId && !canvasIsEmpty && (
-                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#FF6B00]/10 border border-[#FF6B00]/30 text-[11px] text-[#FFB840]">
+                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-orange/10 border border-orange/30 text-[11px] text-amber">
                   <span>Tip: click any text on the canvas to edit it</span>
                   <button
                     onClick={dismissEditTip}
                     aria-label="Dismiss tip"
-                    className="text-[#FFB840]/70 hover:text-[#FFB840] transition-colors"
+                    className="text-amber/70 hover:text-amber transition-colors"
                   >
-                    <X className="w-3 h-3" />
+                    <X className="w-3 h-3" strokeWidth={1.5} />
                   </button>
                 </div>
               )}
               <div className="flex items-center gap-2">
-                <div className="flex items-center rounded-lg bg-white/5 border border-white/10 p-0.5">
+                <div className="flex items-center rounded-lg bg-card-2 p-0.5">
                   <button
                     onClick={undo}
                     disabled={!canUndo}
                     aria-label="Undo"
                     title="Undo (⌘Z)"
-                    className="flex items-center justify-center w-7 h-7 rounded-md text-white/50 hover:bg-white/10 hover:text-white/80 transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                    className="flex items-center justify-center w-7 h-7 rounded-md text-muted hover:bg-white/10 hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                   >
-                    <Undo2 className="w-3.5 h-3.5" />
+                    <Undo2 className="w-3.5 h-3.5" strokeWidth={1.5} />
                   </button>
                   <button
                     onClick={redo}
                     disabled={!canRedo}
                     aria-label="Redo"
                     title="Redo (⇧⌘Z)"
-                    className="flex items-center justify-center w-7 h-7 rounded-md text-white/50 hover:bg-white/10 hover:text-white/80 transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                    className="flex items-center justify-center w-7 h-7 rounded-md text-muted hover:bg-white/10 hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                   >
-                    <Redo2 className="w-3.5 h-3.5" />
+                    <Redo2 className="w-3.5 h-3.5" strokeWidth={1.5} />
                   </button>
                 </div>
                 <button
@@ -1371,8 +1381,8 @@ export default function Home() {
                   title="Show / hide grid"
                   className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${
                     showGrid
-                      ? "bg-[#FF0028]/20 text-[#FF6B00] border border-[#FF0028]/30"
-                      : "bg-white/5 text-white/50 border border-white/10 hover:bg-white/10 hover:text-white/80"
+                      ? "bg-red/20 text-orange border border-red/40"
+                      : "border border-surface/40 bg-transparent text-muted hover:bg-white/5 hover:text-foreground"
                   }`}
                 >
                   <Grid3x3 className="w-3.5 h-3.5" />
@@ -1384,7 +1394,7 @@ export default function Home() {
                       disabled={selectedIds.size === 0}
                       aria-label="Align selection"
                       title={selectedIds.size === 0 ? "Select something to align" : selectedIds.size === 1 ? "Align to canvas" : "Align to selection"}
-                      className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/5 text-white/50 border border-white/10 hover:bg-white/10 hover:text-white/80 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="flex items-center justify-center w-8 h-8 rounded-lg border border-surface/40 bg-transparent text-muted hover:bg-white/5 hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                     >
                       <AlignCenterHorizontal className="w-3.5 h-3.5" />
                     </button>
@@ -1394,9 +1404,9 @@ export default function Home() {
                       side="bottom"
                       align="end"
                       sideOffset={6}
-                      className="z-50 rounded-lg border border-white/15 bg-[#15110e]/95 backdrop-blur-xl shadow-2xl p-2"
+                      className="z-50 rounded-lg bg-card-2 shadow-2xl p-2"
                     >
-                      <div className="text-[9px] uppercase tracking-wider text-white/40 px-1 pb-1.5">
+                      <div className="text-[9px] uppercase tracking-wider text-muted px-1 pb-1.5">
                         {selectedIds.size === 1 ? "Align to canvas" : `Align ${selectedIds.size} items`}
                       </div>
                       <div className="grid grid-cols-3 gap-1">
@@ -1409,7 +1419,7 @@ export default function Home() {
                       </div>
                       {selectedIds.size >= 3 && (
                         <>
-                          <div className="text-[9px] uppercase tracking-wider text-white/40 px-1 pt-2 pb-1.5">Distribute</div>
+                          <div className="text-[9px] uppercase tracking-wider text-muted px-1 pt-2 pb-1.5">Distribute</div>
                           <div className="grid grid-cols-2 gap-1">
                             <AlignBtn icon={AlignHorizontalDistributeCenter} label="Horiz." onClick={() => alignSelection("distribute-h")} />
                             <AlignBtn icon={AlignVerticalDistributeCenter}   label="Vert."  onClick={() => alignSelection("distribute-v")} />
@@ -1424,7 +1434,7 @@ export default function Home() {
                   disabled={isExporting || canvasIsEmpty}
                   aria-label="Save as JPG"
                   title="Save as JPG (Instagram-ready)"
-                  className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/5 text-white/50 border border-white/10 hover:bg-white/10 hover:text-white/80 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="flex items-center justify-center w-8 h-8 rounded-lg border border-surface/40 bg-transparent text-muted hover:bg-white/5 hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   <Download className="w-3.5 h-3.5" />
                 </button>
@@ -1436,8 +1446,8 @@ export default function Home() {
                   title="Layers"
                   className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${
                     showLayers
-                      ? "bg-[#FF0028]/20 text-[#FF6B00] border border-[#FF0028]/30"
-                      : "bg-white/5 text-white/50 border border-white/10 hover:bg-white/10 hover:text-white/80"
+                      ? "bg-red/20 text-orange border border-red/40"
+                      : "border border-surface/40 bg-transparent text-muted hover:bg-white/5 hover:text-foreground"
                   }`}
                 >
                   <LayersIcon className="w-3.5 h-3.5" />
@@ -1449,8 +1459,8 @@ export default function Home() {
                   title={bgPaused ? "Resume animation" : "Pause animation"}
                   className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${
                     bgPaused
-                      ? "bg-[#FF0028]/20 text-[#FF6B00] border border-[#FF0028]/30"
-                      : "bg-white/5 text-white/50 border border-white/10 hover:bg-white/10 hover:text-white/80"
+                      ? "bg-red/20 text-orange border border-red/40"
+                      : "border border-surface/40 bg-transparent text-muted hover:bg-white/5 hover:text-foreground"
                   }`}
                 >
                   {bgPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
@@ -1493,14 +1503,37 @@ export default function Home() {
 
           <div
             ref={previewContainerRef}
-            className="flex-1 min-h-0 min-w-0 flex items-center justify-center overflow-hidden rounded-2xl bg-white/5 border border-white/10 relative"
+            className="flex-1 min-h-0 min-w-0 flex items-center justify-center overflow-hidden rounded-2xl bg-card relative"
           >
             {canvasIsEmpty && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-                <div className="text-center text-white/40">
+                <div className="text-center text-muted">
                   <p className="text-base">Your visual will appear here</p>
-                  <p className="text-xs mt-1 text-white/30">Use the steps on the left to design it</p>
+                  <p className="text-xs mt-1 text-muted/70">Use the steps on the left to design it</p>
                 </div>
+              </div>
+            )}
+            {/* Floating logo toolbar — appears when the TechBBQ logo is
+                selected. Lives outside the scaled canvas so it stays readable. */}
+            {selectedIds.has("tbbqLogo") && (
+              <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 rounded-full bg-black/85 backdrop-blur-md border border-white/10 px-3 py-2 shadow-xl">
+                <span className="text-[11px] font-medium text-white/60 pl-0.5">Logo color</span>
+                {LOGO_COLORS.map(({ id, label, swatch }) => {
+                  const active = (design.logoStyle ?? "white") === id;
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => setDesign((d) => ({ ...d, logoStyle: id }))}
+                      title={label}
+                      aria-label={`Logo color: ${label}`}
+                      aria-pressed={active}
+                      className={`w-6 h-6 rounded-full border-2 transition-all ${
+                        active ? "border-[#FF6B00] scale-110" : "border-white/25 hover:border-white/50"
+                      }`}
+                      style={swatch}
+                    />
+                  );
+                })}
               </div>
             )}
             <div
@@ -1587,7 +1620,7 @@ export default function Home() {
                   const barThickness = Math.max(1, Math.round(1 / scale));
                   const barStyle: React.CSSProperties = {
                     position: "absolute",
-                    backgroundColor: "#FF0028",
+                    backgroundColor: "#ce0f2e",
                     zIndex: 100,
                     pointerEvents: "none",
                   };
@@ -1608,7 +1641,7 @@ export default function Home() {
                   const lineThickness = Math.max(1, Math.round(1 / scale));
                   const lineStyle: React.CSSProperties = {
                     position: "absolute",
-                    backgroundColor: "#FF6B00",
+                    backgroundColor: "#fa7000",
                     zIndex: 90,
                     pointerEvents: "none",
                   };
@@ -1682,8 +1715,8 @@ export default function Home() {
                         top: `${y * 100}%`,
                         width: `${w * 100}%`,
                         height: `${h * 100}%`,
-                        border: `${Math.max(1, Math.round(1 / scale))}px solid #FF6B00`,
-                        background: "rgba(255, 107, 0, 0.08)",
+                        border: `${Math.max(1, Math.round(1 / scale))}px solid #fa7000`,
+                        background: "rgba(250, 112, 0, 0.08)",
                         pointerEvents: "none",
                         zIndex: 150,
                       }}
@@ -1722,7 +1755,7 @@ export default function Home() {
                   >
                     <div
                       style={{
-                        background: "rgba(255, 107, 0, 0.85)",
+                        background: "rgba(250, 112, 0, 0.9)",
                         color: "white",
                         padding: `${Math.max(3, Math.round(3 / scale))}px ${Math.max(4, Math.round(4 / scale))}px`,
                         borderRadius: Math.max(2, Math.round(3 / scale)),
@@ -1941,18 +1974,18 @@ export default function Home() {
                 Docks to the opposite corner from the TechBBQ logo so it
                 doesn't hide what the user is styling. */}
             {showLayers && (
-              <div ref={layersPanelRef} className={`absolute top-4 z-30 w-72 max-h-[calc(100%-2rem)] flex flex-col bg-[#15110e]/95 backdrop-blur-xl border border-[#FF6B00]/30 rounded-xl shadow-2xl overflow-hidden ${design.logoPosition?.endsWith("right") ? "left-4" : "right-4"}`}>
-                <div className="flex items-center justify-between px-3 py-2 border-b border-white/10 shrink-0">
-                  <span className="text-[10px] font-medium text-[#FF6B00] uppercase tracking-[0.18em]">
-                    <LayersIcon className="w-3 h-3 inline-block mr-1.5 -mt-0.5" />
+              <div ref={layersPanelRef} className={`absolute top-4 z-30 w-72 max-h-[calc(100%-2rem)] flex flex-col bg-card-2 border border-border rounded-xl shadow-2xl overflow-hidden ${design.logoPosition?.endsWith("right") ? "left-4" : "right-4"}`}>
+                <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
+                  <span className="text-[10px] font-medium text-orange uppercase tracking-[0.18em]">
+                    <LayersIcon className="w-3 h-3 inline-block mr-1.5 -mt-0.5" strokeWidth={1.5} />
                     Layers
                   </span>
                   <button
                     onClick={() => setShowLayers(false)}
                     aria-label="Close layers panel"
-                    className="p-1 rounded text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+                    className="p-1 rounded text-muted hover:text-foreground hover:bg-white/10 transition-colors"
                   >
-                    <X className="w-3.5 h-3.5" />
+                    <X className="w-3.5 h-3.5" strokeWidth={1.5} />
                   </button>
                 </div>
                 <div className="overflow-y-auto p-3">
@@ -2110,7 +2143,7 @@ export default function Home() {
             style={{ background: "transparent" }}
           />
           <div
-            className="fixed z-[201] min-w-[160px] rounded-lg border border-white/15 bg-[#15110e]/95 backdrop-blur-xl shadow-2xl p-1"
+            className="fixed z-[201] min-w-[160px] rounded-lg border border-border bg-card-2 shadow-2xl p-1"
             style={{ left: Math.min(contextMenu.x, window.innerWidth - 180), top: Math.min(contextMenu.y, window.innerHeight - 100) }}
           >
             <button
@@ -2188,13 +2221,13 @@ export default function Home() {
               onClick={() => { toggleLockSelection(); setContextMenu(null); }}
               className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[11px] text-white/85 hover:bg-white/10 transition-colors"
             >
-              {allSelectedLocked ? <Unlock className="w-3.5 h-3.5 text-[#FF6B00]" /> : <Lock className="w-3.5 h-3.5 text-white/60" />}
+              {allSelectedLocked ? <Unlock className="w-3.5 h-3.5 text-orange" strokeWidth={1.5} /> : <Lock className="w-3.5 h-3.5 text-white/60" strokeWidth={1.5} />}
               <span>{allSelectedLocked ? "Unlock" : "Lock"}</span>
             </button>
             <button
               onClick={() => { deleteSelection(); setContextMenu(null); }}
               disabled={allSelectedLocked}
-              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[11px] text-[#FF6677] hover:bg-[#FF0028]/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[11px] text-red hover:bg-red/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <Trash2 className="w-3.5 h-3.5" />
               <span>Delete</span>

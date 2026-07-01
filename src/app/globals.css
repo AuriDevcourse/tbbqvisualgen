@@ -10,6 +10,37 @@
   --font-mono: var(--font-geist-mono);
   --font-inter: var(--font-inter);
   --font-onest: var(--font-onest);
+
+  /* TechBBQ brand — the fire */
+  --color-red: #ce0f2e;
+  --color-red-deep: #5e101a;
+  --color-red-orange: #ff2600;
+  --color-orange: #fa7000;
+  --color-orange-dark: #d74a01;
+  --color-amber: #fd9d04;
+
+  /* Dark surface steps: #0D0D0D page -> #131313 card -> #191919 raised */
+  --color-card-2: #191919;
+
+  /* Functional status — dots & small badges ONLY, never decorative */
+  --color-success: #00c11a;
+  --color-teal: #10c8a7;
+
+  /* Light accents (off-white pills, text on color) */
+  --color-surface: #f2f2f2;
+  --color-surface-alt: #f6f6f6;
+  --color-surface-sunken: #ececec;
+  --color-ink: #0d0d0d;
+  --color-ink-800: #191919;
+  --color-ink-900: #131313;
+
+  /* Gray ramp — borders on light, secondary strokes */
+  --color-gray-700: #444444;
+  --color-gray-600: #5a5a5a;
+  --color-gray-550: #6e6e6e;
+  --color-gray-500: #818083;
+  --color-gray-300: #ababab;
+  --color-gray-200: #d9d9d9;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -43,27 +74,27 @@
 
 :root {
   --radius: 0.625rem;
-  --background: #0a0604;
-  --foreground: #f8f4ee;
-  --card: #15110e;
-  --card-foreground: #f8f4ee;
-  --popover: #15110e;
+  --background: #0d0d0d;
+  --foreground: #f2f2f2;
+  --card: #131313;
+  --card-foreground: #f2f2f2;
+  --popover: #131313;
   --popover-foreground: #f2f2f2;
-  --primary: #FF0028;
+  --primary: #ce0f2e;
   --primary-foreground: #f2f2f2;
-  --secondary: oklch(0.269 0 0);
+  --secondary: #191919;
   --secondary-foreground: #f2f2f2;
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
+  --muted: #9a9a9c;
+  --muted-foreground: #9a9a9c;
+  --accent: #191919;
   --accent-foreground: #f2f2f2;
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
+  --destructive: #ce0f2e;
+  --border: #2a2a2a;
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
-  --sidebar: #111111;
+  --sidebar: #131313;
   --sidebar-foreground: #f2f2f2;
-  --sidebar-primary: #FF0028;
+  --sidebar-primary: #ce0f2e;
   --sidebar-primary-foreground: #f2f2f2;
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: #f2f2f2;
@@ -73,17 +104,29 @@
 
 @layer base {
   body {
-    @apply bg-[#0a0604] text-[#f8f4ee];
+    @apply bg-[#0d0d0d] text-[#f2f2f2];
     font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
   }
 }
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-onest), system-ui, -apple-system, sans-serif;
+  letter-spacing: -0.02em;
 }
 
 p {
   font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+}
+
+/* Signature TechBBQ gradient — warm orange -> red diagonal, the one accent. */
+.bg-tbbq-gradient {
+  background-image: linear-gradient(120deg, #fa7000 0%, #ff2600 45%, #ce0f2e 100%);
+}
+.text-tbbq-gradient {
+  background-image: linear-gradient(120deg, #fa7000 0%, #ff2600 45%, #ce0f2e 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 /* TechBBQ website-style background: warm-black base with a dramatic
@@ -96,19 +139,18 @@ p {
   background:
     radial-gradient(
       ellipse 90% 70% at 100% 0%,
-      rgba(255, 184, 64, 0.45) 0%,
-      rgba(255, 107, 0, 0.32) 18%,
-      rgba(224, 20, 15, 0.22) 38%,
-      rgba(61, 8, 8, 0.18) 60%,
-      rgba(10, 6, 4, 0) 80%
+      rgba(250, 112, 0, 0.34) 0%,
+      rgba(255, 38, 0, 0.22) 22%,
+      rgba(206, 15, 46, 0.16) 44%,
+      rgba(13, 13, 13, 0) 75%
     ),
     radial-gradient(
-      ellipse 70% 55% at 8% 100%,
-      rgba(255, 0, 40, 0.18) 0%,
-      rgba(120, 12, 30, 0.12) 30%,
-      rgba(10, 6, 4, 0) 65%
+      ellipse 70% 55% at 6% 100%,
+      rgba(206, 15, 46, 0.16) 0%,
+      rgba(94, 16, 26, 0.10) 32%,
+      rgba(13, 13, 13, 0) 65%
     ),
-    linear-gradient(180deg, #0a0604 0%, #060403 100%);
+    #0d0d0d;
 }
 
 /* Optional film grain — subtle warm noise */

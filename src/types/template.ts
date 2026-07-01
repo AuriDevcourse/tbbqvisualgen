@@ -16,30 +16,39 @@ export const FORMAT_DIMENSIONS: Record<PlatformFormat, FormatDimensions> = {
 // Background labels are kept in sync with the BG_REGISTRY in CanvasBackground.tsx.
 // This array preserves the picker order and is the source of truth for what
 // the user sees in the BackgroundPicker / Layers panel.
-export const BACKGROUND_OPTIONS: { id: string; label: string }[] = [
+export const BACKGROUND_OPTIONS: { id: string; label: string; group: string }[] = [
+  // New styling — ported from the newer TechBBQ design-system project: 2D-canvas
+  // orbs (#FA7000 -> #CE0F2E) drifting on dark or deep-red bases.
+  { id: "orb5", label: "Soft Ember", group: "New styling" },
+  { id: "orb6", label: "Right Bloom", group: "New styling" },
+  { id: "orb7", label: "Corner Heat", group: "New styling" },
+  { id: "orb1", label: "Founder Orbs", group: "New styling" },
+  { id: "orb2", label: "Crimson Wash", group: "New styling" },
+  { id: "orb3", label: "Ember Drift", group: "New styling" },
+  { id: "orb4", label: "Ignite", group: "New styling" },
   // Yellow / gold liquid-metal
-  { id: "lm1", label: "Honey Glow" },
-  { id: "lm2", label: "Sunbeam" },
-  { id: "lm3", label: "Amber Pulse" },
+  { id: "lm1", label: "Honey Glow", group: "Liquid metal" },
+  { id: "lm2", label: "Sunbeam", group: "Liquid metal" },
+  { id: "lm3", label: "Amber Pulse", group: "Liquid metal" },
   // Red / lava liquid-metal
-  { id: "lm4", label: "Crimson Flow" },
-  { id: "lm5", label: "Ember Red" },
-  { id: "lm6", label: "Scarlet Tide" },
+  { id: "lm4", label: "Crimson Flow", group: "Liquid metal" },
+  { id: "lm5", label: "Ember Red", group: "Liquid metal" },
+  { id: "lm6", label: "Scarlet Tide", group: "Liquid metal" },
   // Purple / magenta liquid-metal
-  { id: "lm7", label: "Royal Plum" },
-  { id: "lm8", label: "Twilight Violet" },
-  { id: "lm9", label: "Mystic Magenta" },
+  { id: "lm7", label: "Royal Plum", group: "Liquid metal" },
+  { id: "lm8", label: "Twilight Violet", group: "Liquid metal" },
+  { id: "lm9", label: "Mystic Magenta", group: "Liquid metal" },
   // Shaped variants — same liquid-metal shader, different geometry.
-  { id: "lm10", label: "Lava Bloom" },
-  { id: "lm11", label: "Solar Crown" },
-  { id: "lm12", label: "Daisy Ember" },
-  { id: "lm13", label: "Diamond Ruby" },
+  { id: "lm10", label: "Lava Bloom", group: "Liquid metal" },
+  { id: "lm11", label: "Solar Crown", group: "Liquid metal" },
+  { id: "lm12", label: "Daisy Ember", group: "Liquid metal" },
+  { id: "lm13", label: "Diamond Ruby", group: "Liquid metal" },
   // Cool palette for variety
-  { id: "lm14", label: "Cyber Teal" },
-  { id: "lm15", label: "Ocean Deep" },
-  { id: "lm16", label: "Forest Mist" },
-  { id: "lm17", label: "Rose Gold" },
-  { id: "lm18", label: "Midnight Sky" },
+  { id: "lm14", label: "Cyber Teal", group: "Liquid metal" },
+  { id: "lm15", label: "Ocean Deep", group: "Liquid metal" },
+  { id: "lm16", label: "Forest Mist", group: "Liquid metal" },
+  { id: "lm17", label: "Rose Gold", group: "Liquid metal" },
+  { id: "lm18", label: "Midnight Sky", group: "Liquid metal" },
 ];
 
 /**
@@ -270,7 +279,7 @@ export const DEFAULT_DESIGN: DesignConfig = {
   texts: [],
   showLogo: true,
   logoPosition: "bottom-center",
-  logoStyle: "red",
+  logoStyle: "white",
 };
 
 /** Default values for a newly-created TextElement. */

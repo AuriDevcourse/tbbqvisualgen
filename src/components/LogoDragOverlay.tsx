@@ -48,8 +48,8 @@ function loadAspectRatio(src: string, cb: (ar: number) => void) {
 
 function logoSrc(design: DesignConfig): string {
   return design.logoStyle === "gradient" ? "/TechBBQ Logo Gradient.png"
-    : design.logoStyle === "white" ? "/TechBBQ Logo White.png"
-    : "/TechBBQ Logo Red.png";
+    : design.logoStyle === "red" ? "/TechBBQ Logo Red.png"
+    : "/TechBBQ Logo White.png";
 }
 
 /** Computes the logo's pixel rect on canvas (top-left + width/height) using
@@ -65,8 +65,8 @@ function computeLogoRect(
   if (!design.showLogo) return null;
   const scale = Math.max(0.3, Math.min(3.0, design.logoScale ?? 1));
   const h = isPortrait
-    ? Math.round(canvasWidth * 0.07 * scale)
-    : Math.round(canvasHeight * 0.05 * scale);
+    ? Math.round(canvasWidth * 0.052 * scale)
+    : Math.round(canvasHeight * 0.037 * scale);
   const w = Math.round(h * aspectRatio);
   const pad = isPortrait
     ? Math.round(canvasWidth * 0.055)

@@ -22,7 +22,11 @@ export function useExport() {
       const opts = {
         width: exportRef.current.offsetWidth,
         height: exportRef.current.offsetHeight,
-        pixelRatio: 1,
+        // 2x supersample — the condensed TechBBQ wordmark and text edges need
+        // more pixels than the 1:1 design size to render crisply (a 1080px
+        // export makes the logo's thin strokes anti-alias to grey/blurry).
+        // Output is 2x the design dimensions, e.g. a 1080² canvas -> 2160².
+        pixelRatio: 2,
         cacheBust: true,
         skipFonts: false,
         // JPEG has no alpha — flatten onto warm-black so transparent corners

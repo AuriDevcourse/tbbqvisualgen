@@ -967,8 +967,8 @@ export function DynamicTemplate({
         const pos = design.logoPosition || "bottom-center";
         const scale = Math.max(0.3, Math.min(3.0, design.logoScale ?? 1));
         const logoH = isPortrait
-          ? Math.round(dims.width * 0.07 * scale)
-          : Math.round(dims.height * 0.05 * scale);
+          ? Math.round(dims.width * 0.052 * scale)
+          : Math.round(dims.height * 0.037 * scale);
         const pad = isPortrait
           ? Math.round(dims.width * 0.055)
           : Math.round(dims.height * 0.05);
@@ -993,8 +993,8 @@ export function DynamicTemplate({
             };
         const logoSrc =
           design.logoStyle === "gradient" ? "/TechBBQ Logo Gradient.png"
-          : design.logoStyle === "white" ? "/TechBBQ Logo White.png"
-          : "/TechBBQ Logo Red.png";
+          : design.logoStyle === "red" ? "/TechBBQ Logo Red.png"
+          : "/TechBBQ Logo White.png";
 
         return (
           <div

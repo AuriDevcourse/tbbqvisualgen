@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { LiquidMetal } from "@paper-design/shaders-react";
 import type { LiquidMetalShape } from "@paper-design/shaders";
 
@@ -66,6 +67,236 @@ export const BG_REGISTRY: Record<string, BgEntry> = {
   lm18: { label: "Midnight Sky",  config: { colorBack: "#02020a", colorTint: "#3A2BFF", shape: "none",      scale: 2.3, speed: 0.14, repetition: 2.2, softness: 0.7,  distortion: 0.04, contour: 0.14, angle: 150, shiftRed: -0.2,  shiftBlue: 0.4,  frame: 20 } },
 };
 
+/**
+ * "New styling" backgrounds — ported from the newer TechBBQ design-system
+ * project (tdesignsystem/components/brand/background-creator.tsx). These use a
+ * plain 2D <canvas> instead of the WebGL LiquidMetal shader: drifting
+ * #FA7000 -> #CE0F2E orbs on either a near-black or deep-red base, matching the
+ * official Figma orb spec (orange hot-spot, solid crimson body, soft red halo).
+ *
+ * A 2D canvas is captured cleanly by html-to-image (PNG/JPG/MP4 export) and
+ * doesn't count against the browser's ~16 active-WebGL-context limit.
+ *
+ * Orb layouts are seeded (deterministic), so a given preset always looks the
+ * same and its picker thumbnail matches the real render.
+ */
+
+type OrbBase = "dark" | "deep-red";
+
+interface Orb {
+  x: number;    // 0..1 relative start position
+  y: number;
+  r: number;    // radius relative to canvas width
+  dx: number;   // drift speed
+  dy: number;
+  phase: number;
+  angle: number; // direction of the offset gradient core
+}
+
+interface OrbEntry {
+  label: string;
+  base: OrbBase;
+  speed: number;
+  orbs: Orb[];
+  thumb: string; // CSS gradient approximation for the picker thumbnail
+  /** Soft variant: orbs fade to transparent at the edge so the orange blooms
+   *  melt into the black base instead of reading as defined crimson disks.
+   *  Matches the calmer "orange glow on near-black" reference backgrounds. */
+  soft?: boolean;
+}
+
+// Hand-placed orb with sensible drift defaults — for authored (non-seeded)
+// layouts where position matters (e.g. an orange bloom offset to one side).
+function orb(x: number, y: number, r: number, phase: number, angle: number): Orb {
+  return { x, y, r, dx: 0.018, dy: 0.014, phase, angle };
+}
+
+// Deterministic PRNG so every preset's orb layout is stable across renders.
+function mulberry32(seed: number): () => number {
+  return function () {
+    seed |= 0;
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function seededOrbs(count: number, seed: number): Orb[] {
+  const rand = mulberry32(seed);
+  return Array.from({ length: count }, () => ({
+    x: rand(),
+    y: rand(),
+    r: 0.18 + rand() * 0.3,
+    dx: (rand() - 0.5) * 0.06,
+    dy: (rand() - 0.5) * 0.06,
+    phase: rand() * Math.PI * 2,
+    angle: rand() * Math.PI * 2,
+  }));
+}
+
+export const ORB_REGISTRY: Record<string, OrbEntry> = {
+  orb1: {
+    label: "Founder Orbs",
+    base: "dark",
+    speed: 1,
+    orbs: seededOrbs(5, 1337),
+    thumb: "radial-gradient(circle at 35% 40%, #fa7000 0%, #ce0f2e 32%, #0d0d0d 78%)",
+  },
+  orb2: {
+    label: "Crimson Wash",
+    base: "deep-red",
+    speed: 0.9,
+    orbs: seededOrbs(4, 42),
+    thumb: "radial-gradient(circle at 65% 60%, #fa7000 0%, #ce0f2e 42%, #5e101a 100%)",
+  },
+  orb3: {
+    label: "Ember Drift",
+    base: "dark",
+    speed: 0.65,
+    orbs: seededOrbs(3, 7),
+    thumb: "radial-gradient(circle at 50% 55%, #fa7000 0%, #ce0f2e 38%, #0d0d0d 82%)",
+  },
+  orb4: {
+    label: "Ignite",
+    base: "deep-red",
+    speed: 1.15,
+    orbs: seededOrbs(6, 99),
+    thumb: "radial-gradient(circle at 30% 35%, #fa7000 0%, #ce0f2e 40%, #5e101a 100%)",
+  },
+  // ---- Soft blooms — orange glow melting into near-black (reference look) ----
+  orb5: {
+    label: "Soft Ember",
+    base: "dark",
+    speed: 0.5,
+    soft: true,
+    orbs: [orb(0.72, 0.42, 0.55, 0.3, 2.4), orb(0.12, 0.9, 0.34, 1.7, 4.0)],
+    thumb: "radial-gradient(circle at 70% 42%, #fa7000 0%, #ce0f2e 28%, #0d0d0d 70%)",
+  },
+  orb6: {
+    label: "Right Bloom",
+    base: "dark",
+    speed: 0.42,
+    soft: true,
+    orbs: [orb(0.84, 0.5, 0.52, 0.8, 1.2), orb(0.5, 0.32, 0.3, 2.2, 3.1)],
+    thumb: "radial-gradient(circle at 82% 50%, #fa7000 0%, #ce0f2e 30%, #0d0d0d 72%)",
+  },
+  orb7: {
+    label: "Corner Heat",
+    base: "dark",
+    speed: 0.5,
+    soft: true,
+    orbs: [orb(0.85, 0.85, 0.5, 0.5, 0.6), orb(0.16, 0.2, 0.32, 3.0, 2.0)],
+    thumb: "radial-gradient(circle at 82% 82%, #fa7000 0%, #ce0f2e 28%, #0d0d0d 70%)",
+  },
+};
+
+// Paint one frame of an orb preset onto a 2D context. `t` is elapsed
+// (speed-scaled) seconds — the orbs drift via per-orb sin/cos offsets.
+function drawOrbs(ctx: CanvasRenderingContext2D, w: number, h: number, t: number, entry: OrbEntry) {
+  ctx.globalCompositeOperation = "source-over";
+  if (entry.base === "deep-red") {
+    const bg = ctx.createLinearGradient(0, 0, w, h);
+    bg.addColorStop(0, "#5e101a");
+    bg.addColorStop(0.55, "#8c1023");
+    bg.addColorStop(1, "#ce0f2e");
+    ctx.fillStyle = bg;
+  } else {
+    ctx.fillStyle = "#0d0d0d";
+  }
+  ctx.fillRect(0, 0, w, h);
+
+  for (const orb of entry.orbs) {
+    const x = (orb.x + Math.sin(t * orb.dx + orb.phase) * 0.22) * w;
+    const y = (orb.y + Math.cos(t * orb.dy + orb.phase) * 0.18) * h;
+    const r = orb.r * w * (1 + 0.12 * Math.sin(t * 0.05 + orb.phase));
+
+    // Offset radial gradient — orange core melting into a solid crimson body.
+    const ga = orb.angle + t * 0.04;
+    const gx = x + Math.cos(ga) * r * 0.45;
+    const gy = y + Math.sin(ga) * r * 0.45;
+    const g = ctx.createRadialGradient(gx, gy, 0, x, y, r);
+    if (entry.soft) {
+      // Bloom that fades into the base — orange core, red mid, transparent edge.
+      g.addColorStop(0, "#fa7000");
+      g.addColorStop(0.4, "rgba(250, 112, 0, 0.7)");
+      g.addColorStop(0.75, "rgba(206, 15, 46, 0.35)");
+      g.addColorStop(1, "rgba(206, 15, 46, 0)");
+    } else {
+      // Defined orb — orange core melting into a solid crimson body.
+      g.addColorStop(0, "#fa7000");
+      g.addColorStop(0.65, "#ce0f2e");
+      g.addColorStop(1, "#ce0f2e");
+    }
+
+    ctx.save();
+    ctx.filter = `blur(${Math.round(r * (entry.soft ? 0.16 : 0.12))}px)`;
+    ctx.shadowColor = "rgba(255, 47, 47, 0.25)";
+    ctx.shadowBlur = r * 0.3;
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function OrbCanvasBackground({ id, width, height, paused }: CanvasBackgroundProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const timeRef = useRef(0);
+  const lastRef = useRef(0);
+  const rafRef = useRef(0);
+  const pausedRef = useRef(!!paused);
+  pausedRef.current = !!paused;
+
+  const entry = ORB_REGISTRY[id];
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !entry) return;
+    // Supersample the backing store above design resolution so the orbs stay
+    // crisp when html-to-image exports at 2x pixelRatio (it would otherwise
+    // upscale a design-sized canvas and soften it). CSS size stays the design
+    // dimensions; the extra backing pixels just add sharpness. 2D fills are
+    // cheap, so this is effectively free.
+    const SS = 2;
+    const bw = width * SS;
+    const bh = height * SS;
+    canvas.width = bw;
+    canvas.height = bh;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const reduceMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+    const draw = () => drawOrbs(ctx, bw, bh, timeRef.current, entry);
+    draw(); // always paint at least the first frame (needed for export)
+
+    const loop = (now: number) => {
+      if (!lastRef.current) lastRef.current = now;
+      const dt = (now - lastRef.current) / 1000;
+      lastRef.current = now;
+      if (!pausedRef.current && !reduceMotion) {
+        timeRef.current += dt * entry.speed;
+        draw();
+      }
+      rafRef.current = requestAnimationFrame(loop);
+    };
+    rafRef.current = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [entry, width, height]);
+
+  if (!entry) return null;
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{ position: "absolute", inset: 0, width, height }}
+    />
+  );
+}
+
 interface CanvasBackgroundProps {
   id: string;
   width: number;
@@ -74,6 +305,10 @@ interface CanvasBackgroundProps {
 }
 
 export function CanvasBackground({ id, width, height, paused }: CanvasBackgroundProps) {
+  // "New styling" orb presets render on a 2D canvas.
+  if (ORB_REGISTRY[id]) {
+    return <OrbCanvasBackground id={id} width={width} height={height} paused={paused} />;
+  }
   const entry = BG_REGISTRY[id];
   if (!entry) return null;
   const c = entry.config;
@@ -119,6 +354,8 @@ function previewStyle(c: LmConfig): React.CSSProperties {
 }
 
 export function BackgroundThumbnail({ id }: { id: string; size?: number }) {
+  const orb = ORB_REGISTRY[id];
+  if (orb) return <div className="w-full h-full" style={{ background: orb.thumb }} />;
   const entry = BG_REGISTRY[id];
   if (!entry) return null;
   return <div className="w-full h-full" style={previewStyle(entry.config)} />;
