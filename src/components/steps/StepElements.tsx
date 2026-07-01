@@ -214,6 +214,7 @@ interface ShapeEditorProps {
 function ShapeEditor({ shape, onChange }: ShapeEditorProps) {
   const isLine = shape.type === "line";
   const isPlaceholder = !!shape.imagePlaceholder;
+  const [showMore, setShowMore] = useState(false);
 
   return (
     <div className="flex flex-col gap-2.5 px-3 pb-3 pt-1 border-t border-white/5">
@@ -315,60 +316,71 @@ function ShapeEditor({ shape, onChange }: ShapeEditorProps) {
         />
       )}
 
-      {/* Effects: opacity, blur, rotation */}
-      <SliderRow
-        label="Opacity"
-        value={shape.opacity}
-        min={0}
-        max={1}
-        step={0.01}
-        format={(v) => `${Math.round(v * 100)}%`}
-        onChange={(v) => onChange({ opacity: v })}
-      />
-      <SliderRow
-        label="Blur"
-        value={shape.blur}
-        min={0}
-        max={0.05}
-        step={0.001}
-        format={(v) => `${Math.round(v * 1000)}`}
-        onChange={(v) => onChange({ blur: v })}
-      />
-      <SliderRow
-        label="Rotate"
-        value={shape.rotation}
-        min={-180}
-        max={180}
-        step={1}
-        format={(v) => `${Math.round(v)}°`}
-        onChange={(v) => onChange({ rotation: v })}
-      />
-
-      {/* Rectangle radius */}
+      {/* Rectangle radius — a defining property, kept visible. */}
       {shape.type === "rectangle" && <RectRadiusEditor shape={shape} onChange={onChange} />}
 
-      {/* Star spikes + inner radius */}
-      {shape.type === "star" && (
-        <>
+      {/* More options — effects + shape-specific extras, hidden by default so
+       *  the common controls (mode, color, stroke, radius) stay uncluttered. */}
+      <button
+        onClick={() => setShowMore((v) => !v)}
+        className="flex items-center gap-1.5 text-[9px] uppercase tracking-wider text-white/40 hover:text-white/70 transition-colors pt-0.5"
+      >
+        {showMore ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+        More options
+      </button>
+
+      {showMore && (
+        <div className="flex flex-col gap-2.5">
           <SliderRow
-            label="Spikes"
-            value={shape.spikes ?? 5}
-            min={3}
-            max={12}
-            step={1}
-            format={(v) => `${v}`}
-            onChange={(v) => onChange({ spikes: Math.round(v) })}
-          />
-          <SliderRow
-            label="Inner"
-            value={shape.innerRadius ?? 0.5}
-            min={0.1}
-            max={0.9}
+            label="Opacity"
+            value={shape.opacity}
+            min={0}
+            max={1}
             step={0.01}
             format={(v) => `${Math.round(v * 100)}%`}
-            onChange={(v) => onChange({ innerRadius: v })}
+            onChange={(v) => onChange({ opacity: v })}
           />
-        </>
+          <SliderRow
+            label="Blur"
+            value={shape.blur}
+            min={0}
+            max={0.05}
+            step={0.001}
+            format={(v) => `${Math.round(v * 1000)}`}
+            onChange={(v) => onChange({ blur: v })}
+          />
+          <SliderRow
+            label="Rotate"
+            value={shape.rotation}
+            min={-180}
+            max={180}
+            step={1}
+            format={(v) => `${Math.round(v)}°`}
+            onChange={(v) => onChange({ rotation: v })}
+          />
+          {shape.type === "star" && (
+            <>
+              <SliderRow
+                label="Spikes"
+                value={shape.spikes ?? 5}
+                min={3}
+                max={12}
+                step={1}
+                format={(v) => `${v}`}
+                onChange={(v) => onChange({ spikes: Math.round(v) })}
+              />
+              <SliderRow
+                label="Inner"
+                value={shape.innerRadius ?? 0.5}
+                min={0.1}
+                max={0.9}
+                step={0.01}
+                format={(v) => `${Math.round(v * 100)}%`}
+                onChange={(v) => onChange({ innerRadius: v })}
+              />
+            </>
+          )}
+        </div>
       )}
 
       <p className="text-[10px] text-white/30 pt-1">Drag the shape on canvas to reposition.</p>

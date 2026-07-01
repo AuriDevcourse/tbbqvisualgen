@@ -242,44 +242,6 @@ export function DynamicTemplate({
   const editingDivRef = useRef<HTMLDivElement | null>(null);
   const textRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const logoRef = useRef<HTMLDivElement | null>(null);
-  // Snapshot of the cropped image's render geometry, captured ONCE on crop
-  // entry. Used during crop-edit mode so the image stays at a fixed scale
-  // while the user pans / drags handles (matching Google Slides UX). Stored
-  // as state (not ref) so the freshly-set snapshot triggers a re-render.
-  const [cropSnapshot, setCropSnapshot] = useState<{
-    fullW: number; fullH: number; fullLeft: number; fullTop: number;
-    targetFracAspect: number;
-  } | null>(null);
-
-  useEffect(() => {
-    if (!cropEditingId) {
-      setCropSnapshot(null);
-      return;
-    }
-    const ci = canvasImages?.find((c) => c.id === cropEditingId);
-    if (!ci) return;
-    const imgW = Math.round(dims.width * ci.width);
-    const imgH = Math.round(dims.height * ci.height);
-    const imgLeft = Math.round(ci.x * dims.width - imgW / 2);
-    const imgTop = Math.round(ci.y * dims.height - imgH / 2);
-    const cw = ci.crop?.width ?? 1;
-    const ch = ci.crop?.height ?? 1;
-    const cx = ci.crop?.x ?? 0;
-    const cy = ci.crop?.y ?? 0;
-    const fullW = imgW / cw;
-    const fullH = imgH / ch;
-    const fullLeft = imgLeft - cx * fullW;
-    const fullTop = imgTop - cy * fullH;
-    const frameAspect = ci.width / ci.height;
-    const sourceAspect = ci.naturalWidth && ci.naturalHeight
-      ? ci.naturalWidth / ci.naturalHeight
-      : frameAspect;
-    setCropSnapshot({
-      fullW, fullH, fullLeft, fullTop,
-      targetFracAspect: frameAspect / sourceAspect,
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cropEditingId]);
 
   // When a text enters inline-edit mode, focus its div and put the cursor at
   // the end. Only runs on edit-state toggle, NOT on every keystroke (we read
@@ -644,50 +606,43 @@ export function DynamicTemplate({
         // which would produce ellipses on non-square images). 50 = full
         // circle/pill. Fallback for legacy CanvasImage entries that still
         // carry `shape`.
-        const radiusPct = ci.cornerRadius ?? (ci.shape === "circle" ? 50 : 4);
+        const radiusPct = ci.cornerRadius ?? (ci.shape === "circle" ? 50 : 10);
         const radius = `${(radiusPct / 100) * Math.min(imgW, imgH)}px`;
         const hasCrop = ci.crop && (ci.crop.width < 1 || ci.crop.height < 1 || ci.crop.x > 0 || ci.crop.y > 0);
 
-        // ── Inline crop-edit mode (Google Slides parity) ──
-        // The user double-clicked this image. Image renders at the snapshot
-        // scale (taken at entry) — staying fixed while the user pans inside
-        // the orange crop window or drags corner handles to resize it.
-        if (cropEditingId === ci.id && cropSnapshot) {
-          const snap = cropSnapshot;
+        // ── Inline adjust mode — pan the image inside a FIXED frame ──
+        // Double-clicking the photo enters this mode. The frame (mask) stays
+        // exactly where it is on the canvas; dragging moves the IMAGE within
+        // it, changing only which part of the source shows (crop.x / crop.y).
+        // The view renders identically to the final output, so it's WYSIWYG.
+        if (cropEditingId === ci.id) {
           const cropX = ci.crop?.x ?? 0;
           const cropY = ci.crop?.y ?? 0;
           const cropW = ci.crop?.width ?? 1;
           const cropH = ci.crop?.height ?? 1;
-          // Outline position INSIDE the snapshot container, in fractional
-          // coords (these track the current crop, not the snapshot).
-          const oLeft = cropX * 100;
-          const oTop = cropY * 100;
-          const oW = cropW * 100;
-          const oH = cropH * 100;
-
-          // Convert a screen-pixel delta to a source-fraction delta using the
-          // snapshot scale (so resize/pan math doesn't drift as crop changes).
-          const canvasEl = canvasRootRef.current;
-          const canvasRect = canvasEl?.getBoundingClientRect();
-          const screenPerSrcFracX = canvasRect ? (snap.fullW * canvasRect.width / dims.width) : snap.fullW;
-          const screenPerSrcFracY = canvasRect ? (snap.fullH * canvasRect.height / dims.height) : snap.fullH;
-
-          const MIN_CROP = 0.05;
-          const aspect = snap.targetFracAspect;
 
           const handlePan = (e: React.PointerEvent<HTMLDivElement>) => {
+            if (ci.locked) return;
             e.stopPropagation();
             e.preventDefault();
             const startX = e.clientX;
             const startY = e.clientY;
             const startCropX = cropX;
             const startCropY = cropY;
+            // Frame's on-screen size (accounts for the preview's scale
+            // transform). Dragging one frame-width of screen distance moves the
+            // image by the whole visible crop region (cropW of the source).
+            const canvasRect = canvasRootRef.current?.getBoundingClientRect();
+            const frameScreenW = canvasRect ? ci.width * canvasRect.width : imgW;
+            const frameScreenH = canvasRect ? ci.height * canvasRect.height : imgH;
             onEditStart?.();
             const move = (moveE: PointerEvent) => {
-              let nx = startCropX + (moveE.clientX - startX) / screenPerSrcFracX;
-              let ny = startCropY + (moveE.clientY - startY) / screenPerSrcFracY;
-              nx = Math.max(0, Math.min(1 - cropW, nx));
-              ny = Math.max(0, Math.min(1 - cropH, ny));
+              // Drag right → image moves right → reveal more of the LEFT of the
+              // source → crop.x decreases. Hence the minus sign.
+              const dxFrac = ((moveE.clientX - startX) / frameScreenW) * cropW;
+              const dyFrac = ((moveE.clientY - startY) / frameScreenH) * cropH;
+              const nx = Math.max(0, Math.min(1 - cropW, startCropX - dxFrac));
+              const ny = Math.max(0, Math.min(1 - cropH, startCropY - dyFrac));
               onCropChange?.(ci.id, { x: nx, y: ny, width: cropW, height: cropH });
             };
             const up = () => {
@@ -699,48 +654,37 @@ export function DynamicTemplate({
             document.addEventListener("pointerup", up);
           };
 
-          // Corner resize. Aspect is locked to the snapshot's targetFracAspect
-          // so the crop never goes out of sync with the frame on canvas. The
-          // dimension with the larger fractional drag drives; the other is
-          // computed from aspect.
-          const handleCorner = (corner: "nw" | "ne" | "sw" | "se") => (e: React.PointerEvent<HTMLDivElement>) => {
+          // Corner-drag zoom — scales the image about the FIXED frame's centre.
+          // Dragging a corner outward grows the image in the mask (crop shrinks
+          // = zoom in); inward shrinks it (crop grows = zoom out). Aspect stays
+          // locked to the frame so the image never distorts.
+          const handleZoom = (e: React.PointerEvent<HTMLDivElement>) => {
+            if (ci.locked) return;
             e.stopPropagation();
             e.preventDefault();
-            const startX = e.clientX;
-            const startY = e.clientY;
-            const s = { x: cropX, y: cropY, w: cropW, h: cropH };
-            const isW = corner === "nw" || corner === "sw";
-            const isN = corner === "nw" || corner === "ne";
+            const canvasRect = canvasRootRef.current?.getBoundingClientRect();
+            const s = canvasRect ? canvasRect.width / dims.width : 1;
+            const cxScreen = (canvasRect?.left ?? 0) + (imgLeft + imgW / 2) * s;
+            const cyScreen = (canvasRect?.top ?? 0) + (imgTop + imgH / 2) * s;
+            const startDist = Math.max(1, Math.hypot(e.clientX - cxScreen, e.clientY - cyScreen));
+            const startW = cropW;
+            const startH = cropH;
+            const ratio = startW / startH;
+            const centreFx = cropX + cropW / 2;
+            const centreFy = cropY + cropH / 2;
+            const MIN = 0.08;
             onEditStart?.();
             const move = (moveE: PointerEvent) => {
-              const dxF = (moveE.clientX - startX) / screenPerSrcFracX;
-              const dyF = (moveE.clientY - startY) / screenPerSrcFracY;
-              // Width delta: positive = grow.
-              const dW = isW ? -dxF : dxF;
-              const dH = isN ? -dyF : dyF;
-              // Use the dominant axis as driver, then derive the other via aspect.
-              let nw: number;
-              let nh: number;
-              if (Math.abs(dW) > Math.abs(dH * aspect)) {
-                nw = s.w + dW;
-                nh = nw / aspect;
-              } else {
-                nh = s.h + dH;
-                nw = nh * aspect;
-              }
-              // Clamp to MIN and to ≤ 1 (and re-derive partner to keep aspect).
-              if (nw < MIN_CROP) { nw = MIN_CROP; nh = nw / aspect; }
-              if (nh < MIN_CROP) { nh = MIN_CROP; nw = nh * aspect; }
-              if (nw > 1) { nw = 1; nh = nw / aspect; }
-              if (nh > 1) { nh = 1; nw = nh * aspect; }
-              // Reposition x/y so the OPPOSITE corner stays fixed.
-              const nx = isW ? (s.x + s.w - nw) : s.x;
-              const ny = isN ? (s.y + s.h - nh) : s.y;
-              // Clamp position into [0, 1 - size]. If clamping would shrink
-              // the size further, recompute via aspect to keep things stable.
-              let cx = Math.max(0, Math.min(1 - nw, nx));
-              let cy = Math.max(0, Math.min(1 - nh, ny));
-              onCropChange?.(ci.id, { x: cx, y: cy, width: nw, height: nh });
+              const dist = Math.max(1, Math.hypot(moveE.clientX - cxScreen, moveE.clientY - cyScreen));
+              const k = startDist / dist; // outward drag -> k < 1 -> zoom in
+              let nw = startW * k;
+              let nh = nw / ratio;
+              if (nw > 1) { nw = 1; nh = nw / ratio; }
+              if (nh > 1) { nh = 1; nw = nh * ratio; }
+              if (nw < MIN) { nw = MIN; nh = nw / ratio; }
+              const nx = Math.max(0, Math.min(1 - nw, centreFx - nw / 2));
+              const ny = Math.max(0, Math.min(1 - nh, centreFy - nh / 2));
+              onCropChange?.(ci.id, { x: nx, y: ny, width: nw, height: nh });
             };
             const up = () => {
               document.removeEventListener("pointermove", move);
@@ -751,13 +695,25 @@ export function DynamicTemplate({
             document.addEventListener("pointerup", up);
           };
 
+          // Whole-source geometry: position the full image so its crop sub-rect
+          // lands exactly on the FIXED frame. The image extends past the frame;
+          // those parts render dimmed so the user sees the entire picture and
+          // what's inside the mask at the same time.
+          const fullW = imgW / cropW;
+          const fullH = imgH / cropH;
+          const fullLeft = imgLeft - cropX * fullW;
+          const fullTop = imgTop - cropY * fullH;
+          const oLeft = cropX * 100;
+          const oTop = cropY * 100;
+          const oW = cropW * 100;
+          const oH = cropH * 100;
           const handleSize = 12;
-          const corners: { key: "nw" | "ne" | "sw" | "se"; left: string; top: string; cursor: string }[] = [
-            { key: "nw", left: `${oLeft}%`, top: `${oTop}%`, cursor: "nwse-resize" },
-            { key: "ne", left: `${oLeft + oW}%`, top: `${oTop}%`, cursor: "nesw-resize" },
-            { key: "sw", left: `${oLeft}%`, top: `${oTop + oH}%`, cursor: "nesw-resize" },
-            { key: "se", left: `${oLeft + oW}%`, top: `${oTop + oH}%`, cursor: "nwse-resize" },
-          ];
+          const corners = [
+            { key: "nw", left: oLeft, top: oTop, cursor: "nwse-resize" },
+            { key: "ne", left: oLeft + oW, top: oTop, cursor: "nesw-resize" },
+            { key: "sw", left: oLeft, top: oTop + oH, cursor: "nesw-resize" },
+            { key: "se", left: oLeft + oW, top: oTop + oH, cursor: "nwse-resize" },
+          ] as const;
 
           return (
             <div
@@ -766,42 +722,31 @@ export function DynamicTemplate({
               style={{
                 position: "absolute",
                 zIndex: zOf(`image:${ci.id}`) + 5,
-                left: snap.fullLeft,
-                top: snap.fullTop,
-                width: snap.fullW,
-                height: snap.fullH,
+                left: fullLeft,
+                top: fullTop,
+                width: fullW,
+                height: fullH,
                 touchAction: "none",
               }}
             >
+              {/* Whole source — drag it to pan the image inside the mask. */}
               <img
                 src={ci.src}
                 alt=""
                 draggable={false}
-                style={{ width: "100%", height: "100%", display: "block", userSelect: "none", pointerEvents: "none" }}
+                onPointerDown={handlePan}
+                style={{ width: "100%", height: "100%", display: "block", userSelect: "none", cursor: "move" }}
               />
-              {/* Dim the four regions OUTSIDE the crop window. */}
+              {/* Dim everything OUTSIDE the fixed frame (the bright window). */}
               {[
                 { left: 0, top: 0, right: 0, height: `${oTop}%` },
                 { left: 0, bottom: 0, right: 0, height: `${100 - oTop - oH}%` },
                 { left: 0, top: `${oTop}%`, width: `${oLeft}%`, height: `${oH}%` },
                 { right: 0, top: `${oTop}%`, width: `${100 - oLeft - oW}%`, height: `${oH}%` },
-              ].map((s, i) => (
-                <div key={i} style={{ position: "absolute", background: "rgba(0,0,0,0.55)", pointerEvents: "none", ...s }} />
+              ].map((dz, i) => (
+                <div key={i} style={{ position: "absolute", background: "rgba(0,0,0,0.5)", pointerEvents: "none", ...dz }} />
               ))}
-              {/* Pan area — clicking inside the crop window drags it. */}
-              <div
-                onPointerDown={handlePan}
-                style={{
-                  position: "absolute",
-                  left: `${oLeft}%`,
-                  top: `${oTop}%`,
-                  width: `${oW}%`,
-                  height: `${oH}%`,
-                  cursor: "move",
-                  pointerEvents: "auto",
-                }}
-              />
-              {/* Orange crop outline. */}
+              {/* Frame outline (the mask stays put). */}
               <div
                 style={{
                   position: "absolute",
@@ -811,20 +756,20 @@ export function DynamicTemplate({
                   height: `${oH}%`,
                   outline: "2px solid #FF6B00",
                   outlineOffset: -1,
-                  boxSizing: "border-box",
                   borderRadius: radius,
+                  boxSizing: "border-box",
                   pointerEvents: "none",
                 }}
               />
-              {/* Corner resize handles. */}
+              {/* Corner handles — drag to resize (zoom) the image in the mask. */}
               {corners.map((c) => (
                 <div
                   key={c.key}
-                  onPointerDown={handleCorner(c.key)}
+                  onPointerDown={handleZoom}
                   style={{
                     position: "absolute",
-                    left: c.left,
-                    top: c.top,
+                    left: `${c.left}%`,
+                    top: `${c.top}%`,
                     width: handleSize,
                     height: handleSize,
                     transform: "translate(-50%, -50%)",
@@ -918,7 +863,7 @@ export function DynamicTemplate({
                *  by the clip-wrapper's overflow:hidden, padding, or
                *  backdrop-filter. Draws on the OUTER bbox edge. */}
               {ci.border && (() => {
-                const widthPx = Math.max(0, Math.round((ci.borderWidth ?? 0.003) * dims.width));
+                const widthPx = Math.max(0, Math.round((ci.borderWidth ?? 2 / 1500) * dims.width));
                 if (widthPx === 0) return null;
                 if (ci.borderColor) {
                   return (

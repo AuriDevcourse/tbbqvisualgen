@@ -312,7 +312,7 @@ export function ImageDragOverlay({
             : "none",
           outlineOffset: selected ? 4 : 0,
           boxShadow: selected && !resizable ? "0 0 0 2px rgba(255, 107, 0, 0.25)" : "none",
-          borderRadius: `${((image.cornerRadius ?? (image.shape === "circle" ? 50 : 4)) / 100) * Math.min(imgW, imgH)}px`,
+          borderRadius: `${((image.cornerRadius ?? (image.shape === "circle" ? 50 : 10)) / 100) * Math.min(imgW, imgH)}px`,
           pointerEvents: "auto",
           boxSizing: "border-box",
           transition: dragging ? "none" : "outline 0.15s ease, box-shadow 0.15s ease",

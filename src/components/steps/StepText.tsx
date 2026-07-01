@@ -307,6 +307,7 @@ export function StepText({ design, setDesign, focusedId }: StepTextProps) {
                       label="Rotate"
                       value={text.rotation ?? 0}
                       min={-180} max={180} step={1}
+                      snap={[-180, -135, -90, -45, 0, 45, 90, 135, 180]}
                       format={(v) => `${Math.round(v)}°`}
                       onChange={(v) => updateText(text.id, { rotation: v })}
                     />
@@ -360,9 +361,26 @@ interface SliderRowProps {
   step: number;
   format: (v: number) => string;
   onChange: (v: number) => void;
+  /** Values the slider magnetically snaps to when dragged near them. */
+  snap?: number[];
+  /** How close (in value units) to a snap point before it grabs. Default 3. */
+  snapWithin?: number;
 }
 
-function SliderRow({ label, value, min, max, step, format, onChange }: SliderRowProps) {
+function SliderRow({ label, value, min, max, step, format, onChange, snap, snapWithin = 3 }: SliderRowProps) {
+  const applySnap = (v: number) => {
+    if (!snap) return v;
+    let best = v;
+    let bestDist = snapWithin;
+    for (const s of snap) {
+      const d = Math.abs(v - s);
+      if (d <= bestDist) {
+        best = s;
+        bestDist = d;
+      }
+    }
+    return best;
+  };
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center justify-between">
@@ -375,7 +393,7 @@ function SliderRow({ label, value, min, max, step, format, onChange }: SliderRow
         max={max}
         step={step}
         value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
+        onChange={(e) => onChange(applySnap(Number(e.target.value)))}
         className="w-full accent-[#FF6B00]"
       />
     </div>

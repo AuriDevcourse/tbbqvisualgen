@@ -117,7 +117,7 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
             y: Math.min(0.95, 0.5 + offset),
             width: Math.round(w * 100) / 100,
             height: Math.round(h * 100) / 100,
-            cornerRadius: 8,
+            cornerRadius: 10,
             border: false,
             naturalWidth: img.naturalWidth,
             naturalHeight: img.naturalHeight,
@@ -170,6 +170,42 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
 
   const update = (patch: Partial<CanvasImage>) => {
     if (selectedImage) onUpdate(selectedImage.id, patch);
+  };
+
+  // ── Zoom (scale the image inside its box) ──
+  // 1× shows the largest frame-aspect region of the source (standard cover
+  // fit); higher values crop tighter so a small subject can be enlarged to
+  // fill the box. Implemented by scaling the crop rect about its centre,
+  // aspect-locked to the frame so the photo never distorts.
+  const zoomInfo = (() => {
+    if (!selectedImage) return null;
+    if ((selectedImage.fit ?? "cover") !== "cover") return null; // N/A for "Fit"
+    const frameAspect = selectedImage.width / selectedImage.height;
+    const srcAspect = selectedImage.naturalWidth && selectedImage.naturalHeight
+      ? selectedImage.naturalWidth / selectedImage.naturalHeight
+      : frameAspect;
+    const t = frameAspect / srcAspect; // cropW / cropH at every zoom level
+    const baseW = t >= 1 ? 1 : t;      // widest frame-aspect crop that fits
+    const baseH = t >= 1 ? 1 / t : 1;
+    const cw = selectedImage.crop?.width ?? baseW;
+    const zoom = Math.max(1, Math.min(5, baseW / cw));
+    return { t, baseW, baseH, zoom };
+  })();
+
+  const setZoom = (z: number) => {
+    if (!selectedImage || !zoomInfo) return;
+    const { t, baseW, baseH } = zoomInfo;
+    const MIN = 0.08;
+    let nw = Math.max(MIN, Math.min(baseW, baseW / z));
+    let nh = nw / t;
+    if (nh > 1) { nh = 1; nw = nh * t; }
+    const curW = selectedImage.crop?.width ?? baseW;
+    const curH = selectedImage.crop?.height ?? baseH;
+    const cx = (selectedImage.crop?.x ?? (1 - baseW) / 2) + curW / 2;
+    const cy = (selectedImage.crop?.y ?? (1 - baseH) / 2) + curH / 2;
+    const nx = Math.max(0, Math.min(1 - nw, cx - nw / 2));
+    const ny = Math.max(0, Math.min(1 - nh, cy - nh / 2));
+    update({ crop: { x: nx, y: ny, width: nw, height: nh } });
   };
 
   return (
@@ -250,7 +286,7 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
 
       {/* Controls for selected image */}
       {selectedImage && (() => {
-        const currentRadius = selectedImage.cornerRadius ?? (selectedImage.shape === "circle" ? 50 : 4);
+        const currentRadius = selectedImage.cornerRadius ?? (selectedImage.shape === "circle" ? 50 : 10);
         return (<>
           {/* Width slider */}
           <div className="flex items-center gap-3">
@@ -327,6 +363,27 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
               })}
             </div>
           </div>
+
+          {/* Zoom — scale the image within its box (crop tighter for a small
+           *  subject). Only shown for "Fill" images; "Fit" shows the whole
+           *  image so zoom doesn't apply. Pair with double-click-drag on the
+           *  canvas to position the subject. */}
+          {zoomInfo && (
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] text-white/40 uppercase tracking-wider w-10 shrink-0">Zoom</span>
+              <input
+                type="range"
+                min={1}
+                max={5}
+                step={0.01}
+                value={zoomInfo.zoom}
+                onChange={(e) => setZoom(Number(e.target.value))}
+                aria-label="Image zoom"
+                className="flex-1 accent-[#FF0028] h-1"
+              />
+              <span className="text-[10px] text-white/40 w-8 text-right">{zoomInfo.zoom.toFixed(1)}×</span>
+            </div>
+          )}
 
           {/* Backdrop — solid color fill behind the image. Shows in the
            *  letterbox areas when Fit is "contain" (useful for logos with
@@ -410,7 +467,14 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
           <div className="flex items-center gap-3">
             <span className="text-[10px] text-white/40 uppercase tracking-wider w-10 shrink-0">Border</span>
             <button
-              onClick={() => update({ border: !selectedImage.border })}
+              onClick={() => {
+                const on = !selectedImage.border;
+                // Seed a 2px stroke (px are stored as a fraction of a 1500px
+                // reference) the first time the border is switched on.
+                update(on && selectedImage.borderWidth == null
+                  ? { border: on, borderWidth: 2 / 1500 }
+                  : { border: on });
+              }}
               aria-label="Toggle border"
               className={cn(
                 "relative w-10 h-5 rounded-full transition-colors shrink-0",
@@ -444,7 +508,7 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
                 min={0}
                 max={60}
                 step={1}
-                defaultValue={Math.round((selectedImage.borderWidth ?? 0.003) * 1500)}
+                defaultValue={Math.round((selectedImage.borderWidth ?? 2 / 1500) * 1500)}
                 onFocus={(e) => e.target.select()}
                 onChange={(e) => {
                   const raw = e.target.value;

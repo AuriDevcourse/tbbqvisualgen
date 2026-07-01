@@ -180,6 +180,14 @@ export function ColorPicker({
           align="start"
           collisionPadding={12}
           avoidCollisions
+          // The native <input type="color"> below opens the OS color dialog,
+          // which steals focus. Without these guards Radix dismisses the popover
+          // on that focus-out — unmounting the input mid-pick (so the color
+          // never applies) and leaving focus/aria state broken (every later
+          // click triggers the Windows error ding). Keep the popover open when
+          // focus leaves to the OS dialog, and don't force focus-return on close.
+          onFocusOutside={(e) => e.preventDefault()}
+          onCloseAutoFocus={(e) => e.preventDefault()}
           className="z-50 w-64 rounded-xl border border-white/15 bg-[#15110e]/95 backdrop-blur-xl p-3 shadow-2xl"
         >
           <div className="flex flex-col gap-3">

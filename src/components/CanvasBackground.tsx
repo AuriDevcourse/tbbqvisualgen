@@ -229,10 +229,11 @@ function drawOrbs(ctx: CanvasRenderingContext2D, w: number, h: number, t: number
       g.addColorStop(1, "#ce0f2e");
     }
 
+    // Soft orbs get their softness from the transparent-fading gradient, so
+    // they need only a light blur. No shadowBlur — it's one of the most
+    // expensive canvas ops and the gradient already reads as a warm halo.
     ctx.save();
-    ctx.filter = `blur(${Math.round(r * (entry.soft ? 0.16 : 0.12))}px)`;
-    ctx.shadowColor = "rgba(255, 47, 47, 0.25)";
-    ctx.shadowBlur = r * 0.3;
+    ctx.filter = `blur(${Math.round(r * (entry.soft ? 0.08 : 0.1))}px)`;
     ctx.fillStyle = g;
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
@@ -254,14 +255,12 @@ function OrbCanvasBackground({ id, width, height, paused }: CanvasBackgroundProp
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || !entry) return;
-    // Supersample the backing store above design resolution so the orbs stay
-    // crisp when html-to-image exports at 2x pixelRatio (it would otherwise
-    // upscale a design-sized canvas and soften it). CSS size stays the design
-    // dimensions; the extra backing pixels just add sharpness. 2D fills are
-    // cheap, so this is effectively free.
-    const SS = 2;
-    const bw = width * SS;
-    const bh = height * SS;
+    // Render at design resolution (not supersampled). The orbs are soft blooms,
+    // so the 2x export upscale doesn't visibly hurt them — and a full-size
+    // canvas redrawn every frame with blur filters is far too expensive
+    // (2x quadruples the pixel work and caused noticeable lag).
+    const bw = width;
+    const bh = height;
     canvas.width = bw;
     canvas.height = bh;
     const ctx = canvas.getContext("2d");
@@ -274,13 +273,20 @@ function OrbCanvasBackground({ id, width, height, paused }: CanvasBackgroundProp
     const draw = () => drawOrbs(ctx, bw, bh, timeRef.current, entry);
     draw(); // always paint at least the first frame (needed for export)
 
+    // Throttle the actual redraw to ~30fps. Time still advances on real dt so
+    // motion speed is unchanged; we just skip half the (expensive) blur redraws.
+    const FRAME_MS = 1000 / 30;
+    let lastDraw = 0;
     const loop = (now: number) => {
       if (!lastRef.current) lastRef.current = now;
       const dt = (now - lastRef.current) / 1000;
       lastRef.current = now;
       if (!pausedRef.current && !reduceMotion) {
         timeRef.current += dt * entry.speed;
-        draw();
+        if (now - lastDraw >= FRAME_MS) {
+          draw();
+          lastDraw = now;
+        }
       }
       rafRef.current = requestAnimationFrame(loop);
     };
