@@ -124,7 +124,7 @@ export default function Home() {
   // "Start from a template" gallery — shown over the empty canvas until the
   // user picks a template or chooses "start blank".
   const [galleryDismissed, setGalleryDismissed] = useState(false);
-  const [exportFormat, setExportFormat] = useState<ExportFormat>("png");
+  const [exportFormat, setExportFormat] = useState<ExportFormat>("jpeg");
 
   const { exportRef, isExporting, isExportingVideo, exportImage } = useExport();
   const previewContainerRef = useRef<HTMLDivElement>(null);
@@ -1704,29 +1704,43 @@ export default function Home() {
                   );
                 })()}
 
-                {/* Compositional grid overlay — visual only, never exports. */}
-                {showGrid && (
-                  <svg
-                    width="100%"
-                    height="100%"
-                    viewBox="0 0 100 100"
-                    preserveAspectRatio="none"
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      pointerEvents: "none",
-                      zIndex: 95,
-                    }}
-                  >
-                    {/* 100×100 fine grid */}
-                    {Array.from({ length: 99 }).map((_, i) => (
-                      <line key={`v-${i}`} x1={i + 1} y1={0} x2={i + 1} y2={100} stroke="white" strokeOpacity={0.08} strokeWidth={Math.max(0.03, 0.05 / scale)} />
-                    ))}
-                    {Array.from({ length: 99 }).map((_, i) => (
-                      <line key={`h-${i}`} x1={0} y1={i + 1} x2={100} y2={i + 1} stroke="white" strokeOpacity={0.08} strokeWidth={Math.max(0.03, 0.05 / scale)} />
-                    ))}
-                  </svg>
-                )}
+                {/* Compositional grid overlay — visual only, never exports.
+                    viewBox matches the real canvas dimensions and lines step by
+                    a constant cell size, so cells stay SQUARE at any aspect
+                    ratio. Bold lines mark the rule-of-thirds. */}
+                {showGrid && (() => {
+                  const W = dims.width;
+                  const H = dims.height;
+                  const cols = 12;
+                  const cell = W / cols;
+                  const rows = Math.round(H / cell);
+                  const sw = Math.max(0.5, 1 / scale);
+                  const lines: React.ReactNode[] = [];
+                  for (let i = 1; i < cols; i++) {
+                    lines.push(<line key={`v-${i}`} x1={i * cell} y1={0} x2={i * cell} y2={H} stroke="white" strokeOpacity={0.07} strokeWidth={sw} />);
+                  }
+                  for (let j = 1; j < rows; j++) {
+                    lines.push(<line key={`h-${j}`} x1={0} y1={j * cell} x2={W} y2={j * cell} stroke="white" strokeOpacity={0.07} strokeWidth={sw} />);
+                  }
+                  // Rule-of-thirds — bolder guides at 1/3 and 2/3.
+                  const thirds: React.ReactNode[] = [];
+                  for (const f of [1 / 3, 2 / 3]) {
+                    thirds.push(<line key={`tv-${f}`} x1={W * f} y1={0} x2={W * f} y2={H} stroke="white" strokeOpacity={0.18} strokeWidth={sw * 1.4} />);
+                    thirds.push(<line key={`th-${f}`} x1={0} y1={H * f} x2={W} y2={H * f} stroke="white" strokeOpacity={0.18} strokeWidth={sw * 1.4} />);
+                  }
+                  return (
+                    <svg
+                      width="100%"
+                      height="100%"
+                      viewBox={`0 0 ${W} ${H}`}
+                      preserveAspectRatio="none"
+                      style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 95 }}
+                    >
+                      {lines}
+                      {thirds}
+                    </svg>
+                  );
+                })()}
 
                 {/* Marquee selection rectangle — rendered while user drags an
                     empty-canvas area. Sits OUTSIDE exportRef so it never appears

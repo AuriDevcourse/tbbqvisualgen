@@ -275,7 +275,7 @@ export function reconcileLayerOrder(stored: string[] | undefined, available: str
 export type CollageLayout = "single" | "side-by-side" | "grid-2x2" | "top-bottom" | "hero-with-thumbnails";
 
 export const DEFAULT_DESIGN: DesignConfig = {
-  backgroundId: "lm1",
+  backgroundId: "orb5",
   texts: [],
   showLogo: true,
   logoPosition: "bottom-center",

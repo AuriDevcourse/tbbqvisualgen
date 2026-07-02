@@ -53,7 +53,7 @@ interface DynamicTemplateProps {
 // The base state has a transparent outline (no visible mark) so PNG exports
 // stay clean — the orange ring only appears on hover or while editing.
 const textEditableHoverClass =
-  "cursor-text rounded transition-[outline-color] outline outline-2 outline-offset-4 outline-transparent hover:outline-[#FF6B00]/70";
+  "rounded transition-[outline-color] outline outline-2 outline-offset-4 outline-transparent hover:outline-[#FF6B00]/70";
 const editingActiveClass =
   "outline-[#FF6B00] outline-2 outline-offset-4";
 // Multi-select highlight is applied as an INLINE style so it overrides the
@@ -497,7 +497,7 @@ export function DynamicTemplate({
               }
             }
           : undefined}
-        className={`${textEditableHoverClass} ${isEditing ? editingActiveClass : ""}`}
+        className={`${isEditing ? "cursor-text" : "cursor-move"} ${textEditableHoverClass} ${isEditing ? editingActiveClass : ""}`}
         style={{
           position: "absolute",
           left: `${text.position.x * 100}%`,
@@ -708,11 +708,14 @@ export function DynamicTemplate({
           const oW = cropW * 100;
           const oH = cropH * 100;
           const handleSize = 12;
+          // Anchors sit on the WHOLE underlying image (the container is sized
+          // to the full image), not the crop frame — so scaling grabs the
+          // image corners, matching what the user sees.
           const corners = [
-            { key: "nw", left: oLeft, top: oTop, cursor: "nwse-resize" },
-            { key: "ne", left: oLeft + oW, top: oTop, cursor: "nesw-resize" },
-            { key: "sw", left: oLeft, top: oTop + oH, cursor: "nesw-resize" },
-            { key: "se", left: oLeft + oW, top: oTop + oH, cursor: "nwse-resize" },
+            { key: "nw", left: 0, top: 0, cursor: "nwse-resize" },
+            { key: "ne", left: 100, top: 0, cursor: "nesw-resize" },
+            { key: "sw", left: 0, top: 100, cursor: "nesw-resize" },
+            { key: "se", left: 100, top: 100, cursor: "nwse-resize" },
           ] as const;
 
           return (

@@ -185,20 +185,20 @@ export function TemplatesModal({
           <button
             onClick={handleSave}
             disabled={saving}
-            title="Save the current canvas as a regular template (no multi-format variants)"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white/5 border border-white/10 text-white/80 text-xs font-medium hover:bg-white/10 hover:text-white transition-colors disabled:opacity-50"
+            aria-label="Save template"
+            title="Save template — stores the current canvas locally (no multi-format variants)"
+            className="flex items-center justify-center w-8 h-8 rounded-md bg-white/5 border border-white/10 text-white/80 hover:bg-white/10 hover:text-white transition-colors disabled:opacity-50"
           >
             <Save className="w-3.5 h-3.5" />
-            Save template
           </button>
           {onSaveAsPreset && (
             <button
               onClick={() => onSaveAsPreset(name.trim() || `My preset ${templates.length + 1}`)}
-              title="Save the current canvas as a preset (supports multi-format variants, browser-local)"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-gradient-to-r from-[#FF6B00] to-[#FF0028] text-white text-xs font-medium hover:from-[#FF7A1A] hover:to-[#E00224] transition-all shadow-[0_3px_12px_-4px_rgba(255,0,40,0.5)]"
+              aria-label="Save as preset"
+              title="Save as preset — stores locally with multi-format variants"
+              className="flex items-center justify-center w-8 h-8 rounded-md bg-gradient-to-r from-[#FF6B00] to-[#FF0028] text-white hover:from-[#FF7A1A] hover:to-[#E00224] transition-all shadow-[0_3px_12px_-4px_rgba(255,0,40,0.5)]"
             >
               <Star className="w-3.5 h-3.5" />
-              Save as preset
             </button>
           )}
           {onCopyAsPreset && (
@@ -212,11 +212,11 @@ export function TemplatesModal({
                   toast.error("Couldn't copy to clipboard");
                 }
               }}
-              title="Copy as TypeScript preset code (for shipping to the codebase)"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white/5 border border-white/10 text-white/60 text-xs font-medium hover:bg-white/10 hover:text-white transition-colors"
+              aria-label="Copy preset code"
+              title="Copy preset code — TypeScript to ship this template in the app"
+              className="flex items-center justify-center w-8 h-8 rounded-md bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 hover:text-white transition-colors"
             >
               <Code className="w-3.5 h-3.5" />
-              Copy code
             </button>
           )}
         </div>
