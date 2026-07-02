@@ -16,6 +16,8 @@ interface DynamicTemplateProps {
   customHeight?: number;
   canvasImages?: CanvasImage[];
   paused?: boolean;
+  /** When false, dragging text/logo places freeform (no snap-to-guides). */
+  snapEnabled?: boolean;
   /** Click-to-edit a text element — flips it into inline edit mode. */
   onEditText?: (textId: string) => void;
   /** Inline-edit commits the new content for a text element. */
@@ -53,15 +55,15 @@ interface DynamicTemplateProps {
 // The base state has a transparent outline (no visible mark) so PNG exports
 // stay clean — the orange ring only appears on hover or while editing.
 const textEditableHoverClass =
-  "rounded transition-[outline-color] outline outline-2 outline-offset-4 outline-transparent hover:outline-[#FF6B00]/70";
+  "rounded transition-[outline-color] outline outline-2 outline-offset-0 outline-transparent hover:outline-[#FF6B00]/70";
 const editingActiveClass =
-  "outline-[#FF6B00] outline-2 outline-offset-4";
+  "outline-[#FF6B00] outline-2 outline-offset-0";
 // Multi-select highlight is applied as an INLINE style so it overrides the
 // Tailwind utility outline width/style. Kept identical to the image overlay's
 // selected style for visual consistency.
 const SELECTED_INLINE_OUTLINE: React.CSSProperties = {
   outline: "4px dashed #FF6B00",
-  outlineOffset: 4,
+  outlineOffset: 0,
   boxShadow: "0 0 0 2px rgba(255, 107, 0, 0.25)",
 };
 
@@ -223,6 +225,7 @@ export function DynamicTemplate({
   customHeight,
   canvasImages,
   paused,
+  snapEnabled = true,
   onEditText,
   onTextContentChange,
   onLogoPositionChange,
@@ -366,11 +369,18 @@ export function DynamicTemplate({
       if (dragging) {
         const rawX = startFracX + dx / canvasRect.width;
         const rawY = startFracY + dy / canvasRect.height;
-        const snapped = snapBbox({ x: rawX, y: rawY, width: widthFrac, height: heightFrac }, snapTargets);
-        const newX = Math.max(0, Math.min(1, snapped.cx));
-        const newY = Math.max(0, Math.min(1, snapped.cy));
+        let newX: number, newY: number;
+        if (snapEnabled) {
+          const snapped = snapBbox({ x: rawX, y: rawY, width: widthFrac, height: heightFrac }, snapTargets);
+          newX = Math.max(0, Math.min(1, snapped.cx));
+          newY = Math.max(0, Math.min(1, snapped.cy));
+          onGuidesChange?.({ x: snapped.guideX, y: snapped.guideY });
+        } else {
+          newX = Math.max(0, Math.min(1, rawX));
+          newY = Math.max(0, Math.min(1, rawY));
+          onGuidesChange?.({ x: null, y: null });
+        }
         onMoveBy?.(newX - startFracX, newY - startFracY);
-        onGuidesChange?.({ x: snapped.guideX, y: snapped.guideY });
       }
     };
     const handleUp = () => {
@@ -435,12 +445,20 @@ export function DynamicTemplate({
       if (dragging) {
         const rawX = startFracX + dx / canvasRect.width;
         const rawY = startFracY + dy / canvasRect.height;
-        const snapped = snapBbox({ x: rawX, y: rawY, width: widthFrac, height: heightFrac }, snapTargets);
-        onLogoPositionChange({
-          x: Math.max(0, Math.min(1, snapped.cx)),
-          y: Math.max(0, Math.min(1, snapped.cy)),
-        });
-        onGuidesChange?.({ x: snapped.guideX, y: snapped.guideY });
+        if (snapEnabled) {
+          const snapped = snapBbox({ x: rawX, y: rawY, width: widthFrac, height: heightFrac }, snapTargets);
+          onLogoPositionChange({
+            x: Math.max(0, Math.min(1, snapped.cx)),
+            y: Math.max(0, Math.min(1, snapped.cy)),
+          });
+          onGuidesChange?.({ x: snapped.guideX, y: snapped.guideY });
+        } else {
+          onLogoPositionChange({
+            x: Math.max(0, Math.min(1, rawX)),
+            y: Math.max(0, Math.min(1, rawY)),
+          });
+          onGuidesChange?.({ x: null, y: null });
+        }
       }
     };
     const handleUp = () => {
@@ -520,6 +538,10 @@ export function DynamicTemplate({
           transformOrigin: text.align === "left" ? "left center" : text.align === "right" ? "right center" : "center center",
           zIndex: zOf(`text:${text.id}`),
           touchAction: "none",
+          // Only selectable while editing — otherwise marquee-dragging on the
+          // canvas would highlight the text like a PDF selection.
+          userSelect: isEditing ? "text" : "none",
+          WebkitUserSelect: isEditing ? "text" : "none",
           // Box hugs the content exactly so the click/drag affordance matches
           // what the user sees. NO maxWidth — long text intentionally overflows
           // the canvas; the host renders red bars on overflowing edges as a

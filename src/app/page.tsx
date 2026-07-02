@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Pause, Play, X, RotateCcw, Layers as LayersIcon, Download, LayoutTemplate, Type, Image as ImageIcon, Shapes, Undo2, Redo2, Lock, Unlock, Trash2, Copy, LibraryBig, AlignStartVertical, AlignCenterVertical, AlignEndVertical, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignHorizontalDistributeCenter, AlignVerticalDistributeCenter, Grid3x3, Group, Ungroup, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Loader2 } from "lucide-react";
+import { Pause, Play, X, RotateCcw, Layers as LayersIcon, Download, LayoutTemplate, Type, Image as ImageIcon, Shapes, Undo2, Redo2, Lock, Unlock, Trash2, Copy, LibraryBig, AlignStartVertical, AlignCenterVertical, AlignEndVertical, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignHorizontalDistributeCenter, AlignVerticalDistributeCenter, Grid3x3, Magnet, Group, Ungroup, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Loader2 } from "lucide-react";
 import * as Popover from "@radix-ui/react-popover";
 import { toast } from "sonner";
 import { AnimatedGradient } from "@/components/AnimatedGradient";
@@ -150,6 +150,9 @@ export default function Home() {
   // Compositional grid overlay. Pure visual aid — never exports. 10×10 fine
   // grid + bold lines at the rule-of-thirds positions (33% / 67%).
   const [showGrid, setShowGrid] = useState(false);
+  // Snap-to-guides while dragging. On by default; toggle off for freeform
+  // placement (no position adjustment, no guide lines).
+  const [snapEnabled, setSnapEnabled] = useState(true);
 
   // Saved-templates (localStorage) — open via the header button.
   const { templates, saveTemplate, deleteTemplate, renameTemplate } = useTemplates();
@@ -1416,6 +1419,19 @@ export default function Home() {
                 >
                   <Grid3x3 className="w-3.5 h-3.5" />
                 </button>
+                <button
+                  onClick={() => setSnapEnabled((s) => !s)}
+                  aria-label="Toggle snap to guides"
+                  aria-pressed={snapEnabled}
+                  title={snapEnabled ? "Snap to: on — click for freeform" : "Snap to: off"}
+                  className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${
+                    snapEnabled
+                      ? "bg-red/20 text-orange border border-red/40"
+                      : "border border-surface/40 bg-transparent text-muted hover:bg-white/5 hover:text-foreground"
+                  }`}
+                >
+                  <Magnet className="w-3.5 h-3.5" />
+                </button>
                 {/* Align popover */}
                 <Popover.Root>
                   <Popover.Trigger asChild>
@@ -1615,6 +1631,7 @@ export default function Home() {
                     customHeight={format === "custom" ? customSize.height : undefined}
                     canvasImages={canvasImages}
                     paused={bgPaused || interacting}
+                    snapEnabled={snapEnabled}
                     onEditText={(textId) => {
                       const t = design.texts.find((tt) => tt.id === textId);
                       if (t?.locked) {
@@ -1858,6 +1875,7 @@ export default function Home() {
                     canvasWidth={dims.width}
                     canvasHeight={dims.height}
                     selected={selectedIds.has(`image:${img.id}`)}
+                    snapEnabled={snapEnabled}
                     resizable={selectedImageId === img.id}
                     zIndex={layerZ(`image:${img.id}`)}
                     onSelect={() => selectWithGroup(`image:${img.id}`)}
@@ -1983,6 +2001,7 @@ export default function Home() {
                       canvasWidth={dims.width}
                       canvasHeight={dims.height}
                       selected={selectedIds.has(`shape:${sh.id}`)}
+                      snapEnabled={snapEnabled}
                       resizable={selectedIds.size === 1 && selectedIds.has(`shape:${sh.id}`)}
                       zIndex={layerZ(`shape:${sh.id}`)}
                       onSelect={() => selectWithGroup(`shape:${sh.id}`)}
@@ -2012,6 +2031,7 @@ export default function Home() {
                     canvasHeight={dims.height}
                     isPortrait={dims.height > dims.width}
                     selected={selectedIds.has("tbbqLogo")}
+                    snapEnabled={snapEnabled}
                     zIndex={layerZ("tbbqLogo")}
                     onSelect={() => setSelectedIds(new Set(["tbbqLogo"]))}
                     onChange={(patch) =>

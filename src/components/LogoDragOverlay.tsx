@@ -12,6 +12,8 @@ interface LogoDragOverlayProps {
   canvasHeight: number;
   isPortrait: boolean;
   selected: boolean;
+  /** When false, dragging places freeform (no snap-to-guides). */
+  snapEnabled: boolean;
   onSelect: () => void;
   onChange: (patch: { logoScale?: number; logoCustomPosition?: { x: number; y: number } | null }) => void;
   onGuidesChange?: (guides: { x: number | null; y: number | null }) => void;
@@ -92,7 +94,7 @@ function computeLogoRect(
 }
 
 export function LogoDragOverlay({
-  design, canvasWidth, canvasHeight, isPortrait, selected,
+  design, canvasWidth, canvasHeight, isPortrait, selected, snapEnabled,
   onSelect, onChange, onGuidesChange, onEditStart, onEditEnd, otherBboxes, zIndex,
   onBeginDrag, onMoveBy, onEndDrag,
 }: LogoDragOverlayProps) {
@@ -188,13 +190,20 @@ export function LogoDragOverlay({
         const heightFrac = startRef.current.h / canvasHeight;
         const rawX = startRef.current.cx + dxFrac;
         const rawY = startRef.current.cy + dyFrac;
-        const snapped = snapBbox(
-          { x: rawX, y: rawY, width: widthFrac, height: heightFrac },
-          computeSnapTargets(dragSnapTargetsRef.current),
-        );
-        onGuidesChange?.({ x: snapped.guideX, y: snapped.guideY });
-        const clampedX = Math.max(0, Math.min(1, snapped.cx));
-        const clampedY = Math.max(0, Math.min(1, snapped.cy));
+        let clampedX: number, clampedY: number;
+        if (snapEnabled) {
+          const snapped = snapBbox(
+            { x: rawX, y: rawY, width: widthFrac, height: heightFrac },
+            computeSnapTargets(dragSnapTargetsRef.current),
+          );
+          onGuidesChange?.({ x: snapped.guideX, y: snapped.guideY });
+          clampedX = Math.max(0, Math.min(1, snapped.cx));
+          clampedY = Math.max(0, Math.min(1, snapped.cy));
+        } else {
+          onGuidesChange?.({ x: null, y: null });
+          clampedX = Math.max(0, Math.min(1, rawX));
+          clampedY = Math.max(0, Math.min(1, rawY));
+        }
         // Group-drag protocol when the host wired up onMoveBy. The host
         // applies the same delta to every selected element (including the
         // logo). When no group-drag handler exists, fall back to writing

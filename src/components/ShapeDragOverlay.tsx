@@ -14,6 +14,8 @@ interface ShapeDragOverlayProps {
   canvasWidth: number;
   canvasHeight: number;
   selected: boolean;
+  /** When false, dragging places freeform (no snap-to-guides). */
+  snapEnabled: boolean;
   resizable?: boolean;
   zIndex?: number;
   onSelect: () => void;
@@ -36,7 +38,7 @@ interface ShapeDragOverlayProps {
 }
 
 export function ShapeDragOverlay({
-  shape, otherBboxes, canvasWidth, canvasHeight, selected, resizable = selected,
+  shape, otherBboxes, canvasWidth, canvasHeight, selected, snapEnabled, resizable = selected,
   zIndex, onSelect, onChange, onGuidesChange,
   onEditStart, onEditEnd, onBeginDrag, onMoveBy, onEndDrag,
   onPlaceholderUpload,
@@ -106,14 +108,21 @@ export function ShapeDragOverlay({
       if (dragging === "move") {
         const rawX = startRef.current.x + dx;
         const rawY = startRef.current.y + dy;
-        const targets = computeSnapTargets(otherBboxes || []);
-        const result = snapBbox(
-          { x: rawX, y: rawY, width: shape.width, height: shape.height },
-          targets,
-        );
-        onGuidesChange?.({ x: result.guideX, y: result.guideY });
-        const newX = Math.max(0, Math.min(1, result.cx));
-        const newY = Math.max(0, Math.min(1, result.cy));
+        let newX: number, newY: number;
+        if (snapEnabled) {
+          const targets = computeSnapTargets(otherBboxes || []);
+          const result = snapBbox(
+            { x: rawX, y: rawY, width: shape.width, height: shape.height },
+            targets,
+          );
+          onGuidesChange?.({ x: result.guideX, y: result.guideY });
+          newX = Math.max(0, Math.min(1, result.cx));
+          newY = Math.max(0, Math.min(1, result.cy));
+        } else {
+          onGuidesChange?.({ x: null, y: null });
+          newX = Math.max(0, Math.min(1, rawX));
+          newY = Math.max(0, Math.min(1, rawY));
+        }
         onMoveBy?.(newX - startRef.current.x, newY - startRef.current.y);
         return;
       }

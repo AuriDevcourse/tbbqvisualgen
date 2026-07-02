@@ -14,6 +14,8 @@ interface ImageDragOverlayProps {
   canvasWidth: number;
   canvasHeight: number;
   selected: boolean;
+  /** When false, dragging places freeform (no snap-to-guides). */
+  snapEnabled: boolean;
   /** When true, show the corner resize handles. Defaults to `selected`. Set
    *  to false when the image is part of a multi-selection so the canvas isn't
    *  cluttered with handles across every selected image. */
@@ -46,7 +48,7 @@ interface ImageDragOverlayProps {
 }
 
 export function ImageDragOverlay({
-  image, otherImages, extraSnapBboxes, canvasWidth, canvasHeight, selected, resizable = selected, zIndex, onSelect, onDeselect, onChange, onGuidesChange, onEditStart, onEditEnd, onBeginDrag, onMoveBy, onEndDrag, onEnterCrop, onDelete, onDuplicate,
+  image, otherImages, extraSnapBboxes, canvasWidth, canvasHeight, selected, snapEnabled, resizable = selected, zIndex, onSelect, onDeselect, onChange, onGuidesChange, onEditStart, onEditEnd, onBeginDrag, onMoveBy, onEndDrag, onEnterCrop, onDelete, onDuplicate,
 }: ImageDragOverlayProps) {
   const [dragging, setDragging] = useState<DragMode>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -140,17 +142,24 @@ export function ImageDragOverlay({
           })),
           ...(extraSnapBboxes || []),
         ];
-        const targets = computeSnapTargets(otherBboxes);
-        const result = snapBbox(
-          { x: rawX, y: rawY, width: image.width, height: image.height },
-          targets,
-        );
-        onGuidesChange?.({ x: result.guideX, y: result.guideY });
-
+        let newX: number, newY: number;
+        if (snapEnabled) {
+          const targets = computeSnapTargets(otherBboxes);
+          const result = snapBbox(
+            { x: rawX, y: rawY, width: image.width, height: image.height },
+            targets,
+          );
+          onGuidesChange?.({ x: result.guideX, y: result.guideY });
+          newX = Math.max(0, Math.min(1, result.cx));
+          newY = Math.max(0, Math.min(1, result.cy));
+        } else {
+          // Freeform — no snap, no guides.
+          onGuidesChange?.({ x: null, y: null });
+          newX = Math.max(0, Math.min(1, rawX));
+          newY = Math.max(0, Math.min(1, rawY));
+        }
         // Emit delta from the pre-drag position; host applies it to all
         // selected elements (so group-drag works).
-        const newX = Math.max(0, Math.min(1, result.cx));
-        const newY = Math.max(0, Math.min(1, result.cy));
         onMoveBy?.(newX - startRef.current.x, newY - startRef.current.y);
         return;
       }
@@ -310,7 +319,7 @@ export function ImageDragOverlay({
               ? "3px solid #FF6B00"
               : "4px dashed #FF6B00"
             : "none",
-          outlineOffset: selected ? 4 : 0,
+          outlineOffset: 0,
           boxShadow: selected && !resizable ? "0 0 0 2px rgba(255, 107, 0, 0.25)" : "none",
           borderRadius: `${((image.cornerRadius ?? (image.shape === "circle" ? 50 : 10)) / 100) * Math.min(imgW, imgH)}px`,
           pointerEvents: "auto",
