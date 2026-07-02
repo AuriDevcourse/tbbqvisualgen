@@ -497,6 +497,17 @@ export function DynamicTemplate({
               }
             }
           : undefined}
+        // Paste PLAIN TEXT only. Without this, the browser inserts the
+        // clipboard's rich HTML (fonts, colors, background) into the
+        // contentEditable — pasting text copied from a dark source injected a
+        // black background and blacked out the block. Strip to text/plain.
+        onPaste={isEditing
+          ? (e) => {
+              e.preventDefault();
+              const text = e.clipboardData?.getData("text/plain") ?? "";
+              document.execCommand("insertText", false, text);
+            }
+          : undefined}
         className={`${isEditing ? "cursor-text" : "cursor-move"} ${textEditableHoverClass} ${isEditing ? editingActiveClass : ""}`}
         style={{
           position: "absolute",
