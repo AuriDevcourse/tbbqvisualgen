@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { memo, useEffect, useRef } from "react";
 import { LiquidMetal } from "@paper-design/shaders-react";
 import type { LiquidMetalShape } from "@paper-design/shaders";
 
@@ -310,7 +310,10 @@ interface CanvasBackgroundProps {
   paused?: boolean;
 }
 
-export function CanvasBackground({ id, width, height, paused }: CanvasBackgroundProps) {
+// Memoized: all props are primitives (id/width/height/paused), so the shader
+// subtree only re-renders when one actually changes — not on every drag tick
+// when the surrounding document re-renders.
+export const CanvasBackground = memo(function CanvasBackground({ id, width, height, paused }: CanvasBackgroundProps) {
   // "New styling" orb presets render on a 2D canvas.
   if (ORB_REGISTRY[id]) {
     return <OrbCanvasBackground id={id} width={width} height={height} paused={paused} />;
@@ -340,7 +343,7 @@ export function CanvasBackground({ id, width, height, paused }: CanvasBackground
       webGlContextAttributes={{ preserveDrawingBuffer: true }}
     />
   );
-}
+});
 
 // CSS gradient approximation for picker thumbnails. The shader's `angle`
 // controls its flow direction in the shader; we map that to the gradient

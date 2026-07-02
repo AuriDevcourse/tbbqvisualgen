@@ -114,6 +114,10 @@ export default function Home() {
   }, [setSelectedIds]);
 
   const [bgPaused, setBgPaused] = useState(false);
+  // Freeze the animated background while the user drags an element. The shader
+  // repaint competes with per-tick position updates (worst on big image
+  // bitmaps), so pausing it removes the "light moving behind" lag during drag.
+  const [interacting, setInteracting] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [overflow, setOverflow] = useState({ left: false, right: false, top: false, bottom: false });
@@ -362,6 +366,7 @@ export default function Home() {
   // selected element. If the dragged element isn't already in the selection,
   // auto-select just that one (single-element drag behavior).
   const beginGroupDrag = useCallback((draggedId: string) => {
+    setInteracting(true); // freeze the animated background for the drag
     // Exit crop-edit mode if any drag starts elsewhere (Google Slides parity).
     setCropEditingId((prev) => (prev && `image:${prev}` !== draggedId ? null : prev));
     setSelectedIdsRaw((prev) => {
@@ -456,6 +461,7 @@ export default function Home() {
 
   const endGroupDrag = useCallback(() => {
     dragOriginsRef.current = null;
+    setInteracting(false); // resume the animated background after the drag
   }, []);
 
   // ---- Marquee selection — pointer handler attached to canvas wrapper ----
@@ -1584,7 +1590,7 @@ export default function Home() {
                     customWidth={format === "custom" ? customSize.width : undefined}
                     customHeight={format === "custom" ? customSize.height : undefined}
                     canvasImages={canvasImages}
-                    paused={bgPaused}
+                    paused={bgPaused || interacting}
                     onEditText={(textId) => {
                       const t = design.texts.find((tt) => tt.id === textId);
                       if (t?.locked) {
