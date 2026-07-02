@@ -397,7 +397,24 @@ export default function Home() {
     // Exit crop-edit mode if any drag starts elsewhere (Google Slides parity).
     setCropEditingId((prev) => (prev && `image:${prev}` !== draggedId ? null : prev));
     setSelectedIdsRaw((prev) => {
-      const sel = prev.has(draggedId) ? prev : new Set([draggedId]);
+      const sel = prev.has(draggedId) ? new Set(prev) : new Set<string>([draggedId]);
+      // Expand to full groups: grabbing ANY grouped member drags all of its
+      // siblings, regardless of what was selected before or which element you
+      // grab. (Text enters edit on click and never runs selectWithGroup, so
+      // without this, dragging a grouped text moved only the text.)
+      const groupIdOf = (id: string): string | undefined => {
+        if (id.startsWith("text:")) return design.texts.find((t) => `text:${t.id}` === id)?.groupId;
+        if (id.startsWith("shape:")) return (design.shapes ?? []).find((s) => `shape:${s.id}` === id)?.groupId;
+        if (id.startsWith("image:")) return canvasImages.find((ci) => `image:${ci.id}` === id)?.groupId;
+        return undefined;
+      };
+      const groupIds = new Set<string>();
+      for (const id of sel) { const g = groupIdOf(id); if (g) groupIds.add(g); }
+      if (groupIds.size > 0) {
+        for (const t of design.texts) if (t.groupId && groupIds.has(t.groupId)) sel.add(`text:${t.id}`);
+        for (const s of (design.shapes ?? [])) if (s.groupId && groupIds.has(s.groupId)) sel.add(`shape:${s.id}`);
+        for (const ci of canvasImages) if (ci.groupId && groupIds.has(ci.groupId)) sel.add(`image:${ci.id}`);
+      }
       // Build snapshot from the latest doc state.
       const origins = new Map<string, { x: number; y: number }>();
       for (const id of sel) {
