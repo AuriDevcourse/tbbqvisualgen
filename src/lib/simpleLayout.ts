@@ -50,82 +50,126 @@ export interface SimpleDoc {
   canvasImages: CanvasImage[];
 }
 
+const MARGIN = 0.06;
+
 /**
- * Build a TechBBQ panel visual from the simple form: label + headline +
- * subtitle at the top, a centered row of headshots (moderator + speakers)
- * each with role · name · title · company, and the logo bottom-center. Photos
- * become circular CanvasImages; people without a photo get a placeholder ring.
+ * Build a TechBBQ panel visual from the simple form, matching the hand-made
+ * house style: everything LEFT-aligned down the left margin — headline
+ * (weight 600) + subtitle (weight 400) at the top, the session label as a
+ * WHITE PILL with dark uppercase text, then a row of rounded-rectangle
+ * portrait headshots (moderator first), each with name (600) + job title +
+ * company (400) beneath it. Logo bottom-left. Photos become rounded images;
+ * empty people get a rounded placeholder frame.
  */
 export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): SimpleDoc {
   const dims = FORMAT_DIMENSIONS[format] ?? FORMAT_DIMENSIONS.square;
   const W = dims.width;
   const H = dims.height;
-  const u = W; // font/size unit — text scales with canvas width
 
   const texts: TextElement[] = [];
   const shapes: ShapeElement[] = [];
   const canvasImages: CanvasImage[] = [];
 
-  const mkText = (
-    content: string,
-    x: number,
-    y: number,
-    sizeFrac: number,
-    opts: Partial<TextElement> = {},
-  ): void => {
+  // Left-aligned text helper. `x` is the left edge (align:left anchors there).
+  const mkText = (content: string, x: number, y: number, sizeFrac: number, opts: Partial<TextElement> = {}): void => {
     if (!content.trim()) return;
     texts.push({
       id: uid("text"),
       content,
       position: { x, y },
-      fontSize: Math.round(sizeFrac * u),
-      align: "center",
-      weight: 700,
+      fontSize: Math.round(sizeFrac * W),
+      align: "left",
+      weight: 600,
       font: "onest",
       ...opts,
     });
   };
 
-  // ── Header block ──────────────────────────────────────────────────────────
-  mkText(form.label.toUpperCase(), 0.5, 0.11, 0.022, {
-    weight: 700,
-    gradient: true,
-    letterSpacing: Math.round(0.004 * u),
-  });
-  mkText(form.headline, 0.5, 0.19, 0.07, { weight: 800 });
-  mkText(form.subtitle, 0.5, 0.27, 0.03, { weight: 500, color: "rgba(255,255,255,0.8)" });
+  // Auto-fit a font so the longest line fits within `maxWfrac` of the canvas
+  // width — text doesn't wrap (no max-width), so long headlines would overflow.
+  const avail = 0.94 - MARGIN;
+  const fitFont = (text: string, baseFrac: number, avgChar = 0.55): number => {
+    const longest = Math.max(1, ...text.split("\n").map((l) => l.trim().length));
+    const maxPx = (avail * W) / (longest * avgChar);
+    return Math.min(baseFrac * W, maxPx) / W;
+  };
 
-  // ── People row ──────────────────────────────────────────────────────────
-  const people: (SimplePerson & { role: string })[] = [];
-  if (hasContent(form.moderator)) people.push({ ...form.moderator, role: "MODERATOR" });
-  for (const s of form.speakers) if (hasContent(s)) people.push({ ...s, role: "SPEAKER" });
+  // ── Header: headline, subtitle ────────────────────────────────────────────
+  mkText(form.headline, MARGIN, 0.145, fitFont(form.headline, 0.078), { weight: 600, color: "#FFFFFF" });
+  mkText(form.subtitle, MARGIN, 0.255, fitFont(form.subtitle, 0.042), { weight: 400, color: "rgba(255,255,255,0.82)" });
+
+  // ── Session label as a white pill with dark uppercase text ────────────────
+  if (form.label.trim()) {
+    const labelText = form.label.toUpperCase();
+    const fsFrac = 0.038;
+    const fsPx = fsFrac * W;
+    const padX = 0.026 * W; // horizontal padding inside the pill
+    const textWpx = labelText.length * fsPx * 0.62; // rough uppercase-bold width
+    const pillWfrac = Math.min((textWpx + padX * 2) / W, 0.9);
+    const pillHfrac = 0.058;
+    const pillY = 0.35;
+    shapes.push({
+      id: uid("shape"),
+      type: "rectangle",
+      x: MARGIN + pillWfrac / 2, // center-anchored → left edge at MARGIN
+      y: pillY,
+      width: pillWfrac,
+      height: pillHfrac,
+      fillType: "fill",
+      strokeWidth: 0.004,
+      colorType: "solid",
+      color1: "#FFFFFF",
+      color2: "#FF6B00",
+      opacity: 1,
+      blur: 0,
+      rotation: 0,
+      borderRadius: 0.5, // pill
+    });
+    mkText(labelText, MARGIN + padX / W, pillY, fsFrac, {
+      weight: 700,
+      uppercase: true,
+      color: "#15110E",
+      letterSpacing: Math.round(0.002 * W),
+    });
+  }
+
+  // ── People row: moderator first, then speakers ────────────────────────────
+  const people: SimplePerson[] = [];
+  if (hasContent(form.moderator)) people.push(form.moderator);
+  for (const s of form.speakers) if (hasContent(s)) people.push(s);
 
   const count = people.length;
   if (count > 0) {
-    const rowSpan = 0.86;
-    const slot = rowSpan / count;
-    // Circle diameter in px, then back to per-axis fractions so it's a true
-    // circle regardless of canvas aspect ratio.
-    const dPx = Math.min(slot * 0.62 * W, 0.2 * W, 0.34 * H);
-    const wFrac = dPx / W;
-    const hFrac = dPx / H;
-    const photoCy = 0.54;
-    const top = photoCy - hFrac / 2;
-    const bottom = photoCy + hFrac / 2;
+    const rowLeft = MARGIN;
+    const rowW = 0.94 - rowLeft;
+    const cell = rowW / count;
+    // Portrait card ~0.78 aspect (width:height), like the hand-made layout.
+    // Sized by cell width, but the HEIGHT is capped so the photo + the three
+    // text lines always clear the logo — otherwise a wide/short canvas (16:9)
+    // makes the cards tall enough to push names off the bottom.
+    let photoWpx = Math.min(cell * 0.82 * W, 0.2 * W);
+    let photoHpx = photoWpx / 0.78;
+    const maxPhotoHpx = 0.28 * H;
+    if (photoHpx > maxPhotoHpx) { photoHpx = maxPhotoHpx; photoWpx = photoHpx * 0.78; }
+    const wFrac = photoWpx / W;
+    const hFrac = photoHpx / H;
+    const photoTop = 0.46;
+    const cy = photoTop + hFrac / 2;
 
     people.forEach((p, i) => {
-      const cx = (1 - rowSpan) / 2 + slot * (i + 0.5);
+      const cx = rowLeft + cell * i + wFrac / 2; // left-packed in each cell
+      const leftEdge = cx - wFrac / 2;
 
       if (p.photo) {
         canvasImages.push({
           id: uid("img"),
           src: p.photo,
           x: cx,
-          y: photoCy,
+          y: cy,
           width: wFrac,
           height: hFrac,
-          cornerRadius: 50,
-          border: true,
+          cornerRadius: 12,
+          border: false,
           fit: "cover",
           naturalWidth: p.naturalWidth,
           naturalHeight: p.naturalHeight,
@@ -133,30 +177,31 @@ export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): Sim
       } else {
         shapes.push({
           id: uid("shape"),
-          type: "circle",
+          type: "rectangle",
           x: cx,
-          y: photoCy,
+          y: cy,
           width: wFrac,
           height: hFrac,
-          fillType: "fill",
-          strokeWidth: 0.003,
+          fillType: "outline",
+          strokeWidth: 0.004,
           colorType: "solid",
-          color1: "rgba(255,255,255,0.10)",
+          color1: "rgba(255,255,255,0.28)",
           color2: "#FF6B00",
           opacity: 1,
           blur: 0,
           rotation: 0,
+          borderRadius: 0.12,
         });
       }
 
-      // Role tag above the photo; name/title/company below.
-      mkText(p.role, cx, top - 0.03, 0.013, { weight: 700, gradient: true, letterSpacing: Math.round(0.003 * u) });
-      let ty = bottom + 0.045;
-      mkText(p.name, cx, ty, 0.019, { weight: 800 });
+      // Name + title + company beneath, left-aligned to the photo's left edge.
+      let ty = cy + hFrac / 2 + 0.035;
+      mkText(p.name, leftEdge, ty, 0.021, { weight: 700, color: "#FFFFFF" });
       ty += 0.032;
-      mkText(p.title, cx, ty, 0.0135, { weight: 500, color: "rgba(255,255,255,0.78)" });
-      ty += 0.026;
-      mkText(p.company, cx, ty, 0.0135, { weight: 600, color: "rgba(255,255,255,0.6)" });
+      mkText(p.title, leftEdge, ty, 0.016, { weight: 400, color: "rgba(255,255,255,0.78)" });
+      const titleLines = p.title.trim() ? p.title.split("\n").length : 0;
+      ty += 0.026 * Math.max(1, titleLines);
+      mkText(p.company, leftEdge, ty, 0.016, { weight: 500, color: "rgba(255,255,255,0.6)" });
     });
   }
 
@@ -166,7 +211,7 @@ export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): Sim
     shapes,
     showLogo: true,
     logoStyle: "white",
-    logoPosition: "bottom-center",
+    logoPosition: "bottom-left",
   };
 
   return {
