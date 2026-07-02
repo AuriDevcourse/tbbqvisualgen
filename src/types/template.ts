@@ -7,9 +7,9 @@ export interface FormatDimensions {
 }
 
 export const FORMAT_DIMENSIONS: Record<PlatformFormat, FormatDimensions> = {
-  square: { width: 1500, height: 1500, label: "Square (1500×1500)" },
-  presentation: { width: 1920, height: 1080, label: "Presentation (1920×1080)" },
-  story: { width: 1080, height: 1920, label: "Instagram Story (1080×1920)" },
+  square: { width: 1500, height: 1500, label: "1:1 Square (1500×1500)" },
+  presentation: { width: 1920, height: 1080, label: "16:9 Full HD (1920×1080)" },
+  story: { width: 1080, height: 1920, label: "9:16 Story (1080×1920)" },
   custom: { width: 1080, height: 1080, label: "Custom" },
 };
 

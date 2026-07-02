@@ -13,10 +13,12 @@ interface FormatPickerProps {
   onCustomSizeChange: (width: number, height: number) => void;
 }
 
+// The three ways we share: LinkedIn takes 16:9 or 1:1, Stories are 9:16.
+// Ordered to match that mental model; Custom is the escape hatch.
 const formats = [
-  { id: "square" as const, label: "Square", sublabel: "1500×1500", icon: Square },
-  { id: "presentation" as const, label: "Presentation", sublabel: "1920×1080", icon: Presentation },
-  { id: "story" as const, label: "Instagram Story", sublabel: "1080×1920", icon: Smartphone },
+  { id: "presentation" as const, label: "16:9", sublabel: "Full HD · 1920×1080", icon: Presentation },
+  { id: "square" as const, label: "1:1", sublabel: "Square · 1500×1500", icon: Square },
+  { id: "story" as const, label: "9:16", sublabel: "Story · 1080×1920", icon: Smartphone },
   { id: "custom" as const, label: "Custom", sublabel: "", icon: Ruler },
 ];
 
