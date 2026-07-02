@@ -58,7 +58,7 @@ export function PresetEditingBar({
         <Sparkles className="w-4 h-4 text-emerald-300/90 shrink-0" />
         <div className="flex flex-col min-w-0">
           <span className="text-[9px] uppercase tracking-[0.18em] text-emerald-300/70 font-semibold leading-tight">
-            Editing preset
+            Editing template
           </span>
           <span className="text-[13px] font-semibold text-white/95 truncate leading-tight">
             {displayName}
@@ -79,7 +79,7 @@ export function PresetEditingBar({
               ? "border-emerald-400/80 bg-emerald-500/30 text-white"
               : exists
                 ? "border-white/20 bg-white/5 text-white/75 hover:border-emerald-400/60 hover:bg-emerald-500/15 hover:text-white"
-                : "border-white/10 bg-transparent text-white/40 hover:border-white/30 hover:text-white/70"
+                : "border-white/10 bg-transparent text-white/65 hover:border-white/30 hover:text-white/70"
           }`;
           const title = [
             isCurrent ? "Current canvas format" : "Click to switch to this variant",
@@ -150,7 +150,7 @@ export function PresetEditingBar({
         <button
           onClick={onDismiss}
           title="Stop tracking this preset (canvas stays unchanged)"
-          className="p-1 rounded text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+          className="p-1 rounded text-white/65 hover:text-white hover:bg-white/10 transition-colors"
         >
           <X className="w-3.5 h-3.5" />
         </button>

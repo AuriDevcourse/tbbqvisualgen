@@ -158,20 +158,39 @@ a small PNG thumbnail (captured via `html-to-image` at pixelRatio 0.18). Save
 delete (two-click confirm). ~50–80 templates fit in the 5MB localStorage cap
 for typical text-heavy designs.
 
-### Wizard step UI
+### Left tool tabs (was a wizard — de-wizared 2026-07-02, branch `ux-p1-dewizard`)
 
-3 step buttons in left column + auto-switch on canvas selection:
+The left column is now a **persistent tab bar** (`Stepper.tsx`, `role="tablist"`/`role="tab"`/`aria-selected`), not a linear wizard. The old `StepNavigator` (Back / "Step X of Y" / Next + its export button) was **removed** — every tool is one click away, random-access. Tabs still switch the active panel via `goToStep`/`currentStep`, and auto-switch on canvas selection still works.
+
+The 4 tabs + auto-switch on canvas selection:
 1. **Canvas** — format, background picker (18 presets), color overlay.
 2. **Text** — add/manage text layers (font picker Onest/Inter, font-size dropdown + free input, color picker, weight, alignment, italic/uppercase/gradient toggles, line height, rotation, opacity, blur sliders).
 3. **Images** — TechBBQ logo on/off + style; batch image upload (up to 10), per-image controls (size sliders, corner radius, border color + stroke width input, crop).
-4. **Shapes** — 4 add buttons + per-shape editor (fill/outline, solid/gradient color, stroke, opacity, blur, rotation; rect-only linked/unlinked per-corner radius; star-only spikes + inner radius).
+4. **Elements** (was "Shapes" — renamed 2026-07-02; holds photo slots + shapes) — Add-photo-slot + 4 shape add buttons + per-shape editor (fill/outline, solid/gradient color, stroke, opacity, blur, rotation; rect-only linked/unlinked per-corner radius; star-only spikes + inner radius).
 
 Clicking a canvas element auto-switches the wizard to its matching step and
 expands the row in the editor. Manual step nav is sticky after that.
 
+### Export (header, persistent — moved here 2026-07-02)
+
+Primary **Save image** button + PNG/JPG radiogroup toggle live top-right in the
+header, always visible (wired to `handleExport()` / `setExportFormat`; disabled
+when `canvasIsEmpty` or `isExporting`). Export is no longer gated behind a
+wizard step. The old duplicate JPG-only quick-save Download button was removed
+from the canvas controls strip. `⌘E` still exports with the selected format.
+
+### Layers panel (docked, persistent — was floating; 2026-07-02)
+
+`showLayers` now defaults **true**. The panel is a persistent `<aside>` third
+column in the main content flex row (was an absolute floating element over the
+canvas). The strip Layers toggle collapses/expands it; the old
+click-outside-to-close effect was removed. A **`ResizeObserver` on
+`previewContainerRef`** rescales the canvas when the dock toggles (window-resize
+alone didn't catch the width change).
+
 ### Canvas controls strip (above the preview)
 
-Left → right: Undo · Redo · Grid toggle · Align popover · JPG quick-save ·
+Left → right: Undo · Redo · Grid toggle · Align popover ·
 Layers toggle · Pause/Resume animation. The grid is a 100×100 SVG overlay
 (pure visual aid, never exports). Align popover handles align-to-canvas
 (single-select) or align-to-selection-bbox (multi-select) + distribute
@@ -285,6 +304,13 @@ resumes after. Two passes — first warms up font loading, second captures.
 
 In rough priority order:
 
+**UX audit follow-ups (from 2026-07-02 UX + a11y review; P1 shipped on branch `ux-p1-dewizard`, unmerged):**
+
+- **P2 · Naming + onboarding.** DONE (2026-07-02): "Shapes" tab → **"Elements"**; removed all decorative `▪` section bullets (house-rule + screen-reader nit) across step files + TemplatesModal + CropDialog. STILL OPEN (need Auri's design call): lead the empty canvas with a template gallery; strip preset cards to name + thumbnail (hide variant badges behind hover); decide whether the header "Templates" button should be renamed (modal already splits "Presets" vs "Your templates", so vocabulary is mostly consistent already).
+- **P3 · Accessibility (WCAG 2.2 AA).** DONE (2026-07-02, branch `ux-p1-dewizard`): (a) semantic landmarks — header→`<header>`, left tools→`<aside aria-label="Design tools">`, canvas→`<main>`, layers→`<aside aria-label="Layers">`; (b) contrast — bumped all failing `text-white/25|30|40` (120 occurrences, 14 files): labels/body → `text-white/65` (~6:1), placeholders → `text-white/50`; (c) focus — added `focus-visible:ring-2 ring-[#FF6B00]/70` to all 13 inputs that had bare/faint `focus:outline-none`. STILL OPEN: keyboard layer reorder (up/down buttons) + a keyboard path to canvas selection; `TemplatesModal` needs `role="dialog"` + Esc + focus trap (move all 3 modals to Radix Dialog); promote the (now glyph-free) section labels to real `<h2>/<h3>` headings.
+
+**Feature backlog:**
+
 1. **Image effects parity** — rotation, opacity, blur sliders on uploaded images (texts have them; images don't).
 2. **Custom background image** — upload your own image as canvas background (with scale + X/Y position), separate from regular image layers.
 3. **Solid + gradient backgrounds** — two-color gradient with angle alongside the liquid-metal presets.
@@ -303,6 +329,11 @@ In rough priority order:
 
 Newer at the top.
 
+- **Template gallery empty state (2026-07-02, same branch `ux-p1-dewizard`):** new `PresetThumbnail.tsx` renders a static (no-WebGL) mini-preview of any preset (CSS-gradient bg + positioned text/shapes/slots). Empty canvas now shows a "Start from a template" gallery of `visiblePresets` cards; click loads (`handleLoadPreset`), "Start blank" dismisses to the plain placeholder (which has a "Browse templates" reopen button). `galleryDismissed` state gates it. Note: presets have no stored thumbnails — the preview is computed live from preset data, so it stays in sync automatically. tsc clean, serves 200.
+- **P3 accessibility partial (2026-07-02, same branch `ux-p1-dewizard`):** semantic landmarks (header/main/aside), contrast bump on 120 low-opacity text classes (14 files), focus-visible rings on all 13 inputs. Compiles + serves 200, introduced 0 new lint errors.
+- **P2 partial (2026-07-02, same branch `ux-p1-dewizard`):** renamed "Shapes" tab → "Elements"; stripped all `▪` decorative section bullets. Compiles + serves 200.
+- **Known pre-existing lint (NOT from the UX work; present on `master`):** 10 `react-hooks/*` ESLint errors — `set-state-in-effect` in StepText.tsx:31, StepElements.tsx:33, useFolderOrder/useHiddenPresets/usePresetOverrides/useTemplates/useUserPresets; `rules-of-hooks` (conditional hooks) in LogoDragOverlay.tsx:126/171; `refs`-during-render in CanvasBackground.tsx:251. App compiles + runs regardless (React Compiler strict lint, not Turbopack blockers). Worth a dedicated code-health pass.
+- **P1 UX restructure (2026-07-02, branch `ux-p1-dewizard`, not yet merged to `master`):** de-wizared the left column (persistent tool tabs, removed StepNavigator Back/Next), moved export to a persistent header button + PNG/JPG toggle (removed the duplicate strip Download), docked the Layers panel as a persistent right column (default open, ResizeObserver rescales canvas on toggle). Compiles clean, ESLint 0 errors, serves 200.
 - Outline-shape hit-test (click only on stroke; hollow interior is click-through to elements below).
 - Locked elements still selectable (mousedown selects, drag bails; marquee includes them; orange 🔒 badge on canvas + toast on lock/unlock).
 - Layers-panel click-outside-to-close.

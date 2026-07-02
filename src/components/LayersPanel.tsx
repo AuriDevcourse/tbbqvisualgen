@@ -273,10 +273,10 @@ export function LayersPanel({
             )}
           >
             {draggable && (
-              <GripVertical className="w-3 h-3 text-white/30 group-hover:text-white/60 shrink-0 cursor-grab active:cursor-grabbing" />
+              <GripVertical className="w-3 h-3 text-white/60 group-hover:text-white/60 shrink-0 cursor-grab active:cursor-grabbing" />
             )}
-            <Icon className={cn("w-3.5 h-3.5 shrink-0", visuallyHidden ? "text-white/30" : "text-white/60")} />
-            <span className={cn("flex-1 truncate text-[11px]", visuallyHidden ? "text-white/40 line-through" : "text-white/85")}>
+            <Icon className={cn("w-3.5 h-3.5 shrink-0", visuallyHidden ? "text-white/60" : "text-white/60")} />
+            <span className={cn("flex-1 truncate text-[11px]", visuallyHidden ? "text-white/65 line-through" : "text-white/85")}>
               {row.name}
             </span>
 
@@ -285,7 +285,7 @@ export function LayersPanel({
                 onClick={(e) => { e.stopPropagation(); onDuplicateRow(row.layerId!); }}
                 aria-label="Duplicate layer"
                 title="Duplicate layer"
-                className="p-0.5 rounded text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+                className="p-0.5 rounded text-white/65 hover:text-white hover:bg-white/10 transition-colors"
               >
                 <Copy className="w-3 h-3" />
               </button>
@@ -301,7 +301,7 @@ export function LayersPanel({
                   "p-0.5 rounded transition-colors",
                   row.locked
                     ? "text-[#FF6B00] bg-[#FF6B00]/10 hover:bg-[#FF6B00]/20"
-                    : "text-white/40 hover:text-white hover:bg-white/10",
+                    : "text-white/65 hover:text-white hover:bg-white/10",
                 )}
               >
                 {row.locked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
@@ -324,7 +324,7 @@ export function LayersPanel({
                 onClick={(e) => { e.stopPropagation(); deleteRow(row); }}
                 aria-label="Delete layer"
                 title="Delete this layer"
-                className="p-0.5 rounded text-white/40 hover:text-[#FF0028] hover:bg-[#FF0028]/10 transition-colors"
+                className="p-0.5 rounded text-white/65 hover:text-[#FF0028] hover:bg-[#FF0028]/10 transition-colors"
               >
                 <Trash2 className="w-3 h-3" />
               </button>
@@ -333,7 +333,7 @@ export function LayersPanel({
         );
       })}
 
-      <p className="text-[10px] text-white/30 mt-2">Drag to reorder · top of list = top of canvas stack</p>
+      <p className="text-[10px] text-white/60 mt-2">Drag to reorder · top of list = top of canvas stack</p>
     </div>
   );
 }

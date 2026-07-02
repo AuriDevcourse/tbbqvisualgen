@@ -77,7 +77,7 @@ export function OverlayPicker({
                   "px-2 py-1 rounded text-[10px] font-medium transition-colors",
                   blend === mode.value
                     ? "bg-white/15 text-white border border-white/20"
-                    : "bg-white/5 text-white/40 border border-transparent hover:bg-white/10 hover:text-white/60"
+                    : "bg-white/5 text-white/65 border border-transparent hover:bg-white/10 hover:text-white/60"
                 )}
               >
                 {mode.label}
@@ -87,7 +87,7 @@ export function OverlayPicker({
 
           {/* Opacity slider */}
           <div className="flex items-center gap-2">
-            <span className="text-[10px] text-white/40 w-12 shrink-0">Opacity</span>
+            <span className="text-[10px] text-white/65 w-12 shrink-0">Opacity</span>
             <input
               type="range"
               min={0}
@@ -96,7 +96,7 @@ export function OverlayPicker({
               onChange={(e) => onOpacityChange(Number(e.target.value) / 100)}
               className="flex-1 h-1 appearance-none bg-white/10 rounded-full outline-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:cursor-pointer"
             />
-            <span className="text-[10px] text-white/40 w-8 text-right">{Math.round(opacity * 100)}%</span>
+            <span className="text-[10px] text-white/65 w-8 text-right">{Math.round(opacity * 100)}%</span>
           </div>
         </>
       )}

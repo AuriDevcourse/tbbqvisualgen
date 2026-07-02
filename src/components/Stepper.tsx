@@ -17,16 +17,17 @@ interface StepperProps {
 
 export function Stepper({ steps, current, onChange }: StepperProps) {
   return (
-    <div className="flex gap-1 bg-card-2 rounded-lg p-1">
+    <div role="tablist" aria-label="Editor tools" className="flex gap-1 bg-card-2 rounded-lg p-1">
       {steps.map((step) => {
         const active = current === step.id;
         const Icon = step.icon;
         return (
           <button
             key={step.id}
+            role="tab"
             onClick={() => onChange(step.id)}
-            aria-label={`Step ${step.id}: ${step.label}`}
-            aria-current={active ? "step" : undefined}
+            aria-label={step.label}
+            aria-selected={active}
             className={cn(
               "flex-1 flex flex-col items-center justify-center gap-1 py-2 rounded-md transition-colors min-w-0 outline-none focus-visible:ring-2 focus-visible:ring-surface/70",
               active

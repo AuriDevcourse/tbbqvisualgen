@@ -79,7 +79,7 @@ export function StepElements({ design, setDesign, selectedShapeId, onSelectShape
       {/* Add photo slot — emphasized as a primary action because it's the
        *  fastest way to lay out speaker/headshot frames before uploading. */}
       <section className="flex flex-col gap-2">
-        <span className="text-[10px] font-medium text-white/40 uppercase tracking-[0.18em]">▪ Add photo slot</span>
+        <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.18em]">Add photo slot</span>
         <button
           onClick={addPhotoSlot}
           className="flex items-center justify-center gap-2 py-2.5 rounded-md bg-gradient-to-r from-[#FF6B00]/15 to-[#FF0028]/15 border border-[#FF6B00]/40 text-white/90 text-[11px] font-semibold hover:from-[#FF6B00]/25 hover:to-[#FF0028]/25 hover:border-[#FF6B00]/70 transition-all"
@@ -87,14 +87,14 @@ export function StepElements({ design, setDesign, selectedShapeId, onSelectShape
           <ImagePlus className="w-4 h-4 text-[#FF6B00]" />
           Add photo slot
         </button>
-        <p className="text-[10px] text-white/30">
+        <p className="text-[10px] text-white/60">
           Drops a placeholder rectangle. Click it on canvas to upload a photo into that slot.
         </p>
       </section>
 
       {/* Add shape buttons */}
       <section className="flex flex-col gap-2 pt-3 border-t border-white/5">
-        <span className="text-[10px] font-medium text-white/40 uppercase tracking-[0.18em]">▪ Add shape</span>
+        <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.18em]">Add shape</span>
         <div className="grid grid-cols-4 gap-1.5">
           {SHAPE_BUTTONS.map(({ type, label, Icon }) => (
             <button
@@ -114,13 +114,13 @@ export function StepElements({ design, setDesign, selectedShapeId, onSelectShape
       {/* Shape layers list */}
       <section className="flex flex-col gap-2 pt-3 border-t border-white/5">
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-medium text-white/40 uppercase tracking-[0.18em]">
-            ▪ Shapes ({shapes.length})
+          <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.18em]">
+            Shapes ({shapes.length})
           </span>
         </div>
 
         {shapes.length === 0 && (
-          <div className="text-[11px] text-white/40 px-3 py-4 text-center border border-dashed border-white/10 rounded-lg">
+          <div className="text-[11px] text-white/65 px-3 py-4 text-center border border-dashed border-white/10 rounded-lg">
             No shapes yet. Click one of the buttons above to add.
           </div>
         )}
@@ -163,7 +163,7 @@ export function StepElements({ design, setDesign, selectedShapeId, onSelectShape
                     {expanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                   </button>
                   <ShapeIcon className={cn("w-3.5 h-3.5", isPlaceholder ? "text-[#FF6B00]" : "text-white/60")} />
-                  <span className={cn("flex-1 text-[11px] truncate", s.hidden ? "text-white/40 line-through" : "text-white/85")}>
+                  <span className={cn("flex-1 text-[11px] truncate", s.hidden ? "text-white/65 line-through" : "text-white/85")}>
                     {rowLabel}
                   </span>
                   <button
@@ -176,7 +176,7 @@ export function StepElements({ design, setDesign, selectedShapeId, onSelectShape
                   <button
                     onClick={(e) => { e.stopPropagation(); removeShape(s.id); }}
                     aria-label="Delete shape"
-                    className="p-0.5 rounded text-white/40 hover:text-[#FF0028] hover:bg-[#FF0028]/10 transition-colors"
+                    className="p-0.5 rounded text-white/65 hover:text-[#FF0028] hover:bg-[#FF0028]/10 transition-colors"
                   >
                     <Trash2 className="w-3 h-3" />
                   </button>
@@ -195,7 +195,7 @@ export function StepElements({ design, setDesign, selectedShapeId, onSelectShape
       </section>
 
       {selected && !expandedIds.has(selected.id) && (
-        <div className="flex items-center gap-2 text-[10px] text-white/40">
+        <div className="flex items-center gap-2 text-[10px] text-white/65">
           <Plus className="w-3 h-3" />
           <span>Click the selected shape row above to edit.</span>
         </div>
@@ -221,14 +221,14 @@ function ShapeEditor({ shape, onChange }: ShapeEditorProps) {
       {/* Placeholder label — visible only for image-upload slots. */}
       {isPlaceholder && (
         <div className="flex items-center gap-3">
-          <label className="text-[9px] uppercase tracking-wider text-white/40 w-12 shrink-0">Label</label>
+          <label className="text-[9px] uppercase tracking-wider text-white/65 w-12 shrink-0">Label</label>
           <input
             type="text"
             value={shape.imagePlaceholder?.label ?? ""}
             onChange={(e) => onChange({ imagePlaceholder: { label: e.target.value } })}
             placeholder="PHOTO"
             maxLength={32}
-            className="flex-1 bg-white/5 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-[#FF6B00]/40"
+            className="flex-1 bg-white/5 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70 focus:border-[#FF6B00]/40"
           />
         </div>
       )}
@@ -236,7 +236,7 @@ function ShapeEditor({ shape, onChange }: ShapeEditorProps) {
       {/* Fill / Outline tabs — Line is always solid colored. */}
       {!isLine && (
         <div className="flex items-center gap-3">
-          <label className="text-[9px] uppercase tracking-wider text-white/40 w-12 shrink-0">Mode</label>
+          <label className="text-[9px] uppercase tracking-wider text-white/65 w-12 shrink-0">Mode</label>
           <div className="flex gap-1 flex-1">
             {(["fill", "outline"] as const).map((m) => (
               <button
@@ -258,7 +258,7 @@ function ShapeEditor({ shape, onChange }: ShapeEditorProps) {
 
       {/* Color type — solid vs gradient (gradient skipped on outline-only for simplicity) */}
       <div className="flex items-center gap-3">
-        <label className="text-[9px] uppercase tracking-wider text-white/40 w-12 shrink-0">Color</label>
+        <label className="text-[9px] uppercase tracking-wider text-white/65 w-12 shrink-0">Color</label>
         <div className="flex gap-1 flex-1">
           {(["solid", "gradient"] as const).map((c) => (
             <button
@@ -280,7 +280,7 @@ function ShapeEditor({ shape, onChange }: ShapeEditorProps) {
       </div>
 
       <div className="flex items-center gap-3">
-        <label className="text-[9px] uppercase tracking-wider text-white/40 w-12 shrink-0">
+        <label className="text-[9px] uppercase tracking-wider text-white/65 w-12 shrink-0">
           {shape.colorType === "gradient" && shape.fillType !== "outline" ? "From" : "Fill"}
         </label>
         <ColorPicker
@@ -293,7 +293,7 @@ function ShapeEditor({ shape, onChange }: ShapeEditorProps) {
 
       {shape.colorType === "gradient" && shape.fillType !== "outline" && (
         <div className="flex items-center gap-3">
-          <label className="text-[9px] uppercase tracking-wider text-white/40 w-12 shrink-0">To</label>
+          <label className="text-[9px] uppercase tracking-wider text-white/65 w-12 shrink-0">To</label>
           <ColorPicker
             color={shape.color2}
             defaultColor="#FF6B00"
@@ -323,7 +323,7 @@ function ShapeEditor({ shape, onChange }: ShapeEditorProps) {
        *  the common controls (mode, color, stroke, radius) stay uncluttered. */}
       <button
         onClick={() => setShowMore((v) => !v)}
-        className="flex items-center gap-1.5 text-[9px] uppercase tracking-wider text-white/40 hover:text-white/70 transition-colors pt-0.5"
+        className="flex items-center gap-1.5 text-[9px] uppercase tracking-wider text-white/65 hover:text-white/70 transition-colors pt-0.5"
       >
         {showMore ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
         More options
@@ -383,7 +383,7 @@ function ShapeEditor({ shape, onChange }: ShapeEditorProps) {
         </div>
       )}
 
-      <p className="text-[10px] text-white/30 pt-1">Drag the shape on canvas to reposition.</p>
+      <p className="text-[10px] text-white/60 pt-1">Drag the shape on canvas to reposition.</p>
     </div>
   );
 }
@@ -409,7 +409,7 @@ function RectRadiusEditor({ shape, onChange }: { shape: ShapeElement; onChange: 
   return (
     <div className="flex flex-col gap-2 pt-1 border-t border-white/5">
       <div className="flex items-center justify-between">
-        <label className="text-[9px] uppercase tracking-wider text-white/40">Radius</label>
+        <label className="text-[9px] uppercase tracking-wider text-white/65">Radius</label>
         <button
           onClick={toggle}
           aria-label={linked ? "Unlink corners" : "Link corners"}
@@ -465,7 +465,7 @@ function SliderRow({ label, value, min, max, step, format, onChange }: SliderRow
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center justify-between">
-        <label className="text-[9px] uppercase tracking-wider text-white/40">{label}</label>
+        <label className="text-[9px] uppercase tracking-wider text-white/65">{label}</label>
         <span className="text-[10px] font-mono text-white/60">{format(value)}</span>
       </div>
       <input

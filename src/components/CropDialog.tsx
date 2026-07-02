@@ -129,7 +129,7 @@ export function CropDialog({ src, initial, onSave, onCancel }: CropDialogProps) 
         className="bg-[#15110e]/95 border border-[#FF6B00]/30 rounded-2xl p-5 max-w-[min(640px,90vw)] w-full shadow-2xl"
       >
         <div className="flex items-center justify-between mb-4">
-          <span className="text-[10px] font-medium text-[#FF6B00] uppercase tracking-[0.18em]">▪ Crop image</span>
+          <span className="text-[10px] font-medium text-[#FF6B00] uppercase tracking-[0.18em]">Crop image</span>
           <button
             onClick={onCancel}
             aria-label="Cancel"
@@ -186,7 +186,7 @@ export function CropDialog({ src, initial, onSave, onCancel }: CropDialogProps) 
           </div>
         </div>
 
-        <div className="flex items-center justify-between mt-4 text-[10px] font-mono text-white/40">
+        <div className="flex items-center justify-between mt-4 text-[10px] font-mono text-white/65">
           <span>X {(crop.x * 100).toFixed(0)}% · Y {(crop.y * 100).toFixed(0)}%</span>
           <span>{(crop.width * 100).toFixed(0)}% × {(crop.height * 100).toFixed(0)}%</span>
         </div>
@@ -219,7 +219,7 @@ export function CropDialog({ src, initial, onSave, onCancel }: CropDialogProps) 
           </button>
         </div>
 
-        <p className="text-[10px] text-white/30 mt-3 text-center">Drag the rectangle to move it · drag the corners to resize · Enter saves · Esc cancels</p>
+        <p className="text-[10px] text-white/60 mt-3 text-center">Drag the rectangle to move it · drag the corners to resize · Enter saves · Esc cancels</p>
       </div>
     </div>
   );

@@ -71,9 +71,9 @@ export function FormatPicker({ value, onChange, customWidth, customHeight, onCus
             min={100}
             max={4096}
             aria-label="Custom width in pixels"
-            className="w-20 px-2 py-1.5 rounded-md bg-white/5 border border-white/10 text-white text-xs text-center focus:outline-none focus:border-[#FF0028]/50"
+            className="w-20 px-2 py-1.5 rounded-md bg-white/5 border border-white/10 text-white text-xs text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70 focus:border-[#FF0028]/50"
           />
-          <span className="text-white/30 text-xs">×</span>
+          <span className="text-white/60 text-xs">×</span>
           <input
             type="number"
             value={heightInput}
@@ -84,10 +84,10 @@ export function FormatPicker({ value, onChange, customWidth, customHeight, onCus
             min={100}
             max={4096}
             aria-label="Custom height in pixels"
-            className="w-20 px-2 py-1.5 rounded-md bg-white/5 border border-white/10 text-white text-xs text-center focus:outline-none focus:border-[#FF0028]/50"
+            className="w-20 px-2 py-1.5 rounded-md bg-white/5 border border-white/10 text-white text-xs text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70 focus:border-[#FF0028]/50"
           />
-          <span className="text-white/40 text-xs">px</span>
-          <span className="text-[10px] text-white/30 ml-auto">Press Enter to apply</span>
+          <span className="text-white/65 text-xs">px</span>
+          <span className="text-[10px] text-white/60 ml-auto">Press Enter to apply</span>
         </div>
       )}
     </div>

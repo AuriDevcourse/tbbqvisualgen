@@ -67,8 +67,8 @@ export function StepText({ design, setDesign, focusedId }: StepTextProps) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <span className="text-[10px] font-medium text-white/40 uppercase tracking-[0.18em]">
-          ▪ Text layers ({design.texts.length})
+        <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.18em]">
+          Text layers ({design.texts.length})
         </span>
         <button
           onClick={addText}
@@ -81,7 +81,7 @@ export function StepText({ design, setDesign, focusedId }: StepTextProps) {
       </div>
 
       {design.texts.length === 0 && (
-        <div className="text-[11px] text-white/40 px-3 py-4 text-center border border-dashed border-white/10 rounded-lg">
+        <div className="text-[11px] text-white/65 px-3 py-4 text-center border border-dashed border-white/10 rounded-lg">
           No text on canvas. Click <span className="text-[#FF6B00]">Add text</span> to create your first layer.
         </div>
       )}
@@ -115,7 +115,7 @@ export function StepText({ design, setDesign, focusedId }: StepTextProps) {
                   onClick={() => toggleExpand(text.id)}
                   className={cn(
                     "flex-1 text-[11px] truncate cursor-pointer",
-                    text.hidden ? "text-white/40 line-through" : "text-white/85",
+                    text.hidden ? "text-white/65 line-through" : "text-white/85",
                   )}
                 >
                   {text.content.trim().slice(0, 32) || "Empty text"}
@@ -130,7 +130,7 @@ export function StepText({ design, setDesign, focusedId }: StepTextProps) {
                 <button
                   onClick={() => removeText(text.id)}
                   aria-label="Delete layer"
-                  className="p-0.5 rounded text-white/40 hover:text-[#FF0028] hover:bg-[#FF0028]/10 transition-colors"
+                  className="p-0.5 rounded text-white/65 hover:text-[#FF0028] hover:bg-[#FF0028]/10 transition-colors"
                 >
                   <Trash2 className="w-3 h-3" />
                 </button>
@@ -140,18 +140,18 @@ export function StepText({ design, setDesign, focusedId }: StepTextProps) {
               {expanded && (
                 <div className="flex flex-col gap-2.5 px-3 pb-3 pt-1 border-t border-white/5">
                   <div className="flex flex-col gap-1">
-                    <label className="text-[9px] uppercase tracking-wider text-white/40">Content</label>
+                    <label className="text-[9px] uppercase tracking-wider text-white/65">Content</label>
                     <textarea
                       value={text.content}
                       onChange={(e) => updateText(text.id, { content: e.target.value })}
                       rows={2}
                       placeholder="Enter text..."
-                      className="bg-white/5 border border-white/10 rounded-md px-2 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-[#FF6B00]/40 resize-none"
+                      className="bg-white/5 border border-white/10 rounded-md px-2 py-1.5 text-xs text-white placeholder:text-white/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70 focus:border-[#FF6B00]/40 resize-none"
                     />
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <label className="text-[9px] uppercase tracking-wider text-white/40">Size</label>
+                    <label className="text-[9px] uppercase tracking-wider text-white/65">Size</label>
                     <div className="flex items-center gap-1.5">
                       <select
                         value={FONT_SIZE_PRESETS.includes(text.fontSize) ? text.fontSize : ""}
@@ -160,7 +160,7 @@ export function StepText({ design, setDesign, focusedId }: StepTextProps) {
                           if (!Number.isNaN(v) && v > 0) updateText(text.id, { fontSize: v });
                         }}
                         aria-label="Font size preset"
-                        className="flex-1 bg-white/5 border border-white/10 rounded-md px-2 py-1 text-xs text-white/85 focus:outline-none focus:border-[#FF6B00]/40"
+                        className="flex-1 bg-white/5 border border-white/10 rounded-md px-2 py-1 text-xs text-white/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70 focus:border-[#FF6B00]/40"
                       >
                         <option value="" disabled className="bg-[#15110e]">Custom · {text.fontSize}px</option>
                         {FONT_SIZE_PRESETS.map((px) => (
@@ -179,14 +179,14 @@ export function StepText({ design, setDesign, focusedId }: StepTextProps) {
                           if (!Number.isNaN(v) && v > 0) updateText(text.id, { fontSize: v });
                         }}
                         aria-label="Font size (custom)"
-                        className="w-16 bg-white/5 border border-white/10 rounded-md px-2 py-1 text-xs text-white text-right focus:outline-none focus:border-[#FF6B00]/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                        className="w-16 bg-white/5 border border-white/10 rounded-md px-2 py-1 text-xs text-white text-right focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70 focus:border-[#FF6B00]/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                       />
-                      <span className="text-[10px] font-mono text-white/40">px</span>
+                      <span className="text-[10px] font-mono text-white/65">px</span>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <label className="text-[9px] uppercase tracking-wider text-white/40 w-12 shrink-0">Color</label>
+                    <label className="text-[9px] uppercase tracking-wider text-white/65 w-12 shrink-0">Color</label>
                     <ColorPicker
                       color={text.color}
                       defaultColor="#FFFFFF"
@@ -197,7 +197,7 @@ export function StepText({ design, setDesign, focusedId }: StepTextProps) {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <label className="text-[9px] uppercase tracking-wider text-white/40 w-12 shrink-0">Font</label>
+                    <label className="text-[9px] uppercase tracking-wider text-white/65 w-12 shrink-0">Font</label>
                     <div className="flex gap-1 flex-1">
                       {CANVAS_FONT_OPTIONS.map((f) => (
                         <button
@@ -218,7 +218,7 @@ export function StepText({ design, setDesign, focusedId }: StepTextProps) {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <label className="text-[9px] uppercase tracking-wider text-white/40 w-12 shrink-0">Weight</label>
+                    <label className="text-[9px] uppercase tracking-wider text-white/65 w-12 shrink-0">Weight</label>
                     <div className="flex gap-1 flex-1">
                       {[400, 600, 800].map((w) => (
                         <button
@@ -239,7 +239,7 @@ export function StepText({ design, setDesign, focusedId }: StepTextProps) {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <label className="text-[9px] uppercase tracking-wider text-white/40 w-12 shrink-0">Align</label>
+                    <label className="text-[9px] uppercase tracking-wider text-white/65 w-12 shrink-0">Align</label>
                     <div className="flex gap-1 flex-1">
                       {(["left", "center", "right"] as const).map((a) => (
                         <button
@@ -259,7 +259,7 @@ export function StepText({ design, setDesign, focusedId }: StepTextProps) {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <label className="text-[9px] uppercase tracking-wider text-white/40 w-12 shrink-0">Style</label>
+                    <label className="text-[9px] uppercase tracking-wider text-white/65 w-12 shrink-0">Style</label>
                     <div className="flex gap-1.5">
                       <button
                         onClick={() => updateText(text.id, { uppercase: !text.uppercase })}
@@ -328,20 +328,20 @@ export function StepText({ design, setDesign, focusedId }: StepTextProps) {
                   </div>
 
                   <div className="flex items-center justify-between pt-1 border-t border-white/5">
-                    <span className="text-[9px] uppercase tracking-wider text-white/40">Position</span>
+                    <span className="text-[9px] uppercase tracking-wider text-white/65">Position</span>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-mono text-white/40">
+                      <span className="text-[10px] font-mono text-white/65">
                         {Math.round(text.position.x * 100)}% · {Math.round(text.position.y * 100)}%
                       </span>
                       <button
                         onClick={() => updateText(text.id, { position: { x: 0.5, y: 0.5 } })}
-                        className="text-[10px] text-white/40 hover:text-white/80 transition-colors underline"
+                        className="text-[10px] text-white/65 hover:text-white/80 transition-colors underline"
                       >
                         center
                       </button>
                     </div>
                   </div>
-                  <p className="text-[10px] text-white/30">Drag the text on the canvas to reposition.</p>
+                  <p className="text-[10px] text-white/60">Drag the text on the canvas to reposition.</p>
                 </div>
               )}
             </div>
@@ -384,7 +384,7 @@ function SliderRow({ label, value, min, max, step, format, onChange, snap, snapW
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center justify-between">
-        <label className="text-[9px] uppercase tracking-wider text-white/40">{label}</label>
+        <label className="text-[9px] uppercase tracking-wider text-white/65">{label}</label>
         <span className="text-[10px] font-mono text-white/60">{format(value)}</span>
       </div>
       <input

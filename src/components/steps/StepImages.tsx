@@ -19,7 +19,7 @@ export function StepImages({
   return (
     <div className="flex flex-col gap-5">
       <section className="flex flex-col gap-2">
-        <span className="text-[10px] font-medium text-white/40 uppercase tracking-[0.18em]">▪ Images on canvas</span>
+        <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.18em]">Images on canvas</span>
         <ImagePlacer
           images={canvasImages}
           selectedId={selectedImageId}

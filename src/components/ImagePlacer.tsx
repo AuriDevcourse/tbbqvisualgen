@@ -269,7 +269,7 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
           <span className="text-xs text-white/50">
             {images.length === 0 ? "Drop images or click to upload" : "Add another image"}
           </span>
-          <span className="text-[10px] text-white/30">
+          <span className="text-[10px] text-white/60">
             PNG, JPG, WebP — max 10MB each · {images.length}/{MAX_IMAGES}
           </span>
           <input
@@ -290,7 +290,7 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
         return (<>
           {/* Width slider */}
           <div className="flex items-center gap-3">
-            <span className="text-[10px] text-white/40 uppercase tracking-wider w-10 shrink-0">W</span>
+            <span className="text-[10px] text-white/65 uppercase tracking-wider w-10 shrink-0">W</span>
             <input
               type="range"
               min={5}
@@ -299,12 +299,12 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
               onChange={(e) => update({ width: parseInt(e.target.value) / 100 })}
               className="flex-1 accent-[#FF0028] h-1"
             />
-            <span className="text-[10px] text-white/40 w-8 text-right">{Math.round(selectedImage.width * 100)}%</span>
+            <span className="text-[10px] text-white/65 w-8 text-right">{Math.round(selectedImage.width * 100)}%</span>
           </div>
 
           {/* Height slider */}
           <div className="flex items-center gap-3">
-            <span className="text-[10px] text-white/40 uppercase tracking-wider w-10 shrink-0">H</span>
+            <span className="text-[10px] text-white/65 uppercase tracking-wider w-10 shrink-0">H</span>
             <input
               type="range"
               min={5}
@@ -313,12 +313,12 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
               onChange={(e) => update({ height: parseInt(e.target.value) / 100 })}
               className="flex-1 accent-[#FF0028] h-1"
             />
-            <span className="text-[10px] text-white/40 w-8 text-right">{Math.round(selectedImage.height * 100)}%</span>
+            <span className="text-[10px] text-white/65 w-8 text-right">{Math.round(selectedImage.height * 100)}%</span>
           </div>
 
           {/* Corner radius slider — 0 = sharp, 50 = circle */}
           <div className="flex items-center gap-3">
-            <span className="text-[10px] text-white/40 uppercase tracking-wider w-10 shrink-0">Radius</span>
+            <span className="text-[10px] text-white/65 uppercase tracking-wider w-10 shrink-0">Radius</span>
             <input
               type="range"
               min={0}
@@ -329,7 +329,7 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
               aria-label="Corner radius"
               className="flex-1 accent-[#FF0028] h-1"
             />
-            <span className="text-[10px] text-white/40 w-8 text-right">{currentRadius}%</span>
+            <span className="text-[10px] text-white/65 w-8 text-right">{currentRadius}%</span>
           </div>
 
           {/* Fit mode — Fill (cover, crops to fill) vs Fit (contain, no crop).
@@ -337,7 +337,7 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
            *  ratios; "Fit" shows the whole logo with letterboxing instead
            *  of zooming in to fill the bbox. */}
           <div className="flex items-center gap-3">
-            <span className="text-[10px] text-white/40 uppercase tracking-wider w-10 shrink-0">Fit</span>
+            <span className="text-[10px] text-white/65 uppercase tracking-wider w-10 shrink-0">Fit</span>
             <div className="flex flex-1 gap-1">
               {([
                 { value: "cover", label: "Fill", title: "Crop to fill the slot (best for headshots)" },
@@ -370,7 +370,7 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
            *  canvas to position the subject. */}
           {zoomInfo && (
             <div className="flex items-center gap-3">
-              <span className="text-[10px] text-white/40 uppercase tracking-wider w-10 shrink-0">Zoom</span>
+              <span className="text-[10px] text-white/65 uppercase tracking-wider w-10 shrink-0">Zoom</span>
               <input
                 type="range"
                 min={1}
@@ -381,7 +381,7 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
                 aria-label="Image zoom"
                 className="flex-1 accent-[#FF0028] h-1"
               />
-              <span className="text-[10px] text-white/40 w-8 text-right">{zoomInfo.zoom.toFixed(1)}×</span>
+              <span className="text-[10px] text-white/65 w-8 text-right">{zoomInfo.zoom.toFixed(1)}×</span>
             </div>
           )}
 
@@ -390,7 +390,7 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
            *  transparent backgrounds that need a visible card). Pick a color
            *  to enable; clear to remove. */}
           <div className="flex items-center gap-3">
-            <span className="text-[10px] text-white/40 uppercase tracking-wider w-10 shrink-0">Box</span>
+            <span className="text-[10px] text-white/65 uppercase tracking-wider w-10 shrink-0">Box</span>
             <ColorPicker
               color={selectedImage.backdropColor}
               defaultColor="#FFFFFF"
@@ -398,7 +398,7 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
               ariaLabel="Backdrop color behind image"
               allowClear
             />
-            <span className="text-[10px] text-white/40">
+            <span className="text-[10px] text-white/65">
               {selectedImage.backdropColor ? "On" : "Off"}
             </span>
           </div>
@@ -407,7 +407,7 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
            *  backdrop and border still occupy the full bbox; only the image
            *  shrinks. Stored as a fraction of canvas width. */}
           <div className="flex items-center gap-3">
-            <span className="text-[10px] text-white/40 uppercase tracking-wider w-10 shrink-0">Padding</span>
+            <span className="text-[10px] text-white/65 uppercase tracking-wider w-10 shrink-0">Padding</span>
             <input
               type="range"
               min={0}
@@ -418,7 +418,7 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
               aria-label="Padding inside image box"
               className="flex-1 accent-[#FF0028] h-1"
             />
-            <span className="text-[10px] text-white/40 w-10 text-right">
+            <span className="text-[10px] text-white/65 w-10 text-right">
               {Math.round((selectedImage.padding ?? 0) * 1500)}px
             </span>
           </div>
@@ -428,7 +428,7 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
            *  layer order; needs a semi-transparent backdrop color (or no
            *  backdrop) to be visible. */}
           <div className="flex items-center gap-3">
-            <span className="text-[10px] text-white/40 uppercase tracking-wider w-10 shrink-0">Blur</span>
+            <span className="text-[10px] text-white/65 uppercase tracking-wider w-10 shrink-0">Blur</span>
             <input
               type="range"
               min={0}
@@ -439,7 +439,7 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
               aria-label="Backdrop blur (frosted glass behind image)"
               className="flex-1 accent-[#FF0028] h-1"
             />
-            <span className="text-[10px] text-white/40 w-10 text-right">
+            <span className="text-[10px] text-white/65 w-10 text-right">
               {Math.round((selectedImage.backdropBlur ?? 0) * 1500)}px
             </span>
           </div>
@@ -447,7 +447,7 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
           {/* Opacity — fades the whole image box (image + backdrop +
            *  border together). Useful for layering on busy backgrounds. */}
           <div className="flex items-center gap-3">
-            <span className="text-[10px] text-white/40 uppercase tracking-wider w-10 shrink-0">Opacity</span>
+            <span className="text-[10px] text-white/65 uppercase tracking-wider w-10 shrink-0">Opacity</span>
             <input
               type="range"
               min={0}
@@ -458,14 +458,14 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
               aria-label="Image box opacity"
               className="flex-1 accent-[#FF0028] h-1"
             />
-            <span className="text-[10px] text-white/40 w-10 text-right">
+            <span className="text-[10px] text-white/65 w-10 text-right">
               {Math.round((selectedImage.opacity ?? 1) * 100)}%
             </span>
           </div>
 
           {/* Border toggle */}
           <div className="flex items-center gap-3">
-            <span className="text-[10px] text-white/40 uppercase tracking-wider w-10 shrink-0">Border</span>
+            <span className="text-[10px] text-white/65 uppercase tracking-wider w-10 shrink-0">Border</span>
             <button
               onClick={() => {
                 const on = !selectedImage.border;
@@ -493,7 +493,7 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
           {/* Border color + stroke width — single line, controls grouped */}
           {selectedImage.border && (
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-white/40 uppercase tracking-wider w-10 shrink-0">Color</span>
+              <span className="text-[10px] text-white/65 uppercase tracking-wider w-10 shrink-0">Color</span>
               <ColorPicker
                 color={selectedImage.borderColor}
                 defaultColor="#FFFFFF"
@@ -501,7 +501,7 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
                 ariaLabel="Border color"
                 allowClear
               />
-              <span className="text-[10px] text-white/40 uppercase tracking-wider">Stroke</span>
+              <span className="text-[10px] text-white/65 uppercase tracking-wider">Stroke</span>
               <input
                 key={selectedImage.id}
                 type="number"
@@ -517,15 +517,15 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
                   if (!Number.isNaN(px) && px >= 0) update({ borderWidth: px / 1500 });
                 }}
                 aria-label="Border stroke width in pixels"
-                className="w-12 bg-white/5 border border-white/10 rounded-md px-1.5 py-1 text-xs text-white text-right focus:outline-none focus:border-[#FF6B00]/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                className="w-12 bg-white/5 border border-white/10 rounded-md px-1.5 py-1 text-xs text-white text-right focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70 focus:border-[#FF6B00]/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
               />
-              <span className="text-[10px] text-white/40">px</span>
+              <span className="text-[10px] text-white/65">px</span>
             </div>
           )}
 
           {/* Crop */}
           <div className="flex items-center gap-3">
-            <span className="text-[10px] text-white/40 uppercase tracking-wider w-10 shrink-0">Crop</span>
+            <span className="text-[10px] text-white/65 uppercase tracking-wider w-10 shrink-0">Crop</span>
             <button
               onClick={() => setCropDialogFor(selectedImage.id)}
               aria-label="Open crop dialog"
@@ -544,7 +544,7 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
                 onClick={() => update({ crop: undefined })}
                 aria-label="Clear crop"
                 title="Clear crop (back to full image)"
-                className="p-1 rounded text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors"
+                className="p-1 rounded text-white/65 hover:text-white/80 hover:bg-white/10 transition-colors"
               >
                 <X className="w-3 h-3" />
               </button>

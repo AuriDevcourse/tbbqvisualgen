@@ -87,10 +87,10 @@ export function FeedbackButton() {
               rows={4}
               autoFocus
               aria-label="Feedback message"
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/30 transition-colors resize-none"
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-white/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70 focus:border-white/30 transition-colors resize-none"
             />
             <div className="flex items-center justify-between mt-3">
-              <span className="text-[10px] text-white/25">⌘+Enter to send · Esc to close</span>
+              <span className="text-[10px] text-white/60">⌘+Enter to send · Esc to close</span>
               <button
                 onClick={handleSubmit}
                 disabled={!message.trim() || sending}

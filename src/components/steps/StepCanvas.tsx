@@ -75,8 +75,8 @@ export function StepCanvas({
         }
         return (
           <section className="flex flex-col gap-3">
-            <span className="text-[10px] font-medium text-white/40 uppercase tracking-[0.18em]">
-              ▪ Start from preset
+            <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.18em]">
+              Start from a template
             </span>
             {Array.from(groups.entries()).map(([groupLabel, items]) => (
               <div key={groupLabel} className="flex flex-col gap-1.5">
@@ -84,7 +84,7 @@ export function StepCanvas({
                   <span className="text-[9px] font-semibold text-white/55 uppercase tracking-[0.14em]">
                     {groupLabel}
                   </span>
-                  <span className="text-[9px] text-white/30">{items.length}</span>
+                  <span className="text-[9px] text-white/60">{items.length}</span>
                   <div className="flex-1 h-px bg-white/5" />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -114,14 +114,14 @@ export function StepCanvas({
                                   key={f}
                                   title={[
                                     isCurrent ? "Current canvas format" : null,
-                                    hasCustom ? "Your saved variant" : hasBuiltIn ? "Ships with preset" : "Not yet defined for this format",
+                                    hasCustom ? "Your saved variant" : hasBuiltIn ? "Ships with template" : "Not yet defined for this format",
                                   ].filter(Boolean).join(" · ")}
                                   className={`relative text-[8.5px] font-mono px-1 py-px rounded border ${
                                     isCurrent
                                       ? "border-[#FF6B00]/70 bg-[#FF6B00]/15 text-[#FF8A1F]"
                                       : exists
                                         ? "border-white/15 bg-white/5 text-white/65"
-                                        : "border-white/10 bg-transparent text-white/30"
+                                        : "border-white/10 bg-transparent text-white/60"
                                   }`}
                                 >
                                   {FORMAT_BADGES[f]}
@@ -145,7 +145,7 @@ export function StepCanvas({
                 </div>
               </div>
             ))}
-            <p className="text-[10px] text-white/30">
+            <p className="text-[10px] text-white/60">
               Loads a layout you can customize. Click any image slot to upload a photo.
             </p>
           </section>
@@ -153,7 +153,7 @@ export function StepCanvas({
       })()}
 
       <section className="flex flex-col gap-2">
-        <span className="text-[10px] font-medium text-white/40 uppercase tracking-[0.18em]">▪ Format</span>
+        <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.18em]">Format</span>
         <FormatPicker
           value={format}
           onChange={setFormat}
@@ -164,17 +164,17 @@ export function StepCanvas({
       </section>
 
       <section className="flex flex-col gap-2">
-        <span className="text-[10px] font-medium text-white/40 uppercase tracking-[0.18em]">▪ Background</span>
+        <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.18em]">Background</span>
         <BackgroundPicker
           value={design.backgroundId}
           onChange={(id) => setDesign({ ...design, backgroundId: id })}
         />
-        <p className="text-[10px] text-white/30">Pause/resume the animation above the canvas.</p>
+        <p className="text-[10px] text-white/60">Pause/resume the animation above the canvas.</p>
       </section>
 
       <section className="flex flex-col gap-2 pt-3 border-t border-white/5">
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-medium text-white/40 uppercase tracking-[0.18em]">▪ TechBBQ logo</span>
+          <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.18em]">TechBBQ logo</span>
           <label className="flex items-center gap-1.5 text-[10px] text-white/50 cursor-pointer select-none">
             <input
               type="checkbox"
@@ -206,11 +206,11 @@ export function StepCanvas({
             );
           })}
         </div>
-        <p className="text-[10px] text-white/30">Click the logo on the canvas to move or resize it.</p>
+        <p className="text-[10px] text-white/60">Click the logo on the canvas to move or resize it.</p>
       </section>
 
       <section className="flex flex-col gap-2 pt-3 border-t border-white/5">
-        <span className="text-[10px] font-medium text-white/40 uppercase tracking-[0.18em]">▪ Color overlay</span>
+        <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.18em]">Color overlay</span>
         <OverlayPicker
           color={design.overlayColor}
           opacity={design.overlayOpacity ?? 0}
@@ -219,7 +219,7 @@ export function StepCanvas({
           onOpacityChange={(o) => setDesign({ ...design, overlayOpacity: o })}
           onBlendChange={(b) => setDesign({ ...design, overlayBlend: b })}
         />
-        <p className="text-[10px] text-white/30">Tints the whole canvas with a color + blend mode.</p>
+        <p className="text-[10px] text-white/60">Tints the whole canvas with a color + blend mode.</p>
       </section>
     </div>
   );

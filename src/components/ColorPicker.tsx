@@ -193,7 +193,7 @@ export function ColorPicker({
           <div className="flex flex-col gap-3">
             {/* Brand palette */}
             <div className="flex flex-col gap-1">
-              <span className="text-[9px] uppercase tracking-wider text-white/40">TechBBQ brand</span>
+              <span className="text-[9px] uppercase tracking-wider text-white/65">TechBBQ brand</span>
               <div className="grid grid-cols-8 gap-1">
                 {BRAND_SWATCHES.map((s) => (
                   <button
@@ -217,7 +217,7 @@ export function ColorPicker({
             {/* Recents */}
             {recents.length > 0 && (
               <div className="flex flex-col gap-1">
-                <span className="text-[9px] uppercase tracking-wider text-white/40">Recent</span>
+                <span className="text-[9px] uppercase tracking-wider text-white/65">Recent</span>
                 <div className="grid grid-cols-8 gap-1">
                   {recents.slice(0, 8).map((c) => (
                     <button
@@ -273,7 +273,7 @@ export function ColorPicker({
             {/* HEX input */}
             {mode === "hex" && (
               <div className="relative">
-                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-white/40">#</span>
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-white/65">#</span>
                 <input
                   type="text"
                   value={hexInput.replace(/^#/, "")}
@@ -281,7 +281,7 @@ export function ColorPicker({
                   maxLength={6}
                   spellCheck={false}
                   aria-label="Hex color value"
-                  className="w-full pl-5 pr-2 py-1.5 bg-white/5 border border-white/15 rounded-md text-sm font-mono text-white placeholder:text-white/30 focus:outline-none focus:border-[#FF6B00]/40"
+                  className="w-full pl-5 pr-2 py-1.5 bg-white/5 border border-white/15 rounded-md text-sm font-mono text-white placeholder:text-white/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70 focus:border-[#FF6B00]/40"
                 />
               </div>
             )}
@@ -291,7 +291,7 @@ export function ColorPicker({
               <div className="grid grid-cols-3 gap-2">
                 {(["r", "g", "b"] as const).map((channel) => (
                   <label key={channel} className="flex flex-col gap-1">
-                    <span className="text-[10px] uppercase tracking-wider text-white/40 text-center">
+                    <span className="text-[10px] uppercase tracking-wider text-white/65 text-center">
                       {channel.toUpperCase()}
                     </span>
                     <input
@@ -300,7 +300,7 @@ export function ColorPicker({
                       max={255}
                       value={channel === "r" ? r : channel === "g" ? g : b}
                       onChange={(e) => handleRgbChange(channel, Number(e.target.value) || 0)}
-                      className="w-full px-1.5 py-1 bg-white/5 border border-white/15 rounded-md text-sm font-mono text-white text-center focus:outline-none focus:border-[#FF6B00]/40"
+                      className="w-full px-1.5 py-1 bg-white/5 border border-white/15 rounded-md text-sm font-mono text-white text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70 focus:border-[#FF6B00]/40"
                     />
                   </label>
                 ))}

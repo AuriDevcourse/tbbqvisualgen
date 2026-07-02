@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Pause, Play, X, RotateCcw, Layers as LayersIcon, Download, LayoutTemplate, Type, Image as ImageIcon, Shapes, Undo2, Redo2, Lock, Unlock, Trash2, Copy, LibraryBig, AlignStartVertical, AlignCenterVertical, AlignEndVertical, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignHorizontalDistributeCenter, AlignVerticalDistributeCenter, Grid3x3, Group, Ungroup, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown } from "lucide-react";
+import { Pause, Play, X, RotateCcw, Layers as LayersIcon, Download, LayoutTemplate, Type, Image as ImageIcon, Shapes, Undo2, Redo2, Lock, Unlock, Trash2, Copy, LibraryBig, AlignStartVertical, AlignCenterVertical, AlignEndVertical, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignHorizontalDistributeCenter, AlignVerticalDistributeCenter, Grid3x3, Group, Ungroup, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Loader2 } from "lucide-react";
 import * as Popover from "@radix-ui/react-popover";
 import { toast } from "sonner";
 import { AnimatedGradient } from "@/components/AnimatedGradient";
@@ -19,12 +19,12 @@ import type { PlatformFormat, DesignConfig } from "@/types/template";
 import { FeedbackButton } from "@/components/FeedbackButton";
 import { Stepper } from "@/components/Stepper";
 import type { StepDef } from "@/components/Stepper";
-import { StepNavigator } from "@/components/StepNavigator";
 import { StepCanvas } from "@/components/steps/StepCanvas";
 import { StepText } from "@/components/steps/StepText";
 import { StepImages } from "@/components/steps/StepImages";
 import { StepElements } from "@/components/steps/StepElements";
 import { LayersPanel } from "@/components/LayersPanel";
+import { PresetThumbnail } from "@/components/PresetThumbnail";
 import { TemplatesModal } from "@/components/TemplatesModal";
 import { PresetEditingBar } from "@/components/PresetEditingBar";
 import { serializeAsPreset } from "@/lib/presetExport";
@@ -58,7 +58,7 @@ const STEPS: StepDef[] = [
   { id: 1, label: "Canvas", icon: LayoutTemplate },
   { id: 2, label: "Text", icon: Type },
   { id: 3, label: "Images", icon: ImageIcon },
-  { id: 4, label: "Shapes", icon: Shapes },
+  { id: 4, label: "Elements", icon: Shapes },
 ];
 
 // Logo color options for the floating toolbar that appears when the logo is
@@ -120,9 +120,10 @@ export default function Home() {
   const [guides, setGuides] = useState<{ x: number | null; y: number | null }>({ x: null, y: null });
   const [showEditTip, setShowEditTip] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
-  const [showLayers, setShowLayers] = useState(false);
-  const layersPanelRef = useRef<HTMLDivElement>(null);
-  const layersToggleRef = useRef<HTMLButtonElement>(null);
+  const [showLayers, setShowLayers] = useState(true);
+  // "Start from a template" gallery — shown over the empty canvas until the
+  // user picks a template or chooses "start blank".
+  const [galleryDismissed, setGalleryDismissed] = useState(false);
   const [exportFormat, setExportFormat] = useState<ExportFormat>("png");
 
   const { exportRef, isExporting, isExportingVideo, exportImage } = useExport();
@@ -633,7 +634,16 @@ export default function Home() {
   useEffect(() => {
     calculateScale();
     window.addEventListener("resize", calculateScale);
-    return () => window.removeEventListener("resize", calculateScale);
+    // Observe the preview container directly so the canvas rescales when its
+    // width changes for reasons other than a window resize — e.g. docking or
+    // collapsing the Layers panel.
+    const container = previewContainerRef.current;
+    const ro = container ? new ResizeObserver(() => calculateScale()) : null;
+    if (container && ro) ro.observe(container);
+    return () => {
+      window.removeEventListener("resize", calculateScale);
+      ro?.disconnect();
+    };
   }, [calculateScale]);
 
   const handleExport = useCallback((formatOverride?: ExportFormat) => {
@@ -658,22 +668,6 @@ export default function Home() {
     try { sessionStorage.removeItem(STORAGE_KEY); } catch {}
     toast.success("Reset — ready for a new visual");
   }, [canvasImages.length, design.texts.length, setDoc]);
-
-  // ---- Click outside the floating Layers panel closes it ----
-  useEffect(() => {
-    if (!showLayers) return;
-    const onDown = (e: PointerEvent) => {
-      const target = e.target as Node | null;
-      if (!target) return;
-      const panel = layersPanelRef.current;
-      const toggle = layersToggleRef.current;
-      if (panel && panel.contains(target)) return;
-      if (toggle && toggle.contains(target)) return;
-      setShowLayers(false);
-    };
-    window.addEventListener("pointerdown", onDown);
-    return () => window.removeEventListener("pointerdown", onDown);
-  }, [showLayers]);
 
   // ---- Click outside canvas exits crop-edit mode ----
   // Marquee handles empty-canvas clicks; this catches everything ELSE outside
@@ -1228,7 +1222,7 @@ export default function Home() {
 
       <div className="relative z-10 flex flex-col h-screen overflow-hidden">
         {/* Header */}
-        <div className="px-8 py-5 flex items-center gap-4">
+        <header className="px-8 py-5 flex items-center gap-4">
           <img src="/TechBBQ Logo Red.png" alt="TechBBQ" className="h-8" />
           <div>
             <h1 className="text-lg font-medium tracking-tight">
@@ -1260,13 +1254,43 @@ export default function Home() {
               New
             </button>
             <FeedbackButton />
+            {/* Export — persistent primary action (PNG/JPG toggle + Save). */}
+            <div
+              role="radiogroup"
+              aria-label="Export format"
+              className="flex items-center gap-1 rounded-full bg-card-2 p-1"
+            >
+              {(["png", "jpeg"] as const).map((fmt) => (
+                <button
+                  key={fmt}
+                  role="radio"
+                  aria-checked={exportFormat === fmt}
+                  onClick={() => setExportFormat(fmt)}
+                  className={`px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider transition-colors ${
+                    exportFormat === fmt ? "bg-surface text-ink" : "text-muted hover:text-foreground"
+                  }`}
+                >
+                  {fmt === "jpeg" ? "JPG" : fmt}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => handleExport()}
+              disabled={isExporting || canvasIsEmpty}
+              aria-label="Save image"
+              title={canvasIsEmpty ? "Add something to the canvas first" : "Save image (⌘E)"}
+              className="flex items-center gap-1.5 px-5 py-2 rounded-full bg-surface text-ink text-xs font-semibold tracking-wide hover:bg-white active:bg-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isExporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" strokeWidth={1.5} />}
+              {isExporting ? "Exporting…" : "Save image"}
+            </button>
           </div>
-        </div>
+        </header>
 
         {/* Main content */}
         <div className="flex-1 flex min-h-0 px-6 pb-6 gap-6">
-          {/* Left: Stepper + active step content + navigator */}
-          <div className="w-[400px] shrink-0 flex flex-col gap-3 max-h-full min-h-0">
+          {/* Left: tool tabs + active tool panel */}
+          <aside aria-label="Design tools" className="w-[400px] shrink-0 flex flex-col gap-3 max-h-full min-h-0">
             <Stepper steps={STEPS} current={currentStep} onChange={goToStep} />
 
             <GlassCard className="flex-1 min-h-0 p-4 overflow-y-auto">
@@ -1320,21 +1344,10 @@ export default function Home() {
                 />
               )}
             </GlassCard>
+          </aside>
 
-            <StepNavigator
-              current={currentStep}
-              total={STEPS.length}
-              onBack={() => goToStep(currentStep - 1)}
-              onNext={() => goToStep(currentStep + 1)}
-              onFinish={handleExport}
-              isFinishing={isExporting}
-              exportFormat={exportFormat}
-              onExportFormatChange={setExportFormat}
-            />
-          </div>
-
-          {/* Right: Controls bar + Preview */}
-          <div className="flex-1 flex flex-col min-h-0 min-w-0 gap-3">
+          {/* Center: Controls bar + Preview */}
+          <main className="flex-1 flex flex-col min-h-0 min-w-0 gap-3">
             {/* Canvas controls strip — sits above the preview */}
             <div className="shrink-0 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 text-[10px] font-medium text-muted uppercase tracking-[0.18em]">
@@ -1430,16 +1443,6 @@ export default function Home() {
                   </Popover.Portal>
                 </Popover.Root>
                 <button
-                  onClick={() => handleExport("jpeg")}
-                  disabled={isExporting || canvasIsEmpty}
-                  aria-label="Save as JPG"
-                  title="Save as JPG (Instagram-ready)"
-                  className="flex items-center justify-center w-8 h-8 rounded-lg border border-surface/40 bg-transparent text-muted hover:bg-white/5 hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  ref={layersToggleRef}
                   onClick={() => setShowLayers(!showLayers)}
                   aria-label="Toggle layers panel"
                   aria-pressed={showLayers}
@@ -1505,11 +1508,51 @@ export default function Home() {
             ref={previewContainerRef}
             className="flex-1 min-h-0 min-w-0 flex items-center justify-center overflow-hidden rounded-2xl bg-card relative"
           >
-            {canvasIsEmpty && (
+            {canvasIsEmpty && galleryDismissed && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
                 <div className="text-center text-muted">
                   <p className="text-base">Your visual will appear here</p>
-                  <p className="text-xs mt-1 text-muted/70">Use the steps on the left to design it</p>
+                  <p className="text-xs mt-1 text-muted/70">Pick a tool on the left to start</p>
+                  <button
+                    onClick={() => setGalleryDismissed(false)}
+                    className="pointer-events-auto mt-3 text-[11px] font-medium text-orange hover:underline"
+                  >
+                    Browse templates
+                  </button>
+                </div>
+              </div>
+            )}
+            {canvasIsEmpty && !galleryDismissed && (
+              <div className="absolute inset-0 z-20 flex items-center justify-center overflow-y-auto p-6">
+                <div className="w-full max-w-[600px] max-h-full overflow-y-auto rounded-2xl border border-white/10 bg-black/70 backdrop-blur-md p-6 shadow-2xl">
+                  <div className="flex items-baseline justify-between mb-4">
+                    <h2 className="text-sm font-semibold text-white/90">Start from a template</h2>
+                    <button
+                      onClick={() => setGalleryDismissed(true)}
+                      className="text-[11px] font-medium text-white/65 hover:text-white transition-colors"
+                    >
+                      Start blank
+                    </button>
+                  </div>
+                  {visiblePresets.length === 0 ? (
+                    <p className="text-[12px] text-white/65">No templates yet. Choose <span className="text-orange">Start blank</span> and design from scratch.</p>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-3">
+                      {visiblePresets.map((p) => (
+                        <button
+                          key={p.id}
+                          onClick={() => handleLoadPreset(p)}
+                          title={p.description || presetDisplayName(p)}
+                          className="group flex flex-col gap-1.5 text-left rounded-lg p-1.5 hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70 outline-none transition-colors"
+                        >
+                          <div className="rounded-md overflow-hidden border border-white/10 group-hover:border-white/25 transition-colors">
+                            <PresetThumbnail preset={p} format={format} width={158} />
+                          </div>
+                          <span className="text-[11px] font-medium text-white/85 truncate px-0.5">{presetDisplayName(p)}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1970,60 +2013,59 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Floating Layers panel — toggled from the controls strip.
-                Docks to the opposite corner from the TechBBQ logo so it
-                doesn't hide what the user is styling. */}
-            {showLayers && (
-              <div ref={layersPanelRef} className={`absolute top-4 z-30 w-72 max-h-[calc(100%-2rem)] flex flex-col bg-card-2 border border-border rounded-xl shadow-2xl overflow-hidden ${design.logoPosition?.endsWith("right") ? "left-4" : "right-4"}`}>
-                <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
-                  <span className="text-[10px] font-medium text-orange uppercase tracking-[0.18em]">
-                    <LayersIcon className="w-3 h-3 inline-block mr-1.5 -mt-0.5" strokeWidth={1.5} />
-                    Layers
-                  </span>
-                  <button
-                    onClick={() => setShowLayers(false)}
-                    aria-label="Close layers panel"
-                    className="p-1 rounded text-muted hover:text-foreground hover:bg-white/10 transition-colors"
-                  >
-                    <X className="w-3.5 h-3.5" strokeWidth={1.5} />
-                  </button>
-                </div>
-                <div className="overflow-y-auto p-3">
-                  <LayersPanel
-                    design={design}
-                    setDesign={setDesign}
-                    canvasImages={canvasImages}
-                    setCanvasImages={setCanvasImages}
-                    selectedImageId={selectedImageId}
-                    setSelectedImageId={setSelectedImageId}
-                    removeCanvasImage={removeCanvasImage}
-                    onEditText={(textId) => {
-                      setEditingTextId(textId);
-                      setSelectedIdsRaw(new Set([`text:${textId}`]));
-                    }}
-                    onSelectShape={(shapeId) => setSelectedIds(new Set([`shape:${shapeId}`]))}
-                    onDuplicateRow={(layerId) => {
-                      const src: NonNullable<typeof clipboardRef.current> = { texts: [], shapes: [], images: [] };
-                      if (layerId.startsWith("text:")) {
-                        const t = design.texts.find((tt) => `text:${tt.id}` === layerId);
-                        if (t) src.texts.push(t);
-                      } else if (layerId.startsWith("shape:")) {
-                        const sh = (design.shapes ?? []).find((s) => `shape:${s.id}` === layerId);
-                        if (sh) src.shapes.push(sh);
-                      } else if (layerId.startsWith("image:")) {
-                        const im = canvasImages.find((ci) => `image:${ci.id}` === layerId);
-                        if (im) src.images.push(im);
-                      }
-                      insertDuplicates(src);
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-
             {/* Inline text editing happens on the canvas itself (contentEditable). */}
           </div>
-          </div>
+          </main>
+
+          {/* Docked Layers panel — persistent right column. Collapse/expand
+              from the Layers toggle on the controls strip. */}
+          {showLayers && (
+            <aside aria-label="Layers" className="w-72 shrink-0 flex flex-col min-h-0 bg-card-2 border border-border rounded-xl shadow-2xl overflow-hidden">
+              <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
+                <span className="text-[10px] font-medium text-orange uppercase tracking-[0.18em]">
+                  <LayersIcon className="w-3 h-3 inline-block mr-1.5 -mt-0.5" strokeWidth={1.5} />
+                  Layers
+                </span>
+                <button
+                  onClick={() => setShowLayers(false)}
+                  aria-label="Close layers panel"
+                  className="p-1 rounded text-muted hover:text-foreground hover:bg-white/10 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" strokeWidth={1.5} />
+                </button>
+              </div>
+              <div className="flex-1 min-h-0 overflow-y-auto p-3">
+                <LayersPanel
+                  design={design}
+                  setDesign={setDesign}
+                  canvasImages={canvasImages}
+                  setCanvasImages={setCanvasImages}
+                  selectedImageId={selectedImageId}
+                  setSelectedImageId={setSelectedImageId}
+                  removeCanvasImage={removeCanvasImage}
+                  onEditText={(textId) => {
+                    setEditingTextId(textId);
+                    setSelectedIdsRaw(new Set([`text:${textId}`]));
+                  }}
+                  onSelectShape={(shapeId) => setSelectedIds(new Set([`shape:${shapeId}`]))}
+                  onDuplicateRow={(layerId) => {
+                    const src: NonNullable<typeof clipboardRef.current> = { texts: [], shapes: [], images: [] };
+                    if (layerId.startsWith("text:")) {
+                      const t = design.texts.find((tt) => `text:${tt.id}` === layerId);
+                      if (t) src.texts.push(t);
+                    } else if (layerId.startsWith("shape:")) {
+                      const sh = (design.shapes ?? []).find((s) => `shape:${s.id}` === layerId);
+                      if (sh) src.shapes.push(sh);
+                    } else if (layerId.startsWith("image:")) {
+                      const im = canvasImages.find((ci) => `image:${ci.id}` === layerId);
+                      if (im) src.images.push(im);
+                    }
+                    insertDuplicates(src);
+                  }}
+                />
+              </div>
+            </aside>
+          )}
         </div>
       </div>
 
@@ -2152,7 +2194,7 @@ export default function Home() {
             >
               <Copy className="w-3.5 h-3.5 text-white/60" />
               <span>Duplicate</span>
-              <span className="ml-auto text-[10px] text-white/30">⌘D</span>
+              <span className="ml-auto text-[10px] text-white/60">⌘D</span>
             </button>
 
             {/* Z-order */}
@@ -2163,7 +2205,7 @@ export default function Home() {
             >
               <ChevronUp className="w-3.5 h-3.5 text-white/60" />
               <span>Bring forward</span>
-              <span className="ml-auto text-[10px] text-white/30">⌘]</span>
+              <span className="ml-auto text-[10px] text-white/60">⌘]</span>
             </button>
             <button
               onClick={() => { reorderSelection("front"); setContextMenu(null); }}
@@ -2171,7 +2213,7 @@ export default function Home() {
             >
               <ChevronsUp className="w-3.5 h-3.5 text-white/60" />
               <span>Bring to front</span>
-              <span className="ml-auto text-[10px] text-white/30">⇧⌘]</span>
+              <span className="ml-auto text-[10px] text-white/60">⇧⌘]</span>
             </button>
             <button
               onClick={() => { reorderSelection("backward"); setContextMenu(null); }}
@@ -2179,7 +2221,7 @@ export default function Home() {
             >
               <ChevronDown className="w-3.5 h-3.5 text-white/60" />
               <span>Send backward</span>
-              <span className="ml-auto text-[10px] text-white/30">⌘[</span>
+              <span className="ml-auto text-[10px] text-white/60">⌘[</span>
             </button>
             <button
               onClick={() => { reorderSelection("back"); setContextMenu(null); }}
@@ -2187,7 +2229,7 @@ export default function Home() {
             >
               <ChevronsDown className="w-3.5 h-3.5 text-white/60" />
               <span>Send to back</span>
-              <span className="ml-auto text-[10px] text-white/30">⇧⌘[</span>
+              <span className="ml-auto text-[10px] text-white/60">⇧⌘[</span>
             </button>
 
             {/* Group / Ungroup */}
@@ -2201,7 +2243,7 @@ export default function Home() {
               >
                 <Group className="w-3.5 h-3.5 text-white/60" />
                 <span>Group</span>
-                <span className="ml-auto text-[10px] text-white/30">⌘G</span>
+                <span className="ml-auto text-[10px] text-white/60">⌘G</span>
               </button>
             )}
             {Array.from(selectedIds).some((id) => getGroupId(id)) && (
@@ -2211,7 +2253,7 @@ export default function Home() {
               >
                 <Ungroup className="w-3.5 h-3.5 text-white/60" />
                 <span>Ungroup</span>
-                <span className="ml-auto text-[10px] text-white/30">⇧⌘G</span>
+                <span className="ml-auto text-[10px] text-white/60">⇧⌘G</span>
               </button>
             )}
 
