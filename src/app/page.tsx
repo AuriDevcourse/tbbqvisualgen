@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Pause, Play, X, RotateCcw, Layers as LayersIcon, Download, LayoutTemplate, Type, Image as ImageIcon, Shapes, Undo2, Redo2, Lock, Unlock, Trash2, Copy, LibraryBig, AlignStartVertical, AlignCenterVertical, AlignEndVertical, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignHorizontalDistributeCenter, AlignVerticalDistributeCenter, Grid3x3, Magnet, Group, Ungroup, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Loader2 } from "lucide-react";
+import { Pause, Play, X, RotateCcw, Layers as LayersIcon, Download, LayoutTemplate, Type, Image as ImageIcon, Shapes, Undo2, Redo2, Lock, Unlock, Trash2, Copy, LibraryBig, AlignStartVertical, AlignCenterVertical, AlignEndVertical, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignHorizontalDistributeCenter, AlignVerticalDistributeCenter, Grid3x3, Magnet, Group, Ungroup, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Loader2, Users } from "lucide-react";
+import Link from "next/link";
 import * as Popover from "@radix-ui/react-popover";
 import { toast } from "sonner";
 import { AnimatedGradient } from "@/components/AnimatedGradient";
@@ -1280,6 +1281,15 @@ export default function Home() {
             </h1>
           </div>
           <div className="ml-auto flex items-center gap-2">
+            <Link
+              href="/simple"
+              aria-label="Open Panel Maker"
+              title="Panel Maker — build a speaker panel from a simple form"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium border border-surface/40 bg-transparent text-foreground hover:border-surface hover:bg-white/5 transition-colors"
+            >
+              <Users className="w-3.5 h-3.5" strokeWidth={1.5} />
+              Panel Maker
+            </Link>
             <button
               onClick={() => setTemplatesOpen(true)}
               aria-label="Templates"
