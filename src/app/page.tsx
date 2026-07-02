@@ -1302,20 +1302,6 @@ export default function Home() {
                   setCustomSize={setCustomSize}
                   design={design}
                   setDesign={setDesign}
-                  presets={visiblePresets}
-                  presetDisplayName={presetDisplayName}
-                  presetCustomVariants={(p) => {
-                    if (isUserPresetId(p.id)) {
-                      return new Set<PlatformFormat>([
-                        p.format,
-                        ...((Object.keys(p.variants ?? {}) as PlatformFormat[])),
-                      ]);
-                    }
-                    const v = presetOverrides[p.id]?.variants;
-                    if (!v) return new Set<PlatformFormat>();
-                    return new Set(Object.keys(v) as PlatformFormat[]);
-                  }}
-                  onLoadPreset={handleLoadPreset}
                 />
               )}
               {currentStep === 2 && (
@@ -1510,9 +1496,9 @@ export default function Home() {
           >
             {canvasIsEmpty && galleryDismissed && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-                <div className="text-center text-muted">
-                  <p className="text-base">Your visual will appear here</p>
-                  <p className="text-xs mt-1 text-muted/70">Pick a tool on the left to start</p>
+                <div className="text-center rounded-2xl bg-black/60 backdrop-blur-sm px-7 py-6 shadow-xl">
+                  <p className="text-base text-white/90">Your visual will appear here</p>
+                  <p className="text-xs mt-1 text-white/60">Pick a tool on the left to start</p>
                   <button
                     onClick={() => setGalleryDismissed(false)}
                     className="pointer-events-auto mt-3 text-[11px] font-medium text-orange hover:underline"
@@ -1523,8 +1509,8 @@ export default function Home() {
               </div>
             )}
             {canvasIsEmpty && !galleryDismissed && (
-              <div className="absolute inset-0 z-20 flex items-center justify-center overflow-y-auto p-6">
-                <div className="w-full max-w-[600px] max-h-full overflow-y-auto rounded-2xl border border-white/10 bg-black/70 backdrop-blur-md p-6 shadow-2xl">
+              <div className="absolute inset-0 z-20 flex items-center justify-center overflow-y-auto p-6 bg-black/65 backdrop-blur-sm">
+                <div className="w-full max-w-[600px] max-h-full overflow-y-auto rounded-2xl border border-white/10 bg-black/80 backdrop-blur-md p-6 shadow-2xl">
                   <div className="flex items-baseline justify-between mb-4">
                     <h2 className="text-sm font-semibold text-white/90">Start from a template</h2>
                     <button
