@@ -316,11 +316,11 @@ export function ImageDragOverlay({
           // resize-handle case), dashed for multi-select to match text.
           outline: selected
             ? resizable
-              ? "3px solid #FF6B00"
-              : "4px dashed #FF6B00"
+              ? "2px solid #FF6B00"
+              : "2px dashed #FF6B00"
             : "none",
           outlineOffset: 0,
-          boxShadow: selected && !resizable ? "0 0 0 2px rgba(255, 107, 0, 0.25)" : "none",
+          boxShadow: selected && !resizable ? "0 0 0 1px rgba(255, 107, 0, 0.25)" : "none",
           borderRadius: `${((image.cornerRadius ?? (image.shape === "circle" ? 50 : 10)) / 100) * Math.min(imgW, imgH)}px`,
           pointerEvents: "auto",
           boxSizing: "border-box",

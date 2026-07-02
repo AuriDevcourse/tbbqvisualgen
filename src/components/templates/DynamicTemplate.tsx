@@ -62,9 +62,9 @@ const editingActiveClass =
 // Tailwind utility outline width/style. Kept identical to the image overlay's
 // selected style for visual consistency.
 const SELECTED_INLINE_OUTLINE: React.CSSProperties = {
-  outline: "4px dashed #FF6B00",
+  outline: "2px dashed #FF6B00",
   outlineOffset: 0,
-  boxShadow: "0 0 0 2px rgba(255, 107, 0, 0.25)",
+  boxShadow: "0 0 0 1px rgba(255, 107, 0, 0.25)",
 };
 
 // ── Shape rendering ─────────────────────────────────────────────────────────
