@@ -102,6 +102,41 @@ function rgbToHex(r: number, g: number, b: number): string {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
+// HSL <-> RGB. Hue 0–360, saturation/lightness 0–100. Used by the in-DOM
+// slider picker so we never open the native OS color dialog (its focus-steal
+// broke the popover and triggered the Windows error ding).
+function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  let h = 0, s = 0;
+  const d = max - min;
+  if (d !== 0) {
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h *= 60;
+  }
+  return [Math.round(h), Math.round(s * 100), Math.round(l * 100)];
+}
+
+function hslToRgb(h: number, s: number, l: number): [number, number, number] {
+  h /= 360; s /= 100; l /= 100;
+  if (s === 0) return [l * 255, l * 255, l * 255];
+  const hue2rgb = (p: number, q: number, t: number) => {
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1 / 6) return p + (q - p) * 6 * t;
+    if (t < 1 / 2) return q;
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+    return p;
+  };
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const p = 2 * l - q;
+  return [hue2rgb(p, q, h + 1 / 3) * 255, hue2rgb(p, q, h) * 255, hue2rgb(p, q, h - 1 / 3) * 255];
+}
+
 export function ColorPicker({
   color,
   onChange,
@@ -112,7 +147,6 @@ export function ColorPicker({
 }: ColorPickerProps) {
   const active = color ?? defaultColor;
   const isUnset = !color;
-  const [mode, setMode] = useState<"hex" | "rgb">("hex");
   const [hexInput, setHexInput] = useState(active);
   const recents = useRecentColors();
 
@@ -133,13 +167,14 @@ export function ColorPicker({
     if (HEX_RE.test(next)) handlePick(next);
   };
 
-  const handleRgbChange = (channel: "r" | "g" | "b", value: number) => {
-    const { r, g, b } = hexToRgb(active);
-    const nextRgb = { r, g, b, [channel]: value } as { r: number; g: number; b: number };
-    handlePick(rgbToHex(nextRgb.r, nextRgb.g, nextRgb.b));
-  };
-
   const { r, g, b } = hexToRgb(active);
+  const [h, s, l] = rgbToHsl(r, g, b);
+  const setHsl = (nh: number, ns: number, nl: number) => {
+    const [nr, ng, nb] = hslToRgb(nh, ns, nl);
+    handlePick(rgbToHex(nr, ng, nb));
+  };
+  const sliderCls =
+    "flex-1 h-2 appearance-none rounded-full cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-black/40 [&::-webkit-slider-thumb]:shadow";
 
   return (
     <Popover.Root>
@@ -180,14 +215,6 @@ export function ColorPicker({
           align="start"
           collisionPadding={12}
           avoidCollisions
-          // The native <input type="color"> below opens the OS color dialog,
-          // which steals focus. Without these guards Radix dismisses the popover
-          // on that focus-out — unmounting the input mid-pick (so the color
-          // never applies) and leaving focus/aria state broken (every later
-          // click triggers the Windows error ding). Keep the popover open when
-          // focus leaves to the OS dialog, and don't force focus-return on close.
-          onFocusOutside={(e) => e.preventDefault()}
-          onCloseAutoFocus={(e) => e.preventDefault()}
           className="z-50 w-64 rounded-xl border border-white/15 bg-[#15110e]/95 backdrop-blur-xl p-3 shadow-2xl"
         >
           <div className="flex flex-col gap-3">
@@ -239,73 +266,60 @@ export function ColorPicker({
               </div>
             )}
 
-            {/* Color wheel (native) */}
-            <div className="relative w-full h-12 rounded-md overflow-hidden border border-white/15">
-              <input
-                type="color"
-                value={active}
-                onChange={(e) => handlePick(e.target.value)}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                aria-label="Color wheel"
-              />
-              <div className="w-full h-full" style={{ backgroundColor: active }} />
-            </div>
+            {/* Live preview of the current color */}
+            <div
+              className="w-full h-9 rounded-md border border-white/15"
+              style={{ backgroundColor: active }}
+            />
 
-            {/* HEX / RGB toggle */}
-            <div className="grid grid-cols-2 gap-1 bg-white/5 border border-white/10 rounded-md p-1">
-              {(["hex", "rgb"] as const).map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setMode(m)}
-                  className={cn(
-                    "text-[10px] uppercase tracking-wider py-1 rounded transition-colors",
-                    mode === m
-                      ? "bg-white/15 text-white"
-                      : "text-white/50 hover:text-white/80"
-                  )}
-                >
-                  {m}
-                </button>
-              ))}
-            </div>
-
-            {/* HEX input */}
-            {mode === "hex" && (
-              <div className="relative">
-                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-white/65">#</span>
+            {/* HSL sliders — plain range inputs, fully in-DOM. No native OS
+                color dialog, so no focus-steal / error ding. */}
+            <div className="flex flex-col gap-2">
+              <label className="flex items-center gap-2">
+                <span className="text-[10px] uppercase tracking-wider text-white/65 w-3">H</span>
                 <input
-                  type="text"
-                  value={hexInput.replace(/^#/, "")}
-                  onChange={(e) => handleHexChange(e.target.value)}
-                  maxLength={6}
-                  spellCheck={false}
-                  aria-label="Hex color value"
-                  className="w-full pl-5 pr-2 py-1.5 bg-white/5 border border-white/15 rounded-md text-sm font-mono text-white placeholder:text-white/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70 focus:border-[#FF6B00]/40"
+                  type="range" min={0} max={360} value={h}
+                  onChange={(e) => setHsl(Number(e.target.value), s, l)}
+                  aria-label="Hue"
+                  className={sliderCls}
+                  style={{ background: "linear-gradient(to right, #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%)" }}
                 />
-              </div>
-            )}
+              </label>
+              <label className="flex items-center gap-2">
+                <span className="text-[10px] uppercase tracking-wider text-white/65 w-3">S</span>
+                <input
+                  type="range" min={0} max={100} value={s}
+                  onChange={(e) => setHsl(h, Number(e.target.value), l)}
+                  aria-label="Saturation"
+                  className={sliderCls}
+                  style={{ background: `linear-gradient(to right, hsl(${h} 0% ${l}%), hsl(${h} 100% ${l}%))` }}
+                />
+              </label>
+              <label className="flex items-center gap-2">
+                <span className="text-[10px] uppercase tracking-wider text-white/65 w-3">L</span>
+                <input
+                  type="range" min={0} max={100} value={l}
+                  onChange={(e) => setHsl(h, s, Number(e.target.value))}
+                  aria-label="Lightness"
+                  className={sliderCls}
+                  style={{ background: `linear-gradient(to right, #000, hsl(${h} ${s}% 50%), #fff)` }}
+                />
+              </label>
+            </div>
 
-            {/* RGB inputs */}
-            {mode === "rgb" && (
-              <div className="grid grid-cols-3 gap-2">
-                {(["r", "g", "b"] as const).map((channel) => (
-                  <label key={channel} className="flex flex-col gap-1">
-                    <span className="text-[10px] uppercase tracking-wider text-white/65 text-center">
-                      {channel.toUpperCase()}
-                    </span>
-                    <input
-                      type="number"
-                      min={0}
-                      max={255}
-                      value={channel === "r" ? r : channel === "g" ? g : b}
-                      onChange={(e) => handleRgbChange(channel, Number(e.target.value) || 0)}
-                      className="w-full px-1.5 py-1 bg-white/5 border border-white/15 rounded-md text-sm font-mono text-white text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70 focus:border-[#FF6B00]/40"
-                    />
-                  </label>
-                ))}
-              </div>
-            )}
+            {/* HEX input — for pasting an exact value */}
+            <div className="relative">
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-white/65">#</span>
+              <input
+                type="text"
+                value={hexInput.replace(/^#/, "")}
+                onChange={(e) => handleHexChange(e.target.value)}
+                maxLength={6}
+                spellCheck={false}
+                aria-label="Hex color value"
+                className="w-full pl-5 pr-2 py-1.5 bg-white/5 border border-white/15 rounded-md text-sm font-mono text-white placeholder:text-white/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70 focus:border-[#FF6B00]/40"
+              />
+            </div>
 
             {/* Clear button */}
             {allowClear && (

@@ -218,10 +218,22 @@ export default function Home() {
   // editing bar's chips to switch variants). The doc is replaced atomically
   // so we don't read stale state between setFormat + setDoc.
   const handleLoadPresetAtFormat = useCallback((preset: Preset, atFormat?: PlatformFormat) => {
-    const targetFormat = atFormat ?? format;
     // User presets store everything on the Preset itself; built-ins use the
     // override layer for user customizations.
     const ovVariants = isUserPresetId(preset.id) ? undefined : presetOverrides[preset.id]?.variants;
+    // Anti-squish safeguard: on a plain load (no explicit format) open the
+    // template at the format it was DESIGNED for, so its layout renders as
+    // intended on any device. Only keep the current canvas format when a
+    // version actually exists for it (matching variant, or it IS the native
+    // format) — otherwise a wide layout would get crammed into a square, etc.
+    let targetFormat: PlatformFormat;
+    if (atFormat) {
+      targetFormat = atFormat;
+    } else if (ovVariants?.[format] || preset.variants?.[format] || preset.format === format) {
+      targetFormat = format;
+    } else {
+      targetFormat = preset.format;
+    }
     const resolved = resolvePresetForFormat(preset, targetFormat, ovVariants);
     setDoc({
       format: resolved.format,
