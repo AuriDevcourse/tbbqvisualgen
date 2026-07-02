@@ -47,9 +47,9 @@ function loadAspectRatio(src: string, cb: (ar: number) => void) {
 }
 
 function logoSrc(design: DesignConfig): string {
-  return design.logoStyle === "gradient" ? "/TechBBQ Logo Gradient.png"
-    : design.logoStyle === "red" ? "/TechBBQ Logo Red.png"
-    : "/TechBBQ Logo White.png";
+  return design.logoStyle === "gradient" ? "/logo-gradient.svg"
+    : design.logoStyle === "red" ? "/logo-red.svg"
+    : "/logo-white.svg";
 }
 
 /** Computes the logo's pixel rect on canvas (top-left + width/height) using

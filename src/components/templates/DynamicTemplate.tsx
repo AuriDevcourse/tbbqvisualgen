@@ -940,9 +940,9 @@ export function DynamicTemplate({
                   : { left: "50%", transform: "translateX(-50%)" }),
             };
         const logoSrc =
-          design.logoStyle === "gradient" ? "/TechBBQ Logo Gradient.png"
-          : design.logoStyle === "red" ? "/TechBBQ Logo Red.png"
-          : "/TechBBQ Logo White.png";
+          design.logoStyle === "gradient" ? "/logo-gradient.svg"
+          : design.logoStyle === "red" ? "/logo-red.svg"
+          : "/logo-white.svg";
 
         return (
           <div

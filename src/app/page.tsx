@@ -311,17 +311,29 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Persist on changes (after initial hydration)
+  // Persist on changes (after initial hydration), DEBOUNCED. Without the
+  // debounce this ran on every doc change — including every pointermove of a
+  // drag — and JSON.stringify'd the whole doc, which includes each image's
+  // multi-MB base64 `src`. Serializing megabytes per frame was the real
+  // image-drag lag. Now we coalesce a burst of edits into one write ~350ms
+  // after the user stops.
+  const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (!hydrated) return;
-    try {
-      sessionStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ format, customSize, design, canvasImages, currentStep })
-      );
-    } catch {
-      // quota exceeded — skip
-    }
+    if (persistTimerRef.current) clearTimeout(persistTimerRef.current);
+    persistTimerRef.current = setTimeout(() => {
+      try {
+        sessionStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({ format, customSize, design, canvasImages, currentStep })
+        );
+      } catch {
+        // quota exceeded — skip
+      }
+    }, 350);
+    return () => {
+      if (persistTimerRef.current) clearTimeout(persistTimerRef.current);
+    };
   }, [hydrated, format, customSize, design, canvasImages, currentStep]);
 
   // When the user single-selects an element on canvas, jump to the matching
@@ -1229,7 +1241,7 @@ export default function Home() {
       <div className="relative z-10 flex flex-col h-screen overflow-hidden">
         {/* Header */}
         <header className="px-8 py-5 flex items-center gap-4">
-          <img src="/TechBBQ Logo Red.png" alt="TechBBQ" className="h-8" />
+          <img src="/logo-red.svg" alt="TechBBQ" className="h-8" />
           <div>
             <h1 className="text-lg font-medium tracking-tight">
               Visual <span className="text-tbbq-gradient font-semibold">Generator</span>
