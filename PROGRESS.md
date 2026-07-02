@@ -304,18 +304,17 @@ resumes after. Two passes — first warms up font loading, second captures.
 
 In rough priority order. **Top priority is first-run intuitiveness** (Auri, 2026-07-02): everything below the P0 block is secondary to making the cold entry make sense.
 
-**P0 · First-run flow (from a live cold-run walkthrough, 2026-07-02, branch `ux-p1-dewizard`).** Ran the app and walked the empty-session entry + all 4 tabs. Findings, most-impactful first:
+**P0 · First-run flow (from a live cold-run walkthrough, 2026-07-02; work on branch `ux-p1-dewizard-notes`, PR #1).** Ran the app and walked the empty-session entry + all 4 tabs. Status per finding:
 
-1. **Templates show in three places at once.** On cold load the center "Start from a template" gallery (thumbnail cards) and the left Canvas tab's "START FROM A TEMPLATE" text list render the *same* presets simultaneously, and the header "Templates" button is a third door. Fix: make the gallery the single first-decision funnel; **remove the duplicate preset list from the Canvas tab** (Canvas tab keeps Format + Background + Logo only). One door, not three.
-2. **The gallery overlay is semi-transparent over the animated background**, so the busy yellow liquid-metal bleeds through and kills focus. Make it an opaque/scrim modal.
-3. **Empty-canvas placeholder text is illegible** — "Your visual will appear here / Pick a tool on the left" is grey rendered over the bright animated canvas bg, washes out (fails contrast). The P3 pass only touched panel text, not this overlay. Fix: dark scrim behind it, or move the copy out of the canvas.
-4. **Left preset list surfaces scary power-user metadata on first run** — variant badges (16:9/1:1/9:16) and warnings like "No 1:1 variant yet — will load default and may need adjustment." Reads as "broken" to a newcomer. Hide behind hover/secondary.
-5. **Placeholder preset names shipped to users:** "Preset 3", "Panel 4". Give every built-in a real name.
-6. **Format is buried** as the third section inside the Canvas tab, below the whole template list (needs scroll). It's often the first real decision — promote it (gallery header or a top bar).
-7. **Layers panel docks open showing logo + background on an empty canvas** — full right column occupied before the user acts. Default it closed until ≥1 user layer.
-8. **Overlapping start/reset vocabulary:** header `New`, gallery `Start blank`, `Browse templates`, `Start over` confirm, plus template-vs-preset-vs-styling wording. Consolidate to one verb set.
-   - What already works well (leave alone): per-tab empty states (Text "No text on canvas…", Elements "No shapes yet…") are clear and task-oriented; the thumbnail gallery itself is the right idea; tabs-as-tablist, header export, PNG/JPG toggle are clean.
-   - Screenshots from the walkthrough live in the job tmp dir (`shots/`), not committed.
+1. **Templates showed in three places at once.** DONE — removed the duplicate preset list from the Canvas tab (now Format + Background + Logo + Overlay only); the empty-canvas gallery is the single start door.
+2. **Gallery overlay was see-through over the animated bg.** DONE — added an opaque scrim (`bg-black/65 backdrop-blur`).
+3. **Empty-canvas placeholder text was illegible.** DONE — placed the copy in a dark blurred pill so it reads over the bright bg.
+4. **Scary variant-badge / "no variant yet" metadata.** Mostly resolved as a side effect of #1 (the noisy list is gone from the Canvas tab). Re-check if it resurfaces in the gallery.
+5. **Placeholder preset names ("Preset 3", "Panel 4").** MOOT — all built-in presets cleared (clean slate, `PRESETS = []`); the team authors + ships its own.
+6. **Format was buried.** DONE — Format now leads the Canvas tab (after removing the template list).
+7. **Layers panel docks open on an empty canvas.** STILL OPEN — default it closed until ≥1 user layer.
+8. **Overlapping start/reset vocabulary** (`New` / `Start blank` / `Browse templates` / `Start over`). STILL OPEN — consolidate.
+   - Walkthrough + verification screenshots live in the job tmp dir (`shots*/`), not committed.
 
 **P2 · Naming + onboarding.** DONE (2026-07-02): "Shapes" tab → **"Elements"**; removed all decorative `▪` section bullets across step files + TemplatesModal + CropDialog. STILL OPEN: folded into P0 above (preset naming, variant-badge noise, template/preset vocabulary).
 
@@ -340,6 +339,22 @@ In rough priority order. **Top priority is first-run intuitiveness** (Auri, 2026
 ## Verified-shipped features (chronological hits)
 
 Newer at the top.
+
+**Session 2026-07-02 (branch `ux-p1-dewizard-notes`, PR #1 → `master`, draft/unmerged).** Built on top of the P1 de-wizard commit. All items tsc-clean, verified in headless Chrome:
+
+- **`/simple` "Panel Maker" (new page + `src/lib/simpleLayout.ts`):** form-driven simplified generator that reuses the renderer + export. Fields: session label, headline, subtitle, one moderator + N speakers (add/remove) each with name/title/company + optional headshot upload; format 16:9/1:1/9:16, background picker, live preview, PNG/JPG export. Layout matches the hand-made house style (from Auri's exported `preset2`): everything LEFT-aligned; **session label = white pill with dark uppercase text**; headline (600, auto-fit to width) + subtitle (400); rounded-rect PORTRAIT headshot cards (photos → rounded images, empty → placeholder frame); name (600) + title + company (400) beneath each; card height capped so photo+text clear the logo on 16:9; logo bottom-left. Header links to `/` (Advanced editor); the main editor header has a **"Panel Maker"** button → `/simple`. Deliberately NOT auto-applied: the teal color overlay + the scattered-diagonal photo arrangement (both were one-design specifics).
+- **Formats reframed to the 3 share targets:** `16:9 Full HD (1920×1080)`, `1:1 Square (1500×1500)`, `9:16 Story (1080×1920)`, Custom — labels + order only (dimensions already matched). Dropped "Presentation"/"Instagram Story".
+- **Clean-slate presets:** removed all 5 built-in panels; `PRESETS = []`. Ship your own via "Copy code" in the Templates modal → paste into `presets.ts`.
+- **Anti-squish load safeguard:** loading a template opens the canvas at the format it was DESIGNED for (unless a variant exists for the current format), so a 16:9 layout no longer gets crammed into a 1:1 canvas across devices. (Screen size never squishes — canvas scales uniformly.)
+- **Color picker rebuilt (`ColorPicker.tsx`):** removed the native `<input type=color>` OS dialog (its focus-steal broke the popover, caused the Windows error ding, and swallowed later clicks). Now fully in-DOM: brand swatches + recents + H/S/L range sliders + hex. Removed the focus-out guards that were only there for the OS dialog.
+- **Paste-into-text fix:** editable text now pastes PLAIN TEXT only (`onPaste` → `insertText`). Was inserting the clipboard's rich HTML/background → could black out the canvas.
+- **Image-drag lag fix:** the sessionStorage persist effect is now DEBOUNCED (~350ms). It was `JSON.stringify`-ing the whole doc — including each photo's multi-MB base64 `src` — on every pointermove, which was the real drag lag (pictures only). Also memoized `CanvasBackground` + pause it during drag.
+- **SVG logos:** header + canvas + drag-overlay now use vector SVGs (`public/logo-{red,white,gradient,black,outlined-white}.svg`) instead of the PNGs (crisp at any scale + in export).
+- **Group drag fix:** grabbing ANY grouped member (text included) now drags the whole group. Was asymmetric because shapes/images run `selectWithGroup` on click but text enters edit mode; `beginGroupDrag` now expands the dragged element to its group.
+- **Selection polish:** dashed selection outline halved (4px → 2px); removed the 4px outline offset so the highlight hugs the element; canvas text is `user-select:none` except while editing (marquee no longer highlights text like a PDF).
+- **"Snap to" toggle:** magnet button in the controls strip, ON by default; off = freeform placement (no snapping, no guide lines) for images/shapes/text/logo.
+- **Editor-polish batch:** Templates-modal save buttons icon-only; compositional grid cells now SQUARE at any aspect (+ rule-of-thirds); default export = JPG; default background = orb ("Soft Ember"); text shows a move cursor (I-beam only in edit mode); crop-mode scale anchors sit on the whole image, not the frame.
+- **Notes:** PROGRESS.md reprioritized to first-run intuitiveness (P0).
 
 - **Template gallery empty state (2026-07-02, same branch `ux-p1-dewizard`):** new `PresetThumbnail.tsx` renders a static (no-WebGL) mini-preview of any preset (CSS-gradient bg + positioned text/shapes/slots). Empty canvas now shows a "Start from a template" gallery of `visiblePresets` cards; click loads (`handleLoadPreset`), "Start blank" dismisses to the plain placeholder (which has a "Browse templates" reopen button). `galleryDismissed` state gates it. Note: presets have no stored thumbnails — the preview is computed live from preset data, so it stays in sync automatically. tsc clean, serves 200.
 - **P3 accessibility partial (2026-07-02, same branch `ux-p1-dewizard`):** semantic landmarks (header/main/aside), contrast bump on 120 low-opacity text classes (14 files), focus-visible rings on all 13 inputs. Compiles + serves 200, introduced 0 new lint errors.
