@@ -302,14 +302,26 @@ resumes after. Two passes — first warms up font loading, second captures.
 
 ## Open work / suggested next steps
 
-In rough priority order:
+In rough priority order. **Top priority is first-run intuitiveness** (Auri, 2026-07-02): everything below the P0 block is secondary to making the cold entry make sense.
 
-**UX audit follow-ups (from 2026-07-02 UX + a11y review; P1 shipped on branch `ux-p1-dewizard`, unmerged):**
+**P0 · First-run flow (from a live cold-run walkthrough, 2026-07-02, branch `ux-p1-dewizard`).** Ran the app and walked the empty-session entry + all 4 tabs. Findings, most-impactful first:
 
-- **P2 · Naming + onboarding.** DONE (2026-07-02): "Shapes" tab → **"Elements"**; removed all decorative `▪` section bullets (house-rule + screen-reader nit) across step files + TemplatesModal + CropDialog. STILL OPEN (need Auri's design call): lead the empty canvas with a template gallery; strip preset cards to name + thumbnail (hide variant badges behind hover); decide whether the header "Templates" button should be renamed (modal already splits "Presets" vs "Your templates", so vocabulary is mostly consistent already).
-- **P3 · Accessibility (WCAG 2.2 AA).** DONE (2026-07-02, branch `ux-p1-dewizard`): (a) semantic landmarks — header→`<header>`, left tools→`<aside aria-label="Design tools">`, canvas→`<main>`, layers→`<aside aria-label="Layers">`; (b) contrast — bumped all failing `text-white/25|30|40` (120 occurrences, 14 files): labels/body → `text-white/65` (~6:1), placeholders → `text-white/50`; (c) focus — added `focus-visible:ring-2 ring-[#FF6B00]/70` to all 13 inputs that had bare/faint `focus:outline-none`. STILL OPEN: keyboard layer reorder (up/down buttons) + a keyboard path to canvas selection; `TemplatesModal` needs `role="dialog"` + Esc + focus trap (move all 3 modals to Radix Dialog); promote the (now glyph-free) section labels to real `<h2>/<h3>` headings.
+1. **Templates show in three places at once.** On cold load the center "Start from a template" gallery (thumbnail cards) and the left Canvas tab's "START FROM A TEMPLATE" text list render the *same* presets simultaneously, and the header "Templates" button is a third door. Fix: make the gallery the single first-decision funnel; **remove the duplicate preset list from the Canvas tab** (Canvas tab keeps Format + Background + Logo only). One door, not three.
+2. **The gallery overlay is semi-transparent over the animated background**, so the busy yellow liquid-metal bleeds through and kills focus. Make it an opaque/scrim modal.
+3. **Empty-canvas placeholder text is illegible** — "Your visual will appear here / Pick a tool on the left" is grey rendered over the bright animated canvas bg, washes out (fails contrast). The P3 pass only touched panel text, not this overlay. Fix: dark scrim behind it, or move the copy out of the canvas.
+4. **Left preset list surfaces scary power-user metadata on first run** — variant badges (16:9/1:1/9:16) and warnings like "No 1:1 variant yet — will load default and may need adjustment." Reads as "broken" to a newcomer. Hide behind hover/secondary.
+5. **Placeholder preset names shipped to users:** "Preset 3", "Panel 4". Give every built-in a real name.
+6. **Format is buried** as the third section inside the Canvas tab, below the whole template list (needs scroll). It's often the first real decision — promote it (gallery header or a top bar).
+7. **Layers panel docks open showing logo + background on an empty canvas** — full right column occupied before the user acts. Default it closed until ≥1 user layer.
+8. **Overlapping start/reset vocabulary:** header `New`, gallery `Start blank`, `Browse templates`, `Start over` confirm, plus template-vs-preset-vs-styling wording. Consolidate to one verb set.
+   - What already works well (leave alone): per-tab empty states (Text "No text on canvas…", Elements "No shapes yet…") are clear and task-oriented; the thumbnail gallery itself is the right idea; tabs-as-tablist, header export, PNG/JPG toggle are clean.
+   - Screenshots from the walkthrough live in the job tmp dir (`shots/`), not committed.
 
-**Feature backlog:**
+**P2 · Naming + onboarding.** DONE (2026-07-02): "Shapes" tab → **"Elements"**; removed all decorative `▪` section bullets across step files + TemplatesModal + CropDialog. STILL OPEN: folded into P0 above (preset naming, variant-badge noise, template/preset vocabulary).
+
+**P3 · Accessibility (WCAG 2.2 AA).** DONE (2026-07-02): semantic landmarks (header/main/aside); contrast bump on 120 low-opacity text classes (14 files); focus-visible rings on all 13 inputs. STILL OPEN (below P0 now): empty-canvas overlay contrast (see P0 #3); keyboard layer reorder + keyboard path to canvas selection; `TemplatesModal` `role="dialog"` + Esc + focus trap (move all 3 modals to Radix Dialog); promote glyph-free section labels to real `<h2>/<h3>` headings.
+
+**Feature backlog (all below the P0 first-run work):**
 
 1. **Image effects parity** — rotation, opacity, blur sliders on uploaded images (texts have them; images don't).
 2. **Custom background image** — upload your own image as canvas background (with scale + X/Y position), separate from regular image layers.
