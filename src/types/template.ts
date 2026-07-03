@@ -94,6 +94,8 @@ export interface TextElement {
   blur?: number;
   /** Shared group identifier — clicking any member selects the whole group. */
   groupId?: string;
+  /** Optional CSS text-shadow (e.g. for legible labels overlaid on photos). */
+  shadow?: string;
 }
 
 /** A vector shape on the canvas — rectangle / circle / line / star. */

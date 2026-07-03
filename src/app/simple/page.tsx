@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Download, Loader2, Plus, Trash2, ImagePlus, X, Square, Presentation, Smartphone, PencilRuler } from "lucide-react";
+import { Download, Loader2, Plus, Minus, Trash2, ImagePlus, X, Square, Presentation, Smartphone, PencilRuler } from "lucide-react";
 import { AnimatedGradient } from "@/components/AnimatedGradient";
 import { DynamicTemplate } from "@/components/templates/DynamicTemplate";
 import { BackgroundPicker } from "@/components/BackgroundPicker";
@@ -33,18 +33,33 @@ function readImage(file: File): Promise<{ src: string; w: number; h: number }> {
   });
 }
 
-// Small labelled text input.
-function Field({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+// Small labelled text input. `multiline` renders a textarea so titles can span
+// several lines (Enter inserts a line break) — a broken headline renders bigger.
+function Field({ label, value, onChange, placeholder, multiline, hint }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; multiline?: boolean; hint?: string }) {
+  const cls = "w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder:text-white/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70 focus:border-[#FF6B00]/40";
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">{label}</span>
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder:text-white/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70 focus:border-[#FF6B00]/40"
-      />
+      <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">
+        {label}
+        {hint && <span className="ml-1.5 normal-case tracking-normal text-white/35">{hint}</span>}
+      </span>
+      {multiline ? (
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          rows={2}
+          className={`${cls} resize-none leading-snug`}
+        />
+      ) : (
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className={cls}
+        />
+      )}
     </label>
   );
 }
@@ -59,53 +74,61 @@ function PersonEditor({
   roleLabel: string;
 }) {
   return (
-    <div className="flex flex-col gap-2.5 rounded-xl border border-white/10 bg-white/[0.03] p-3">
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] font-semibold text-orange uppercase tracking-[0.16em]">{roleLabel}</span>
-        {onRemove && (
-          <button onClick={onRemove} aria-label="Remove speaker" title="Remove speaker" className="p-1 rounded text-white/50 hover:text-white hover:bg-white/10 transition-colors">
-            <Trash2 className="w-3.5 h-3.5" />
+    <div className="flex gap-2.5 rounded-xl border border-white/10 bg-white/[0.03] p-2.5">
+      {/* Photo */}
+      <div className="relative shrink-0">
+        <label className="relative flex items-center justify-center w-14 h-14 rounded-xl overflow-hidden border border-white/15 bg-white/5 cursor-pointer hover:border-[#FF6B00]/60 transition-colors group">
+          {person.photo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={person.photo} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <ImagePlus className="w-5 h-5 text-white/40 group-hover:text-white/70" />
+          )}
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              try {
+                const { src, w, h } = await readImage(file);
+                onChange({ photo: src, naturalWidth: w, naturalHeight: h });
+              } catch {
+                toast.error("Couldn't read that image");
+              }
+              e.target.value = "";
+            }}
+          />
+        </label>
+        {person.photo && (
+          <button
+            onClick={() => onChange({ photo: "", naturalWidth: undefined, naturalHeight: undefined })}
+            aria-label="Remove photo"
+            title="Remove photo"
+            className="absolute -top-1.5 -right-1.5 w-5 h-5 flex items-center justify-center rounded-full bg-black/75 border border-white/20 text-white/80 hover:bg-black hover:text-white transition-colors"
+          >
+            <X className="w-2.5 h-2.5" strokeWidth={2.5} />
           </button>
         )}
       </div>
-      <div className="flex gap-3">
-        {/* Photo */}
-        <div className="shrink-0">
-          <label className="relative flex items-center justify-center w-16 h-16 rounded-full overflow-hidden border border-white/15 bg-white/5 cursor-pointer hover:border-[#FF6B00]/60 transition-colors group">
-            {person.photo ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={person.photo} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <ImagePlus className="w-5 h-5 text-white/40 group-hover:text-white/70" />
-            )}
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                try {
-                  const { src, w, h } = await readImage(file);
-                  onChange({ photo: src, naturalWidth: w, naturalHeight: h });
-                } catch {
-                  toast.error("Couldn't read that image");
-                }
-                e.target.value = "";
-              }}
-            />
-          </label>
-          {person.photo && (
-            <button onClick={() => onChange({ photo: "", naturalWidth: undefined, naturalHeight: undefined })} className="mt-1 w-full text-[9px] text-white/50 hover:text-white/80 flex items-center justify-center gap-0.5">
-              <X className="w-2.5 h-2.5" /> photo
+      {/* Fields */}
+      <div className="flex-1 flex flex-col gap-1.5 min-w-0">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-semibold text-orange uppercase tracking-[0.16em]">{roleLabel}</span>
+          {onRemove && (
+            <button onClick={onRemove} aria-label="Remove speaker" title="Remove speaker" className="p-0.5 rounded text-white/50 hover:text-white hover:bg-white/10 transition-colors">
+              <Trash2 className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
-        {/* Fields */}
-        <div className="flex-1 flex flex-col gap-2 min-w-0">
-          <Field label="Name" value={person.name} onChange={(v) => onChange({ name: v })} placeholder="Jane Doe" />
-          <Field label="Job title" value={person.title} onChange={(v) => onChange({ title: v })} placeholder="CEO" />
-          <Field label="Company" value={person.company} onChange={(v) => onChange({ company: v })} placeholder="TechBBQ" />
+        <input type="text" value={person.name} onChange={(e) => onChange({ name: e.target.value })} placeholder="Full name"
+          className="w-full px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 text-sm font-medium text-white placeholder:text-white/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70 focus:border-[#FF6B00]/40" />
+        <div className="flex gap-1.5">
+          <input type="text" value={person.title} onChange={(e) => onChange({ title: e.target.value })} placeholder="Job title"
+            className="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-white placeholder:text-white/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70 focus:border-[#FF6B00]/40" />
+          <input type="text" value={person.company} onChange={(e) => onChange({ company: e.target.value })} placeholder="Company"
+            className="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-white placeholder:text-white/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70 focus:border-[#FF6B00]/40" />
         </div>
       </div>
     </div>
@@ -149,6 +172,16 @@ export default function SimplePage() {
     setForm((f) => ({ ...f, speakers: f.speakers.map((s, idx) => (idx === i ? { ...s, ...patch } : s)) }));
   const addSpeaker = () => setForm((f) => ({ ...f, speakers: [...f.speakers, emptyPerson()] }));
   const removeSpeaker = (i: number) => setForm((f) => ({ ...f, speakers: f.speakers.filter((_, idx) => idx !== i) }));
+  const MAX_SPEAKERS = 9;
+  const setSpeakerCount = (n: number) =>
+    setForm((f) => {
+      const count = Math.max(1, Math.min(MAX_SPEAKERS, n));
+      if (count === f.speakers.length) return f;
+      const speakers = count < f.speakers.length
+        ? f.speakers.slice(0, count)
+        : [...f.speakers, ...Array.from({ length: count - f.speakers.length }, () => emptyPerson())];
+      return { ...f, speakers };
+    });
 
   const isEmpty = !form.headline.trim() && !form.label.trim() && form.speakers.every((s) => !s.name.trim()) && !form.moderator.name.trim();
 
@@ -162,21 +195,36 @@ export default function SimplePage() {
     }, 100);
   };
 
+  // Hand the current composition to the full editor: the advanced editor
+  // hydrates from this exact sessionStorage key, so it opens with everything
+  // in place, ready to drag/tweak freely and export. Same shape it persists.
+  const ADVANCED_STORAGE_KEY = "tbbqvisualgen.session.v4";
+  const handleOpenAdvanced = () => {
+    try {
+      sessionStorage.setItem(
+        ADVANCED_STORAGE_KEY,
+        JSON.stringify({ format, customSize: doc.customSize, design: doc.design, canvasImages: doc.canvasImages }),
+      );
+    } catch {
+      // ignore — the editor will just open with its own last session
+    }
+  };
+
   return (
     <div className="h-screen relative overflow-hidden">
       <AnimatedGradient />
       <div className="relative z-10 flex flex-col h-screen overflow-hidden">
         {/* Header */}
-        <header className="px-8 py-5 flex items-center gap-4">
+        <header className="px-4 sm:px-8 py-4 sm:py-5 flex flex-wrap items-center gap-x-4 gap-y-3 shrink-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-red.svg" alt="TechBBQ" className="h-8" />
           <h1 className="text-lg font-medium tracking-tight">
             Panel <span className="text-tbbq-gradient font-semibold">Maker</span>
           </h1>
           <div className="ml-auto flex items-center gap-2">
-            <Link href="/" className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium border border-surface/40 text-foreground hover:bg-white/5 transition-colors">
+            <Link href="/" onClick={handleOpenAdvanced} title="Open this panel in the full editor to drag & fine-tune, then save" className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium border border-surface/40 text-foreground hover:bg-white/5 transition-colors">
               <PencilRuler className="w-3.5 h-3.5" strokeWidth={1.5} />
-              Advanced editor
+              Edit &amp; fine-tune
             </Link>
             <div role="radiogroup" aria-label="Export format" className="flex items-center gap-1 rounded-full bg-card-2 p-1">
               {(["png", "jpeg"] as const).map((fmt) => (
@@ -204,9 +252,9 @@ export default function SimplePage() {
           </div>
         </header>
 
-        <div className="flex-1 flex min-h-0 px-6 pb-6 gap-6">
+        <div className="flex-1 flex flex-col lg:flex-row min-h-0 px-4 sm:px-6 pb-4 sm:pb-6 gap-4 sm:gap-6 overflow-y-auto lg:overflow-hidden">
           {/* Form */}
-          <aside className="w-[420px] shrink-0 flex flex-col gap-4 max-h-full overflow-y-auto pr-1">
+          <aside className="w-full lg:w-[420px] shrink-0 flex flex-col gap-4 lg:max-h-full lg:overflow-y-auto lg:pr-1">
             {/* Format */}
             <section className="flex flex-col gap-2">
               <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Format</span>
@@ -228,18 +276,61 @@ export default function SimplePage() {
               </div>
             </section>
 
-            {/* Content */}
-            <section className="flex flex-col gap-3">
-              <Field label="Session label" value={form.label} onChange={(v) => setForm((f) => ({ ...f, label: v }))} placeholder="Fireside Chat" />
-              <Field label="Headline" value={form.headline} onChange={(v) => setForm((f) => ({ ...f, headline: v }))} placeholder="The Future of European Tech" />
-              <Field label="Subtitle" value={form.subtitle} onChange={(v) => setForm((f) => ({ ...f, subtitle: v }))} placeholder="12 SEP · 14:30 · Main Stage" />
+            {/* Setup — panel composition: moderator + how many speakers */}
+            <section className="flex flex-col gap-2">
+              <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Setup</span>
+              <div className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-white/85">Moderator</span>
+                  <button
+                    role="switch"
+                    aria-checked={form.includeModerator}
+                    aria-label="Include a moderator"
+                    onClick={() => setForm((f) => ({ ...f, includeModerator: !f.includeModerator }))}
+                    className={`relative w-10 h-6 rounded-full transition-colors ${form.includeModerator ? "bg-[#FF6B00]" : "bg-white/15"}`}
+                  >
+                    <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all ${form.includeModerator ? "left-[18px]" : "left-0.5"}`} />
+                  </button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-white/85">Speakers</span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => setSpeakerCount(form.speakers.length - 1)}
+                      disabled={form.speakers.length <= 1}
+                      aria-label="Fewer speakers"
+                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/5 border border-white/10 text-white/80 hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <Minus className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="w-6 text-center text-sm font-semibold tabular-nums text-white">{form.speakers.length}</span>
+                    <button
+                      onClick={() => setSpeakerCount(form.speakers.length + 1)}
+                      disabled={form.speakers.length >= MAX_SPEAKERS}
+                      aria-label="More speakers"
+                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/5 border border-white/10 text-white/80 hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
             </section>
 
-            {/* Moderator */}
-            <section className="flex flex-col gap-2">
-              <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Moderator</span>
-              <PersonEditor person={form.moderator} onChange={setModerator} roleLabel="Moderator" />
+            {/* Content */}
+            <section className="flex flex-col gap-3">
+              <Field label="Headline" hint="Enter = new line" multiline value={form.headline} onChange={(v) => setForm((f) => ({ ...f, headline: v }))} placeholder={"Continuation Capital\n& Venture Secondaries:"} />
+              <Field label="Subtitle" value={form.subtitle} onChange={(v) => setForm((f) => ({ ...f, subtitle: v }))} placeholder="12 SEP · 14:30 · Main Stage" />
+              <Field label="Session label" value={form.label} onChange={(v) => setForm((f) => ({ ...f, label: v }))} placeholder="Fireside Chat" />
             </section>
+
+            {/* Moderator — only when the setup toggle is on */}
+            {form.includeModerator && (
+              <section className="flex flex-col gap-2">
+                <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Moderator</span>
+                <PersonEditor person={form.moderator} onChange={setModerator} roleLabel="Moderator" />
+              </section>
+            )}
 
             {/* Speakers */}
             <section className="flex flex-col gap-2">
@@ -257,12 +348,14 @@ export default function SimplePage() {
                   />
                 ))}
               </div>
-              <button
-                onClick={addSpeaker}
-                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-dashed border-white/15 text-xs text-white/70 hover:border-[#FF6B00]/50 hover:text-white transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5" /> Add speaker
-              </button>
+              {form.speakers.length < MAX_SPEAKERS && (
+                <button
+                  onClick={addSpeaker}
+                  className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-dashed border-white/15 text-xs text-white/70 hover:border-[#FF6B00]/50 hover:text-white transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Add speaker
+                </button>
+              )}
             </section>
 
             {/* Background */}
@@ -273,7 +366,7 @@ export default function SimplePage() {
           </aside>
 
           {/* Preview */}
-          <main ref={previewRef} className="flex-1 min-h-0 min-w-0 flex items-center justify-center overflow-hidden rounded-2xl bg-card relative">
+          <main ref={previewRef} className="flex-1 min-h-[55vh] lg:min-h-0 min-w-0 flex items-center justify-center overflow-hidden rounded-2xl bg-card relative">
             {isEmpty && (
               <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
                 <div className="text-center rounded-2xl bg-black/60 backdrop-blur-sm px-7 py-6">

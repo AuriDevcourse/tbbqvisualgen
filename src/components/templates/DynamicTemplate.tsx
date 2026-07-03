@@ -560,6 +560,7 @@ export function DynamicTemplate({
           textAlign: text.align ?? "center",
           textTransform: text.uppercase ? "uppercase" : undefined,
           letterSpacing: text.letterSpacing,
+          textShadow: text.shadow,
           opacity: text.opacity,
           filter: text.blur && text.blur > 0 ? `blur(${text.blur * dims.width}px)` : undefined,
           // `pre` preserves explicit `\n` line breaks the user typed and
