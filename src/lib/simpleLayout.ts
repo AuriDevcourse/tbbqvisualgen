@@ -31,12 +31,18 @@ export interface SimpleForm {
 
 export function emptyForm(): SimpleForm {
   return {
-    label: "",
-    headline: "",
-    subtitle: "",
+    // Sample panel pre-filled so there's no retyping to preview/tweak. Photos
+    // live in /public/samples. Clear or edit any field as needed.
+    label: "Panel Discussion",
+    headline: "Continuation Capital\n& Venture Secondaries:",
+    subtitle: "Financing the Next Phase of European Growth",
     includeModerator: true,
-    moderator: emptyPerson(),
-    speakers: [emptyPerson(), emptyPerson(), emptyPerson()],
+    moderator: { name: "Pierre Leroy", title: "Managing Director & Co-Head of Secondaries", company: "at Stifel", photo: "/samples/pierre-leroy.jpg" },
+    speakers: [
+      { name: "Andrei Xydas", title: "Principal", company: "Lightrock", photo: "/samples/andrei-xydas.jpg" },
+      { name: "Nicholas Sando", title: "Partner, Secondaries", company: "Molten", photo: "/samples/nicholas-sando.jpg" },
+      { name: "Omolade Adebisi", title: "Principal & Head of Secondaries", company: "ISOMER Capital", photo: "/samples/omolade-adebisi.jpg" },
+    ],
     backgroundId: "orb5",
   };
 }
@@ -67,6 +73,15 @@ export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): Sim
   const W = dims.width;
   const H = dims.height;
 
+  // Font sizes are expressed as a fraction of the SHORTER side `S`, so text
+  // looks the same visual size across formats (square vs 16:9 vs 9:16). Because
+  // a font-fraction measures a WIDTH but vertical layout is in H-fractions,
+  // `vs` converts a font-fraction into the height (in H-fractions) that one
+  // line of it occupies. On a square canvas S=W=H and vs=1, so the (approved)
+  // square layout is unchanged; only non-square formats are corrected.
+  const S = Math.min(W, H);
+  const vs = S / H;
+
   const texts: TextElement[] = [];
   const shapes: ShapeElement[] = [];
   const canvasImages: CanvasImage[] = [];
@@ -78,7 +93,7 @@ export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): Sim
       id: uid("text"),
       content,
       position: { x, y },
-      fontSize: Math.round(sizeFrac * W),
+      fontSize: Math.round(sizeFrac * S),
       align: "left",
       weight: 600,
       font: "onest",
@@ -86,13 +101,32 @@ export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): Sim
     });
   };
 
-  // Auto-fit a font so the longest line fits within `maxWfrac` of the canvas
-  // width — text doesn't wrap (no max-width), so long headlines would overflow.
+  // Auto-fit a font so the longest line fits within the usable width — used for
+  // the headline/subtitle which are single-flow lines (may be manually broken).
   const avail = 0.94 - MARGIN;
   const fitFont = (text: string, baseFrac: number, avgChar = 0.55): number => {
     const longest = Math.max(1, ...text.split("\n").map((l) => l.trim().length));
     const maxPx = (avail * W) / (longest * avgChar);
-    return Math.min(baseFrac * W, maxPx) / W;
+    return Math.min(baseFrac * S, maxPx) / S;
+  };
+
+  // Greedily word-wrap `text` so no line exceeds `maxWfrac` of the canvas width
+  // at the given font size — keeps long names/titles from overflowing into the
+  // neighbouring card. Honours any manual "\n" the user typed.
+  const wrapToWidth = (text: string, maxWfrac: number, fontFrac: number, avgChar = 0.56): string => {
+    const maxChars = Math.max(4, Math.floor((maxWfrac * W) / (fontFrac * S * avgChar)));
+    return text.split("\n").map((line) => {
+      const words = line.trim().split(/\s+/);
+      const out: string[] = [];
+      let cur = "";
+      for (const w of words) {
+        const trial = cur ? `${cur} ${w}` : w;
+        if (trial.length > maxChars && cur) { out.push(cur); cur = w; }
+        else cur = trial;
+      }
+      if (cur) out.push(cur);
+      return out.join("\n");
+    }).join("\n");
   };
 
   // ── Header: headline, subtitle, session label — flowed top-down so a
@@ -102,14 +136,14 @@ export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): Sim
 
   if (form.headline.trim()) {
     const f = fitFont(form.headline, 0.082);
-    const blockH = lineCount(form.headline) * f;
+    const blockH = lineCount(form.headline) * f * vs;
     mkText(form.headline, MARGIN, cursorY + blockH / 2, f, { weight: 600, color: "#FFFFFF" });
     cursorY += blockH + 0.03;
   }
   if (form.subtitle.trim()) {
     // Smaller than before but higher-contrast so it stays readable.
     const f = fitFont(form.subtitle, 0.036);
-    const blockH = lineCount(form.subtitle) * f;
+    const blockH = lineCount(form.subtitle) * f * vs;
     mkText(form.subtitle, MARGIN, cursorY + blockH / 2, f, { weight: 500, color: "rgba(255,255,255,0.95)" });
     cursorY += blockH + 0.028;
   }
@@ -120,14 +154,14 @@ export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): Sim
   if (form.label.trim()) {
     const labelText = form.label.toUpperCase();
     const fsFrac = 0.036;
-    const fsPx = fsFrac * W;
-    const letterSpacingPx = Math.round(0.0016 * W);
-    const padLeft = 0.03 * W;
-    const padRight = 0.046 * W; // more padding on the right of the text
-    const textWpx = labelText.length * fsPx * 0.66 + Math.max(0, labelText.length - 1) * letterSpacingPx;
-    const chipHfrac = 0.062;
+    const fsPx = fsFrac * S;
+    const letterSpacingPx = Math.round(0.0005 * S); // near-normal tracking
+    const padLeft = 0.03 * S;
+    const padRight = 0.046 * S; // more padding on the right of the text
+    const textWpx = labelText.length * fsPx * 0.62 + Math.max(0, labelText.length - 1) * letterSpacingPx;
+    const chipHfrac = fsFrac * vs * 1.7; // font's line height + vertical padding
     const chipWfrac = Math.min((textWpx + padLeft + padRight) / W, 0.94);
-    const chipY = cursorY + chipHfrac / 2;
+    const chipY = cursorY + chipHfrac / 2 - 0.004; // nudge the chip up slightly
     shapes.push({
       id: uid("shape"), type: "rectangle",
       x: MARGIN + chipWfrac / 2, y: chipY, width: chipWfrac, height: chipHfrac,
@@ -135,8 +169,10 @@ export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): Sim
       color1: "#FFFFFF", color2: "#FF6B00", opacity: 1, blur: 0, rotation: 0,
       borderRadius: 0.22, // rounded rectangle, not a pill
     });
-    // Vertically nudge the cap-height text to sit optically centred in the chip.
-    mkText(labelText, MARGIN + padLeft / W, chipY - fsFrac * 0.06, fsFrac, {
+    // Uppercase caps sit high in their line box (descender space below), which
+    // reads as extra padding under the text — nudge the text DOWN to optically
+    // centre the caps in the chip.
+    mkText(labelText, MARGIN + padLeft / W, chipY + fsFrac * vs * 0.11, fsFrac, {
       weight: 800, uppercase: true, color: "#15110E", letterSpacing: letterSpacingPx,
     });
     cursorY += chipHfrac + 0.03;
@@ -162,6 +198,7 @@ export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): Sim
       canvasImages.push({
         id: uid("img"), src: p.photo, x: cx, y: cy, width: w, height: h,
         cornerRadius: 8, border: true, borderWidth: 2 / 1500, fit: "cover",
+        scrimBottom: 0.5, // subtle bottom fade so overlaid labels/text read
         naturalWidth: p.naturalWidth, naturalHeight: p.naturalHeight,
       });
     } else {
@@ -177,118 +214,203 @@ export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): Sim
   // Role label overlaid on the photo's lower-left — NO background chip, just
   // bold white letters with a soft shadow so they read on any headshot.
   const emitRoleLabel = (role: string, left: number, top: number, _w: number, h: number, fsFrac: number): void => {
-    mkText(role.toUpperCase(), left + 0.02, top + h - fsFrac * 0.95, fsFrac, {
+    mkText(role.toUpperCase(), left + 0.02, top + h - fsFrac * vs * 1.25, fsFrac, {
       weight: 800, uppercase: true, color: "#FFFFFF",
-      letterSpacing: Math.round(0.0012 * W),
-      shadow: "0 2px 8px rgba(0,0,0,0.8), 0 0 3px rgba(0,0,0,0.9)",
+      letterSpacing: Math.round(0.0008 * S),
+      shadow: "0 1px 4px rgba(0,0,0,0.5)",
     });
   };
 
-  // Height of a name/title/company caption block (for above-anchored captions).
-  const captionHeight = (p: SimplePerson, nameFrac: number): number => {
+  // Wrap the name/title/company to `maxWfrac` and measure the block's height
+  // (in H-fractions) so it can be anchored above a card without overlapping.
+  const buildCaption = (p: SimplePerson, nameFrac: number, maxWfrac: number) => {
     const titleFrac = nameFrac * 0.72;
-    let hgt = nameFrac;
-    if (p.title.trim()) hgt += 0.006 + lineCount(p.title) * titleFrac;
-    if (p.company.trim()) hgt += 0.004 + titleFrac;
-    return hgt;
+    const name = p.name.trim() ? wrapToWidth(p.name, maxWfrac, nameFrac) : "";
+    const title = p.title.trim() ? wrapToWidth(p.title, maxWfrac, titleFrac) : "";
+    const company = p.company.trim() ? wrapToWidth(p.company, maxWfrac, titleFrac) : "";
+    let height = 0;
+    if (name) height += lineCount(name) * nameFrac * vs;
+    if (title) height += 0.006 + lineCount(title) * titleFrac * vs;
+    if (company) height += 0.004 + lineCount(company) * titleFrac * vs;
+    return { name, title, company, titleFrac, height };
+  };
+  const captionHeight = (p: SimplePerson, nameFrac: number, maxWfrac: number): number =>
+    buildCaption(p, nameFrac, maxWfrac).height;
+
+  // Render a wrapped caption block downward from topY, left-aligned at x.
+  const captionBlock = (p: SimplePerson, x: number, topY: number, nameFrac: number, maxWfrac: number): void => {
+    const { name, title, company, titleFrac } = buildCaption(p, nameFrac, maxWfrac);
+    let ty = topY;
+    if (name) {
+      const half = (lineCount(name) * nameFrac * vs) / 2;
+      ty += half;
+      mkText(name, x, ty, nameFrac, { weight: 700, color: "#FFFFFF" });
+      ty += half;
+    }
+    if (title) {
+      const half = (lineCount(title) * titleFrac * vs) / 2;
+      ty += 0.006 + half;
+      mkText(title, x, ty, titleFrac, { weight: 400, color: "rgba(255,255,255,0.82)" });
+      ty += half;
+    }
+    if (company) {
+      const half = (lineCount(company) * titleFrac * vs) / 2;
+      ty += 0.004 + half;
+      mkText(company, x, ty, titleFrac, { weight: 500, color: "rgba(255,255,255,0.64)" });
+      ty += half;
+    }
   };
 
-  // Render a caption block downward from topY, left-aligned at x.
-  const captionBlock = (p: SimplePerson, x: number, topY: number, nameFrac: number): void => {
-    const titleFrac = nameFrac * 0.72;
-    let ty = topY + nameFrac / 2;
-    mkText(p.name, x, ty, nameFrac, { weight: 700, color: "#FFFFFF" });
-    ty += nameFrac / 2;
-    if (p.title.trim()) {
-      ty += 0.006 + titleFrac / 2;
-      mkText(p.title, x, ty, titleFrac, { weight: 400, color: "rgba(255,255,255,0.82)" });
-      ty += titleFrac * (lineCount(p.title) - 0.5);
-    }
-    if (p.company.trim()) {
-      ty += 0.004 + titleFrac / 2;
-      mkText(p.company, x, ty, titleFrac, { weight: 500, color: "rgba(255,255,255,0.64)" });
-    }
-  };
+  // Portrait-card geometry helpers (aspect ar = width:height). Keep photos from
+  // squishing on wide (16:9) or tall (9:16) canvases.
+  const cardWfromH = (hFrac: number, ar: number): number => hFrac * (H / W) * ar;
+  const cardHfromW = (wFrac: number, ar: number): number => (wFrac * (W / H)) / ar;
 
-  if (moderator) {
-    // ── Panel layout (matches the hand-made "Panel Discussion" reference) ──
-    // Big moderator card on the left with its caption to the RIGHT; speakers
-    // step gradually UPWARD to the right, each with its caption ABOVE the card.
-    const modW = 0.28;
+  const isLandscape = W > H * 1.2;
+  const isPortrait = H > W * 1.2;
+
+  if (moderator && isLandscape) {
+    // ── Landscape (16:9): a level ROW of cards (moderator a bit bigger),
+    // each with its caption ABOVE. The diagonal/right-caption layout needs
+    // vertical room a wide-short canvas doesn't have. ──
+    const people = [moderator, ...speakerList];
+    const m = people.length;
+    const gap = 0.018;
+    const rowBottom = 0.92;
+    const capAllow = 0.04 + 0.06 * vs;
+    const rowTop = areaTop + capAllow;
+    const bandH = rowBottom - rowTop;
+    const totalW = (areaRight - areaLeft) - gap * (m - 1);
+    const unit = totalW / (1.3 + (m - 1)); // moderator = 1.3 units wide
+    let x = areaLeft;
+    people.forEach((p, i) => {
+      const isMod = i === 0;
+      const uw = isMod ? unit * 1.3 : unit;
+      let cw = uw;
+      let ch = cardHfromW(cw, 0.85);
+      if (ch > bandH) { ch = bandH; cw = cardWfromH(ch, 0.85); }
+      const top = rowBottom - ch;
+      const nameFrac = isMod ? 0.02 : 0.018;
+      const capH = captionHeight(p, nameFrac, cw);
+      captionBlock(p, x, top - 0.012 - capH, nameFrac, cw);
+      emitPhoto(p, x, top, cw, ch);
+      emitRoleLabel(isMod ? "Moderator" : "Speaker", x, top, cw, ch, isMod ? 0.018 : 0.015);
+      x += uw + gap;
+    });
+  } else if (moderator && !isPortrait) {
+    // ── Square panel (the hand-made "Panel Discussion" reference) ──
+    // Big moderator card left with caption to the RIGHT; speakers step UPWARD
+    // to the right, each with its caption ABOVE the card.
+    const n = speakerList.length;
+    const modAr = 0.82;
     const modTop = areaTop + 0.01;
-    const modH = Math.min(0.30, 0.80 - modTop); // portrait card, not squished
+    const modBottom = 0.9;
+    let modH = modBottom - modTop;
+    let modW = cardWfromH(modH, modAr);
+    if (modW > 0.3) { modW = 0.3; modH = cardHfromW(modW, modAr); } // cap width, keep room for speakers
     emitPhoto(moderator, areaLeft, modTop, modW, modH);
     emitRoleLabel("Moderator", areaLeft, modTop, modW, modH, 0.019);
     const modCapX = areaLeft + modW + 0.03;
-    // Moderator caption text is the SAME size as speakers' — the moderator is
-    // emphasised by the bigger card, not bigger text (matches the reference).
-    captionBlock(moderator, modCapX, modTop + 0.006, 0.02);
+    captionBlock(moderator, modCapX, modTop + 0.006, 0.02, Math.min(0.32, areaRight - modCapX));
 
-    const n = speakerList.length;
     if (n > 0) {
       const spkAreaLeft = modCapX;
       const spkAreaRight = areaRight;
       const spkGap = 0.02;
-      const spkW = n <= 3 ? 0.185 : Math.max(0.12, (spkAreaRight - spkAreaLeft - spkGap * (n - 1)) / n);
-      const spkH = (spkW * W) / 0.9 / H; // ~0.9 aspect (w:h) → portrait, un-squished
+      const spkBottom = 0.93;
+      const capAllow = (0.05 + 0.05 * vs) * 1.1;
+      const spkTop = areaTop + capAllow;
+      const bandH = spkBottom - spkTop;
+      let spkW = n <= 3 ? 0.185 : Math.max(0.12, (spkAreaRight - spkAreaLeft - spkGap * (n - 1)) / n);
+      let spkH = cardHfromW(spkW, 0.9); // portrait, un-squished
+      if (spkH > bandH) { spkH = bandH; spkW = cardWfromH(spkH, 0.9); } // fit the band
       const step = n > 1 ? (spkAreaRight - spkAreaLeft - spkW) / (n - 1) : 0;
-      const bottomBase = 0.94;
-      // Higher steps for later speakers so their captions clear the moderator
-      // caption band; the first (leftmost) speaker sits lowest, under it.
-      const ascend = Math.min(0.11, n > 1 ? (bottomBase - 0.48) / (n - 1) : 0);
+      const ascend = n > 1 ? (bandH - spkH) / (n - 1) : 0;
       speakerList.forEach((p, i) => {
         const cardLeft = spkAreaLeft + i * step;
-        const cardBottom = bottomBase - i * ascend;
+        const cardBottom = spkBottom - i * ascend;
         const cardTop = cardBottom - spkH;
-        const capH = captionHeight(p, 0.018);
-        captionBlock(p, cardLeft, cardTop - 0.014 - capH, 0.018);
+        const capMaxW = i < n - 1 ? Math.max(spkW, step * 0.9) : Math.max(spkW, spkAreaRight - cardLeft);
+        const capH = captionHeight(p, 0.018, capMaxW);
+        captionBlock(p, cardLeft, cardTop - 0.012 - capH, 0.018, capMaxW);
         emitPhoto(p, cardLeft, cardTop, spkW, spkH);
         emitRoleLabel("Speaker", cardLeft, cardTop, spkW, spkH, 0.015);
       });
     }
-  } else if (speakerList.length > 0) {
-    // ── Speakers-only grid (matches the "Speakers" reference) ──
-    // Up to 3 columns with captions overlaid on the photos, filling the height.
-    const n = speakerList.length;
-    const peopleBottom = 0.9;
-    const cols = n <= 3 ? n : n === 4 ? 2 : 3;
-    const nameFrac = n <= 4 ? 0.024 : 0.02;
-    const rows = Math.ceil(n / cols);
-    const gapPx = 0.024 * W;
-    const rowGapPx = 0.02 * H;
-    const cellWpx = ((areaRight - areaLeft) * W - gapPx * (cols - 1)) / cols;
-    const availHpx = ((peopleBottom - areaTop) * H - rowGapPx * (rows - 1)) / rows;
-    const photoWpx = cellWpx;
-    const photoHpx = Math.max(cellWpx * 0.55, Math.min(availHpx, cellWpx * 1.28));
-    speakerList.forEach((p, i) => {
-      const c = i % cols;
-      const r = Math.floor(i / cols);
-      const left = areaLeft + (c * (cellWpx + gapPx)) / W;
-      const top = areaTop + (r * (photoHpx + rowGapPx)) / H;
-      const w = photoWpx / W;
-      const h = photoHpx / H;
-      emitPhoto(p, left, top, w, h);
-      // Overlaid caption over a soft scrim, bottom-left.
-      const titleFrac = nameFrac * 0.72;
-      const secondary = [p.title.trim(), p.company.trim()].filter(Boolean).join(", ");
-      const scrimH = nameFrac * 3.4;
-      shapes.push({
-        id: uid("shape"), type: "rectangle",
-        x: left + w / 2, y: top + h - scrimH / 2, width: w, height: scrimH,
-        fillType: "fill", strokeWidth: 0, colorType: "solid",
-        color1: "rgba(0,0,0,0.55)", color2: "#000000", opacity: 1, blur: 0, rotation: 0,
-        borderRadius: 0.08,
+  } else {
+    // ── Grid — portrait-with-moderator OR speakers-only (any format). Cards
+    // are equal-sized and fill the area; captions are overlaid on the photo,
+    // with a small role label above the name when a moderator is present. ──
+    const gridPeople: { p: SimplePerson; role: string | null }[] = moderator
+      ? [{ p: moderator, role: "Moderator" }, ...speakerList.map((p) => ({ p, role: "Speaker" as string | null }))]
+      : speakerList.map((p) => ({ p, role: null as string | null }));
+    const total = gridPeople.length;
+    if (total > 0) {
+      const peopleBottom = 0.92;
+      const cols = total <= 3 ? total : total === 4 ? 2 : 3;
+      const nameFrac = total <= 4 ? 0.024 : 0.02;
+      const rows = Math.ceil(total / cols);
+      const gapPx = 0.024 * W;
+      const rowGapPx = 0.024 * H;
+      const cellWpx = ((areaRight - areaLeft) * W - gapPx * (cols - 1)) / cols;
+      const availHpx = ((peopleBottom - areaTop) * H - rowGapPx * (rows - 1)) / rows;
+      const photoWpx = cellWpx;
+      const photoHpx = Math.max(cellWpx * 0.55, Math.min(availHpx, cellWpx * 1.4));
+      gridPeople.forEach(({ p, role }, i) => {
+        const c = i % cols;
+        const r = Math.floor(i / cols);
+        const left = areaLeft + (c * (cellWpx + gapPx)) / W;
+        const top = areaTop + (r * (photoHpx + rowGapPx)) / H;
+        const w = photoWpx / W;
+        const h = photoHpx / H;
+        emitPhoto(p, left, top, w, h);
+        // Overlaid caption: optional ROLE line, then name, then "title, company"
+        // — all wrap to the card width so long names don't spill.
+        const titleFrac = nameFrac * 0.72;
+        const roleFrac = Math.min(0.014, nameFrac * 0.66);
+        const maxCapW = w - 0.032;
+        const roleTxt = role ? role.toUpperCase() : "";
+        const name = p.name.trim() ? wrapToWidth(p.name, maxCapW, nameFrac) : "";
+        const secRaw = [p.title.trim(), p.company.trim()].filter(Boolean).join(", ");
+        const secondary = secRaw ? wrapToWidth(secRaw, maxCapW, titleFrac) : "";
+        const roleH = roleTxt ? roleFrac * vs : 0;
+        const roleGap = roleTxt && (name || secondary) ? 0.005 : 0;
+        const nameH = name ? lineCount(name) * nameFrac * vs : 0;
+        const secH = secondary ? lineCount(secondary) * titleFrac * vs : 0;
+        const innerGap = name && secondary ? 0.006 : 0;
+        const totalH = roleH + roleGap + nameH + secH + innerGap;
+        const padBottom = 0.016 * vs + 0.012;
+        if (!p.photo && totalH > 0) {
+          const scrimH = totalH + padBottom + 0.02;
+          shapes.push({
+            id: uid("shape"), type: "rectangle",
+            x: left + w / 2, y: top + h - scrimH / 2, width: w, height: scrimH,
+            fillType: "fill", strokeWidth: 0, colorType: "solid",
+            color1: "rgba(0,0,0,0.45)", color2: "#000000", opacity: 1, blur: 0, rotation: 0,
+            borderRadius: 0.08,
+          });
+        }
+        const padL = left + 0.016;
+        let ty = top + h - padBottom - totalH; // top of the caption block
+        if (roleTxt) {
+          ty += roleH / 2;
+          mkText(roleTxt, padL, ty, roleFrac, {
+            weight: 800, uppercase: true, color: "#FFFFFF",
+            letterSpacing: Math.round(0.0008 * S), shadow: "0 1px 4px rgba(0,0,0,0.5)",
+          });
+          ty += roleH / 2 + roleGap;
+        }
+        if (name) {
+          ty += nameH / 2;
+          mkText(name, padL, ty, nameFrac, { weight: 700, color: "#FFFFFF" });
+          ty += nameH / 2;
+        }
+        if (secondary) {
+          ty += innerGap + secH / 2;
+          mkText(secondary, padL, ty, titleFrac, { weight: 400, color: "rgba(255,255,255,0.88)" });
+        }
       });
-      const padL = left + 0.016;
-      let ty = top + h - (secondary ? titleFrac / 2 + 0.02 : 0.03);
-      if (secondary) {
-        mkText(secondary, padL, ty, titleFrac, { weight: 400, color: "rgba(255,255,255,0.88)" });
-        ty -= titleFrac / 2 + nameFrac / 2 + 0.006;
-      } else {
-        ty -= nameFrac / 2;
-      }
-      mkText(p.name, padL, ty, nameFrac, { weight: 700, color: "#FFFFFF" });
-    });
+    }
   }
 
   const design: DesignConfig = {

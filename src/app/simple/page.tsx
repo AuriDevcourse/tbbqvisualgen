@@ -9,7 +9,7 @@ import { DynamicTemplate } from "@/components/templates/DynamicTemplate";
 import { BackgroundPicker } from "@/components/BackgroundPicker";
 import { useExport, type ExportFormat } from "@/hooks/useExport";
 import type { PlatformFormat } from "@/types/template";
-import { buildSimpleDesign, emptyForm, emptyPerson, type SimpleForm, type SimplePerson } from "@/lib/simpleLayout";
+import { buildSimpleDesign, emptyForm, emptyPerson, type SimpleForm, type SimplePerson, type SimpleDoc } from "@/lib/simpleLayout";
 
 const FORMATS: { id: PlatformFormat; label: string; sub: string; icon: typeof Square }[] = [
   { id: "presentation", label: "16:9", sub: "Full HD", icon: Presentation },
@@ -135,15 +135,68 @@ function PersonEditor({
   );
 }
 
+// sessionStorage keys for the round-trip with the advanced editor.
+const ADVANCED_STORAGE_KEY = "tbbqvisualgen.session.v4"; // the editor hydrates from this
+const HANDOFF_FLAG_KEY = "tbbqvisualgen.simple.handoff"; // set when we hand off, so we re-adopt on return
+const CUSTOM_KEY = "tbbqvisualgen.simple.custom"; // the fine-tuned doc we keep for the simple preview
+
 export default function SimplePage() {
   const [form, setForm] = useState<SimpleForm>(emptyForm);
   const [format, setFormat] = useState<PlatformFormat>("square");
   const [exportFormat, setExportFormat] = useState<ExportFormat>("jpeg");
   const [paused, setPaused] = useState(false);
+  // When the user fine-tunes in the advanced editor, we adopt their edited doc
+  // here and render THAT instead of the form-generated layout — so coming back
+  // to the simple panel shows exactly what they saved. Any form/format edit
+  // drops the override (rebuilds from the form).
+  const [custom, setCustom] = useState<SimpleDoc | null>(null);
 
   const { exportRef, isExporting, exportImage } = useExport();
-  const doc = useMemo(() => buildSimpleDesign(form, format), [form, format]);
+  const genDoc = useMemo(() => buildSimpleDesign(form, format), [form, format]);
+  const doc = custom ?? genDoc;
   const { width: W, height: H } = doc.customSize;
+
+  // On mount: adopt the fine-tuned doc when returning from the editor (or a
+  // previously-kept one on refresh).
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem(HANDOFF_FLAG_KEY)) {
+        const raw = sessionStorage.getItem(ADVANCED_STORAGE_KEY);
+        if (raw) {
+          const s = JSON.parse(raw);
+          const adopted = { format: s.format, customSize: s.customSize, design: s.design, canvasImages: s.canvasImages ?? [] } as SimpleDoc;
+          sessionStorage.setItem(CUSTOM_KEY, JSON.stringify(adopted));
+          // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time hydrate from sessionStorage on mount
+          setCustom(adopted);
+        }
+        sessionStorage.removeItem(HANDOFF_FLAG_KEY);
+      } else {
+        const rawCustom = sessionStorage.getItem(CUSTOM_KEY);
+        if (rawCustom) setCustom(JSON.parse(rawCustom));
+      }
+    } catch { /* start fresh */ }
+  }, []);
+
+  // A user edit to the form or format rebuilds from the form → drop the
+  // fine-tuned override. Compares against a baseline snapshot (rather than a
+  // "skip first run" flag) so it's safe under StrictMode's double-invoke and
+  // survives adoption of the override on mount.
+  const baselineRef = useRef<string>("");
+  useEffect(() => {
+    const key = JSON.stringify([form, format]);
+    if (baselineRef.current === "") { baselineRef.current = key; return; }
+    if (key !== baselineRef.current) {
+      baselineRef.current = key;
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- drop the override when the user edits the form
+      setCustom(null);
+      try { sessionStorage.removeItem(CUSTOM_KEY); } catch { /* ignore */ }
+    }
+  }, [form, format]);
+
+  const revertCustom = () => {
+    setCustom(null);
+    try { sessionStorage.removeItem(CUSTOM_KEY); } catch { /* ignore */ }
+  };
 
   // Scale the canvas to fit the preview column.
   const previewRef = useRef<HTMLDivElement>(null);
@@ -183,7 +236,7 @@ export default function SimplePage() {
       return { ...f, speakers };
     });
 
-  const isEmpty = !form.headline.trim() && !form.label.trim() && form.speakers.every((s) => !s.name.trim()) && !form.moderator.name.trim();
+  const isEmpty = !custom && !form.headline.trim() && !form.label.trim() && form.speakers.every((s) => !s.name.trim()) && !form.moderator.name.trim();
 
   const handleExport = () => {
     setPaused(true);
@@ -197,14 +250,15 @@ export default function SimplePage() {
 
   // Hand the current composition to the full editor: the advanced editor
   // hydrates from this exact sessionStorage key, so it opens with everything
-  // in place, ready to drag/tweak freely and export. Same shape it persists.
-  const ADVANCED_STORAGE_KEY = "tbbqvisualgen.session.v4";
+  // in place, ready to drag/tweak freely. The handoff flag makes the simple
+  // panel re-adopt whatever they saved when they navigate back here.
   const handleOpenAdvanced = () => {
     try {
       sessionStorage.setItem(
         ADVANCED_STORAGE_KEY,
-        JSON.stringify({ format, customSize: doc.customSize, design: doc.design, canvasImages: doc.canvasImages }),
+        JSON.stringify({ format: doc.format, customSize: doc.customSize, design: doc.design, canvasImages: doc.canvasImages }),
       );
+      sessionStorage.setItem(HANDOFF_FLAG_KEY, "1");
     } catch {
       // ignore — the editor will just open with its own last session
     }
@@ -255,16 +309,30 @@ export default function SimplePage() {
         <div className="flex-1 flex flex-col lg:flex-row min-h-0 px-4 sm:px-6 pb-4 sm:pb-6 gap-4 sm:gap-6 overflow-y-auto lg:overflow-hidden">
           {/* Form */}
           <aside className="w-full lg:w-[420px] shrink-0 flex flex-col gap-4 lg:max-h-full lg:overflow-y-auto lg:pr-1">
+            {/* Fine-tuned banner — the preview is a saved editor version */}
+            {custom && (
+              <div className="flex items-center justify-between gap-2 rounded-lg border border-[#FF6B00]/40 bg-[#FF6B00]/10 px-3 py-2">
+                <span className="text-xs text-white/85 leading-tight">
+                  <span className="font-semibold text-[#FF8A3D]">Fine-tuned in editor.</span> Editing fields rebuilds the layout.
+                </span>
+                <button
+                  onClick={revertCustom}
+                  className="shrink-0 px-2.5 py-1 rounded-md text-[11px] font-medium bg-white/10 text-white hover:bg-white/20 transition-colors"
+                >
+                  Revert
+                </button>
+              </div>
+            )}
             {/* Format */}
             <section className="flex flex-col gap-2">
               <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Format</span>
               <div className="flex gap-1.5">
                 {FORMATS.map((f) => {
-                  const active = format === f.id;
+                  const active = doc.format === f.id;
                   return (
                     <button
                       key={f.id}
-                      onClick={() => setFormat(f.id)}
+                      onClick={() => { revertCustom(); setFormat(f.id); }}
                       aria-pressed={active}
                       className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-xs transition-all ${active ? "bg-[#FF0028] text-white" : "bg-white/5 border border-white/10 text-white/70 hover:bg-white/10"}`}
                     >
@@ -380,7 +448,9 @@ export default function SimplePage() {
                 <div ref={exportRef}>
                   <DynamicTemplate
                     design={doc.design}
-                    format={format}
+                    format={doc.format}
+                    customWidth={W}
+                    customHeight={H}
                     canvasImages={doc.canvasImages}
                     paused={paused}
                   />

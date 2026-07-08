@@ -895,6 +895,18 @@ export function DynamicTemplate({
                       : null),
                   }}
                 />
+                {/* Bottom scrim — subtle black gradient fading up, keeps white
+                 *  text/labels over the lower part of the photo legible. */}
+                {ci.scrimBottom ? (
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      pointerEvents: "none",
+                      background: `linear-gradient(to top, rgba(0,0,0,${ci.scrimBottom}) 0%, rgba(0,0,0,${(ci.scrimBottom * 0.35).toFixed(3)}) 22%, rgba(0,0,0,0) 48%)`,
+                    }}
+                  />
+                ) : null}
               </div>
               {/* Border — sibling of the clip-wrapper so it's not affected
                *  by the clip-wrapper's overflow:hidden, padding, or

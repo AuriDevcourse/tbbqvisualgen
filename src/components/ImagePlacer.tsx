@@ -59,6 +59,10 @@ export interface CanvasImage {
   /** Overall opacity of the whole image box (image + backdrop + border).
    *  Range 0–1, default 1 (fully opaque). */
   opacity?: number;
+  /** Darkens the bottom of the photo with a subtle black gradient fading up
+   *  to transparent — so white text/labels overlaid on the lower part stay
+   *  legible. The number is the max opacity at the very bottom edge (0–1). */
+  scrimBottom?: number;
 }
 
 interface ImagePlacerProps {
