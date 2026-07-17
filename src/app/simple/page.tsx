@@ -9,7 +9,7 @@ import { DynamicTemplate } from "@/components/templates/DynamicTemplate";
 import { BackgroundPicker } from "@/components/BackgroundPicker";
 import { useExport, type ExportFormat } from "@/hooks/useExport";
 import type { PlatformFormat } from "@/types/template";
-import { buildSimpleDesign, emptyForm, emptyPerson, type SimpleForm, type SimplePerson, type SimpleDoc } from "@/lib/simpleLayout";
+import { buildSimpleDesign, emptyForm, emptyPerson, isBlankPerson, panelShapeKey, retargetTunedDoc, type SimpleForm, type SimplePerson, type SimpleDoc } from "@/lib/simpleLayout";
 
 const FORMATS: { id: PlatformFormat; label: string; sub: string; icon: typeof Square }[] = [
   { id: "presentation", label: "16:9", sub: "Full HD", icon: Presentation },
@@ -138,11 +138,85 @@ function PersonEditor({
 // sessionStorage keys for the round-trip with the advanced editor.
 const ADVANCED_STORAGE_KEY = "tbbqvisualgen.session.v4"; // the editor hydrates from this
 const HANDOFF_FLAG_KEY = "tbbqvisualgen.simple.handoff"; // set when we hand off, so we re-adopt on return
-const CUSTOM_KEY = "tbbqvisualgen.simple.custom"; // the fine-tuned doc we keep for the simple preview
+const CUSTOM_KEY = "tbbqvisualgen.simple.custom.v2"; // the fine-tuned doc — localStorage, so it outlives the tab
+// localStorage (not session) so a closed tab doesn't cost you the panel.
+const FORM_KEY = "tbbqvisualgen.simpleForm.v1";
+// Tuned designs for setups you are not currently on (e.g. the 3-speaker one
+// while you are temporarily on 2), so stepping back restores them.
+const PARKED_KEY = "tbbqvisualgen.simple.parked.v1";
+
+interface PersistedForm {
+  form: SimpleForm;
+  format: PlatformFormat;
+  stash: SimplePerson[];
+}
+
+/** Drop dataURL photos — the fallback when the full form busts the quota. */
+function withoutPhotos({ form, format, stash }: PersistedForm): PersistedForm {
+  const strip = (p: SimplePerson): SimplePerson => ({ ...p, photo: "", naturalWidth: undefined, naturalHeight: undefined });
+  return {
+    format,
+    form: { ...form, moderator: strip(form.moderator), speakers: form.speakers.map(strip) },
+    stash: stash.map(strip),
+  };
+}
+
+/**
+ * Uploaded photos are dataURLs, so a panel of headshots can approach the ~5MB
+ * per-origin cap. Rather than lose everything, fall back to saving the form
+ * without images so the typed details still survive a refresh.
+ */
+function persistForm(state: PersistedForm): void {
+  try {
+    localStorage.setItem(FORM_KEY, JSON.stringify(state));
+  } catch {
+    try {
+      localStorage.setItem(FORM_KEY, JSON.stringify(withoutPhotos(state)));
+    } catch { /* out of room entirely — keep working in memory */ }
+  }
+}
+
+/** Is there actually a design here? A doc with no text, no shapes and no
+ *  photos renders as a blank canvas — never worth adopting or restoring. */
+function hasContent(doc: SimpleDoc): boolean {
+  return (doc.design?.texts?.length ?? 0) > 0
+    || (doc.design?.shapes?.length ?? 0) > 0
+    || (doc.canvasImages?.length ?? 0) > 0;
+}
+
+/** How many tuned-but-inactive designs to keep on the shelf. Each carries its
+ *  own photos, so this is a storage budget, not a UX one. */
+const MAX_PARKED = 4;
+
+/**
+ * Save the active tuned design plus the parked ones. The active design matters
+ * most, so it's written first and on its own — a shelf too big for the quota
+ * must never cost you the panel you're actually looking at.
+ */
+function persistTuned(active: SimpleDoc | null, parked: Record<string, SimpleDoc>): void {
+  try {
+    if (active) localStorage.setItem(CUSTOM_KEY, JSON.stringify(active));
+    else localStorage.removeItem(CUSTOM_KEY);
+  } catch { /* over quota — it stays in memory for this session */ }
+
+  const trimmed = Object.entries(parked).slice(-MAX_PARKED);
+  try {
+    localStorage.setItem(PARKED_KEY, JSON.stringify(Object.fromEntries(trimmed)));
+  } catch {
+    // No room for the shelf — drop it rather than wedge the active design.
+    try { localStorage.removeItem(PARKED_KEY); } catch { /* ignore */ }
+  }
+}
 
 export default function SimplePage() {
   const [form, setForm] = useState<SimpleForm>(emptyForm);
   const [format, setFormat] = useState<PlatformFormat>("square");
+  // Gates the persist + override-drop effects until the one-time hydrate has
+  // landed, so restoring a saved form doesn't read as "the user edited it".
+  const [hydrated, setHydrated] = useState(false);
+  // People parked by lowering the speaker count — popped back in order when
+  // the count goes up again, so a mis-click doesn't cost you their details.
+  const [stash, setStash] = useState<SimplePerson[]>([]);
   const [exportFormat, setExportFormat] = useState<ExportFormat>("jpeg");
   const [paused, setPaused] = useState(false);
   // When the user fine-tunes in the advanced editor, we adopt their edited doc
@@ -150,6 +224,8 @@ export default function SimplePage() {
   // to the simple panel shows exactly what they saved. Any form/format edit
   // drops the override (rebuilds from the form).
   const [custom, setCustom] = useState<SimpleDoc | null>(null);
+  // Tuned designs for shapes we are not on right now, keyed by panelShapeKey.
+  const [parked, setParked] = useState<Record<string, SimpleDoc>>({});
 
   const { exportRef, isExporting, exportImage } = useExport();
   const genDoc = useMemo(() => buildSimpleDesign(form, format), [form, format]);
@@ -165,37 +241,103 @@ export default function SimplePage() {
         if (raw) {
           const s = JSON.parse(raw);
           const adopted = { format: s.format, customSize: s.customSize, design: s.design, canvasImages: s.canvasImages ?? [] } as SimpleDoc;
-          sessionStorage.setItem(CUSTOM_KEY, JSON.stringify(adopted));
-          // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time hydrate from sessionStorage on mount
-          setCustom(adopted);
+          // Only adopt a design with something in it. An empty editor doc used
+          // to be a transient annoyance you could close the tab on; now that
+          // tuning is saved, adopting one would strand you on a blank panel.
+          if (hasContent(adopted)) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time adopt of the editor's doc on return
+            setCustom(adopted);
+          }
         }
         sessionStorage.removeItem(HANDOFF_FLAG_KEY);
       } else {
-        const rawCustom = sessionStorage.getItem(CUSTOM_KEY);
-        if (rawCustom) setCustom(JSON.parse(rawCustom));
+        const rawCustom = localStorage.getItem(CUSTOM_KEY);
+        if (rawCustom) {
+          const saved = JSON.parse(rawCustom) as SimpleDoc;
+          // Same guard on the way back in — never restore someone onto a blank
+          // canvas, and clear the bad entry so it stops haunting them.
+          if (hasContent(saved)) setCustom(saved);
+          else localStorage.removeItem(CUSTOM_KEY);
+        }
+      }
+      const rawParked = localStorage.getItem(PARKED_KEY);
+      if (rawParked) setParked(JSON.parse(rawParked));
+    } catch { /* start fresh */ }
+
+    // Restore the last panel. Done here rather than in a useState initializer
+    // so the prerendered HTML and the first client render still agree.
+    try {
+      const rawForm = localStorage.getItem(FORM_KEY);
+      if (rawForm) {
+        const saved = JSON.parse(rawForm) as Partial<PersistedForm>;
+        if (saved?.form?.speakers) {
+          setForm(saved.form);
+          if (saved.format) setFormat(saved.format);
+          setStash(saved.stash ?? []);
+        }
       }
     } catch { /* start fresh */ }
+    setHydrated(true);
   }, []);
 
-  // A user edit to the form or format rebuilds from the form → drop the
-  // fine-tuned override. Compares against a baseline snapshot (rather than a
-  // "skip first run" flag) so it's safe under StrictMode's double-invoke and
-  // survives adoption of the override on mount.
+  // Save on every change, once hydrated — the guard stops the initial sample
+  // form from overwriting a saved panel before it has been read back.
+  useEffect(() => {
+    if (!hydrated) return;
+    persistForm({ form, format, stash });
+  }, [hydrated, form, format, stash]);
+
+  // A form edit used to bin the fine-tuned design outright. Now the words are
+  // re-pointed at the tuned layers instead, so retyping a title costs you
+  // nothing. Only an edit that changes WHICH layers exist — a new speaker, a
+  // cleared field, a different format — forces a rebuild, because the tuned
+  // design has no layer to carry the change.
   const baselineRef = useRef<string>("");
   useEffect(() => {
+    // Wait for the hydrate, else restoring a saved form looks like an edit and
+    // needlessly bins the fine-tuned override.
+    if (!hydrated) return;
     const key = JSON.stringify([form, format]);
     if (baselineRef.current === "") { baselineRef.current = key; return; }
-    if (key !== baselineRef.current) {
-      baselineRef.current = key;
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- drop the override when the user edits the form
-      setCustom(null);
-      try { sessionStorage.removeItem(CUSTOM_KEY); } catch { /* ignore */ }
+    if (key === baselineRef.current) return;
+    baselineRef.current = key;
+
+    const rebuilt = buildSimpleDesign(form, format);
+
+    if (custom) {
+      // Same shape → carry the tuning across, only the words change.
+      const retargeted = retargetTunedDoc(custom, rebuilt);
+      if (retargeted) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- retarget the override at the edited form
+        setCustom(retargeted);
+        return;
+      }
+      // Different shape → park it. Stepping 3 → 2 → 3, or flipping format and
+      // back, must not cost the tuning just because it can't apply right now.
+      setParked((p) => ({ ...p, [panelShapeKey(custom)]: custom }));
     }
-  }, [form, format]);
+
+    // Coming back to a shape we've tuned before? Put it back.
+    const revived = parked[panelShapeKey(rebuilt)];
+    setCustom(revived ? retargetTunedDoc(revived, rebuilt) : null);
+  }, [hydrated, form, format, custom, parked]);
+
+  // Keep the tuned designs across tab closes — they were session-only, so
+  // shutting the tab silently threw the fine-tuning away.
+  useEffect(() => {
+    if (!hydrated) return;
+    persistTuned(custom, parked);
+  }, [hydrated, custom, parked]);
 
   const revertCustom = () => {
     setCustom(null);
-    try { sessionStorage.removeItem(CUSTOM_KEY); } catch { /* ignore */ }
+    // Forget the parked copy for this shape too — otherwise Revert would undo
+    // the tuning only until the next round-trip brought it back.
+    setParked((p) => {
+      const next = { ...p };
+      if (custom) delete next[panelShapeKey(custom)];
+      return next;
+    });
   };
 
   // Scale the canvas to fit the preview column.
@@ -223,18 +365,40 @@ export default function SimplePage() {
   const setModerator = (patch: Partial<SimplePerson>) => setForm((f) => ({ ...f, moderator: { ...f.moderator, ...patch } }));
   const setSpeaker = (i: number, patch: Partial<SimplePerson>) =>
     setForm((f) => ({ ...f, speakers: f.speakers.map((s, idx) => (idx === i ? { ...s, ...patch } : s)) }));
-  const addSpeaker = () => setForm((f) => ({ ...f, speakers: [...f.speakers, emptyPerson()] }));
-  const removeSpeaker = (i: number) => setForm((f) => ({ ...f, speakers: f.speakers.filter((_, idx) => idx !== i) }));
+  const addSpeaker = () => setSpeakerCount(form.speakers.length + 1);
+  const removeSpeaker = (i: number) => {
+    const dropped = form.speakers[i];
+    if (dropped && !isBlankPerson(dropped)) setStash((s) => [dropped, ...s]);
+    setForm((f) => ({ ...f, speakers: f.speakers.filter((_, idx) => idx !== i) }));
+  };
   const MAX_SPEAKERS = 9;
-  const setSpeakerCount = (n: number) =>
-    setForm((f) => {
-      const count = Math.max(1, Math.min(MAX_SPEAKERS, n));
-      if (count === f.speakers.length) return f;
-      const speakers = count < f.speakers.length
-        ? f.speakers.slice(0, count)
-        : [...f.speakers, ...Array.from({ length: count - f.speakers.length }, () => emptyPerson())];
-      return { ...f, speakers };
-    });
+  // Lowering the count parks the dropped people in `stash` instead of binning
+  // them, so stepping 3 -> 2 -> 3 gives back the same panel rather than a
+  // blank card. Only filled-in people are worth keeping.
+  const setSpeakerCount = (n: number) => {
+    const count = Math.max(1, Math.min(MAX_SPEAKERS, n));
+    const current = form.speakers.length;
+    if (count === current) return;
+
+    if (count < current) {
+      const dropped = form.speakers.slice(count).filter((p) => !isBlankPerson(p));
+      if (dropped.length) setStash((s) => [...dropped, ...s]);
+      setForm((f) => ({ ...f, speakers: f.speakers.slice(0, count) }));
+      return;
+    }
+
+    const needed = count - current;
+    const restored = stash.slice(0, needed);
+    if (restored.length) setStash((s) => s.slice(restored.length));
+    setForm((f) => ({
+      ...f,
+      speakers: [
+        ...f.speakers,
+        ...restored,
+        ...Array.from({ length: needed - restored.length }, () => emptyPerson()),
+      ],
+    }));
+  };
 
   const isEmpty = !custom && !form.headline.trim() && !form.label.trim() && form.speakers.every((s) => !s.name.trim()) && !form.moderator.name.trim();
 
@@ -313,7 +477,7 @@ export default function SimplePage() {
             {custom && (
               <div className="flex items-center justify-between gap-2 rounded-lg border border-[#FF6B00]/40 bg-[#FF6B00]/10 px-3 py-2">
                 <span className="text-xs text-white/85 leading-tight">
-                  <span className="font-semibold text-[#FF8A3D]">Fine-tuned in editor.</span> Editing fields rebuilds the layout.
+                  <span className="font-semibold text-[#FF8A3D]">Fine-tuned in editor — saved.</span> Text edits keep your layout. Changing the speaker count, moderator or format rebuilds it.
                 </span>
                 <button
                   onClick={revertCustom}

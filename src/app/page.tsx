@@ -334,23 +334,44 @@ export default function Home() {
   // image-drag lag. Now we coalesce a burst of edits into one write ~350ms
   // after the user stops.
   const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Latest doc, readable from the unmount flush below without making that
+  // effect depend on (and therefore re-run on) every edit.
+  const latestDocRef = useRef({ format, customSize, design, canvasImages, currentStep });
+  latestDocRef.current = { format, customSize, design, canvasImages, currentStep };
+
+  const writeSession = useCallback((doc: typeof latestDocRef.current) => {
+    try {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(doc));
+    } catch {
+      // quota exceeded — skip
+    }
+  }, []);
+
   useEffect(() => {
     if (!hydrated) return;
     if (persistTimerRef.current) clearTimeout(persistTimerRef.current);
-    persistTimerRef.current = setTimeout(() => {
-      try {
-        sessionStorage.setItem(
-          STORAGE_KEY,
-          JSON.stringify({ format, customSize, design, canvasImages, currentStep })
-        );
-      } catch {
-        // quota exceeded — skip
-      }
-    }, 350);
+    persistTimerRef.current = setTimeout(() => writeSession(latestDocRef.current), 350);
     return () => {
       if (persistTimerRef.current) clearTimeout(persistTimerRef.current);
     };
-  }, [hydrated, format, customSize, design, canvasImages, currentStep]);
+  }, [hydrated, format, customSize, design, canvasImages, currentStep, writeSession]);
+
+  // Leaving the editor (e.g. the Panel Maker button) unmounts us and the
+  // cleanup above cancels the pending debounce — which silently threw away the
+  // last burst of edits, so Panel Maker adopted the pre-tuning doc and looked
+  // like it had ignored the fine-tuning. Flush on the way out instead.
+  const hydratedRef = useRef(hydrated);
+  hydratedRef.current = hydrated;
+  useEffect(() => {
+    return () => {
+      // Never flush before hydration — that would stamp the empty initial doc
+      // over a real saved one.
+      if (!hydratedRef.current) return;
+      if (persistTimerRef.current) clearTimeout(persistTimerRef.current);
+      writeSession(latestDocRef.current);
+    };
+  }, [writeSession]);
 
   // When the user single-selects an element on canvas, jump to the matching
   // wizard step + focus its row in the control panel so they can immediately
@@ -674,7 +695,7 @@ export default function Home() {
   const calculateScale = useCallback(() => {
     if (!previewContainerRef.current) return;
     const container = previewContainerRef.current;
-    const padding = 40;
+    const padding = 20;
     const availW = container.clientWidth - padding * 2;
     const availH = container.clientHeight - padding * 2;
     const scaleX = availW / dims.width;
@@ -1273,7 +1294,7 @@ export default function Home() {
 
       <div className="relative z-10 flex flex-col h-screen overflow-hidden">
         {/* Header */}
-        <header className="px-8 py-5 flex items-center gap-4">
+        <header className="px-6 py-4 flex items-center gap-4">
           <img src="/logo-red.svg" alt="TechBBQ" className="h-8" />
           <div>
             <h1 className="text-lg font-medium tracking-tight">
@@ -1348,9 +1369,9 @@ export default function Home() {
         </header>
 
         {/* Main content */}
-        <div className="flex-1 flex min-h-0 px-6 pb-6 gap-6">
+        <div className="flex-1 flex min-h-0 px-4 pb-4 gap-4">
           {/* Left: tool tabs + active tool panel */}
-          <aside aria-label="Design tools" className="w-[400px] shrink-0 flex flex-col gap-3 max-h-full min-h-0">
+          <aside aria-label="Design tools" className="w-[300px] xl:w-[340px] shrink-0 flex flex-col gap-3 max-h-full min-h-0">
             <Stepper steps={STEPS} current={currentStep} onChange={goToStep} />
 
             <GlassCard className="flex-1 min-h-0 p-4 overflow-y-auto">
@@ -2097,7 +2118,7 @@ export default function Home() {
           {/* Docked Layers panel — persistent right column. Collapse/expand
               from the Layers toggle on the controls strip. */}
           {showLayers && (
-            <aside aria-label="Layers" className="w-72 shrink-0 flex flex-col min-h-0 bg-card-2 border border-border rounded-xl shadow-2xl overflow-hidden">
+            <aside aria-label="Layers" className="w-56 xl:w-64 shrink-0 flex flex-col min-h-0 bg-card-2 border border-border rounded-xl shadow-2xl overflow-hidden">
               <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
                 <span className="text-[10px] font-medium text-orange uppercase tracking-[0.18em]">
                   <LayersIcon className="w-3 h-3 inline-block mr-1.5 -mt-0.5" strokeWidth={1.5} />

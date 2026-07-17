@@ -59,6 +59,11 @@ export const BACKGROUND_OPTIONS: { id: string; label: string; group: string }[] 
 export interface TextElement {
   id: string;
   content: string;
+  /** Which Panel Maker field this layer came from — e.g. "headline",
+   *  "speaker-1.title". Lets Panel Maker retarget a form edit at the matching
+   *  layer of a hand-tuned design instead of regenerating and losing the
+   *  tuning. Absent on layers the user added by hand in the editor. */
+  simpleRole?: string;
   /** Font size in px at canvas resolution. */
   fontSize: number;
   /** Position on canvas (0–1 fractional, center anchor). */

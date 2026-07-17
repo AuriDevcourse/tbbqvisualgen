@@ -17,6 +17,60 @@ export function emptyPerson(): SimplePerson {
   return { name: "", title: "", company: "", photo: "" };
 }
 
+/** True when nothing has been filled in — i.e. losing this person costs nothing. */
+export function isBlankPerson(p: SimplePerson): boolean {
+  return !p.name.trim() && !p.title.trim() && !p.company.trim() && !p.photo;
+}
+
+/**
+ * Identifies which layers a doc is made of. Two docs sharing a key can swap
+ * words via `retargetTunedDoc`, so it doubles as the shelf label for parking a
+ * tuned design: drop to 2 speakers and back to 3 and the key matches again,
+ * which is how the tuning comes home instead of being binned.
+ */
+export function panelShapeKey(doc: SimpleDoc): string {
+  const roles = doc.design.texts
+    .map((t) => t.simpleRole)
+    .filter((r): r is string => Boolean(r))
+    .sort();
+  return `${doc.format}|${doc.customSize.width}x${doc.customSize.height}|${roles.join(",")}`;
+}
+
+/**
+ * Re-point a hand-tuned doc at the current form, keeping every hand-placed
+ * position, size and colour. Only the WORDS move across.
+ *
+ * Returns null when the edit can't be absorbed — a field appearing or
+ * disappearing (clearing a name, adding a company) changes which layers exist,
+ * and there is no honest place to put a layer the tuned design never had. The
+ * caller rebuilds from scratch in that case.
+ */
+export function retargetTunedDoc(tuned: SimpleDoc, rebuilt: SimpleDoc): SimpleDoc | null {
+  // A tuned doc carries its own canvas — reusing it across formats would keep
+  // the old dimensions and silently ignore the format switch.
+  if (tuned.format !== rebuilt.format) return null;
+  if (tuned.customSize.width !== rebuilt.customSize.width) return null;
+  if (tuned.customSize.height !== rebuilt.customSize.height) return null;
+
+  const roleOf = (d: SimpleDoc) =>
+    new Map(d.design.texts.filter((t) => t.simpleRole).map((t) => [t.simpleRole as string, t.content]));
+
+  const want = roleOf(rebuilt);
+  const have = roleOf(tuned);
+  if (want.size !== have.size) return null;
+  for (const role of want.keys()) if (!have.has(role)) return null;
+
+  return {
+    ...tuned,
+    design: {
+      ...tuned.design,
+      texts: tuned.design.texts.map((t) =>
+        t.simpleRole && want.has(t.simpleRole) ? { ...t, content: want.get(t.simpleRole) as string } : t,
+      ),
+    },
+  };
+}
+
 export interface SimpleForm {
   /** Eyebrow / session label — e.g. "Fireside Chat", the discussion topic. */
   label: string;
@@ -47,6 +101,10 @@ export function emptyForm(): SimpleForm {
   };
 }
 
+// Reset per build (see buildSimpleDesign) so ids depend only on the doc being
+// built, never on how many times this module has run. A module-level counter
+// that kept climbing gave the server and the client different ids for the same
+// panel, which broke React hydration.
 let seq = 0;
 const uid = (p: string) => `${p}-s${(seq++).toString(36)}`;
 
@@ -69,6 +127,9 @@ const MARGIN = 0.06;
  * empty people get a rounded placeholder frame.
  */
 export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): SimpleDoc {
+  // Ids restart with every build, so the same form always yields the same
+  // doc — server and client included.
+  seq = 0;
   const dims = FORMAT_DIMENSIONS[format] ?? FORMAT_DIMENSIONS.square;
   const W = dims.width;
   const H = dims.height;
@@ -137,14 +198,14 @@ export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): Sim
   if (form.headline.trim()) {
     const f = fitFont(form.headline, 0.082);
     const blockH = lineCount(form.headline) * f * vs;
-    mkText(form.headline, MARGIN, cursorY + blockH / 2, f, { weight: 600, color: "#FFFFFF" });
+    mkText(form.headline, MARGIN, cursorY + blockH / 2, f, { weight: 600, color: "#FFFFFF", simpleRole: "headline" });
     cursorY += blockH + 0.03;
   }
   if (form.subtitle.trim()) {
     // Smaller than before but higher-contrast so it stays readable.
     const f = fitFont(form.subtitle, 0.036);
     const blockH = lineCount(form.subtitle) * f * vs;
-    mkText(form.subtitle, MARGIN, cursorY + blockH / 2, f, { weight: 500, color: "rgba(255,255,255,0.95)" });
+    mkText(form.subtitle, MARGIN, cursorY + blockH / 2, f, { weight: 500, color: "rgba(255,255,255,0.95)", simpleRole: "subtitle" });
     cursorY += blockH + 0.028;
   }
 
@@ -174,6 +235,7 @@ export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): Sim
     // centre the caps in the chip.
     mkText(labelText, MARGIN + padLeft / W, chipY + fsFrac * vs * 0.11, fsFrac, {
       weight: 800, uppercase: true, color: "#15110E", letterSpacing: letterSpacingPx,
+      simpleRole: "label",
     });
     cursorY += chipHfrac + 0.03;
   }
@@ -238,25 +300,27 @@ export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): Sim
     buildCaption(p, nameFrac, maxWfrac).height;
 
   // Render a wrapped caption block downward from topY, left-aligned at x.
-  const captionBlock = (p: SimplePerson, x: number, topY: number, nameFrac: number, maxWfrac: number): void => {
+  // `who` tags each layer with the form field behind it (e.g. "speaker-1"), so
+  // a later text edit can retarget the matching layer of a tuned design.
+  const captionBlock = (p: SimplePerson, x: number, topY: number, nameFrac: number, maxWfrac: number, who: string): void => {
     const { name, title, company, titleFrac } = buildCaption(p, nameFrac, maxWfrac);
     let ty = topY;
     if (name) {
       const half = (lineCount(name) * nameFrac * vs) / 2;
       ty += half;
-      mkText(name, x, ty, nameFrac, { weight: 700, color: "#FFFFFF" });
+      mkText(name, x, ty, nameFrac, { weight: 700, color: "#FFFFFF", simpleRole: `${who}.name` });
       ty += half;
     }
     if (title) {
       const half = (lineCount(title) * titleFrac * vs) / 2;
       ty += 0.006 + half;
-      mkText(title, x, ty, titleFrac, { weight: 400, color: "rgba(255,255,255,0.82)" });
+      mkText(title, x, ty, titleFrac, { weight: 400, color: "rgba(255,255,255,0.82)", simpleRole: `${who}.title` });
       ty += half;
     }
     if (company) {
       const half = (lineCount(company) * titleFrac * vs) / 2;
       ty += 0.004 + half;
-      mkText(company, x, ty, titleFrac, { weight: 500, color: "rgba(255,255,255,0.64)" });
+      mkText(company, x, ty, titleFrac, { weight: 500, color: "rgba(255,255,255,0.64)", simpleRole: `${who}.company` });
       ty += half;
     }
   };
@@ -292,7 +356,7 @@ export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): Sim
       const top = rowBottom - ch;
       const nameFrac = isMod ? 0.02 : 0.018;
       const capH = captionHeight(p, nameFrac, cw);
-      captionBlock(p, x, top - 0.012 - capH, nameFrac, cw);
+      captionBlock(p, x, top - 0.012 - capH, nameFrac, cw, isMod ? "moderator" : `speaker-${i - 1}`);
       emitPhoto(p, x, top, cw, ch);
       emitRoleLabel(isMod ? "Moderator" : "Speaker", x, top, cw, ch, isMod ? 0.018 : 0.015);
       x += uw + gap;
@@ -311,7 +375,7 @@ export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): Sim
     emitPhoto(moderator, areaLeft, modTop, modW, modH);
     emitRoleLabel("Moderator", areaLeft, modTop, modW, modH, 0.019);
     const modCapX = areaLeft + modW + 0.03;
-    captionBlock(moderator, modCapX, modTop + 0.006, 0.02, Math.min(0.32, areaRight - modCapX));
+    captionBlock(moderator, modCapX, modTop + 0.006, 0.02, Math.min(0.32, areaRight - modCapX), "moderator");
 
     if (n > 0) {
       const spkAreaLeft = modCapX;
@@ -332,7 +396,7 @@ export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): Sim
         const cardTop = cardBottom - spkH;
         const capMaxW = i < n - 1 ? Math.max(spkW, step * 0.9) : Math.max(spkW, spkAreaRight - cardLeft);
         const capH = captionHeight(p, 0.018, capMaxW);
-        captionBlock(p, cardLeft, cardTop - 0.012 - capH, 0.018, capMaxW);
+        captionBlock(p, cardLeft, cardTop - 0.012 - capH, 0.018, capMaxW, `speaker-${i}`);
         emitPhoto(p, cardLeft, cardTop, spkW, spkH);
         emitRoleLabel("Speaker", cardLeft, cardTop, spkW, spkH, 0.015);
       });
@@ -357,6 +421,8 @@ export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): Sim
       const photoWpx = cellWpx;
       const photoHpx = Math.max(cellWpx * 0.55, Math.min(availHpx, cellWpx * 1.4));
       gridPeople.forEach(({ p, role }, i) => {
+        // Moderator (when present) occupies slot 0; speakers follow.
+        const who = moderator ? (i === 0 ? "moderator" : `speaker-${i - 1}`) : `speaker-${i}`;
         const c = i % cols;
         const r = Math.floor(i / cols);
         const left = areaLeft + (c * (cellWpx + gapPx)) / W;
@@ -402,12 +468,12 @@ export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): Sim
         }
         if (name) {
           ty += nameH / 2;
-          mkText(name, padL, ty, nameFrac, { weight: 700, color: "#FFFFFF" });
+          mkText(name, padL, ty, nameFrac, { weight: 700, color: "#FFFFFF", simpleRole: `${who}.name` });
           ty += nameH / 2;
         }
         if (secondary) {
           ty += innerGap + secH / 2;
-          mkText(secondary, padL, ty, titleFrac, { weight: 400, color: "rgba(255,255,255,0.88)" });
+          mkText(secondary, padL, ty, titleFrac, { weight: 400, color: "rgba(255,255,255,0.88)", simpleRole: `${who}.secondary` });
         }
       });
     }
