@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Pause, Play, X, RotateCcw, Layers as LayersIcon, Download, LayoutTemplate, Type, Image as ImageIcon, Shapes, Undo2, Redo2, Lock, Unlock, Trash2, Copy, LibraryBig, AlignStartVertical, AlignCenterVertical, AlignEndVertical, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignHorizontalDistributeCenter, AlignVerticalDistributeCenter, Grid3x3, Magnet, Group, Ungroup, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Loader2, Users } from "lucide-react";
+import { Pause, Play, X, RotateCcw, Layers as LayersIcon, Download, LayoutTemplate, Type, Image as ImageIcon, Shapes, Undo2, Redo2, Lock, Unlock, Trash2, Copy, LibraryBig, AlignStartVertical, AlignCenterVertical, AlignEndVertical, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignHorizontalDistributeCenter, AlignVerticalDistributeCenter, Grid3x3, Magnet, Group, Ungroup, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Loader2, Users, Save } from "lucide-react";
 import Link from "next/link";
 import * as Popover from "@radix-ui/react-popover";
 import { toast } from "sonner";
@@ -39,6 +39,14 @@ import { useTemplates, type SavedTemplate } from "@/hooks/useTemplates";
 
 // Bumped storage key because the design schema changed (partnerLogo removed).
 const STORAGE_KEY = "tbbqvisualgen.session.v4";
+
+/** Short format names for the Save button + its toasts. */
+const FORMAT_LABEL: Record<PlatformFormat, string> = {
+  square: "1:1",
+  presentation: "16:9",
+  story: "9:16",
+  custom: "custom",
+};
 
 // Single icon-button used inside the align popover.
 function AlignBtn({ icon: Icon, label, onClick }: { icon: typeof AlignStartVertical; label: string; onClick: () => void }) {
@@ -196,6 +204,39 @@ export default function Home() {
   const lastLoadedPreset: Preset | null = lastLoadedPresetId
     ? visiblePresets.find((p) => p.id === lastLoadedPresetId) ?? null
     : null;
+
+  /** Save the canvas as a brand-new preset under `name`. */
+  const saveAsNewPreset = useCallback((name: string) => {
+    const id = `user-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const preset = buildPresetFromDoc(doc, {
+      id,
+      name,
+      description: `Custom layout · ${doc.canvasImages.length} image(s) converted to placeholders.`,
+      category: "event",
+    });
+    addUserPreset(preset);
+    setLastLoadedPresetId(id);
+    toast.success(`Saved "${name}" — find it under Templates`);
+  }, [doc, addUserPreset]);
+
+  /**
+   * The header's Save button. Each format keeps its own look: tuning the 1:1
+   * and then the 16:9 saves two variants of one preset, so switching format —
+   * or coming back tomorrow — reloads exactly what you saved rather than a
+   * regenerated guess.
+   */
+  const saveLook = useCallback(() => {
+    if (lastLoadedPreset) {
+      const variant = { customSize, design, canvasImages };
+      if (isUserPresetId(lastLoadedPreset.id)) setUserPresetVariant(lastLoadedPreset.id, format, variant);
+      else setPresetVariant(lastLoadedPreset.id, format, variant);
+      toast.success(`Saved the ${FORMAT_LABEL[format]} look of "${presetDisplayName(lastLoadedPreset)}"`);
+      return;
+    }
+    // Nothing loaded — name it from the headline so it's findable later.
+    const headline = design.texts.find((t) => t.content.trim())?.content.split("\n")[0].trim();
+    saveAsNewPreset(headline ? headline.slice(0, 40) : "My panel");
+  }, [lastLoadedPreset, customSize, design, canvasImages, format, isUserPresetId, setUserPresetVariant, setPresetVariant, presetDisplayName, saveAsNewPreset]);
   // Format sets used by the editing bar's chips. For user presets, "saved
   // by you" = the variants stored directly on the preset; "built-in" is
   // empty since they ship nothing from source. For built-ins, "saved by
@@ -1312,6 +1353,19 @@ export default function Home() {
               Panel Maker
             </Link>
             <button
+              onClick={saveLook}
+              aria-label="Save this look"
+              title={
+                lastLoadedPreset
+                  ? `Save this ${FORMAT_LABEL[format]} look of "${lastLoadedPreset.name}" — loading it at this format brings it back exactly`
+                  : "Save this look as a preset you can load again"
+              }
+              className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold border border-orange/60 bg-orange/15 text-foreground hover:bg-orange/25 hover:border-orange transition-colors"
+            >
+              <Save className="w-3.5 h-3.5" strokeWidth={1.75} />
+              {lastLoadedPreset ? `Save ${FORMAT_LABEL[format]} look` : "Save look"}
+            </button>
+            <button
               onClick={() => setTemplatesOpen(true)}
               aria-label="Templates"
               title="Saved templates"
@@ -2215,18 +2269,7 @@ export default function Home() {
         }}
         presetDisplayName={presetDisplayName}
         isUserPreset={(p) => isUserPresetId(p.id)}
-        onSaveAsPreset={(name) => {
-          const id = `user-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-          const preset = buildPresetFromDoc(doc, {
-            id,
-            name,
-            description: `Custom layout · ${doc.canvasImages.length} image(s) converted to placeholders.`,
-            category: "event",
-          });
-          addUserPreset(preset);
-          setLastLoadedPresetId(id);
-          toast.success(`Saved "${name}" as a preset — find it under "Built-in presets"`);
-        }}
+        onSaveAsPreset={saveAsNewPreset}
         currentPresetId={lastLoadedPresetId}
         onSaveVariant={(presetId) => {
           const variant = { customSize, design, canvasImages };

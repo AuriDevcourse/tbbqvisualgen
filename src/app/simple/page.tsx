@@ -3,10 +3,12 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Download, Loader2, Plus, Minus, Trash2, ImagePlus, X, Square, Presentation, Smartphone, PencilRuler } from "lucide-react";
+import { Download, Loader2, Plus, Minus, Trash2, ImagePlus, X, Square, Presentation, Smartphone, PencilRuler, Save } from "lucide-react";
 import { AnimatedGradient } from "@/components/AnimatedGradient";
 import { DynamicTemplate } from "@/components/templates/DynamicTemplate";
 import { BackgroundPicker } from "@/components/BackgroundPicker";
+import { buildPresetFromDoc } from "@/lib/presetExport";
+import { useUserPresets } from "@/hooks/useUserPresets";
 import { useExport, type ExportFormat } from "@/hooks/useExport";
 import type { PlatformFormat } from "@/types/template";
 import { buildSimpleDesign, emptyForm, emptyPerson, isBlankPerson, panelShapeKey, retargetTunedDoc, type SimpleForm, type SimplePerson, type SimpleDoc } from "@/lib/simpleLayout";
@@ -217,6 +219,7 @@ export default function SimplePage() {
   // People parked by lowering the speaker count — popped back in order when
   // the count goes up again, so a mis-click doesn't cost you their details.
   const [stash, setStash] = useState<SimplePerson[]>([]);
+  const { add: addUserPreset } = useUserPresets();
   const [exportFormat, setExportFormat] = useState<ExportFormat>("jpeg");
   const [paused, setPaused] = useState(false);
   // When the user fine-tunes in the advanced editor, we adopt their edited doc
@@ -262,6 +265,21 @@ export default function SimplePage() {
       }
       const rawParked = localStorage.getItem(PARKED_KEY);
       if (rawParked) setParked(JSON.parse(rawParked));
+
+      // `custom` and `format` are restored from separate keys, so they can
+      // disagree — a story-shaped tuned doc rendered on a square setting looks
+      // like the layout exploded. The saved format wins; a tuned doc for the
+      // wrong one goes to the shelf rather than on screen.
+      const savedFormat = (JSON.parse(localStorage.getItem(FORM_KEY) || "null") as PersistedForm | null)?.format;
+      const rawActive = localStorage.getItem(CUSTOM_KEY);
+      if (savedFormat && rawActive) {
+        const active = JSON.parse(rawActive) as SimpleDoc;
+        if (active.format !== savedFormat) {
+          setCustom(null);
+          setParked((p) => ({ ...p, [panelShapeKey(active)]: active }));
+          localStorage.removeItem(CUSTOM_KEY);
+        }
+      }
     } catch { /* start fresh */ }
 
     // Restore the last panel. Done here rather than in a useState initializer
@@ -400,6 +418,23 @@ export default function SimplePage() {
     }));
   };
 
+  /**
+   * Save whatever is on the canvas right now — generated or hand-tuned — as a
+   * preset, so it survives independently of the form and shows up in the
+   * editor's Templates list. Named from the headline so it's findable.
+   */
+  const saveLook = useCallback(() => {
+    const name = form.headline.split("\n")[0].trim().slice(0, 40) || "My panel";
+    const preset = buildPresetFromDoc(doc, {
+      id: `user-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name,
+      description: `Panel Maker · ${form.speakers.length} speaker(s)${form.includeModerator ? " + moderator" : ""}.`,
+      category: "event",
+    });
+    addUserPreset(preset);
+    toast.success(`Saved "${name}" — find it under Templates in the editor`);
+  }, [doc, form, addUserPreset]);
+
   const isEmpty = !custom && !form.headline.trim() && !form.label.trim() && form.speakers.every((s) => !s.name.trim()) && !form.moderator.name.trim();
 
   const handleExport = () => {
@@ -440,6 +475,15 @@ export default function SimplePage() {
             Panel <span className="text-tbbq-gradient font-semibold">Maker</span>
           </h1>
           <div className="ml-auto flex items-center gap-2">
+            <button
+              onClick={saveLook}
+              aria-label="Save this look"
+              title="Save this panel as a preset — find it under Templates in the editor"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold border border-orange/60 bg-orange/15 text-foreground hover:bg-orange/25 hover:border-orange transition-colors"
+            >
+              <Save className="w-3.5 h-3.5" strokeWidth={1.75} />
+              Save look
+            </button>
             <Link href="/" onClick={handleOpenAdvanced} title="Open this panel in the full editor to drag & fine-tune, then save" className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium border border-surface/40 text-foreground hover:bg-white/5 transition-colors">
               <PencilRuler className="w-3.5 h-3.5" strokeWidth={1.5} />
               Edit &amp; fine-tune
