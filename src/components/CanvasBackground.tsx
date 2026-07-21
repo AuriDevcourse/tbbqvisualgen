@@ -48,15 +48,19 @@ export const IMAGE_BG_REGISTRY: Record<string, { label: string; src: string }> =
   season3: { label: "Signal Red", src: "/backgrounds/season-3.jpg" },
   season4: { label: "Berry Glow", src: "/backgrounds/season-4.jpg" },
   // Per-stage backgrounds — pick the one matching where the session happens.
-  // Two variants per stage.
+  // Three variants per stage.
   stageTech: { label: "Tech Stage 1", src: "/backgrounds/stage-tech.jpg" },
   stageTech2: { label: "Tech Stage 2", src: "/backgrounds/stage-tech-2.jpg" },
+  stageTech3: { label: "Tech Stage 3", src: "/backgrounds/stage-tech-3.jpg" },
   stageBbq: { label: "BBQ Stage 1", src: "/backgrounds/stage-bbq.jpg" },
   stageBbq2: { label: "BBQ Stage 2", src: "/backgrounds/stage-bbq-2.jpg" },
+  stageBbq3: { label: "BBQ Stage 3", src: "/backgrounds/stage-bbq-3.jpg" },
   stageBonfire: { label: "Bonfire Stage 1", src: "/backgrounds/stage-bonfire.jpg" },
   stageBonfire2: { label: "Bonfire Stage 2", src: "/backgrounds/stage-bonfire-2.jpg" },
+  stageBonfire3: { label: "Bonfire Stage 3", src: "/backgrounds/stage-bonfire-3.jpg" },
   stageFounder: { label: "Founder Stage 1", src: "/backgrounds/stage-founder.jpg" },
   stageFounder2: { label: "Founder Stage 2", src: "/backgrounds/stage-founder-2.jpg" },
+  stageFounder3: { label: "Founder Stage 3", src: "/backgrounds/stage-founder-3.jpg" },
 };
 
 export const BG_REGISTRY: Record<string, BgEntry> = {

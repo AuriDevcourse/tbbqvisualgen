@@ -23,12 +23,16 @@ export const BACKGROUND_OPTIONS: { id: string; label: string; group: string }[] 
   // name reads as the section heading. Two variants per stage.
   { id: "stageTech", label: "Tech Stage 1", group: "Tech Stage" },
   { id: "stageTech2", label: "Tech Stage 2", group: "Tech Stage" },
+  { id: "stageTech3", label: "Tech Stage 3", group: "Tech Stage" },
   { id: "stageBbq", label: "BBQ Stage 1", group: "BBQ Stage" },
   { id: "stageBbq2", label: "BBQ Stage 2", group: "BBQ Stage" },
+  { id: "stageBbq3", label: "BBQ Stage 3", group: "BBQ Stage" },
   { id: "stageBonfire", label: "Bonfire Stage 1", group: "Bonfire Stage" },
   { id: "stageBonfire2", label: "Bonfire Stage 2", group: "Bonfire Stage" },
+  { id: "stageBonfire3", label: "Bonfire Stage 3", group: "Bonfire Stage" },
   { id: "stageFounder", label: "Founder Stage 1", group: "Founder Stage" },
   { id: "stageFounder2", label: "Founder Stage 2", group: "Founder Stage" },
+  { id: "stageFounder3", label: "Founder Stage 3", group: "Founder Stage" },
   // Official 2026-season gradient exports (static images in /public/backgrounds).
   { id: "season1", label: "Molten Gold", group: "New styling" },
   { id: "season2", label: "Flame Wash", group: "New styling" },
