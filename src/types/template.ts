@@ -19,11 +19,16 @@ export const FORMAT_DIMENSIONS: Record<PlatformFormat, FormatDimensions> = {
 export const BACKGROUND_OPTIONS: { id: string; label: string; group: string }[] = [
   // New styling — ported from the newer TechBBQ design-system project: 2D-canvas
   // orbs (#FA7000 -> #CE0F2E) drifting on dark or deep-red bases.
-  // Per-stage backgrounds — one per venue stage, for stage-specific panels.
-  { id: "stageTech", label: "Tech Stage", group: "Stages" },
-  { id: "stageBbq", label: "BBQ Stage", group: "Stages" },
-  { id: "stageBonfire", label: "Bonfire Stage", group: "Stages" },
-  { id: "stageFounder", label: "Founder Stage", group: "Stages" },
+  // Per-stage backgrounds — each stage is its own picker group so the stage
+  // name reads as the section heading. Two variants per stage.
+  { id: "stageTech", label: "Tech Stage 1", group: "Tech Stage" },
+  { id: "stageTech2", label: "Tech Stage 2", group: "Tech Stage" },
+  { id: "stageBbq", label: "BBQ Stage 1", group: "BBQ Stage" },
+  { id: "stageBbq2", label: "BBQ Stage 2", group: "BBQ Stage" },
+  { id: "stageBonfire", label: "Bonfire Stage 1", group: "Bonfire Stage" },
+  { id: "stageBonfire2", label: "Bonfire Stage 2", group: "Bonfire Stage" },
+  { id: "stageFounder", label: "Founder Stage 1", group: "Founder Stage" },
+  { id: "stageFounder2", label: "Founder Stage 2", group: "Founder Stage" },
   // Official 2026-season gradient exports (static images in /public/backgrounds).
   { id: "season1", label: "Molten Gold", group: "New styling" },
   { id: "season2", label: "Flame Wash", group: "New styling" },
