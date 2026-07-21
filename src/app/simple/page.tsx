@@ -3,7 +3,8 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Download, Loader2, Plus, Minus, Trash2, ImagePlus, X, Square, Presentation, Smartphone, PencilRuler, Users, Handshake, LayoutGrid, ChevronLeft, ChevronRight } from "lucide-react";
+import { Download, Loader2, Plus, Minus, Trash2, ImagePlus, X, Square, Presentation, Smartphone, PencilRuler, Users, Handshake, LayoutGrid, ChevronLeft, ChevronRight, Library } from "lucide-react";
+import { TeamLibrary } from "@/components/TeamLibrary";
 import { AnimatedGradient } from "@/components/AnimatedGradient";
 import { DynamicTemplate } from "@/components/templates/DynamicTemplate";
 import { BackgroundPicker } from "@/components/BackgroundPicker";
@@ -304,6 +305,7 @@ export default function SimplePage() {
   // to the simple panel shows exactly what they saved. Any form/format edit
   // drops the override (rebuilds from the form).
   const [custom, setCustom] = useState<SimpleDoc | null>(null);
+  const [libraryOpen, setLibraryOpen] = useState(false);
   // Tuned designs for shapes we are not on right now, keyed by panelShapeKey.
   const [parked, setParked] = useState<Record<string, SimpleDoc>>({});
 
@@ -550,6 +552,13 @@ export default function SimplePage() {
 
   return (
     <div className="h-screen relative overflow-hidden">
+      <TeamLibrary
+        open={libraryOpen}
+        onClose={() => setLibraryOpen(false)}
+        currentDoc={doc}
+        currentKind={template}
+        onLoad={(loaded) => setCustom(loaded)}
+      />
       <AnimatedGradient />
       <div className="relative z-10 flex flex-col h-screen overflow-hidden">
         {/* Header */}
@@ -560,6 +569,14 @@ export default function SimplePage() {
             Quick <span className="text-tbbq-gradient font-semibold">Templates</span>
           </h1>
           <div className="ml-auto flex items-center gap-2">
+            <button
+              onClick={() => setLibraryOpen(true)}
+              title="Team library — designs shared with the whole team"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium border border-surface/40 text-foreground hover:bg-white/5 transition-colors"
+            >
+              <Library className="w-3.5 h-3.5" strokeWidth={1.5} />
+              Team library
+            </button>
             <Link href="/" onClick={handleOpenAdvanced} title="Open this panel in the full editor to drag & fine-tune, then save" className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium border border-surface/40 text-foreground hover:bg-white/5 transition-colors">
               <PencilRuler className="w-3.5 h-3.5" strokeWidth={1.5} />
               Edit &amp; fine-tune

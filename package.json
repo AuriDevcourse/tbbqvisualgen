@@ -11,6 +11,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
     "@paper-design/shaders-react": "^0.0.71",
     "agentation": "^2.2.1",
     "class-variance-authority": "^0.7.1",
@@ -20,6 +21,7 @@
     "lucide-react": "^0.563.0",
     "mp4-muxer": "^5.2.2",
     "next": "16.1.6",
+    "next-auth": "^5.0.0-beta.32",
     "radix-ui": "^1.4.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",
