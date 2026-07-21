@@ -19,6 +19,11 @@ export const FORMAT_DIMENSIONS: Record<PlatformFormat, FormatDimensions> = {
 export const BACKGROUND_OPTIONS: { id: string; label: string; group: string }[] = [
   // New styling — ported from the newer TechBBQ design-system project: 2D-canvas
   // orbs (#FA7000 -> #CE0F2E) drifting on dark or deep-red bases.
+  // Per-stage backgrounds — one per venue stage, for stage-specific panels.
+  { id: "stageTech", label: "Tech Stage", group: "Stages" },
+  { id: "stageBbq", label: "BBQ Stage", group: "Stages" },
+  { id: "stageBonfire", label: "Bonfire Stage", group: "Stages" },
+  { id: "stageFounder", label: "Founder Stage", group: "Stages" },
   // Official 2026-season gradient exports (static images in /public/backgrounds).
   { id: "season1", label: "Molten Gold", group: "New styling" },
   { id: "season2", label: "Flame Wash", group: "New styling" },
