@@ -803,6 +803,7 @@ export default function SimplePage() {
                 onChange={(id) => template === "partner"
                   ? setPartner((p) => ({ ...p, backgroundId: id }))
                   : setForm((f) => ({ ...f, backgroundId: id }))}
+                excludeGroups={template === "partner" ? ["Tech Stage", "Bonfire Stage", "Founder Stage"] : undefined}
               />
             </section>
           </aside>

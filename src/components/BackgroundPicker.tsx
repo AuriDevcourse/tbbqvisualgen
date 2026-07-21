@@ -7,12 +7,16 @@ import { BackgroundThumbnail } from "@/components/CanvasBackground";
 interface BackgroundPickerProps {
   value: string;
   onChange: (value: string) => void;
+  /** Group names to hide — e.g. the stage groups on templates where a
+   *  stage-specific background makes no sense. */
+  excludeGroups?: string[];
 }
 
-export function BackgroundPicker({ value, onChange }: BackgroundPickerProps) {
+export function BackgroundPicker({ value, onChange, excludeGroups }: BackgroundPickerProps) {
   // Preserve first-seen order of groups from BACKGROUND_OPTIONS.
   const groups: string[] = [];
   for (const bg of BACKGROUND_OPTIONS) {
+    if (excludeGroups?.includes(bg.group)) continue;
     if (!groups.includes(bg.group)) groups.push(bg.group);
   }
 
