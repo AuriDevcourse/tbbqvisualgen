@@ -3,13 +3,20 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Download, Loader2, Plus, Minus, Trash2, ImagePlus, X, Square, Presentation, Smartphone, PencilRuler } from "lucide-react";
+import { Download, Loader2, Plus, Minus, Trash2, ImagePlus, X, Square, Presentation, Smartphone, PencilRuler, Users, Handshake, LayoutGrid, ChevronLeft, ChevronRight } from "lucide-react";
 import { AnimatedGradient } from "@/components/AnimatedGradient";
 import { DynamicTemplate } from "@/components/templates/DynamicTemplate";
 import { BackgroundPicker } from "@/components/BackgroundPicker";
 import { useExport, type ExportFormat } from "@/hooks/useExport";
 import type { PlatformFormat } from "@/types/template";
-import { buildSimpleDesign, emptyForm, emptyPerson, isBlankPerson, panelShapeKey, retargetTunedDoc, type SimpleForm, type SimplePerson, type SimpleDoc } from "@/lib/simpleLayout";
+import { buildSimpleDesign, buildPartnerDesign, emptyForm, emptyPartnerForm, emptyPerson, isBlankPerson, panelShapeKey, retargetTunedDoc, type SimpleForm, type PartnerForm, type PartnerLogo, type SimplePerson, type SimpleDoc } from "@/lib/simpleLayout";
+
+type TemplateKind = "panel" | "partner";
+
+const TEMPLATES: { id: TemplateKind; label: string; icon: typeof Users }[] = [
+  { id: "panel", label: "Panel", icon: Users },
+  { id: "partner", label: "Partner Announcement", icon: Handshake },
+];
 
 const FORMATS: { id: PlatformFormat; label: string; sub: string; icon: typeof Square }[] = [
   { id: "presentation", label: "16:9", sub: "Full HD", icon: Presentation },
@@ -135,6 +142,73 @@ function PersonEditor({
   );
 }
 
+// One partner-logo upload slot: dropzone → contain-fit preview + remove.
+// `onSwapPrev`/`onSwapNext` (quad grid only) swap this slot's content with the
+// neighbouring cell, so logos can be re-ordered after upload.
+function LogoSlot({ logo, onChange, small, onSwapPrev, onSwapNext }: { logo: PartnerLogo | null; onChange: (l: PartnerLogo | null) => void; small?: boolean; onSwapPrev?: () => void; onSwapNext?: () => void }) {
+  return (
+    <div className="relative">
+      <label className={`relative flex items-center justify-center ${small ? "h-20" : "h-28"} rounded-xl overflow-hidden border cursor-pointer transition-colors group ${logo?.src ? "border-white/15 bg-white/5" : "border-dashed border-white/15 bg-white/[0.03] hover:border-[#FF6B00]/60"}`}>
+        {logo?.src ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={logo.src} alt="Partner logo" className="max-w-[85%] max-h-[80%] object-contain" />
+        ) : (
+          <span className="flex flex-col items-center gap-1.5 text-white/40 group-hover:text-white/70 transition-colors">
+            <ImagePlus className={small ? "w-5 h-5" : "w-6 h-6"} />
+            {!small && <span className="text-xs">Upload the partner&apos;s logo</span>}
+          </span>
+        )}
+        <input
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            try {
+              const { src, w, h } = await readImage(file);
+              onChange({ src, naturalWidth: w, naturalHeight: h });
+            } catch {
+              toast.error("Couldn't read that image");
+            }
+            e.target.value = "";
+          }}
+        />
+      </label>
+      {logo?.src && (
+        <button
+          onClick={() => onChange(null)}
+          aria-label="Remove logo"
+          title="Remove logo"
+          className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full bg-black/75 border border-white/20 text-white/80 hover:bg-black hover:text-white transition-colors"
+        >
+          <X className="w-3 h-3" strokeWidth={2.5} />
+        </button>
+      )}
+      {logo?.src && onSwapPrev && (
+        <button
+          onClick={onSwapPrev}
+          aria-label="Move logo to previous position"
+          title="Move to previous position"
+          className="absolute bottom-2 left-2 w-6 h-6 flex items-center justify-center rounded-full bg-black/75 border border-white/20 text-white/80 hover:bg-black hover:text-white transition-colors"
+        >
+          <ChevronLeft className="w-3.5 h-3.5" strokeWidth={2.5} />
+        </button>
+      )}
+      {logo?.src && onSwapNext && (
+        <button
+          onClick={onSwapNext}
+          aria-label="Move logo to next position"
+          title="Move to next position"
+          className="absolute bottom-2 right-2 w-6 h-6 flex items-center justify-center rounded-full bg-black/75 border border-white/20 text-white/80 hover:bg-black hover:text-white transition-colors"
+        >
+          <ChevronRight className="w-3.5 h-3.5" strokeWidth={2.5} />
+        </button>
+      )}
+    </div>
+  );
+}
+
 // sessionStorage keys for the round-trip with the advanced editor.
 const ADVANCED_STORAGE_KEY = "tbbqvisualgen.session.v4"; // the editor hydrates from this
 const HANDOFF_FLAG_KEY = "tbbqvisualgen.simple.handoff"; // set when we hand off, so we re-adopt on return
@@ -149,13 +223,17 @@ interface PersistedForm {
   form: SimpleForm;
   format: PlatformFormat;
   stash: SimplePerson[];
+  template?: TemplateKind;
+  partner?: PartnerForm;
 }
 
 /** Drop dataURL photos — the fallback when the full form busts the quota. */
-function withoutPhotos({ form, format, stash }: PersistedForm): PersistedForm {
+function withoutPhotos({ form, format, stash, template, partner }: PersistedForm): PersistedForm {
   const strip = (p: SimplePerson): SimplePerson => ({ ...p, photo: "", naturalWidth: undefined, naturalHeight: undefined });
   return {
     format,
+    template,
+    partner: partner ? { ...partner, logos: [] } : undefined,
     form: { ...form, moderator: strip(form.moderator), speakers: form.speakers.map(strip) },
     stash: stash.map(strip),
   };
@@ -210,6 +288,8 @@ function persistTuned(active: SimpleDoc | null, parked: Record<string, SimpleDoc
 
 export default function SimplePage() {
   const [form, setForm] = useState<SimpleForm>(emptyForm);
+  const [template, setTemplate] = useState<TemplateKind>("panel");
+  const [partner, setPartner] = useState<PartnerForm>(emptyPartnerForm);
   const [format, setFormat] = useState<PlatformFormat>("square");
   // Gates the persist + override-drop effects until the one-time hydrate has
   // landed, so restoring a saved form doesn't read as "the user edited it".
@@ -228,7 +308,10 @@ export default function SimplePage() {
   const [parked, setParked] = useState<Record<string, SimpleDoc>>({});
 
   const { exportRef, isExporting, exportImage } = useExport();
-  const genDoc = useMemo(() => buildSimpleDesign(form, format), [form, format]);
+  const genDoc = useMemo(
+    () => (template === "partner" ? buildPartnerDesign(partner, format) : buildSimpleDesign(form, format)),
+    [template, partner, form, format],
+  );
   const doc = custom ?? genDoc;
   const { width: W, height: H } = doc.customSize;
 
@@ -247,6 +330,13 @@ export default function SimplePage() {
           if (hasContent(adopted)) {
             // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time adopt of the editor's doc on return
             setCustom(adopted);
+            // Persist the adopted doc NOW, not in the debounced persist effect.
+            // This effect runs twice in dev (StrictMode): run 1 adopts and
+            // consumes the handoff flag, so run 2 falls into the else branch
+            // and restores CUSTOM_KEY — which still held the PREVIOUS tuning
+            // and silently overwrote the fresh one (every second fine-tune
+            // "reverted"). Writing it here makes the re-run read the fresh doc.
+            try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(adopted)); } catch { /* quota — keep it in memory */ }
           }
         }
         sessionStorage.removeItem(HANDOFF_FLAG_KEY);
@@ -274,6 +364,18 @@ export default function SimplePage() {
           setForm(saved.form);
           if (saved.format) setFormat(saved.format);
           setStash(saved.stash ?? []);
+          if (saved.template) setTemplate(saved.template);
+          if (saved.partner) {
+            // Migrate the short-lived single-`logo` shape (2026-07-21 morning)
+            // to the slot-array shape.
+            const p = saved.partner as PartnerForm & { logo?: string; naturalWidth?: number; naturalHeight?: number };
+            setPartner(Array.isArray(p.logos) ? p : {
+              label: p.label,
+              layout: "single",
+              logos: p.logo ? [{ src: p.logo, naturalWidth: p.naturalWidth, naturalHeight: p.naturalHeight }] : [],
+              backgroundId: p.backgroundId,
+            });
+          }
         }
       }
     } catch { /* start fresh */ }
@@ -284,8 +386,8 @@ export default function SimplePage() {
   // form from overwriting a saved panel before it has been read back.
   useEffect(() => {
     if (!hydrated) return;
-    persistForm({ form, format, stash });
-  }, [hydrated, form, format, stash]);
+    persistForm({ form, format, stash, template, partner });
+  }, [hydrated, form, format, stash, template, partner]);
 
   // A form edit used to bin the fine-tuned design outright. Now the words are
   // re-pointed at the tuned layers instead, so retyping a title costs you
@@ -297,12 +399,12 @@ export default function SimplePage() {
     // Wait for the hydrate, else restoring a saved form looks like an edit and
     // needlessly bins the fine-tuned override.
     if (!hydrated) return;
-    const key = JSON.stringify([form, format]);
+    const key = JSON.stringify([template, form, partner, format]);
     if (baselineRef.current === "") { baselineRef.current = key; return; }
     if (key === baselineRef.current) return;
     baselineRef.current = key;
 
-    const rebuilt = buildSimpleDesign(form, format);
+    const rebuilt = template === "partner" ? buildPartnerDesign(partner, format) : buildSimpleDesign(form, format);
 
     if (custom) {
       // Same shape → carry the tuning across, only the words change.
@@ -320,7 +422,7 @@ export default function SimplePage() {
     // Coming back to a shape we've tuned before? Put it back.
     const revived = parked[panelShapeKey(rebuilt)];
     setCustom(revived ? retargetTunedDoc(revived, rebuilt) : null);
-  }, [hydrated, form, format, custom, parked]);
+  }, [hydrated, template, form, partner, format, custom, parked]);
 
   // Keep the tuned designs across tab closes — they were session-only, so
   // shutting the tab silently threw the fine-tuning away.
@@ -400,7 +502,25 @@ export default function SimplePage() {
     }));
   };
 
-  const isEmpty = !custom && !form.headline.trim() && !form.label.trim() && form.speakers.every((s) => !s.name.trim()) && !form.moderator.name.trim();
+  const setPartnerLogo = (i: number, logo: PartnerLogo | null) =>
+    setPartner((p) => {
+      const logos = [...p.logos];
+      logos[i] = logo;
+      return { ...p, logos };
+    });
+
+  // Swap two quad cells — works with an empty neighbour too, which reads as
+  // "move the logo there".
+  const swapLogos = (i: number, j: number) =>
+    setPartner((p) => {
+      const logos = [...p.logos];
+      [logos[i], logos[j]] = [logos[j] ?? null, logos[i] ?? null];
+      return { ...p, logos };
+    });
+
+  const isEmpty = template === "partner"
+    ? !custom && !partner.label.trim() && !partner.logos.some((l) => l?.src)
+    : !custom && !form.headline.trim() && !form.label.trim() && form.speakers.every((s) => !s.name.trim()) && !form.moderator.name.trim();
 
   const handleExport = () => {
     setPaused(true);
@@ -437,7 +557,7 @@ export default function SimplePage() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-red.svg" alt="TechBBQ" className="h-8" />
           <h1 className="text-lg font-medium tracking-tight">
-            Panel <span className="text-tbbq-gradient font-semibold">Maker</span>
+            Quick <span className="text-tbbq-gradient font-semibold">Templates</span>
           </h1>
           <div className="ml-auto flex items-center gap-2">
             <Link href="/" onClick={handleOpenAdvanced} title="Open this panel in the full editor to drag & fine-tune, then save" className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium border border-surface/40 text-foreground hover:bg-white/5 transition-colors">
@@ -461,7 +581,7 @@ export default function SimplePage() {
               onClick={handleExport}
               disabled={isExporting || isEmpty}
               aria-label="Save image"
-              title={isEmpty ? "Add a headline or a speaker first" : "Save image"}
+              title={isEmpty ? (template === "partner" ? "Add a label or a partner logo first" : "Add a headline or a speaker first") : "Save image"}
               className="flex items-center gap-1.5 px-5 py-2 rounded-full bg-surface text-ink text-xs font-semibold tracking-wide hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isExporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" strokeWidth={1.5} />}
@@ -487,6 +607,27 @@ export default function SimplePage() {
                 </button>
               </div>
             )}
+            {/* Template — which quick template this form builds */}
+            <section className="flex flex-col gap-2">
+              <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Template</span>
+              <div className="flex gap-1.5">
+                {TEMPLATES.map((t) => {
+                  const active = template === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => setTemplate(t.id)}
+                      aria-pressed={active}
+                      className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-xs transition-all ${active ? "bg-[#FF0028] text-white" : "bg-white/5 border border-white/10 text-white/70 hover:bg-white/10"}`}
+                    >
+                      <t.icon className="w-3.5 h-3.5" />
+                      <span className="font-medium">{t.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
             {/* Format */}
             <section className="flex flex-col gap-2">
               <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Format</span>
@@ -508,6 +649,52 @@ export default function SimplePage() {
               </div>
             </section>
 
+            {template === "partner" && (<>
+            {/* Partner announcement: the label up top + the partner's logo */}
+            <section className="flex flex-col gap-3">
+              <Field label="Label" value={partner.label} onChange={(v) => setPartner((p) => ({ ...p, label: v }))} placeholder="Partner Announcement" />
+            </section>
+            <section className="flex flex-col gap-2">
+              <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Partner logos</span>
+              <div className="flex gap-1.5">
+                {([
+                  { id: "single" as const, label: "One logo", icon: Square },
+                  { id: "quad" as const, label: "Four logos", icon: LayoutGrid },
+                ]).map((opt) => {
+                  const active = partner.layout === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      onClick={() => setPartner((p) => ({ ...p, layout: opt.id }))}
+                      aria-pressed={active}
+                      className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-xs transition-all ${active ? "bg-[#FF0028] text-white" : "bg-white/5 border border-white/10 text-white/70 hover:bg-white/10"}`}
+                    >
+                      <opt.icon className="w-3.5 h-3.5" />
+                      <span className="font-medium">{opt.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {partner.layout === "quad" ? (
+                <div className="grid grid-cols-2 gap-2">
+                  {[0, 1, 2, 3].map((i) => (
+                    <LogoSlot
+                      key={i}
+                      small
+                      logo={partner.logos[i] ?? null}
+                      onChange={(l) => setPartnerLogo(i, l)}
+                      onSwapPrev={i > 0 ? () => swapLogos(i, i - 1) : undefined}
+                      onSwapNext={i < 3 ? () => swapLogos(i, i + 1) : undefined}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <LogoSlot logo={partner.logos[0] ?? null} onChange={(l) => setPartnerLogo(0, l)} />
+              )}
+            </section>
+            </>)}
+
+            {template === "panel" && (<>
             {/* Setup — panel composition: moderator + how many speakers */}
             <section className="flex flex-col gap-2">
               <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Setup</span>
@@ -589,11 +776,17 @@ export default function SimplePage() {
                 </button>
               )}
             </section>
+            </>)}
 
             {/* Background */}
             <section className="flex flex-col gap-2">
               <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Background</span>
-              <BackgroundPicker value={form.backgroundId} onChange={(id) => setForm((f) => ({ ...f, backgroundId: id }))} />
+              <BackgroundPicker
+                value={template === "partner" ? partner.backgroundId : form.backgroundId}
+                onChange={(id) => template === "partner"
+                  ? setPartner((p) => ({ ...p, backgroundId: id }))
+                  : setForm((f) => ({ ...f, backgroundId: id }))}
+              />
             </section>
           </aside>
 
@@ -602,8 +795,8 @@ export default function SimplePage() {
             {isEmpty && (
               <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
                 <div className="text-center rounded-2xl bg-black/60 backdrop-blur-sm px-7 py-6">
-                  <p className="text-base text-white/90">Fill in the form to build your panel visual</p>
-                  <p className="text-xs mt-1 text-white/60">Add a headline and your speakers on the left</p>
+                  <p className="text-base text-white/90">Fill in the form to build your visual</p>
+                  <p className="text-xs mt-1 text-white/60">{template === "partner" ? "Add a label and the partner's logo on the left" : "Add a headline and your speakers on the left"}</p>
                 </div>
               </div>
             )}

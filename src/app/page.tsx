@@ -1304,12 +1304,12 @@ export default function Home() {
           <div className="ml-auto flex items-center gap-2">
             <Link
               href="/simple"
-              aria-label="Open Panel Maker"
-              title="Panel Maker — build a speaker panel from a simple form"
+              aria-label="Open Quick Templates"
+              title="Quick Templates — build a visual from a simple form"
               className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium border border-surface/40 bg-transparent text-foreground hover:border-surface hover:bg-white/5 transition-colors"
             >
               <Users className="w-3.5 h-3.5" strokeWidth={1.5} />
-              Panel Maker
+              Quick Templates
             </Link>
             <button
               onClick={() => setTemplatesOpen(true)}

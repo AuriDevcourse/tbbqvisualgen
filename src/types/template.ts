@@ -19,6 +19,11 @@ export const FORMAT_DIMENSIONS: Record<PlatformFormat, FormatDimensions> = {
 export const BACKGROUND_OPTIONS: { id: string; label: string; group: string }[] = [
   // New styling — ported from the newer TechBBQ design-system project: 2D-canvas
   // orbs (#FA7000 -> #CE0F2E) drifting on dark or deep-red bases.
+  // Official 2026-season gradient exports (static images in /public/backgrounds).
+  { id: "season1", label: "Molten Gold", group: "New styling" },
+  { id: "season2", label: "Flame Wash", group: "New styling" },
+  { id: "season3", label: "Signal Red", group: "New styling" },
+  { id: "season4", label: "Berry Glow", group: "New styling" },
   { id: "orb5", label: "Soft Ember", group: "New styling" },
   { id: "orb6", label: "Right Bloom", group: "New styling" },
   { id: "orb7", label: "Corner Heat", group: "New styling" },

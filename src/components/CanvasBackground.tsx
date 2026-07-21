@@ -37,6 +37,18 @@ interface BgEntry {
   config: LmConfig;
 }
 
+/**
+ * Static image backgrounds — official 2026-season gradient exports, served
+ * from /public/backgrounds. Rendered as a plain cover-fit <img>, so they
+ * export cleanly through html-to-image and cost no WebGL context.
+ */
+export const IMAGE_BG_REGISTRY: Record<string, { label: string; src: string }> = {
+  season1: { label: "Molten Gold", src: "/backgrounds/season-1.jpg" },
+  season2: { label: "Flame Wash", src: "/backgrounds/season-2.jpg" },
+  season3: { label: "Signal Red", src: "/backgrounds/season-3.jpg" },
+  season4: { label: "Berry Glow", src: "/backgrounds/season-4.jpg" },
+};
+
 export const BG_REGISTRY: Record<string, BgEntry> = {
   // ---- Yellow / gold ----
   lm1: { label: "Honey Glow",      config: { colorBack: "#1a0d00", colorTint: "#FFC400", shape: "none",      scale: 2.0, speed: 0.2,  repetition: 1.8, softness: 0.55, distortion: 0.05, contour: 0.2,  angle: 45,  shiftRed: 0.2,   shiftBlue: -0.25, frame: 5  } },
@@ -314,6 +326,12 @@ interface CanvasBackgroundProps {
 // subtree only re-renders when one actually changes — not on every drag tick
 // when the surrounding document re-renders.
 export const CanvasBackground = memo(function CanvasBackground({ id, width, height, paused }: CanvasBackgroundProps) {
+  // Static image backgrounds — plain cover-fit <img>.
+  const img = IMAGE_BG_REGISTRY[id];
+  if (img) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={img.src} alt="" style={{ position: "absolute", inset: 0, width, height, objectFit: "cover" }} />;
+  }
   // "New styling" orb presets render on a 2D canvas.
   if (ORB_REGISTRY[id]) {
     return <OrbCanvasBackground id={id} width={width} height={height} paused={paused} />;
@@ -363,6 +381,8 @@ function previewStyle(c: LmConfig): React.CSSProperties {
 }
 
 export function BackgroundThumbnail({ id }: { id: string; size?: number }) {
+  const img = IMAGE_BG_REGISTRY[id];
+  if (img) return <div className="w-full h-full" style={{ backgroundImage: `url(${img.src})`, backgroundSize: "cover", backgroundPosition: "center" }} />;
   const orb = ORB_REGISTRY[id];
   if (orb) return <div className="w-full h-full" style={{ background: orb.thumb }} />;
   const entry = BG_REGISTRY[id];

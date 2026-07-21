@@ -33,7 +33,11 @@ export function panelShapeKey(doc: SimpleDoc): string {
     .map((t) => t.simpleRole)
     .filter((r): r is string => Boolean(r))
     .sort();
-  return `${doc.format}|${doc.customSize.width}x${doc.customSize.height}|${roles.join(",")}`;
+  // Image slots are part of the shape: a doc with a photo/logo is not the same
+  // composition as one without, and a single-logo doc is not a quad doc even
+  // when the text roles match.
+  const imgRoles = doc.canvasImages.map((i) => i.simpleRole ?? "img").sort();
+  return `${doc.format}|${doc.customSize.width}x${doc.customSize.height}|${roles.join(",")}|imgs:${imgRoles.join(",") || "none"}`;
 }
 
 /**
@@ -52,6 +56,14 @@ export function retargetTunedDoc(tuned: SimpleDoc, rebuilt: SimpleDoc): SimpleDo
   if (tuned.customSize.width !== rebuilt.customSize.width) return null;
   if (tuned.customSize.height !== rebuilt.customSize.height) return null;
 
+  // Retargeting only moves WORDS across — an image change (uploading, swapping
+  // or removing a photo/logo) has no tuned layer to land on, so the tuned doc
+  // would keep rendering its old images and the edit would silently vanish.
+  // The slot role is part of the identity: a quad-grid swap or a single↔quad
+  // switch reuses the same srcs, and only the roles reveal the change.
+  const imageKey = (d: SimpleDoc) => d.canvasImages.map((i) => `${i.simpleRole ?? ""}=${i.src}`).join(" ");
+  if (imageKey(tuned) !== imageKey(rebuilt)) return null;
+
   const roleOf = (d: SimpleDoc) =>
     new Map(d.design.texts.filter((t) => t.simpleRole).map((t) => [t.simpleRole as string, t.content]));
 
@@ -64,11 +76,37 @@ export function retargetTunedDoc(tuned: SimpleDoc, rebuilt: SimpleDoc): SimpleDo
     ...tuned,
     design: {
       ...tuned.design,
+      // The background is a form choice, not a hand-placed layer — carry the
+      // CURRENT pick across, else switching backgrounds does nothing while a
+      // tuned design is active.
+      backgroundId: rebuilt.design.backgroundId,
       texts: tuned.design.texts.map((t) =>
         t.simpleRole && want.has(t.simpleRole) ? { ...t, content: want.get(t.simpleRole) as string } : t,
       ),
     },
   };
+}
+
+export interface PartnerLogo {
+  /** Uploaded logo as a data-URL. */
+  src: string;
+  naturalWidth?: number;
+  naturalHeight?: number;
+}
+
+export interface PartnerForm {
+  /** Announcement label rendered across the top — e.g. "Partner Announcement". */
+  label: string;
+  /** "single" = one big logo; "quad" = four logos in a 2×2 grid. */
+  layout: "single" | "quad";
+  /** Slot 0 for single, slots 0–3 for quad. A missing/empty slot renders as
+   *  an outlined placeholder frame. */
+  logos: (PartnerLogo | null)[];
+  backgroundId: string;
+}
+
+export function emptyPartnerForm(): PartnerForm {
+  return { label: "Partner Announcement", layout: "single", logos: [], backgroundId: "orb5" };
 }
 
 export interface SimpleForm {
@@ -116,6 +154,112 @@ export interface SimpleDoc {
 }
 
 const MARGIN = 0.06;
+
+/**
+ * Build a Partner Announcement visual: a centered vertical stack — the label
+ * as a white chip up top, the partner's logo contain-fit in the middle, the
+ * TechBBQ logo bottom-center. Same doc shape as the panel builder, so the
+ * editor round-trip, parking and retargeting machinery apply unchanged.
+ */
+export function buildPartnerDesign(form: PartnerForm, format: PlatformFormat): SimpleDoc {
+  seq = 0;
+  const dims = FORMAT_DIMENSIONS[format] ?? FORMAT_DIMENSIONS.square;
+  const W = dims.width;
+  const H = dims.height;
+  const S = Math.min(W, H);
+  const vs = S / H;
+
+  const texts: TextElement[] = [];
+  const shapes: ShapeElement[] = [];
+  const canvasImages: CanvasImage[] = [];
+
+  // ── Label chip, top-center — same house chip as the panel's session label
+  // (white rounded rectangle, dark uppercase text), anchored by its center. ──
+  if (form.label.trim()) {
+    const labelText = form.label.toUpperCase();
+    const fsFrac = 0.038;
+    const fsPx = fsFrac * S;
+    const letterSpacingPx = Math.round(0.0005 * S);
+    const padX = 0.042 * S;
+    const textWpx = labelText.length * fsPx * 0.62 + Math.max(0, labelText.length - 1) * letterSpacingPx;
+    const chipHfrac = fsFrac * vs * 1.7;
+    const chipWfrac = Math.min((textWpx + padX * 2) / W, 0.94);
+    const chipY = 0.13;
+    shapes.push({
+      id: uid("shape"), type: "rectangle",
+      x: 0.5, y: chipY, width: chipWfrac, height: chipHfrac,
+      fillType: "fill", strokeWidth: 0, colorType: "solid",
+      color1: "#FFFFFF", color2: "#FF6B00", opacity: 1, blur: 0, rotation: 0,
+      borderRadius: 0.22,
+    });
+    // Same optical correction as the panel chip: caps sit high in their line
+    // box, so nudge the text down a touch to centre it visually.
+    texts.push({
+      id: uid("text"), content: labelText,
+      position: { x: 0.5, y: chipY + fsFrac * vs * 0.11 },
+      fontSize: Math.round(fsFrac * S), align: "center",
+      weight: 800, uppercase: true, font: "onest",
+      color: "#15110E", letterSpacing: letterSpacingPx,
+      simpleRole: "label",
+    });
+  }
+
+  // ── Partner logo(s), centered — contain-fit so nothing gets cropped, no
+  // border, no backdrop: the logo sits directly on the background. Boxes are
+  // sized off the shorter side so they read the same in every format. An
+  // empty slot → the same gradient-outlined placeholder the panel uses. ──
+  const emitLogo = (logo: PartnerLogo | null | undefined, cx: number, cy: number, wFrac: number, hFrac: number, role: string): void => {
+    if (logo?.src) {
+      canvasImages.push({
+        id: uid("img"), src: logo.src, x: cx, y: cy,
+        width: wFrac, height: hFrac,
+        cornerRadius: 0, border: false, fit: "contain",
+        naturalWidth: logo.naturalWidth, naturalHeight: logo.naturalHeight,
+        simpleRole: role,
+      });
+    } else {
+      shapes.push({
+        id: uid("shape"), type: "rectangle", x: cx, y: cy,
+        width: wFrac, height: hFrac,
+        fillType: "outline", strokeWidth: 2 / 1500, colorType: "gradient",
+        color1: "#FF6B00", color2: "#FF0028", opacity: 1, blur: 0, rotation: 0,
+        borderRadius: 0.08,
+      });
+    }
+  };
+
+  const centerY = 0.52;
+  if (form.layout === "quad") {
+    // 2×2 grid centered as a block: each cell contain-fits its logo.
+    const cellW = (0.34 * S) / W;
+    const cellH = (0.2 * S) / H;
+    const dx = ((0.34 + 0.06) / 2) * S / W; // half cell + half gap
+    const dy = ((0.2 + 0.07) / 2) * S / H;
+    const centers: [number, number][] = [
+      [0.5 - dx, centerY - dy], [0.5 + dx, centerY - dy],
+      [0.5 - dx, centerY + dy], [0.5 + dx, centerY + dy],
+    ];
+    centers.forEach(([cx, cy], i) => emitLogo(form.logos[i], cx, cy, cellW, cellH, `logo-${i}`));
+  } else {
+    emitLogo(form.logos[0], 0.5, centerY, (0.62 * S) / W, (0.32 * S) / H, "logo-single");
+  }
+
+  const design: DesignConfig = {
+    backgroundId: form.backgroundId || "orb5",
+    texts,
+    shapes,
+    showLogo: true,
+    logoStyle: "white",
+    logoPosition: "bottom-center",
+  };
+
+  return {
+    format,
+    customSize: { width: W, height: H },
+    design,
+    canvasImages,
+  };
+}
 
 /**
  * Build a TechBBQ panel visual from the simple form, matching the hand-made
