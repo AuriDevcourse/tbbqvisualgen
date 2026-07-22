@@ -59,11 +59,11 @@ export async function createItem(name: string, kind: string, doc: unknown, updat
   return (rows[0] as { id: string }).id;
 }
 
-export async function updateItem(id: string, name: string, doc: unknown, updatedBy: string): Promise<boolean> {
+export async function updateItem(id: string, name: string, kind: string, doc: unknown, updatedBy: string): Promise<boolean> {
   await ensureTable();
   const rows = await sql()`
     UPDATE library_items
-    SET name = ${name}, doc = ${JSON.stringify(doc)}::jsonb, updated_by = ${updatedBy}, updated_at = now()
+    SET name = ${name}, kind = ${kind}, doc = ${JSON.stringify(doc)}::jsonb, updated_by = ${updatedBy}, updated_at = now()
     WHERE id = ${id} RETURNING id`;
   return rows.length > 0;
 }

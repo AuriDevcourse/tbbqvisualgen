@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { signIn } from "next-auth/react";
 import { toast } from "sonner";
-import { X, Loader2, Save, Trash2, FolderOpen, LogIn } from "lucide-react";
-import type { SimpleDoc } from "@/lib/simpleLayout";
+import { X, Loader2, Save, Trash2, FolderOpen, LogIn, Link2 } from "lucide-react";
+import type { SimpleDoc, SimpleFormsSnapshot } from "@/lib/simpleLayout";
 
 interface LibraryListItem {
   id: string;
@@ -14,19 +14,34 @@ interface LibraryListItem {
   updated_at: string;
 }
 
+/** What comes back from GET /api/library/[id] — the doc plus, for items saved
+ *  since forms-snapshots existed, the sidebar state it was built from and the
+ *  tuned docs for the template's OTHER layout variants (One/Two/Four). */
+export interface LibraryLoadedItem {
+  id: string;
+  name: string;
+  kind: string;
+  doc: SimpleDoc & { simpleForms?: SimpleFormsSnapshot; simpleVariants?: SimpleDoc[] };
+}
+
 /**
  * Shared team library modal: list / save / load / delete designs stored in
  * Postgres behind the @techbbq.org-gated API. Unauthenticated users get a
  * Google sign-in prompt instead of the list.
  */
 export function TeamLibrary({
-  open, onClose, currentDoc, currentKind, onLoad,
+  open, onClose, currentKind, currentBundle, onLoad, onSaved,
 }: {
   open: boolean;
   onClose: () => void;
-  currentDoc: SimpleDoc;
   currentKind: "panel" | "partner";
-  onLoad: (doc: SimpleDoc) => void;
+  /** The full save payload, built by the page: active doc + sidebar snapshot
+   *  + the tuned docs for this template's other layouts. */
+  currentBundle: SimpleDoc & { simpleForms: SimpleFormsSnapshot; simpleVariants: SimpleDoc[] };
+  onLoad: (item: LibraryLoadedItem) => void;
+  /** Called after a successful save/overwrite, so the page can adopt the item
+   *  as "what I'm working on" (header Update button + URL). */
+  onSaved?: (item: { id: string; name: string; kind: "panel" | "partner" }) => void;
 }) {
   const [items, setItems] = useState<LibraryListItem[] | null>(null);
   const [needsAuth, setNeedsAuth] = useState(false);
@@ -62,15 +77,39 @@ export function TeamLibrary({
       const res = await fetch("/api/library", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, kind: currentKind, doc: currentDoc }),
+        body: JSON.stringify({ name, kind: currentKind, doc: currentBundle }),
       });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error ?? "Save failed"); return; }
       toast.success(`Saved "${name}" to the team library`);
       setSaveName("");
+      if (data.id) onSaved?.({ id: data.id, name, kind: currentKind });
       void refresh();
     } catch {
       toast.error("Save failed — could not reach the library");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Overwrite an existing item with the design open right now — same name,
+  // same id, so its shared link keeps working.
+  const handleUpdate = async (id: string, name: string) => {
+    if (!window.confirm(`Overwrite "${name}" for everyone with the design you have open now?`)) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/library/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, kind: currentKind, doc: currentBundle }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "Update failed"); return; }
+      toast.success(`Updated "${name}" — its link now opens this design`);
+      onSaved?.({ id, name, kind: currentKind });
+      void refresh();
+    } catch {
+      toast.error("Update failed — could not reach the library");
     } finally {
       setBusy(false);
     }
@@ -82,7 +121,7 @@ export function TeamLibrary({
       const res = await fetch(`/api/library/${id}`);
       const data = await res.json();
       if (!res.ok) { toast.error(data.error ?? "Load failed"); return; }
-      onLoad(data.item.doc as SimpleDoc);
+      onLoad({ id, name, kind: data.item.kind, doc: data.item.doc } as LibraryLoadedItem);
       toast.success(`Loaded "${name}"`);
       onClose();
     } catch {
@@ -175,6 +214,26 @@ export function TeamLibrary({
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 text-xs text-white hover:bg-white/20 transition-colors disabled:opacity-50"
                   >
                     <FolderOpen className="w-3.5 h-3.5" /> Load
+                  </button>
+                  <button
+                    onClick={() => {
+                      void navigator.clipboard.writeText(`${window.location.origin}/simple?load=${it.id}`);
+                      toast.success("Link copied — opening it loads this design (TechBBQ sign-in required)");
+                    }}
+                    aria-label={`Copy link to ${it.name}`}
+                    title="Copy a direct link to this design"
+                    className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+                  >
+                    <Link2 className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => void handleUpdate(it.id, it.name)}
+                    disabled={busy}
+                    aria-label={`Overwrite ${it.name} with the current design`}
+                    title="Overwrite with the design you have open now"
+                    className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-50"
+                  >
+                    <Save className="w-3.5 h-3.5" />
                   </button>
                   <button
                     onClick={() => void handleDelete(it.id, it.name)}

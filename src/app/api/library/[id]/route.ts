@@ -36,7 +36,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
   const body = await validateItemBody(req);
   if (body instanceof NextResponse) return body;
   try {
-    const ok = await updateItem(g.id, body.name, body.doc, g.email);
+    const ok = await updateItem(g.id, body.name, body.kind, body.doc, g.email);
     if (!ok) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json({ ok: true });
   } catch (e) {

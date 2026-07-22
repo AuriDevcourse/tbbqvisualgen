@@ -3,14 +3,15 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Download, Loader2, Plus, Minus, Trash2, ImagePlus, X, Square, Presentation, Smartphone, PencilRuler, Users, Handshake, LayoutGrid, ChevronLeft, ChevronRight, Library } from "lucide-react";
-import { TeamLibrary } from "@/components/TeamLibrary";
+import { Download, Loader2, Plus, Minus, Trash2, ImagePlus, X, Square, Presentation, Smartphone, PencilRuler, Users, Handshake, Columns2, LayoutGrid, ChevronLeft, ChevronRight, Library, Save } from "lucide-react";
+import { TeamLibrary, type LibraryLoadedItem } from "@/components/TeamLibrary";
+import { AuthChip } from "@/components/AuthChip";
 import { AnimatedGradient } from "@/components/AnimatedGradient";
 import { DynamicTemplate } from "@/components/templates/DynamicTemplate";
 import { BackgroundPicker } from "@/components/BackgroundPicker";
 import { useExport, type ExportFormat } from "@/hooks/useExport";
 import type { PlatformFormat } from "@/types/template";
-import { buildSimpleDesign, buildPartnerDesign, emptyForm, emptyPartnerForm, emptyPerson, isBlankPerson, panelShapeKey, retargetTunedDoc, type SimpleForm, type PartnerForm, type PartnerLogo, type SimplePerson, type SimpleDoc } from "@/lib/simpleLayout";
+import { buildSimpleDesign, buildPartnerDesign, emptyForm, emptyPartnerForm, emptyPerson, formsFromDoc, isBlankPerson, isPartnerDoc, panelShapeKey, retargetTunedDoc, stripFormsForSave, type SimpleForm, type PartnerForm, type PartnerLogo, type SimplePerson, type SimpleDoc } from "@/lib/simpleLayout";
 
 type TemplateKind = "panel" | "partner";
 
@@ -219,6 +220,12 @@ const FORM_KEY = "tbbqvisualgen.simpleForm.v1";
 // Tuned designs for setups you are not currently on (e.g. the 3-speaker one
 // while you are temporarily on 2), so stepping back restores them.
 const PARKED_KEY = "tbbqvisualgen.simple.parked.v1";
+// Which library id this tab has already applied from the URL — makes the
+// ?load= deep link one-shot per tab, so refreshes keep local edits.
+const DEEPLINK_DONE_KEY = "tbbqvisualgen.simple.deeplink.done";
+// The library item the current design belongs to ({id, name, kind} JSON) —
+// drives the header "Update <name>" button. Session-scoped like the marker.
+const LOADED_ITEM_KEY = "tbbqvisualgen.simple.loadedItem";
 
 interface PersistedForm {
   form: SimpleForm;
@@ -264,8 +271,9 @@ function hasContent(doc: SimpleDoc): boolean {
 }
 
 /** How many tuned-but-inactive designs to keep on the shelf. Each carries its
- *  own photos, so this is a storage budget, not a UX one. */
-const MAX_PARKED = 4;
+ *  own photos, so this is a storage budget, not a UX one. Sized so a partner
+ *  template's One/Two/Four variants plus a panel or two all fit. */
+const MAX_PARKED = 6;
 
 /**
  * Save the active tuned design plus the parked ones. The active design matters
@@ -308,6 +316,10 @@ export default function SimplePage() {
   const [libraryOpen, setLibraryOpen] = useState(false);
   // Tuned designs for shapes we are not on right now, keyed by panelShapeKey.
   const [parked, setParked] = useState<Record<string, SimpleDoc>>({});
+  // Which library item the design on screen belongs to — set by loading or
+  // saving, cleared by Revert. Drives the header "Update <name>" button.
+  const [loadedItem, setLoadedItem] = useState<{ id: string; name: string; kind: "panel" | "partner" } | null>(null);
+  const [updatingItem, setUpdatingItem] = useState(false);
 
   const { exportRef, isExporting, exportImage } = useExport();
   const genDoc = useMemo(
@@ -330,7 +342,6 @@ export default function SimplePage() {
           // to be a transient annoyance you could close the tab on; now that
           // tuning is saved, adopting one would strand you on a blank panel.
           if (hasContent(adopted)) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time adopt of the editor's doc on return
             setCustom(adopted);
             // Persist the adopted doc NOW, not in the debounced persist effect.
             // This effect runs twice in dev (StrictMode): run 1 adopts and
@@ -354,6 +365,8 @@ export default function SimplePage() {
       }
       const rawParked = localStorage.getItem(PARKED_KEY);
       if (rawParked) setParked(JSON.parse(rawParked));
+      const rawLoaded = sessionStorage.getItem(LOADED_ITEM_KEY);
+      if (rawLoaded) setLoadedItem(JSON.parse(rawLoaded));
     } catch { /* start fresh */ }
 
     // Restore the last panel. Done here rather than in a useState initializer
@@ -412,7 +425,6 @@ export default function SimplePage() {
       // Same shape → carry the tuning across, only the words change.
       const retargeted = retargetTunedDoc(custom, rebuilt);
       if (retargeted) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- retarget the override at the edited form
         setCustom(retargeted);
         return;
       }
@@ -433,6 +445,85 @@ export default function SimplePage() {
     persistTuned(custom, parked);
   }, [hydrated, custom, parked]);
 
+  // Load a team-library design: adopt its doc as the active custom design AND
+  // sync the whole sidebar to it — template toggle (a partner doc must not sit
+  // behind a Panel form), format, and the form fields themselves (from the
+  // snapshot saved with the doc, or reconstructed from role-tagged layers for
+  // older items). The rebuild baseline is synced too, so restoring the form
+  // doesn't read as an edit and retarget (or bin) the doc we just loaded.
+  // Adopt a library item as "what I'm working on": header Update button, the
+  // re-copyable ?load= URL, and the applied-marker so a refresh keeps edits.
+  const adoptLibraryIdentity = (id: string, name: string, kind: "panel" | "partner") => {
+    setLoadedItem({ id, name, kind });
+    try {
+      window.history.replaceState(null, "", `${window.location.pathname}?load=${id}`);
+      sessionStorage.setItem(DEEPLINK_DONE_KEY, id);
+      sessionStorage.setItem(LOADED_ITEM_KEY, JSON.stringify({ id, name, kind }));
+    } catch { /* URL cosmetics only */ }
+  };
+
+  const handleLibraryLoad = (item: LibraryLoadedItem) => {
+    const { simpleForms, simpleVariants, ...doc } = item.doc;
+    const restored = formsFromDoc(item.kind, doc, simpleForms);
+    const nextForm = restored.form ?? form;
+    const nextPartner = restored.partner ?? partner;
+    setTemplate(restored.template);
+    setForm(nextForm);
+    setPartner(nextPartner);
+    setFormat(doc.format);
+    setCustom(doc);
+    // The loaded item becomes the source of truth for its template: purge the
+    // local parked leftovers of the same kind, THEN install the item's own
+    // layout variants so the One/Two/Four picker revives exactly those. The
+    // purge matters even without variants — stale parked docs otherwise
+    // resurface later when an upload makes the shape key match again (Auri
+    // hit this: adding a second logo revived an old tuned duo experiment).
+    const isPartnerKind = item.kind === "partner";
+    setParked((p) => ({
+      ...Object.fromEntries(Object.entries(p).filter(([, d]) => isPartnerDoc(d) !== isPartnerKind)),
+      ...Object.fromEntries((simpleVariants ?? []).map((d) => [panelShapeKey(d), d])),
+    }));
+    baselineRef.current = JSON.stringify([restored.template, nextForm, nextPartner, doc.format]);
+    adoptLibraryIdentity(item.id, item.name, restored.template);
+  };
+
+  // Deep link: /simple?load=<library-id> opens with that team design active —
+  // for sharing a template with a colleague. The param stays in the address
+  // bar (re-copyable from there); the per-tab DEEPLINK_DONE marker makes it
+  // one-shot instead, so a refresh or an editor round-trip keeps your edits
+  // rather than resetting to the template. A fresh tab has no marker and
+  // loads clean. On a 401 nothing is marked, because the sign-in round-trip
+  // returns to this URL and must retry the load.
+  const deepLinkTried = useRef(false);
+  useEffect(() => {
+    if (!hydrated || deepLinkTried.current) return;
+    deepLinkTried.current = true;
+    const id = new URLSearchParams(window.location.search).get("load");
+    if (!id) return;
+    try { if (sessionStorage.getItem(DEEPLINK_DONE_KEY) === id) return; } catch { /* fall through — worst case the design reloads */ }
+    (async () => {
+      try {
+        const res = await fetch(`/api/library/${id}`);
+        if (res.status === 401) {
+          toast.info("Sign in with your TechBBQ account to open this design");
+          setLibraryOpen(true);
+          return;
+        }
+        const data = await res.json();
+        if (!res.ok) {
+          toast.error(data.error ?? "Couldn't open the linked design");
+          try { sessionStorage.setItem(DEEPLINK_DONE_KEY, id); } catch { /* ignore */ }
+          return;
+        }
+        // handleLibraryLoad sets the URL + applied-marker itself.
+        handleLibraryLoad({ id, name: data.item.name, kind: data.item.kind, doc: data.item.doc });
+        toast.success(`Loaded "${data.item.name}"`);
+      } catch {
+        toast.error("Couldn't reach the team library");
+      }
+    })();
+  });
+
   const revertCustom = () => {
     setCustom(null);
     // Forget the parked copy for this shape too — otherwise Revert would undo
@@ -442,6 +533,14 @@ export default function SimplePage() {
       if (custom) delete next[panelShapeKey(custom)];
       return next;
     });
+    // The address bar and Update button stop claiming a library design we no
+    // longer show.
+    setLoadedItem(null);
+    try {
+      window.history.replaceState(null, "", window.location.pathname);
+      sessionStorage.removeItem(DEEPLINK_DONE_KEY);
+      sessionStorage.removeItem(LOADED_ITEM_KEY);
+    } catch { /* cosmetics only */ }
   };
 
   // Scale the canvas to fit the preview column.
@@ -520,6 +619,36 @@ export default function SimplePage() {
       return { ...p, logos };
     });
 
+  // The full save payload for the team library: active doc + sidebar snapshot
+  // + the tuned docs of this template's other layouts (from the parked shelf).
+  const currentBundle = useMemo(() => ({
+    ...doc,
+    simpleForms: stripFormsForSave(template, form, partner),
+    simpleVariants: Object.values(parked).filter((d) => isPartnerDoc(d) === (template === "partner")),
+  }), [doc, template, form, partner, parked]);
+
+  // Header shortcut: overwrite the loaded library item with everything on
+  // screen — same id, so its shared link keeps working.
+  const updateLoadedItem = async () => {
+    if (!loadedItem || updatingItem) return;
+    if (!window.confirm(`Overwrite "${loadedItem.name}" for everyone with the current design (all layouts included)?`)) return;
+    setUpdatingItem(true);
+    try {
+      const res = await fetch(`/api/library/${loadedItem.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: loadedItem.name, kind: template, doc: currentBundle }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "Update failed"); return; }
+      toast.success(`"${loadedItem.name}" updated — its link now opens this design`);
+    } catch {
+      toast.error("Update failed — could not reach the library");
+    } finally {
+      setUpdatingItem(false);
+    }
+  };
+
   const isEmpty = template === "partner"
     ? !custom && !partner.label.trim() && !partner.logos.some((l) => l?.src)
     : !custom && !form.headline.trim() && !form.label.trim() && form.speakers.every((s) => !s.name.trim()) && !form.moderator.name.trim();
@@ -555,9 +684,10 @@ export default function SimplePage() {
       <TeamLibrary
         open={libraryOpen}
         onClose={() => setLibraryOpen(false)}
-        currentDoc={doc}
         currentKind={template}
-        onLoad={(loaded) => setCustom(loaded)}
+        currentBundle={currentBundle}
+        onLoad={handleLibraryLoad}
+        onSaved={({ id, name, kind }) => adoptLibraryIdentity(id, name, kind)}
       />
       <AnimatedGradient />
       <div className="relative z-10 flex flex-col h-screen overflow-hidden">
@@ -569,6 +699,18 @@ export default function SimplePage() {
             Quick <span className="text-tbbq-gradient font-semibold">Templates</span>
           </h1>
           <div className="ml-auto flex items-center gap-2">
+            <AuthChip />
+            {loadedItem && template === loadedItem.kind && (
+              <button
+                onClick={() => void updateLoadedItem()}
+                disabled={updatingItem}
+                title={`Save the current design — all layouts included — into "${loadedItem.name}". Its link keeps working.`}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium border border-[#FF6B00]/50 text-[#FF8A3D] hover:bg-[#FF6B00]/10 transition-colors disabled:opacity-50"
+              >
+                {updatingItem ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" strokeWidth={1.5} />}
+                Update <span className="max-w-[140px] truncate">&ldquo;{loadedItem.name}&rdquo;</span>
+              </button>
+            )}
             <button
               onClick={() => setLibraryOpen(true)}
               title="Team library — designs shared with the whole team"
@@ -614,7 +756,10 @@ export default function SimplePage() {
             {custom && (
               <div className="flex items-center justify-between gap-2 rounded-lg border border-[#FF6B00]/40 bg-[#FF6B00]/10 px-3 py-2">
                 <span className="text-xs text-white/85 leading-tight">
-                  <span className="font-semibold text-[#FF8A3D]">Fine-tuned in editor — saved.</span> Text edits keep your layout. Changing the speaker count, moderator or format rebuilds it.
+                  <span className="font-semibold text-[#FF8A3D]">Custom design active — saved.</span>{" "}
+                  {template === "partner"
+                    ? "Text edits and logo swaps keep this layout. Changing the logo layout or format rebuilds it."
+                    : "Text edits and photo swaps keep this layout. Changing the speaker count, moderator or format rebuilds it."}
                 </span>
                 <button
                   onClick={revertCustom}
@@ -675,8 +820,9 @@ export default function SimplePage() {
               <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Partner logos</span>
               <div className="flex gap-1.5">
                 {([
-                  { id: "single" as const, label: "One logo", icon: Square },
-                  { id: "quad" as const, label: "Four logos", icon: LayoutGrid },
+                  { id: "single" as const, label: "One", icon: Square },
+                  { id: "duo" as const, label: "Two", icon: Columns2 },
+                  { id: "quad" as const, label: "Four", icon: LayoutGrid },
                 ]).map((opt) => {
                   const active = partner.layout === opt.id;
                   return (
@@ -702,6 +848,19 @@ export default function SimplePage() {
                       onChange={(l) => setPartnerLogo(i, l)}
                       onSwapPrev={i > 0 ? () => swapLogos(i, i - 1) : undefined}
                       onSwapNext={i < 3 ? () => swapLogos(i, i + 1) : undefined}
+                    />
+                  ))}
+                </div>
+              ) : partner.layout === "duo" ? (
+                <div className="grid grid-cols-2 gap-2">
+                  {[0, 1].map((i) => (
+                    <LogoSlot
+                      key={i}
+                      small
+                      logo={partner.logos[i] ?? null}
+                      onChange={(l) => setPartnerLogo(i, l)}
+                      onSwapPrev={i === 1 ? () => swapLogos(1, 0) : undefined}
+                      onSwapNext={i === 0 ? () => swapLogos(0, 1) : undefined}
                     />
                   ))}
                 </div>

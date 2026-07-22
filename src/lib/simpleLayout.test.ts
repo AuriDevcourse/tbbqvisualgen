@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildSimpleDesign, emptyForm, emptyPerson, isBlankPerson, panelShapeKey, retargetTunedDoc, type SimpleForm } from "./simpleLayout";
+import { buildPartnerDesign, buildSimpleDesign, emptyForm, emptyPartnerForm, emptyPerson, formsFromDoc, isBlankPerson, panelShapeKey, retargetTunedDoc, stripFormsForSave, type PartnerForm, type SimpleForm } from "./simpleLayout";
 import type { PlatformFormat } from "@/types/template";
 
 /**
@@ -219,6 +219,136 @@ describe("retargetTunedDoc — keeping a hand-tuned panel through a text edit", 
 
     const result = retargetTunedDoc(tuned, buildSimpleDesign({ ...form, subtitle: "New words" }, "square"));
     expect(result!.design.texts.find((t) => t.id === "hand-made")?.content).toBe("Sponsored by Acme");
+  });
+});
+
+// Replacing a photo/logo used to bin the tuned design outright ("it just
+// restarted the template"). These pin the fix: a swapped image lands in the
+// tuned slot; only a slot appearing/disappearing forces a rebuild.
+describe("retargetTunedDoc — image swaps keep the tuned layout", () => {
+  const partnerWith = (src: string): PartnerForm => ({
+    label: "Official Partner",
+    layout: "single",
+    logos: [{ src, naturalWidth: 800, naturalHeight: 400 }],
+    backgroundId: "orb5",
+  });
+
+  it("carries a replaced partner logo into the tuned frame", () => {
+    const built = buildPartnerDesign(partnerWith("data:logo-a"), "square");
+    // Hand-tune: move the logo somewhere custom.
+    const tuned = { ...built, canvasImages: built.canvasImages.map((i) => ({ ...i, x: 0.31, y: 0.27 })) };
+
+    const result = retargetTunedDoc(tuned, buildPartnerDesign(partnerWith("data:logo-b"), "square"));
+    expect(result).not.toBeNull();
+    const logo = result!.canvasImages.find((i) => i.simpleRole === "logo-single")!;
+    expect(logo.src).toBe("data:logo-b"); // new picture…
+    expect(logo.x).toBe(0.31);            // …in the hand-placed frame
+    expect(logo.naturalWidth).toBe(800);
+  });
+
+  it("carries a replaced speaker photo without touching the others", () => {
+    const form = panelOf3PlusModerator();
+    const tuned = buildSimpleDesign(form, "square");
+
+    const speakers = [...form.speakers];
+    speakers[1] = { ...speakers[1], photo: "/samples/replacement.jpg", naturalWidth: 10, naturalHeight: 20 };
+    const result = retargetTunedDoc(tuned, buildSimpleDesign({ ...form, speakers }, "square"));
+
+    expect(result).not.toBeNull();
+    expect(result!.canvasImages.find((i) => i.simpleRole === "speaker-1.photo")?.src).toBe("/samples/replacement.jpg");
+    expect(result!.canvasImages.find((i) => i.simpleRole === "speaker-0.photo")?.src).toBe(form.speakers[0].photo);
+    expect(result!.canvasImages.find((i) => i.simpleRole === "moderator.photo")?.src).toBe(form.moderator.photo);
+  });
+
+  it("refuses when a photo is removed — that slot becomes a placeholder", () => {
+    const form = panelOf3PlusModerator();
+    const tuned = buildSimpleDesign(form, "square");
+    const speakers = [...form.speakers];
+    speakers[1] = { ...speakers[1], photo: "" };
+    expect(retargetTunedDoc(tuned, buildSimpleDesign({ ...form, speakers }, "square"))).toBeNull();
+  });
+
+  it("refuses a single → quad logo-layout switch", () => {
+    const single = buildPartnerDesign(partnerWith("data:logo-a"), "square");
+    const quadForm: PartnerForm = { ...partnerWith("data:logo-a"), layout: "quad" };
+    expect(retargetTunedDoc(single, buildPartnerDesign(quadForm, "square"))).toBeNull();
+  });
+
+  it("duo layout uses duo-specific roles — never shape-matches a half-filled quad", () => {
+    const logos = [{ src: "data:a" }, { src: "data:b" }];
+    const duo = buildPartnerDesign({ label: "X", layout: "duo", logos, backgroundId: "orb5" }, "square");
+    const halfQuad = buildPartnerDesign({ label: "X", layout: "quad", logos, backgroundId: "orb5" }, "square");
+
+    expect(duo.canvasImages.map((i) => i.simpleRole)).toEqual(["logo-duo-0", "logo-duo-1"]);
+    expect(panelShapeKey(duo)).not.toBe(panelShapeKey(halfQuad));
+    expect(retargetTunedDoc(duo, halfQuad)).toBeNull();
+    // A replaced logo within duo still retargets.
+    const swapped = buildPartnerDesign({ label: "X", layout: "duo", logos: [{ src: "data:c" }, { src: "data:b" }], backgroundId: "orb5" }, "square");
+    expect(retargetTunedDoc(duo, swapped)?.canvasImages.find((i) => i.simpleRole === "logo-duo-0")?.src).toBe("data:c");
+  });
+});
+
+// Loading a library doc must put the sidebar in the matching state — the
+// template toggle AND the form fields ("loads a partner doc, still shows the
+// Panel form" was the bug).
+describe("formsFromDoc — restoring the sidebar for a loaded doc", () => {
+  it("reconstructs a legacy partner form from role-tagged layers", () => {
+    const pf: PartnerForm = { label: "Official Partner", layout: "single", logos: [{ src: "data:logo", naturalWidth: 640, naturalHeight: 320 }], backgroundId: "orb3" };
+    const doc = buildPartnerDesign(pf, "square");
+
+    const restored = formsFromDoc("partner", doc);
+    expect(restored.template).toBe("partner");
+    expect(restored.form).toBeNull(); // panel side untouched
+    expect(restored.partner!.layout).toBe("single");
+    expect(restored.partner!.logos[0]?.src).toBe("data:logo");
+    expect(restored.partner!.label).toBe("OFFICIAL PARTNER"); // docs store the rendered (uppercased) label
+    expect(restored.partner!.backgroundId).toBe("orb3");
+  });
+
+  it("reconstructs a duo partner form from duo roles", () => {
+    const pf: PartnerForm = { label: "Partners", layout: "duo", logos: [{ src: "data:l" }, { src: "data:r" }], backgroundId: "orb5" };
+    const restored = formsFromDoc("partner", buildPartnerDesign(pf, "square"));
+    expect(restored.partner!.layout).toBe("duo");
+    expect(restored.partner!.logos.map((l) => l?.src)).toEqual(["data:l", "data:r"]);
+  });
+
+  it("keeps ALL partner logo slots through a save/load round-trip — not just the active layout's", () => {
+    // Single layout active, but slots 0–1 filled (the user also set up Two).
+    const pf: PartnerForm = { label: "Official Partner", layout: "single", logos: [{ src: "data:one" }, { src: "data:two" }], backgroundId: "orb5" };
+    const doc = buildPartnerDesign(pf, "square"); // carries only logo-single
+    const snap = stripFormsForSave("partner", emptyForm(), pf);
+    expect(snap.partner!.logos.map((l) => l?.src)).toEqual(["data:one", "data:two"]); // logos survive saving
+
+    const restored = formsFromDoc("partner", doc, snap);
+    expect(restored.partner!.layout).toBe("single");
+    // Flipping to Two after loading must find slot 1 still filled.
+    expect(restored.partner!.logos.map((l) => l?.src)).toEqual(["data:one", "data:two"]);
+  });
+
+  it("prefers the saved snapshot and rehydrates the stripped photos from the doc", () => {
+    const form = panelOf3PlusModerator();
+    const doc = buildSimpleDesign(form, "square");
+    const snap = stripFormsForSave("panel", form, emptyPartnerForm());
+    expect(snap.form!.moderator.photo).toBe(""); // stripped for the payload
+
+    const restored = formsFromDoc("panel", doc, snap);
+    expect(restored.template).toBe("panel");
+    expect(restored.partner).toBeNull();
+    expect(restored.form!.moderator.photo).toBe(form.moderator.photo); // back from the doc
+    expect(restored.form!.speakers[2].name).toBe(form.speakers[2].name);
+    expect(restored.form!.speakers[1].photo).toBe(form.speakers[1].photo);
+  });
+
+  it("reconstructs a legacy panel form (no snapshot) from text + photo roles", () => {
+    const form = panelOf3PlusModerator();
+    const doc = buildSimpleDesign(form, "square");
+
+    const restored = formsFromDoc("panel", doc);
+    expect(restored.form!.headline).toBe(form.headline);
+    expect(restored.form!.includeModerator).toBe(true);
+    expect(restored.form!.speakers).toHaveLength(3);
+    expect(restored.form!.speakers[1].photo).toBe(form.speakers[1].photo);
+    expect(restored.form!.moderator.name).toBe(form.moderator.name);
   });
 });
 

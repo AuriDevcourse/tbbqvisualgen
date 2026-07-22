@@ -56,13 +56,20 @@ export function retargetTunedDoc(tuned: SimpleDoc, rebuilt: SimpleDoc): SimpleDo
   if (tuned.customSize.width !== rebuilt.customSize.width) return null;
   if (tuned.customSize.height !== rebuilt.customSize.height) return null;
 
-  // Retargeting only moves WORDS across — an image change (uploading, swapping
-  // or removing a photo/logo) has no tuned layer to land on, so the tuned doc
-  // would keep rendering its old images and the edit would silently vanish.
-  // The slot role is part of the identity: a quad-grid swap or a single↔quad
-  // switch reuses the same srcs, and only the roles reveal the change.
-  const imageKey = (d: SimpleDoc) => d.canvasImages.map((i) => `${i.simpleRole ?? ""}=${i.src}`).join(" ");
-  if (imageKey(tuned) !== imageKey(rebuilt)) return null;
+  // Images match by slot role, the same way texts match below. A REPLACED
+  // photo/logo (same slot, new file) carries its src into the tuned layer,
+  // keeping the hand-placed geometry — a swap between two FILLED quad cells
+  // retargets the same way, as two src changes. Only a slot appearing or
+  // disappearing — a removed photo, a single↔quad switch, a swap into an
+  // EMPTY quad cell — is a rebuild, because the tuned doc has no layer for
+  // the new shape. Role-less images were hand-added in the editor; the form
+  // can't address them, so they pass through untouched.
+  const roleImgs = (d: SimpleDoc) =>
+    new Map(d.canvasImages.filter((i) => i.simpleRole).map((i) => [i.simpleRole as string, i]));
+  const wantImgs = roleImgs(rebuilt);
+  const haveImgs = roleImgs(tuned);
+  if (wantImgs.size !== haveImgs.size) return null;
+  for (const role of wantImgs.keys()) if (!haveImgs.has(role)) return null;
 
   const roleOf = (d: SimpleDoc) =>
     new Map(d.design.texts.filter((t) => t.simpleRole).map((t) => [t.simpleRole as string, t.content]));
@@ -74,6 +81,13 @@ export function retargetTunedDoc(tuned: SimpleDoc, rebuilt: SimpleDoc): SimpleDo
 
   return {
     ...tuned,
+    canvasImages: tuned.canvasImages.map((img) => {
+      const next = img.simpleRole ? wantImgs.get(img.simpleRole) : undefined;
+      if (!next || next.src === img.src) return img;
+      // New picture in this slot — keep the tuned frame, swap the contents.
+      // The crop was drawn for the old image, so it doesn't carry over.
+      return { ...img, src: next.src, naturalWidth: next.naturalWidth, naturalHeight: next.naturalHeight, crop: undefined };
+    }),
     design: {
       ...tuned.design,
       // The background is a form choice, not a hand-placed layer — carry the
@@ -97,10 +111,10 @@ export interface PartnerLogo {
 export interface PartnerForm {
   /** Announcement label rendered across the top — e.g. "Partner Announcement". */
   label: string;
-  /** "single" = one big logo; "quad" = four logos in a 2×2 grid. */
-  layout: "single" | "quad";
-  /** Slot 0 for single, slots 0–3 for quad. A missing/empty slot renders as
-   *  an outlined placeholder frame. */
+  /** "single" = one big logo; "duo" = two side by side; "quad" = 2×2 grid. */
+  layout: "single" | "duo" | "quad";
+  /** Slot 0 for single, 0–1 for duo, 0–3 for quad. A missing/empty slot
+   *  renders as an outlined placeholder frame. */
   logos: (PartnerLogo | null)[];
   backgroundId: string;
 }
@@ -240,6 +254,15 @@ export function buildPartnerDesign(form: PartnerForm, format: PlatformFormat): S
       [0.5 - dx, centerY + dy], [0.5 + dx, centerY + dy],
     ];
     centers.forEach(([cx, cy], i) => emitLogo(form.logos[i], cx, cy, cellW, cellH, `logo-${i}`));
+  } else if (form.layout === "duo") {
+    // Two logos side by side, block-centered — the same contain-fit cells as
+    // the quad grid, just bigger. Roles are duo-specific ("logo-duo-N", not
+    // "logo-N") so a duo doc never shape-matches a half-filled quad doc.
+    const cellW = (0.42 * S) / W;
+    const cellH = (0.26 * S) / H;
+    const dx = (((0.42 + 0.06) / 2) * S) / W; // half cell + half gap
+    emitLogo(form.logos[0], 0.5 - dx, centerY, cellW, cellH, "logo-duo-0");
+    emitLogo(form.logos[1], 0.5 + dx, centerY, cellW, cellH, "logo-duo-1");
   } else {
     emitLogo(form.logos[0], 0.5, centerY, (0.62 * S) / W, (0.32 * S) / H, "logo-single");
   }
@@ -397,7 +420,9 @@ export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): Sim
   const areaTop = Math.max(cursorY + 0.015, 0.34);
 
   // Draw just the photo (gradient-bordered) or an outlined placeholder frame.
-  const emitPhoto = (p: SimplePerson, left: number, top: number, w: number, h: number): void => {
+  // `who` mirrors the caption roles ("moderator", "speaker-0"…) so a replaced
+  // headshot can retarget into a tuned design instead of forcing a rebuild.
+  const emitPhoto = (p: SimplePerson, left: number, top: number, w: number, h: number, who: string): void => {
     const cx = left + w / 2;
     const cy = top + h / 2;
     if (p.photo) {
@@ -406,6 +431,7 @@ export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): Sim
         cornerRadius: 8, border: true, borderWidth: 2 / 1500, fit: "cover",
         scrimBottom: 0.5, // subtle bottom fade so overlaid labels/text read
         naturalWidth: p.naturalWidth, naturalHeight: p.naturalHeight,
+        simpleRole: `${who}.photo`,
       });
     } else {
       shapes.push({
@@ -499,9 +525,10 @@ export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): Sim
       if (ch > bandH) { ch = bandH; cw = cardWfromH(ch, 0.85); }
       const top = rowBottom - ch;
       const nameFrac = isMod ? 0.02 : 0.018;
+      const who = isMod ? "moderator" : `speaker-${i - 1}`;
       const capH = captionHeight(p, nameFrac, cw);
-      captionBlock(p, x, top - 0.012 - capH, nameFrac, cw, isMod ? "moderator" : `speaker-${i - 1}`);
-      emitPhoto(p, x, top, cw, ch);
+      captionBlock(p, x, top - 0.012 - capH, nameFrac, cw, who);
+      emitPhoto(p, x, top, cw, ch, who);
       emitRoleLabel(isMod ? "Moderator" : "Speaker", x, top, cw, ch, isMod ? 0.018 : 0.015);
       x += uw + gap;
     });
@@ -516,7 +543,7 @@ export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): Sim
     let modH = modBottom - modTop;
     let modW = cardWfromH(modH, modAr);
     if (modW > 0.3) { modW = 0.3; modH = cardHfromW(modW, modAr); } // cap width, keep room for speakers
-    emitPhoto(moderator, areaLeft, modTop, modW, modH);
+    emitPhoto(moderator, areaLeft, modTop, modW, modH, "moderator");
     emitRoleLabel("Moderator", areaLeft, modTop, modW, modH, 0.019);
     const modCapX = areaLeft + modW + 0.03;
     captionBlock(moderator, modCapX, modTop + 0.006, 0.02, Math.min(0.32, areaRight - modCapX), "moderator");
@@ -541,7 +568,7 @@ export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): Sim
         const capMaxW = i < n - 1 ? Math.max(spkW, step * 0.9) : Math.max(spkW, spkAreaRight - cardLeft);
         const capH = captionHeight(p, 0.018, capMaxW);
         captionBlock(p, cardLeft, cardTop - 0.012 - capH, 0.018, capMaxW, `speaker-${i}`);
-        emitPhoto(p, cardLeft, cardTop, spkW, spkH);
+        emitPhoto(p, cardLeft, cardTop, spkW, spkH, `speaker-${i}`);
         emitRoleLabel("Speaker", cardLeft, cardTop, spkW, spkH, 0.015);
       });
     }
@@ -573,7 +600,7 @@ export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): Sim
         const top = areaTop + (r * (photoHpx + rowGapPx)) / H;
         const w = photoWpx / W;
         const h = photoHpx / H;
-        emitPhoto(p, left, top, w, h);
+        emitPhoto(p, left, top, w, h, who);
         // Overlaid caption: optional ROLE line, then name, then "title, company"
         // — all wrap to the card width so long names don't spill.
         const titleFrac = nameFrac * 0.72;
@@ -637,5 +664,132 @@ export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): Sim
     customSize: { width: W, height: H },
     design,
     canvasImages,
+  };
+}
+
+/**
+ * Sidebar state saved ALONGSIDE a library doc, so loading restores the exact
+ * form the design was built from. Panel photos are stripped before saving —
+ * the doc's role-tagged canvasImages already carry them — and rehydrated by
+ * role in `formsFromDoc`, so the payload stays small. Partner logos are
+ * KEPT in full: One/Two/Four share the slot array, and the active doc only
+ * carries the current layout's slots, so stripping would lose the others.
+ */
+export interface SimpleFormsSnapshot {
+  template: "panel" | "partner";
+  form?: SimpleForm;
+  partner?: PartnerForm;
+}
+
+export function stripFormsForSave(template: "panel" | "partner", form: SimpleForm, partner: PartnerForm): SimpleFormsSnapshot {
+  const strip = (p: SimplePerson): SimplePerson => ({ ...p, photo: "", naturalWidth: undefined, naturalHeight: undefined });
+  return {
+    template,
+    form: { ...form, moderator: strip(form.moderator), speakers: form.speakers.map(strip) },
+    partner,
+  };
+}
+
+/** Partner docs are recognisable by their logo slots — used to pick which
+ *  parked layout-variants belong to the template being saved. */
+export function isPartnerDoc(doc: SimpleDoc): boolean {
+  return doc.canvasImages.some((i) => i.simpleRole?.startsWith("logo"));
+}
+
+/**
+ * Rebuild the sidebar state for a doc loaded from the team library, so the
+ * template toggle and every field match what's on the canvas. Prefers the
+ * `SimpleFormsSnapshot` saved with the doc (exact); for docs saved before
+ * snapshots existed it reconstructs what it can from the role-tagged layers.
+ * Returns null for the form that doesn't belong to the doc's kind, so the
+ * caller leaves that side of the state alone.
+ */
+export function formsFromDoc(kind: string, doc: SimpleDoc, saved?: SimpleFormsSnapshot): { template: "panel" | "partner"; form: SimpleForm | null; partner: PartnerForm | null } {
+  const template: "panel" | "partner" = saved?.template ?? (kind === "partner" ? "partner" : "panel");
+  const imgByRole = new Map(doc.canvasImages.filter((i) => i.simpleRole).map((i) => [i.simpleRole as string, i]));
+  const textByRole = new Map(doc.design.texts.filter((t) => t.simpleRole).map((t) => [t.simpleRole as string, t.content]));
+  const asLogo = (role: string): PartnerLogo | null => {
+    const i = imgByRole.get(role);
+    return i ? { src: i.src, naturalWidth: i.naturalWidth, naturalHeight: i.naturalHeight } : null;
+  };
+
+  if (template === "partner") {
+    const base = saved?.partner ?? emptyPartnerForm();
+    const quad = [0, 1, 2, 3].some((i) => imgByRole.has(`logo-${i}`));
+    const duo = [0, 1].some((i) => imgByRole.has(`logo-duo-${i}`));
+    // A doc with no uploaded logos has no image roles to infer from — the
+    // saved layout (when present) is the only witness.
+    const layout = duo ? "duo" as const : quad ? "quad" as const : (imgByRole.has("logo-single") || !saved?.partner) ? "single" as const : base.layout;
+    // Snapshots carry the FULL slot array (One/Two/Four share it); the doc's
+    // roles only cover the active layout, so they're the legacy fallback.
+    const roleLogos = layout === "quad" ? [0, 1, 2, 3].map((i) => asLogo(`logo-${i}`))
+      : layout === "duo" ? [0, 1].map((i) => asLogo(`logo-duo-${i}`))
+      : [asLogo("logo-single")];
+    return {
+      template,
+      form: null,
+      partner: {
+        ...base,
+        label: saved?.partner ? base.label : (textByRole.get("label") ?? base.label),
+        layout,
+        logos: base.logos.some((l) => l?.src) ? base.logos : roleLogos,
+        backgroundId: doc.design.backgroundId || base.backgroundId,
+      },
+    };
+  }
+
+  // Panel. Photos always come from the doc's role-tagged images; text fields
+  // from the snapshot when present, else reconstructed from the text roles.
+  const withPhoto = (p: SimplePerson, who: string): SimplePerson => {
+    const img = imgByRole.get(`${who}.photo`);
+    return img ? { ...p, photo: img.src, naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight } : p;
+  };
+
+  if (saved?.form) {
+    return {
+      template,
+      partner: null,
+      form: {
+        ...saved.form,
+        moderator: withPhoto(saved.form.moderator, "moderator"),
+        speakers: saved.form.speakers.map((p, i) => withPhoto(p, `speaker-${i}`)),
+        backgroundId: doc.design.backgroundId || saved.form.backgroundId,
+      },
+    };
+  }
+
+  // Legacy doc (no snapshot): reconstruct from roles. The grid layout merges
+  // title+company into one "secondary" line — split at the LAST comma, since
+  // titles ("Partner, Secondaries") contain commas more often than companies.
+  const person = (who: string): SimplePerson => {
+    const secondary = textByRole.get(`${who}.secondary`) ?? "";
+    const cut = secondary.lastIndexOf(", ");
+    return withPhoto({
+      name: textByRole.get(`${who}.name`) ?? "",
+      title: textByRole.get(`${who}.title`) ?? (cut > 0 ? secondary.slice(0, cut) : secondary),
+      company: textByRole.get(`${who}.company`) ?? (cut > 0 ? secondary.slice(cut + 2) : ""),
+      photo: "",
+    }, who);
+  };
+  const roles = [...textByRole.keys(), ...imgByRole.keys()];
+  const speakerCount = 1 + Math.max(-1, ...roles
+    .map((r) => /^speaker-(\d+)\./.exec(r))
+    .filter((m): m is RegExpExecArray => Boolean(m))
+    .map((m) => Number(m[1])));
+  const includeModerator = roles.some((r) => r.startsWith("moderator"));
+  return {
+    template,
+    partner: null,
+    form: {
+      label: textByRole.get("label") ?? "",
+      headline: textByRole.get("headline") ?? "",
+      subtitle: textByRole.get("subtitle") ?? "",
+      includeModerator,
+      moderator: includeModerator ? person("moderator") : emptyPerson(),
+      speakers: speakerCount > 0
+        ? Array.from({ length: speakerCount }, (_, i) => person(`speaker-${i}`))
+        : [emptyPerson()],
+      backgroundId: doc.design.backgroundId || "orb5",
+    },
   };
 }
