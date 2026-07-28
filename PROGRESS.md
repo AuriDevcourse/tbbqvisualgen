@@ -145,10 +145,15 @@ during drag, outside `exportRef`.
 
 ### Backgrounds
 
-18 liquid-metal presets in `src/components/CanvasBackground.tsx` — one shader
-family with different colors / shapes / motion. Picker thumbnails are
-**static CSS gradients** (no WebGL) so 18 thumbnails + 1 main canvas don't
-exceed the browser's ~16-context limit.
+Three registries in `src/components/CanvasBackground.tsx`, all listed in
+`BACKGROUND_OPTIONS` (`src/types/template.ts`, grouped for the picker):
+`IMAGE_BG_REGISTRY` (static JPGs in `/public/backgrounds` — 2026-season
+gradients + per-stage sets), `ORB_REGISTRY` (2D-canvas drifting orbs), and
+`BG_REGISTRY` (18 WebGL liquid-metal presets). Picker thumbnails are static
+(CSS gradients or the image itself, no WebGL) so thumbnails + main canvas
+don't exceed the browser's ~16-context limit. New static background = drop
+the JPG in `/public/backgrounds`, add one line to `IMAGE_BG_REGISTRY` and one
+to `BACKGROUND_OPTIONS`.
 
 ### Templates (`src/hooks/useTemplates.ts`)
 
@@ -339,6 +344,8 @@ In rough priority order. **Top priority is first-run intuitiveness** (Auri, 2026
 ## Verified-shipped features (chronological hits)
 
 Newer at the top.
+
+**Session 2026-07-28 — four new season background options (UNCOMMITTED, on `master` working tree).** Added the green + purple 2026-season gradient exports as picker options: Lime Glow / Lime Shadow / Violet Haze / Violet Shadow. Source JPGs from `Desktop\TBBQ\2x` (~780KB each) were recompressed with the project's `sharp` (width-capped 2160, q80 mozjpeg → ~22KB) into `public/backgrounds/season-green-{1,2}.jpg` + `season-purple-{1,2}.jpg`, then registered in `IMAGE_BG_REGISTRY` (`CanvasBackground.tsx`) and `BACKGROUND_OPTIONS` (`template.ts`) under the "New styling" group — so they appear on every template incl. Partner Announcement (which only excludes the stage groups via `excludeGroups` in `simple/page.tsx`). Verified: dev-server compile clean, `/simple` 200, all four images serve 200. Next steps: 1. Auri eyeballs them in the picker on `/simple`. 2. Commit + push to `master` (Vercel auto-deploys). Gotcha: text presets/templates were designed on dark backgrounds — light lime/lavender areas may need dark text.
 
 **Session 2026-07-22 — SHIPPED to master (`9aa654d`, fast-forward from `fix/library-load-and-logo-retarget`, branch deleted; Vercel auto-deployed). Two completion-auditor passes, both GO.** Fixed the three team-library bugs Auri hit loading a saved Partner Announcement: (1) sidebar stayed on the Panel template, (2) replacing the logo didn't change the canvas, (3) or it rebuilt the raw template and lost the fine-tuned layout. Rounds 2-7 below grew it into: shareable template links, auth chip, Two-logo layout, all-variants-in-one-item, and update-in-place.
 

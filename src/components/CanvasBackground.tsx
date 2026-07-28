@@ -47,6 +47,10 @@ export const IMAGE_BG_REGISTRY: Record<string, { label: string; src: string }> =
   season2: { label: "Flame Wash", src: "/backgrounds/season-2.jpg" },
   season3: { label: "Signal Red", src: "/backgrounds/season-3.jpg" },
   season4: { label: "Berry Glow", src: "/backgrounds/season-4.jpg" },
+  seasonGreen1: { label: "Lime Glow", src: "/backgrounds/season-green-1.jpg" },
+  seasonGreen2: { label: "Lime Shadow", src: "/backgrounds/season-green-2.jpg" },
+  seasonPurple1: { label: "Violet Haze", src: "/backgrounds/season-purple-1.jpg" },
+  seasonPurple2: { label: "Violet Shadow", src: "/backgrounds/season-purple-2.jpg" },
   // Per-stage backgrounds — pick the one matching where the session happens.
   // Three variants per stage.
   stageTech: { label: "Tech Stage 1", src: "/backgrounds/stage-tech.jpg" },
