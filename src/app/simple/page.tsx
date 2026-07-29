@@ -650,12 +650,24 @@ export default function SimplePage() {
     panel: "c20fddbb-d4c5-455d-ac10-3c802ea7a3d6",
     partner: "7583298d-759b-4f97-9d33-fc2e10776e97",
   } as const;
-  // The two flavours of Partner Announcement, offered as a picker above
-  // Format. Each is a door into its team-library item.
-  const ANNOUNCEMENTS = [
-    { key: "official", label: "Official Announcement", itemId: DEFAULT_ITEM_IDS.partner },
-    { key: "community", label: "Community Announcement", itemId: "431c22ac-a5a2-46a4-aec7-ad39923eae7d" },
-  ] as const;
+  // Each template's flavours, offered as a picker above Format. Every button
+  // is a door into its team-library item.
+  const FLAVOURS = {
+    panel: {
+      heading: "Panel type",
+      options: [
+        { key: "discussion", label: "Panel Discussion", itemId: DEFAULT_ITEM_IDS.panel },
+        { key: "host", label: "Host", itemId: "e3fce4c3-8afc-4d87-9dd5-3ddc5425b993" },
+      ],
+    },
+    partner: {
+      heading: "Announcement",
+      options: [
+        { key: "official", label: "Official Announcement", itemId: DEFAULT_ITEM_IDS.partner },
+        { key: "community", label: "Community Announcement", itemId: "431c22ac-a5a2-46a4-aec7-ad39923eae7d" },
+      ],
+    },
+  } as const;
   // All official templates are PREFETCHED into memory right after mount, so
   // pressing an Announcement button (or switching Template) applies instantly
   // — the network round-trip happens once in the background, never on the
@@ -681,7 +693,7 @@ export default function SimplePage() {
   useEffect(() => {
     if (!hydrated || prefetchTried.current) return;
     prefetchTried.current = true;
-    for (const id of [DEFAULT_ITEM_IDS.panel, ...ANNOUNCEMENTS.map((a) => a.itemId)]) void fetchLibraryItem(id);
+    for (const id of Object.values(FLAVOURS).flatMap((f) => f.options.map((o) => o.itemId))) void fetchLibraryItem(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated]);
 
@@ -1041,28 +1053,26 @@ export default function SimplePage() {
               </div>
             </section>
 
-            {/* Announcement flavour — each button opens its team-library
-                item, so Official/Community are one press away. */}
-            {template === "partner" && (
-              <section className="flex flex-col gap-2">
-                <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Announcement</span>
-                <div className="flex gap-1.5">
-                  {ANNOUNCEMENTS.map((a) => {
-                    const active = loadedItem?.id === a.itemId;
-                    return (
-                      <button
-                        key={a.key}
-                        onClick={() => { if (!active) void loadItemById(a.itemId); }}
-                        aria-pressed={active}
-                        className={`flex-1 px-2 py-2 rounded-lg text-xs font-medium transition-all ${active ? "bg-[#FF0028] text-white" : "bg-white/5 border border-white/10 text-white/70 hover:bg-white/10"}`}
-                      >
-                        {a.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
-            )}
+            {/* Template flavour — each button opens its team-library item, so
+                the official designs are one press away (prefetched). */}
+            <section className="flex flex-col gap-2">
+              <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">{FLAVOURS[template].heading}</span>
+              <div className="flex gap-1.5">
+                {FLAVOURS[template].options.map((a) => {
+                  const active = loadedItem?.id === a.itemId;
+                  return (
+                    <button
+                      key={a.key}
+                      onClick={() => { if (!active) void loadItemById(a.itemId); }}
+                      aria-pressed={active}
+                      className={`flex-1 px-2 py-2 rounded-lg text-xs font-medium transition-all ${active ? "bg-[#FF0028] text-white" : "bg-white/5 border border-white/10 text-white/70 hover:bg-white/10"}`}
+                    >
+                      {a.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
 
             {/* Format. Switching parks the current tuned design and revives
                 the one saved for the target format, when the template has
