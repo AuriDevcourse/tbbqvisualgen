@@ -12,7 +12,7 @@ import { DynamicTemplate } from "@/components/templates/DynamicTemplate";
 import { BackgroundPicker } from "@/components/BackgroundPicker";
 import { useExport, type ExportFormat } from "@/hooks/useExport";
 import type { PlatformFormat } from "@/types/template";
-import { buildSimpleDesign, buildPartnerDesign, bundleCoverage, emptyForm, emptyPartnerForm, emptyPerson, formsFromDoc, isBlankPerson, isPartnerDoc, mergePersonDescription, migrateLegacyPanelDoc, panelShapeKey, parkDoc, partnerLayoutOf, retargetPartnerLayout, retargetTunedDoc, sampleFourthSpeaker, stripFormsForSave, syncPanelChrome, syncPartnerChrome, type SimpleForm, type PartnerForm, type PartnerLogo, type SimplePerson, type SimpleDoc, type TemplateCoverage } from "@/lib/simpleLayout";
+import { buildSimpleDesign, buildPartnerDesign, bundleCoverage, emptyForm, emptyPartnerForm, emptyPerson, formsFromDoc, isBlankPerson, isPartnerDoc, mergePersonDescription, migrateLegacyPanelDoc, panelShapeKey, parkDoc, partnerLayoutOf, retargetPartnerLayout, retargetTunedDoc, sampleFourthSpeaker, simpleExportName, stripFormsForSave, syncPanelChrome, syncPartnerChrome, type SimpleForm, type PartnerForm, type PartnerLogo, type SimplePerson, type SimpleDoc, type TemplateCoverage } from "@/lib/simpleLayout";
 
 type TemplateKind = "panel" | "partner";
 
@@ -788,10 +788,8 @@ export default function SimplePage() {
   const handleExport = () => {
     setPaused(true);
     setTimeout(() => {
-      const d = new Date();
-      const stamp = `${d.toISOString().slice(0, 10)}-${String(d.getHours()).padStart(2, "0")}${String(d.getMinutes()).padStart(2, "0")}`;
       const ext = exportFormat === "jpeg" ? "jpg" : "png";
-      exportImage(`techbbq-${format}-${W}x${H}-${stamp}.${ext}`, exportFormat).finally(() => setPaused(false));
+      exportImage(`${simpleExportName(template, format, form.headline)}.${ext}`, exportFormat).finally(() => setPaused(false));
     }, 100);
   };
 

@@ -1260,6 +1260,23 @@ export function sampleFourthSpeaker(): SimplePerson {
 }
 
 /**
+ * Saved-image file name (without extension): format first, then the template,
+ * then the headline for panels — "1x1 - Panel - Continuation Capital".
+ * Partner announcements are just "16x9 - Partner Announcement" (their label is
+ * generic). Colons are illegal in Windows file names, so 16:9 → 16x9.
+ */
+export function simpleExportName(template: "panel" | "partner", format: PlatformFormat, headline: string): string {
+  const fmt = format === "presentation" ? "16x9" : format === "story" ? "9x16" : "1x1";
+  if (template === "partner") return `${fmt} - Partner Announcement`;
+  const clean = headline
+    .split("\n").join(" ")
+    .replace(/[\\/:*?"<>|]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return clean ? `${fmt} - Panel - ${clean}` : `${fmt} - Panel`;
+}
+
+/**
  * Rebuild the sidebar state for a doc loaded from the team library, so the
  * template toggle and every field match what's on the canvas. Prefers the
  * `SimpleFormsSnapshot` saved with the doc (exact); for docs saved before

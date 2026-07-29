@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { adoptLegacyPanelRoles, buildPartnerDesign, buildSimpleDesign, bundleCoverage, dedupeSpeakerRoles, emptyForm, parkDoc, emptyPartnerForm, emptyPerson, formsFromDoc, isBlankPerson, mergePersonDescription, migrateLegacyPanelDoc, panelShapeKey, partnerLayoutOf, retargetPartnerLayout, retargetTunedDoc, sampleFourthSpeaker, stripFormsForSave, syncPanelChrome, syncPartnerChrome, type PartnerForm, type SimpleForm } from "./simpleLayout";
+import { adoptLegacyPanelRoles, buildPartnerDesign, buildSimpleDesign, bundleCoverage, dedupeSpeakerRoles, emptyForm, parkDoc, emptyPartnerForm, emptyPerson, formsFromDoc, isBlankPerson, mergePersonDescription, migrateLegacyPanelDoc, panelShapeKey, partnerLayoutOf, retargetPartnerLayout, retargetTunedDoc, sampleFourthSpeaker, simpleExportName, stripFormsForSave, syncPanelChrome, syncPartnerChrome, type PartnerForm, type SimpleForm } from "./simpleLayout";
 import type { PlatformFormat } from "@/types/template";
 
 /**
@@ -761,6 +761,19 @@ describe("dedupeSpeakerRoles — editor-cloned layers get fresh speaker indices"
     expect(doc.canvasImages.some((i) => i.simpleRole === "speaker-3.photo")).toBe(true);
     expect(doc.design.texts.find((t) => t.simpleRole === "speaker-3.name")?.content).toBe("Rajeev Kumal");
     expect(doc.design.texts.find((t) => t.simpleRole === "speaker-3.title")?.content).toContain("CTO at 88 Angle");
+  });
+});
+
+describe("simpleExportName — saved-image naming convention", () => {
+  it("format first, then template, then the panel headline", () => {
+    expect(simpleExportName("panel", "square", "Continuation Capital\n& Venture Secondaries:")).toBe("1x1 - Panel - Continuation Capital & Venture Secondaries");
+    expect(simpleExportName("panel", "presentation", "AI in 2026")).toBe("16x9 - Panel - AI in 2026");
+    expect(simpleExportName("panel", "story", "")).toBe("9x16 - Panel");
+    expect(simpleExportName("partner", "presentation", "ignored")).toBe("16x9 - Partner Announcement");
+  });
+
+  it("strips characters that break file names", () => {
+    expect(simpleExportName("panel", "square", 'What: "AI/ML" <Now?>')).toBe("1x1 - Panel - What AIML Now");
   });
 });
 
