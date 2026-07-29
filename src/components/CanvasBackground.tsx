@@ -348,7 +348,9 @@ export const CanvasBackground = memo(function CanvasBackground({ id, width, heig
   const img = IMAGE_BG_REGISTRY[id];
   if (img) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={img.src} alt="" style={{ position: "absolute", inset: 0, width, height, objectFit: "cover" }} />;
+    // draggable={false}: click-dragging the canvas must never start the
+    // browser's native image drag ("it grabs the background").
+    return <img src={img.src} alt="" draggable={false} style={{ position: "absolute", inset: 0, width, height, objectFit: "cover" }} />;
   }
   // "New styling" orb presets render on a 2D canvas.
   if (ORB_REGISTRY[id]) {
