@@ -524,7 +524,10 @@ export default function SimplePage() {
     // lines, TechBBQ logo) follows the user across One/Two/Four — tune it
     // once, it stays put in every layout of this format. Applies to a revived
     // variant AND to the generic rebuild of a not-yet-tuned layout.
-    if (template === "partner" && custom
+    // isPartnerDoc(custom): on a TEMPLATE switch `custom` is still the doc of
+    // the template being left — panel chrome must never flow into a partner
+    // doc (or the reverse; the panel branch below has the mirror guard).
+    if (template === "partner" && custom && isPartnerDoc(custom)
       && custom.format === rebuilt.format
       && custom.customSize.width === rebuilt.customSize.width
       && custom.customSize.height === rebuilt.customSize.height) {

@@ -509,6 +509,26 @@ describe("syncPartnerChrome — shared chrome across layouts of one format", () 
     expect(synced.design.logoScale).toBe(1.2);
   });
 
+  it("a panel doc being left never leaks its role words into a partner doc", () => {
+    // Live bug: switching Panel -> Partner at the same format ran the sync
+    // with `from` still being the panel doc, floating MODERATOR/SPEAKER words
+    // over the partner design.
+    const panel = buildSimpleDesign(emptyForm(), "story");
+    const partner = buildPartnerDesign({ label: "Official Community Partner", layout: "single", logos: [], backgroundId: "orb7" }, "story");
+    expect(syncPartnerChrome(panel, partner)).toBe(partner);
+    expect(syncPartnerChrome(partner, panel)).toBe(panel); // reverse direction guarded too
+
+    // Docs contaminated before this guard heal on load: the migration strips
+    // the leaked words from partner docs, and only from partner docs.
+    const contaminated = {
+      ...partner,
+      design: { ...partner.design, texts: [...partner.design.texts, { id: "leak", content: "MODERATOR", fontSize: 29, position: { x: 0.1, y: 0.5 } }] },
+    };
+    const healed = migrateLegacyPanelDoc(contaminated);
+    expect(healed.design.texts.some((t) => t.content === "MODERATOR")).toBe(false);
+    expect(migrateLegacyPanelDoc(panel).design.texts.some((t) => t.content === "MODERATOR")).toBe(true);
+  });
+
   it("returns the target untouched across formats", () => {
     const from = buildPartnerDesign(pf("single", [{ src: "data:a" }]), "square");
     const to = buildPartnerDesign(pf("duo", [{ src: "data:a" }, null]), "presentation");

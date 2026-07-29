@@ -307,6 +307,11 @@ export function syncPartnerChrome(from: SimpleDoc, to: SimpleDoc): SimpleDoc {
   if (from.format !== to.format) return to;
   if (from.customSize.width !== to.customSize.width) return to;
   if (from.customSize.height !== to.customSize.height) return to;
+  // Partner chrome only flows between partner docs. A template switch lands
+  // here with `from` still being the PANEL doc being left — carrying its
+  // role-less texts would float MODERATOR/SPEAKER words over the partner
+  // design (live bug: Auri's 9:16 partner announcement wearing panel words).
+  if (!isPartnerDoc(from) || !isPartnerDoc(to)) return to;
 
   const fromLabel = from.design.texts.find((t) => t.simpleRole === "label");
   const texts = [
@@ -1245,12 +1250,23 @@ export function dedupeSpeakerRoles(doc: SimpleDoc): SimpleDoc {
   };
 }
 
+/** A partner doc has no people, so role-less MODERATOR/SPEAKER words on one
+ *  are leakage from the pre-guard `syncPartnerChrome` bug (panel chrome
+ *  carried across a template switch) — drop them so docs contaminated before
+ *  the fix heal on their next load. Panel docs keep their words, of course. */
+export function stripLeakedPanelWords(doc: SimpleDoc): SimpleDoc {
+  if (!isPartnerDoc(doc)) return doc;
+  const leaked = (t: TextElement) => !t.simpleRole && ["MODERATOR", "SPEAKER"].includes(t.content.trim());
+  if (!doc.design.texts.some(leaked)) return doc;
+  return { ...doc, design: { ...doc.design, texts: doc.design.texts.filter((t) => !leaked(t)) } };
+}
+
 /** Everything a doc from storage or the library needs before use: photo roles
  *  for pre-2026-07-22 items, deduped roles for editor-cloned layers,
- *  description-merged text layers for pre-merge ones. All no-ops on clean
- *  current docs. */
+ *  description-merged text layers for pre-merge ones, leaked panel words
+ *  stripped off partner docs. All no-ops on clean current docs. */
 export function migrateLegacyPanelDoc(doc: SimpleDoc): SimpleDoc {
-  return mergeLegacyCompanyLayers(dedupeSpeakerRoles(adoptLegacyPanelRoles(doc)));
+  return stripLeakedPanelWords(mergeLegacyCompanyLayers(dedupeSpeakerRoles(adoptLegacyPanelRoles(doc))));
 }
 
 /** The identity a newly added 4th speaker starts with (Auri's sample) — a
