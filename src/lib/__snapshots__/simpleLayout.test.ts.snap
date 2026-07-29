@@ -73,7 +73,7 @@ exports[`Panel Maker — 3 speakers + 1 moderator > layout is stable for present
     "width": 1920,
   },
   "design": {
-    "backgroundId": "orb5",
+    "backgroundId": "orb7",
     "logoPosition": "bottom-left",
     "logoStyle": "white",
     "shapes": [
@@ -400,7 +400,7 @@ exports[`Panel Maker — 3 speakers + 1 moderator > layout is stable for square 
     "width": 1500,
   },
   "design": {
-    "backgroundId": "orb5",
+    "backgroundId": "orb7",
     "logoPosition": "bottom-left",
     "logoStyle": "white",
     "shapes": [
@@ -729,7 +729,7 @@ exports[`Panel Maker — 3 speakers + 1 moderator > layout is stable for story 1
     "width": 1080,
   },
   "design": {
-    "backgroundId": "orb5",
+    "backgroundId": "orb7",
     "logoPosition": "bottom-left",
     "logoStyle": "white",
     "shapes": [

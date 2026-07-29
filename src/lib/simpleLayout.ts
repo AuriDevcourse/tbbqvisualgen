@@ -519,7 +519,7 @@ export interface PartnerForm {
 }
 
 export function emptyPartnerForm(): PartnerForm {
-  return { label: "Partner Announcement", layout: "single", logos: [], backgroundId: "orb5" };
+  return { label: "Partner Announcement", layout: "single", logos: [], backgroundId: "orb7" };
 }
 
 export interface SimpleForm {
@@ -548,7 +548,7 @@ export function emptyForm(): SimpleForm {
       { name: "Nicholas Sando", title: "Partner, Secondaries, Molten", company: "", photo: "/samples/nicholas-sando.jpg" },
       { name: "Omolade Adebisi", title: "Principal & Head of Secondaries, ISOMER Capital", company: "", photo: "/samples/omolade-adebisi.jpg" },
     ],
-    backgroundId: "orb5",
+    backgroundId: "orb7",
   };
 }
 
@@ -677,7 +677,7 @@ export function buildPartnerDesign(form: PartnerForm, format: PlatformFormat): S
   }
 
   const design: DesignConfig = {
-    backgroundId: form.backgroundId || "orb5",
+    backgroundId: form.backgroundId || "orb7",
     texts,
     shapes,
     showLogo: true,
@@ -1073,7 +1073,7 @@ export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): Sim
   }
 
   const design: DesignConfig = {
-    backgroundId: form.backgroundId || "orb5",
+    backgroundId: form.backgroundId || "orb7",
     texts,
     shapes,
     showLogo: true,
@@ -1372,7 +1372,7 @@ export function formsFromDoc(kind: string, doc: SimpleDoc, saved?: SimpleFormsSn
       speakers: speakerCount > 0
         ? Array.from({ length: speakerCount }, (_, i) => person(`speaker-${i}`))
         : [emptyPerson()],
-      backgroundId: doc.design.backgroundId || "orb5",
+      backgroundId: doc.design.backgroundId || "orb7",
     },
   };
 }

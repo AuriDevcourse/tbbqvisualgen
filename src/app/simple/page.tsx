@@ -142,12 +142,52 @@ function PersonEditor({
 }
 
 // One partner-logo upload slot: dropzone → contain-fit preview + remove.
-// `onSwapPrev`/`onSwapNext` (quad grid only) swap this slot's content with the
-// neighbouring cell, so logos can be re-ordered after upload.
-function LogoSlot({ logo, onChange, small, onSwapPrev, onSwapNext }: { logo: PartnerLogo | null; onChange: (l: PartnerLogo | null) => void; small?: boolean; onSwapPrev?: () => void; onSwapNext?: () => void }) {
+// A logo file can be DROPPED straight onto any slot, and a filled slot can be
+// DRAGGED onto another to move/swap it (`onReorder`). The ‹ › buttons remain
+// as the keyboard-friendly path.
+const LOGO_DRAG_TYPE = "application/x-logo-slot";
+function LogoSlot({ logo, onChange, small, onSwapPrev, onSwapNext, index, onReorder }: { logo: PartnerLogo | null; onChange: (l: PartnerLogo | null) => void; small?: boolean; onSwapPrev?: () => void; onSwapNext?: () => void; index?: number; onReorder?: (from: number, to: number) => void }) {
+  const [dragOver, setDragOver] = useState(false);
+  const reorderable = index !== undefined && Boolean(onReorder);
   return (
-    <div className="relative">
-      <label className={`relative flex items-center justify-center ${small ? "h-20" : "h-28"} rounded-xl overflow-hidden border cursor-pointer transition-colors group ${logo?.src ? "border-white/15 bg-white/5" : "border-dashed border-white/15 bg-white/[0.03] hover:border-[#FF6B00]/60"}`}>
+    <div
+      className="relative"
+      draggable={reorderable && Boolean(logo?.src)}
+      onDragStart={(e) => {
+        if (!reorderable || !logo?.src) return;
+        e.dataTransfer.setData(LOGO_DRAG_TYPE, String(index));
+        e.dataTransfer.effectAllowed = "move";
+      }}
+      onDragOver={(e) => {
+        // Accept slot reorders and image files; let everything else pass.
+        if (e.dataTransfer.types.includes(LOGO_DRAG_TYPE) || e.dataTransfer.types.includes("Files")) {
+          e.preventDefault();
+          setDragOver(true);
+        }
+      }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={async (e) => {
+        setDragOver(false);
+        const fromRaw = e.dataTransfer.getData(LOGO_DRAG_TYPE);
+        if (fromRaw !== "" && reorderable) {
+          e.preventDefault();
+          const from = Number(fromRaw);
+          if (Number.isInteger(from) && from !== index) onReorder!(from, index as number);
+          return;
+        }
+        const file = e.dataTransfer.files?.[0];
+        if (file && file.type.startsWith("image/")) {
+          e.preventDefault();
+          try {
+            const { src, w, h } = await readImage(file);
+            onChange({ src, naturalWidth: w, naturalHeight: h });
+          } catch {
+            toast.error("Couldn't read that image");
+          }
+        }
+      }}
+    >
+      <label className={`relative flex items-center justify-center ${small ? "h-20" : "h-28"} rounded-xl overflow-hidden border cursor-pointer transition-colors group ${dragOver ? "border-[#FF6B00] bg-[#FF6B00]/10" : logo?.src ? "border-white/15 bg-white/5" : "border-dashed border-white/15 bg-white/[0.03] hover:border-[#FF6B00]/60"}`}>
         {logo?.src ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={logo.src} alt="Partner logo" className="max-w-[85%] max-h-[80%] object-contain" />
@@ -1022,6 +1062,8 @@ export default function SimplePage() {
                       <LogoSlot
                         key={i}
                         small
+                        index={i}
+                        onReorder={swapLogos}
                         logo={partner.logos[i] ?? null}
                         onChange={(l) => setPartnerLogo(i, l)}
                         onSwapPrev={i > 0 ? () => swapLogos(i, i - 1) : undefined}
@@ -1035,6 +1077,8 @@ export default function SimplePage() {
                       <LogoSlot
                         key={i}
                         small
+                        index={i}
+                        onReorder={swapLogos}
                         logo={partner.logos[i] ?? null}
                         onChange={(l) => setPartnerLogo(i, l)}
                         onSwapPrev={i === 1 ? () => swapLogos(1, 0) : undefined}
