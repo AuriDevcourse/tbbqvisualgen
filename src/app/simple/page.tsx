@@ -656,6 +656,35 @@ export default function SimplePage() {
     { key: "official", label: "Official Announcement", itemId: DEFAULT_ITEM_IDS.partner },
     { key: "community", label: "Community Announcement", itemId: "431c22ac-a5a2-46a4-aec7-ad39923eae7d" },
   ] as const;
+  // All official templates are PREFETCHED into memory right after mount, so
+  // pressing an Announcement button (or switching Template) applies instantly
+  // — the network round-trip happens once in the background, never on the
+  // click. `null` marks a fetch that failed (signed out/offline); the click
+  // path then falls back to a live fetch with the sign-in prompt.
+  const itemCache = useRef(new Map<string, LibraryLoadedItem | null>());
+  const fetchLibraryItem = useCallback(async (id: string): Promise<LibraryLoadedItem | null> => {
+    const cached = itemCache.current.get(id);
+    if (cached) return cached;
+    try {
+      const res = await fetch(`/api/library/${id}`);
+      if (!res.ok) { itemCache.current.set(id, null); return null; }
+      const data = await res.json();
+      const item: LibraryLoadedItem = { id, name: data.item.name, kind: data.item.kind, doc: data.item.doc };
+      itemCache.current.set(id, item);
+      return item;
+    } catch {
+      itemCache.current.set(id, null);
+      return null;
+    }
+  }, []);
+  const prefetchTried = useRef(false);
+  useEffect(() => {
+    if (!hydrated || prefetchTried.current) return;
+    prefetchTried.current = true;
+    for (const id of [DEFAULT_ITEM_IDS.panel, ...ANNOUNCEMENTS.map((a) => a.itemId)]) void fetchLibraryItem(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated]);
+
   const defaultLoadTried = useRef<{ panel?: boolean; partner?: boolean }>({});
   useEffect(() => {
     if (!hydrated) return;
@@ -674,19 +703,23 @@ export default function SimplePage() {
     try { if (pending && sessionStorage.getItem(DEEPLINK_DONE_KEY) !== pending) return; } catch { /* treat as applied */ }
     defaultLoadTried.current[kind] = true;
     (async () => {
-      try {
-        const res = await fetch(`/api/library/${DEFAULT_ITEM_IDS[kind]}`);
-        if (!res.ok) return;
-        const data = await res.json();
-        handleLibraryLoad({ id: DEFAULT_ITEM_IDS[kind], name: data.item.name, kind: data.item.kind, doc: data.item.doc });
-        toast.info(`Loaded the team template "${data.item.name}"`);
-      } catch { /* offline — keep the generic layout */ }
+      const item = await fetchLibraryItem(DEFAULT_ITEM_IDS[kind]);
+      if (!item) return; // signed out/offline — the generic layout is the fallback
+      handleLibraryLoad(item);
+      toast.info(`Loaded the team template "${item.name}"`);
     })();
   });
 
-  // Explicit load of a library item (announcement picker) — same path as the
-  // modal's Load button, with the deep link's sign-in fallback.
+  // Explicit load of a library item (announcement picker). Cache hit =
+  // synchronous apply, no spinner needed; miss = one live fetch with the
+  // deep link's sign-in fallback.
   const loadItemById = async (id: string) => {
+    const cached = itemCache.current.get(id);
+    if (cached) {
+      handleLibraryLoad(cached);
+      toast.success(`Loaded "${cached.name}"`);
+      return;
+    }
     try {
       const res = await fetch(`/api/library/${id}`);
       if (res.status === 401) {
@@ -696,8 +729,10 @@ export default function SimplePage() {
       }
       const data = await res.json();
       if (!res.ok) { toast.error(data.error ?? "Couldn't open the template"); return; }
-      handleLibraryLoad({ id, name: data.item.name, kind: data.item.kind, doc: data.item.doc });
-      toast.success(`Loaded "${data.item.name}"`);
+      const item: LibraryLoadedItem = { id, name: data.item.name, kind: data.item.kind, doc: data.item.doc };
+      itemCache.current.set(id, item);
+      handleLibraryLoad(item);
+      toast.success(`Loaded "${item.name}"`);
     } catch {
       toast.error("Couldn't reach the team library");
     }
@@ -824,6 +859,8 @@ export default function SimplePage() {
     if (!loadedItem || updatingItem) return;
     if (!window.confirm(`Overwrite "${loadedItem.name}" for everyone with the current design (all layouts included)?`)) return;
     setUpdatingItem(true);
+    // The prefetched copy is now stale — the next explicit load refetches.
+    itemCache.current.delete(loadedItem.id);
     try {
       const res = await fetch(`/api/library/${loadedItem.id}`, {
         method: "PUT",
@@ -895,7 +932,10 @@ export default function SimplePage() {
         currentKind={template}
         currentBundle={currentBundle}
         onLoad={handleLibraryLoad}
-        onSaved={({ id, name, kind }) => adoptLibraryIdentity(id, name, kind, bundleCoverage([currentBundle, ...currentBundle.simpleVariants]))}
+        onSaved={({ id, name, kind }) => {
+          itemCache.current.delete(id); // saved over — the prefetched copy is stale
+          adoptLibraryIdentity(id, name, kind, bundleCoverage([currentBundle, ...currentBundle.simpleVariants]));
+        }}
       />
       <AnimatedGradient />
       <div className="relative z-10 flex flex-col h-screen overflow-hidden">
