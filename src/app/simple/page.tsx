@@ -260,6 +260,8 @@ const PARKED_KEY = "tbbqvisualgen.simple.parked.v1";
 // Which library id this tab has already applied from the URL — makes the
 // ?load= deep link one-shot per tab, so refreshes keep local edits.
 const DEEPLINK_DONE_KEY = "tbbqvisualgen.simple.deeplink.done";
+// The "Official Host" library item — hosts cap at 2, unlike panels.
+const HOST_ITEM_ID = "e3fce4c3-8afc-4d87-9dd5-3ddc5425b993";
 // The library item the current design belongs to ({id, name, kind, coverage}
 // JSON) — drives the header "Update <name>" button and the sidebar's
 // set-up-for hints. Session-scoped like the marker.
@@ -657,7 +659,7 @@ export default function SimplePage() {
       heading: "Panel type",
       options: [
         { key: "discussion", label: "Panel Discussion", itemId: DEFAULT_ITEM_IDS.panel },
-        { key: "host", label: "Host", itemId: "e3fce4c3-8afc-4d87-9dd5-3ddc5425b993" },
+        { key: "host", label: "Host", itemId: HOST_ITEM_ID },
       ],
     },
     partner: {
@@ -809,7 +811,8 @@ export default function SimplePage() {
     if (dropped && !isBlankPerson(dropped)) setStash((s) => [dropped, ...s]);
     setForm((f) => ({ ...f, speakers: f.speakers.filter((_, idx) => idx !== i) }));
   };
-  const MAX_SPEAKERS = 9;
+  // Hosts cap at 2 (there is no 3-host visual); panels go up to 9.
+  const MAX_SPEAKERS = loadedItem?.id === HOST_ITEM_ID ? 2 : 9;
   // Lowering the count parks the dropped people in `stash` instead of binning
   // them, so stepping 3 -> 2 -> 3 gives back the same panel rather than a
   // blank card. Only filled-in people are worth keeping.
@@ -958,6 +961,24 @@ export default function SimplePage() {
           <h1 className="text-lg font-medium tracking-tight">
             Quick <span className="text-tbbq-gradient font-semibold">Templates</span>
           </h1>
+          {/* Fine-tuned indicator — in the header so it never covers the
+              canvas. Full explanation in the tooltip. */}
+          {custom && (
+            <div
+              className="flex items-center gap-2 rounded-full border border-[#FF6B00]/40 bg-[#FF6B00]/10 pl-3 pr-1.5 py-1"
+              title={template === "partner"
+                ? "Text edits and logo swaps keep this layout. Switching layout or format shows the design saved for it, when there is one."
+                : "Text edits and photo swaps keep this layout. Switching format shows the design saved for it; changing the speaker count or moderator rebuilds."}
+            >
+              <span className="text-[11px] font-medium text-[#FF8A3D] whitespace-nowrap">Custom design active · saved</span>
+              <button
+                onClick={revertCustom}
+                className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-white/10 text-white hover:bg-white/20 transition-colors"
+              >
+                Revert
+              </button>
+            </div>
+          )}
           <div className="ml-auto flex items-center gap-2">
             <AuthChip />
             {loadedItem && template === loadedItem.kind && (
@@ -1287,25 +1308,6 @@ export default function SimplePage() {
 
           {/* Preview */}
           <main ref={previewRef} className="flex-1 min-h-[55vh] lg:min-h-0 min-w-0 flex items-center justify-center overflow-hidden rounded-2xl bg-card relative">
-            {/* Fine-tuned indicator — compact pill over the preview, so the
-                form column doesn't jump when a custom design activates. The
-                full explanation lives in the tooltip. */}
-            {custom && (
-              <div
-                className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 rounded-full border border-[#FF6B00]/40 bg-black/70 backdrop-blur-sm pl-3 pr-1.5 py-1"
-                title={template === "partner"
-                  ? "Text edits and logo swaps keep this layout. Switching layout or format shows the design saved for it, when there is one."
-                  : "Text edits and photo swaps keep this layout. Switching format shows the design saved for it; changing the speaker count or moderator rebuilds."}
-              >
-                <span className="text-[11px] font-medium text-[#FF8A3D]">Custom design active · saved</span>
-                <button
-                  onClick={revertCustom}
-                  className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-white/10 text-white hover:bg-white/20 transition-colors"
-                >
-                  Revert
-                </button>
-              </div>
-            )}
             {isEmpty && (
               <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
                 <div className="text-center rounded-2xl bg-black/60 backdrop-blur-sm px-7 py-6">
