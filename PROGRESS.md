@@ -345,6 +345,13 @@ In rough priority order. **Top priority is first-run intuitiveness** (Auri, 2026
 
 Newer at the top.
 
+**Session 2026-07-29, round 33 — tuned 16:9 Host doc "switches" on format round-trips (code + LIVE DB write).** Auri tuned the 1-host 16:9 design (headline renamed to singular "HOST", his own hand-made description layer), but returning to 16:9 showed an older design. TWO causes found by emulating his walk on the live bundle:
+
+1. **Hand-deleted role layer strands the tuning.** He replaced the generated `speaker-0.secondary` with a role-less hand-made text — the doc's shape key could never match a rebuild again, so his tuning parked under an unreachable key and the STALE 16:9×1 variant revived instead. Data repair (backup `host-backup2-*`): his description re-tagged `speaker-0.secondary` (sidebar edits now address it), the shadowing stale variant dropped. Verified: key match, direct retarget, full 16:9 → 1:1 → 16:9 walk revives his exact tuning.
+2. **Singular/plural headline.** New builder rule: on a moderator-less form whose headline IS the word "HOST"/"HOSTS" (any case), the rendered headline follows the count — "HOST" at 1, "HOSTS" at 2+ (same pattern as the partner label plural). Any other headline passes through verbatim. Without this, a successful retarget would stamp the form's "HOSTS" over his singular. Test added (74/74).
+
+**Pattern note for future sessions:** "my tuned design switches back on format/count round-trips" = shape-key mismatch; diff the tuned doc's role set against its rebuild (hand-deleted role layers are the usual cause; consider re-tagging surviving hand-made replacements on load, like `adoptLegacyPanelRoles` does for photos).
+
 **Session 2026-07-29, round 32 — host-mode sidebar: just "Hosts 1-2".** With the Host flavour loaded (`hostMode` = loadedItem is the Host item), the Setup section hides the Moderator toggle and says **Hosts** with the 1-2 stepper; person cards read "Host 1/2", section "Hosts (N)", button "Add host"; the Moderator editor section never renders in host mode. Regular panels unchanged. Verified live both ways (seeded loadedItem sessionStorage signed-out). 73/73 vitest, tsc + eslint + build clean.
 
 **Session 2026-07-29, round 31 — Host words (HOSTS / BBQ Stage) + label chips refit on retarget (code + LIVE DB write).** Auri: Host template must say headline "HOSTS", label "BBQ Stage", and the white chip must run slightly longer than the label text. Two layers:

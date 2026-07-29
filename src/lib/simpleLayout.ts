@@ -811,10 +811,17 @@ export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): Sim
   const lineCount = (s: string) => (s.trim() ? s.split("\n").length : 0);
   let cursorY = 0.115; // top edge of the header content block
 
-  if (form.headline.trim()) {
-    const f = fitFont(form.headline, 0.082);
-    const blockH = lineCount(form.headline) * f * vs;
-    mkText(form.headline, MARGIN, cursorY + blockH / 2, f, { weight: 600, color: "#FFFFFF", simpleRole: "headline" });
+  // The Host template's headline follows the count: "HOST" for one, "HOSTS"
+  // for two — same idea as the partner label's plural rule. Applies only to
+  // a moderator-less form whose headline IS the word (any other headline is
+  // real copy and passes through verbatim).
+  const headline = !form.includeModerator && /^hosts?$/i.test(form.headline.trim())
+    ? (form.speakers.length === 1 ? "HOST" : "HOSTS")
+    : form.headline;
+  if (headline.trim()) {
+    const f = fitFont(headline, 0.082);
+    const blockH = lineCount(headline) * f * vs;
+    mkText(headline, MARGIN, cursorY + blockH / 2, f, { weight: 600, color: "#FFFFFF", simpleRole: "headline" });
     cursorY += blockH + 0.03;
   }
   if (form.subtitle.trim()) {

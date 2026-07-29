@@ -751,6 +751,21 @@ describe("description merge — one field replaces title + company", () => {
   });
 });
 
+describe("host headline singular/plural", () => {
+  it("HOSTS <-> HOST follows the count on moderator-less forms; real copy passes through", () => {
+    const base: SimpleForm = { ...emptyForm(), includeModerator: false, headline: "HOSTS", label: "BBQ Stage" };
+    const headlineOf = (form: SimpleForm) =>
+      buildSimpleDesign(form, "presentation").design.texts.find((t) => t.simpleRole === "headline")!.content;
+    expect(headlineOf({ ...base, speakers: base.speakers.slice(0, 1) })).toBe("HOST");
+    expect(headlineOf({ ...base, speakers: base.speakers.slice(0, 2) })).toBe("HOSTS");
+    // Typed lowercase/singular also normalizes by count.
+    expect(headlineOf({ ...base, headline: "host", speakers: base.speakers.slice(0, 2) })).toBe("HOSTS");
+    // Real headlines are untouched, and panels with a moderator are too.
+    expect(headlineOf({ ...base, headline: "AI in 2026", speakers: base.speakers.slice(0, 1) })).toBe("AI in 2026");
+    expect(headlineOf({ ...base, includeModerator: true, speakers: base.speakers.slice(0, 1) })).toBe("HOSTS");
+  });
+});
+
 describe("dedupeSpeakerRoles — editor-cloned layers get fresh speaker indices", () => {
   it("renumbers a cloned name+title pair to ONE new speaker; the doc becomes matchable again", () => {
     // Auri's live corruption: Omolade's texts duplicated (⌘D keeps the role),
