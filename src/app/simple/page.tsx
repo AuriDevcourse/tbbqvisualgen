@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Check, ChevronDown, Download, Loader2, Plus, Minus, Trash2, ImagePlus, X, Square, Presentation, Smartphone, PencilRuler, Users, Handshake, Columns2, LayoutGrid, ChevronLeft, ChevronRight, Library, Save } from "lucide-react";
+import { Check, ChevronDown, Download, GripVertical, Loader2, Plus, Minus, Trash2, ImagePlus, X, Square, Presentation, Smartphone, PencilRuler, Users, Handshake, Columns2, LayoutGrid, ChevronLeft, ChevronRight, Library, Save } from "lucide-react";
 import { Popover } from "radix-ui";
 import { TeamLibrary, type LibraryLoadedItem } from "@/components/TeamLibrary";
 import { AuthChip } from "@/components/AuthChip";
@@ -143,21 +143,19 @@ function PersonEditor({
 
 // One partner-logo upload slot: dropzone → contain-fit preview + remove.
 // A logo file can be DROPPED straight onto any slot, and a filled slot can be
-// DRAGGED onto another to move/swap it (`onReorder`). The ‹ › buttons remain
-// as the keyboard-friendly path.
+// DRAGGED onto another to move/swap it via the GRIP HANDLE in its top-left
+// corner (`onReorder`). The ‹ › buttons remain as the keyboard-friendly path.
 const LOGO_DRAG_TYPE = "application/x-logo-slot";
 function LogoSlot({ logo, onChange, small, onSwapPrev, onSwapNext, index, onReorder }: { logo: PartnerLogo | null; onChange: (l: PartnerLogo | null) => void; small?: boolean; onSwapPrev?: () => void; onSwapNext?: () => void; index?: number; onReorder?: (from: number, to: number) => void }) {
   const [dragOver, setDragOver] = useState(false);
   const reorderable = index !== undefined && Boolean(onReorder);
   return (
+    // NB: the container itself is NOT draggable — that hijacked plain clicks
+    // on the upload label (press-and-hold started a drag, so the file picker
+    // needed a second click). The reorder drag starts from the grip handle
+    // below; the whole slot stays a drop target.
     <div
       className="relative"
-      draggable={reorderable && Boolean(logo?.src)}
-      onDragStart={(e) => {
-        if (!reorderable || !logo?.src) return;
-        e.dataTransfer.setData(LOGO_DRAG_TYPE, String(index));
-        e.dataTransfer.effectAllowed = "move";
-      }}
       onDragOver={(e) => {
         // Accept slot reorders and image files; let everything else pass.
         if (e.dataTransfer.types.includes(LOGO_DRAG_TYPE) || e.dataTransfer.types.includes("Files")) {
@@ -189,8 +187,10 @@ function LogoSlot({ logo, onChange, small, onSwapPrev, onSwapNext, index, onReor
     >
       <label className={`relative flex items-center justify-center ${small ? "h-20" : "h-28"} rounded-xl overflow-hidden border cursor-pointer transition-colors group ${dragOver ? "border-[#FF6B00] bg-[#FF6B00]/10" : logo?.src ? "border-white/15 bg-white/5" : "border-dashed border-white/15 bg-white/[0.03] hover:border-[#FF6B00]/60"}`}>
         {logo?.src ? (
+          // draggable={false}: the browser's native image drag would fight
+          // both the label click and the handle's reorder payload.
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={logo.src} alt="Partner logo" className="max-w-[85%] max-h-[80%] object-contain" />
+          <img src={logo.src} alt="Partner logo" draggable={false} className="max-w-[85%] max-h-[80%] object-contain" />
         ) : (
           <span className="flex flex-col items-center gap-1.5 text-white/40 group-hover:text-white/70 transition-colors">
             <ImagePlus className={small ? "w-5 h-5" : "w-6 h-6"} />
@@ -223,6 +223,20 @@ function LogoSlot({ logo, onChange, small, onSwapPrev, onSwapNext, index, onReor
         >
           <X className="w-3 h-3" strokeWidth={2.5} />
         </button>
+      )}
+      {logo?.src && reorderable && (
+        <span
+          draggable
+          onDragStart={(e) => {
+            e.dataTransfer.setData(LOGO_DRAG_TYPE, String(index));
+            e.dataTransfer.effectAllowed = "move";
+          }}
+          aria-label="Drag to move this logo to another slot"
+          title="Drag to move this logo to another slot"
+          className="absolute top-2 left-2 w-6 h-6 flex items-center justify-center rounded-full bg-black/75 border border-white/20 text-white/80 hover:bg-black hover:text-white transition-colors cursor-grab active:cursor-grabbing"
+        >
+          <GripVertical className="w-3.5 h-3.5" strokeWidth={2} />
+        </span>
       )}
       {logo?.src && onSwapPrev && (
         <button
