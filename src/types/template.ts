@@ -139,6 +139,10 @@ export interface ShapeBorderRadii {
 export interface ShapeElement {
   id: string;
   type: ShapeType;
+  /** Which Panel Maker slot this shape stands in for — set on the partner
+   *  templates' empty-logo placeholder frames (e.g. "logo-duo-1") so a slot
+   *  edit can swap the right frame. Absent on hand-added shapes. */
+  simpleRole?: string;
   /** Center position in 0–1 fractional canvas coords. */
   x: number;
   y: number;

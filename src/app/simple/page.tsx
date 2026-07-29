@@ -3,7 +3,8 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Download, Loader2, Plus, Minus, Trash2, ImagePlus, X, Square, Presentation, Smartphone, PencilRuler, Users, Handshake, Columns2, LayoutGrid, ChevronLeft, ChevronRight, Library, Save } from "lucide-react";
+import { Check, ChevronDown, Download, Loader2, Plus, Minus, Trash2, ImagePlus, X, Square, Presentation, Smartphone, PencilRuler, Users, Handshake, Columns2, LayoutGrid, ChevronLeft, ChevronRight, Library, Save } from "lucide-react";
+import { Popover } from "radix-ui";
 import { TeamLibrary, type LibraryLoadedItem } from "@/components/TeamLibrary";
 import { AuthChip } from "@/components/AuthChip";
 import { AnimatedGradient } from "@/components/AnimatedGradient";
@@ -11,7 +12,7 @@ import { DynamicTemplate } from "@/components/templates/DynamicTemplate";
 import { BackgroundPicker } from "@/components/BackgroundPicker";
 import { useExport, type ExportFormat } from "@/hooks/useExport";
 import type { PlatformFormat } from "@/types/template";
-import { buildSimpleDesign, buildPartnerDesign, emptyForm, emptyPartnerForm, emptyPerson, formsFromDoc, isBlankPerson, isPartnerDoc, panelShapeKey, retargetTunedDoc, stripFormsForSave, type SimpleForm, type PartnerForm, type PartnerLogo, type SimplePerson, type SimpleDoc } from "@/lib/simpleLayout";
+import { buildSimpleDesign, buildPartnerDesign, bundleCoverage, emptyForm, emptyPartnerForm, emptyPerson, formsFromDoc, isBlankPerson, isPartnerDoc, mergePersonDescription, migrateLegacyPanelDoc, panelShapeKey, parkDoc, partnerLayoutOf, retargetPartnerLayout, retargetTunedDoc, sampleFourthSpeaker, stripFormsForSave, syncPanelChrome, syncPartnerChrome, type SimpleForm, type PartnerForm, type PartnerLogo, type SimplePerson, type SimpleDoc, type TemplateCoverage } from "@/lib/simpleLayout";
 
 type TemplateKind = "panel" | "partner";
 
@@ -73,7 +74,7 @@ function Field({ label, value, onChange, placeholder, multiline, hint }: { label
   );
 }
 
-// One person block (moderator or a speaker): photo + name/title/company.
+// One person block (moderator or a speaker): photo + name + description.
 function PersonEditor({
   person, onChange, onRemove, roleLabel,
 }: {
@@ -133,12 +134,8 @@ function PersonEditor({
         </div>
         <input type="text" value={person.name} onChange={(e) => onChange({ name: e.target.value })} placeholder="Full name"
           className="w-full px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 text-sm font-medium text-white placeholder:text-white/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70 focus:border-[#FF6B00]/40" />
-        <div className="flex gap-1.5">
-          <input type="text" value={person.title} onChange={(e) => onChange({ title: e.target.value })} placeholder="Job title"
-            className="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-white placeholder:text-white/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70 focus:border-[#FF6B00]/40" />
-          <input type="text" value={person.company} onChange={(e) => onChange({ company: e.target.value })} placeholder="Company"
-            className="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-white placeholder:text-white/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70 focus:border-[#FF6B00]/40" />
-        </div>
+        <input type="text" value={person.title} onChange={(e) => onChange({ title: e.target.value })} placeholder="Job title, company" aria-label="Description"
+          className="w-full px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-white placeholder:text-white/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70 focus:border-[#FF6B00]/40" />
       </div>
     </div>
   );
@@ -223,8 +220,9 @@ const PARKED_KEY = "tbbqvisualgen.simple.parked.v1";
 // Which library id this tab has already applied from the URL — makes the
 // ?load= deep link one-shot per tab, so refreshes keep local edits.
 const DEEPLINK_DONE_KEY = "tbbqvisualgen.simple.deeplink.done";
-// The library item the current design belongs to ({id, name, kind} JSON) —
-// drives the header "Update <name>" button. Session-scoped like the marker.
+// The library item the current design belongs to ({id, name, kind, coverage}
+// JSON) — drives the header "Update <name>" button and the sidebar's
+// set-up-for hints. Session-scoped like the marker.
 const LOADED_ITEM_KEY = "tbbqvisualgen.simple.loadedItem";
 
 interface PersistedForm {
@@ -270,10 +268,14 @@ function hasContent(doc: SimpleDoc): boolean {
     || (doc.canvasImages?.length ?? 0) > 0;
 }
 
-/** How many tuned-but-inactive designs to keep on the shelf. Each carries its
- *  own photos, so this is a storage budget, not a UX one. Sized so a partner
- *  template's One/Two/Four variants plus a panel or two all fit. */
-const MAX_PARKED = 6;
+/** How many tuned-but-inactive designs to keep on the shelf. The chrome sync
+ *  parks a doc for EVERY layout the user visits (3 formats × 3 partner
+ *  layouts = 9 reachable keys, plus label-cleared shapes and panel docs), so
+ *  this must cover a whole tour — the quota catch in persistTuned is the
+ *  real storage backstop. The trim drops the least-recently-TOUCHED entries
+ *  first (parkDoc re-inserts at the end), so the design the user keeps
+ *  returning to is never the one evicted. */
+const MAX_PARKED = 16;
 
 /**
  * Save the active tuned design plus the parked ones. The active design matters
@@ -286,13 +288,16 @@ function persistTuned(active: SimpleDoc | null, parked: Record<string, SimpleDoc
     else localStorage.removeItem(CUSTOM_KEY);
   } catch { /* over quota — it stays in memory for this session */ }
 
-  const trimmed = Object.entries(parked).slice(-MAX_PARKED);
-  try {
-    localStorage.setItem(PARKED_KEY, JSON.stringify(Object.fromEntries(trimmed)));
-  } catch {
-    // No room for the shelf — drop it rather than wedge the active design.
-    try { localStorage.removeItem(PARKED_KEY); } catch { /* ignore */ }
+  // Keep as many of the most-recently-touched entries as fit: a shelf too
+  // big for the quota sheds its stalest docs first (halving until it fits)
+  // instead of vanishing wholesale.
+  for (let keep = Math.min(Object.keys(parked).length, MAX_PARKED); keep > 0; keep = Math.floor(keep / 2)) {
+    try {
+      localStorage.setItem(PARKED_KEY, JSON.stringify(Object.fromEntries(Object.entries(parked).slice(-keep))));
+      return;
+    } catch { /* try fewer */ }
   }
+  try { localStorage.removeItem(PARKED_KEY); } catch { /* ignore */ }
 }
 
 export default function SimplePage() {
@@ -320,6 +325,11 @@ export default function SimplePage() {
   // saving, cleared by Revert. Drives the header "Update <name>" button.
   const [loadedItem, setLoadedItem] = useState<{ id: string; name: string; kind: "panel" | "partner" } | null>(null);
   const [updatingItem, setUpdatingItem] = useState(false);
+  // What the loaded template consists of — its (format × layout) combos.
+  // Shown as dots on the Format / logo-layout buttons plus a "set up for /
+  // not set up for" line, so nobody has to discover by clicking around that
+  // a template only exists in 1:1.
+  const [coverage, setCoverage] = useState<TemplateCoverage[] | null>(null);
 
   const { exportRef, isExporting, exportImage } = useExport();
   const genDoc = useMemo(
@@ -337,7 +347,7 @@ export default function SimplePage() {
         const raw = sessionStorage.getItem(ADVANCED_STORAGE_KEY);
         if (raw) {
           const s = JSON.parse(raw);
-          const adopted = { format: s.format, customSize: s.customSize, design: s.design, canvasImages: s.canvasImages ?? [] } as SimpleDoc;
+          const adopted = migrateLegacyPanelDoc({ format: s.format, customSize: s.customSize, design: s.design, canvasImages: s.canvasImages ?? [] } as SimpleDoc);
           // Only adopt a design with something in it. An empty editor doc used
           // to be a transient annoyance you could close the tab on; now that
           // tuning is saved, adopting one would strand you on a blank panel.
@@ -356,7 +366,7 @@ export default function SimplePage() {
       } else {
         const rawCustom = localStorage.getItem(CUSTOM_KEY);
         if (rawCustom) {
-          const saved = JSON.parse(rawCustom) as SimpleDoc;
+          const saved = migrateLegacyPanelDoc(JSON.parse(rawCustom) as SimpleDoc);
           // Same guard on the way back in — never restore someone onto a blank
           // canvas, and clear the bad entry so it stops haunting them.
           if (hasContent(saved)) setCustom(saved);
@@ -364,9 +374,22 @@ export default function SimplePage() {
         }
       }
       const rawParked = localStorage.getItem(PARKED_KEY);
-      if (rawParked) setParked(JSON.parse(rawParked));
+      if (rawParked) {
+        // Migrate + RE-KEY: a role-less parked doc sits under a key no rebuild
+        // can reproduce, so its tuning would never revive. Order (= touch
+        // recency) is preserved by the map.
+        const shelf = JSON.parse(rawParked) as Record<string, SimpleDoc>;
+        setParked(Object.fromEntries(Object.values(shelf).map((d) => {
+          const m = migrateLegacyPanelDoc(d);
+          return [panelShapeKey(m), m];
+        })));
+      }
       const rawLoaded = sessionStorage.getItem(LOADED_ITEM_KEY);
-      if (rawLoaded) setLoadedItem(JSON.parse(rawLoaded));
+      if (rawLoaded) {
+        const li = JSON.parse(rawLoaded);
+        setLoadedItem({ id: li.id, name: li.name, kind: li.kind });
+        if (Array.isArray(li.coverage)) setCoverage(li.coverage);
+      }
     } catch { /* start fresh */ }
 
     // Restore the last panel. Done here rather than in a useState initializer
@@ -376,9 +399,15 @@ export default function SimplePage() {
       if (rawForm) {
         const saved = JSON.parse(rawForm) as Partial<PersistedForm>;
         if (saved?.form?.speakers) {
-          setForm(saved.form);
+          // Old saved forms carry two-field people — fold company into the
+          // single description field (no-op on current forms).
+          setForm({
+            ...saved.form,
+            moderator: mergePersonDescription(saved.form.moderator),
+            speakers: saved.form.speakers.map(mergePersonDescription),
+          });
           if (saved.format) setFormat(saved.format);
-          setStash(saved.stash ?? []);
+          setStash((saved.stash ?? []).map(mergePersonDescription));
           if (saved.template) setTemplate(saved.template);
           if (saved.partner) {
             // Migrate the short-lived single-`logo` shape (2026-07-21 morning)
@@ -422,20 +451,57 @@ export default function SimplePage() {
     const rebuilt = template === "partner" ? buildPartnerDesign(partner, format) : buildSimpleDesign(form, format);
 
     if (custom) {
-      // Same shape → carry the tuning across, only the words change.
-      const retargeted = retargetTunedDoc(custom, rebuilt);
+      // Same shape → carry the tuning across, only the words change. For a
+      // partner doc, a slot gaining/losing its logo changes the shape but not
+      // the layout — reconcile the slots instead of binning the tuning.
+      const retargeted = retargetTunedDoc(custom, rebuilt)
+        ?? (template === "partner" ? retargetPartnerLayout(custom, rebuilt, partner.layout) : null);
       if (retargeted) {
         setCustom(retargeted);
         return;
       }
-      // Different shape → park it. Stepping 3 → 2 → 3, or flipping format and
-      // back, must not cost the tuning just because it can't apply right now.
-      setParked((p) => ({ ...p, [panelShapeKey(custom)]: custom }));
+      // Different shape → park it (touch-recency insert, see parkDoc).
+      // Stepping 3 → 2 → 3, or flipping format and back, must not cost the
+      // tuning just because it can't apply right now.
+      setParked((p) => parkDoc(p, custom));
     }
 
-    // Coming back to a shape we've tuned before? Put it back.
+    // Coming back to a shape we've tuned before? Put it back. Exact shape
+    // first; else, for partner docs, any parked design of the same logo
+    // layout — a saved Two-logo variant must revive even when the number of
+    // uploaded logos differs from when it was tuned. (Scan order is reversed
+    // insertion order — any same-layout match is equally valid, retarget
+    // re-checks format/size/roles itself.)
     const revived = parked[panelShapeKey(rebuilt)];
-    setCustom(revived ? retargetTunedDoc(revived, rebuilt) : null);
+    let next = revived ? retargetTunedDoc(revived, rebuilt) : null;
+    if (!next && template === "partner") {
+      for (const d of Object.values(parked).reverse()) {
+        next = retargetPartnerLayout(d, rebuilt, partner.layout);
+        if (next) break;
+      }
+    }
+    // Same format, different layout: the chrome (label position, hand-drawn
+    // lines, TechBBQ logo) follows the user across One/Two/Four — tune it
+    // once, it stays put in every layout of this format. Applies to a revived
+    // variant AND to the generic rebuild of a not-yet-tuned layout.
+    if (template === "partner" && custom
+      && custom.format === rebuilt.format
+      && custom.customSize.width === rebuilt.customSize.width
+      && custom.customSize.height === rebuilt.customSize.height) {
+      next = syncPartnerChrome(custom, next ?? rebuilt);
+    }
+    // Same idea for panels: a speaker-count change must not move the header
+    // or the moderator card, so both are carried from the design being left.
+    // Gated like the partner block — the sync returns its target UNCHANGED on
+    // a guard bail, which would still wrongly promote a generic rebuild to a
+    // "custom" doc if called cross-format or with a partner doc as source.
+    if (template === "panel" && custom && !isPartnerDoc(custom)
+      && custom.format === rebuilt.format
+      && custom.customSize.width === rebuilt.customSize.width
+      && custom.customSize.height === rebuilt.customSize.height) {
+      next = syncPanelChrome(custom, next ?? rebuilt);
+    }
+    setCustom(next);
   }, [hydrated, template, form, partner, format, custom, parked]);
 
   // Keep the tuned designs across tab closes — they were session-only, so
@@ -453,17 +519,23 @@ export default function SimplePage() {
   // doesn't read as an edit and retarget (or bin) the doc we just loaded.
   // Adopt a library item as "what I'm working on": header Update button, the
   // re-copyable ?load= URL, and the applied-marker so a refresh keeps edits.
-  const adoptLibraryIdentity = (id: string, name: string, kind: "panel" | "partner") => {
+  const adoptLibraryIdentity = (id: string, name: string, kind: "panel" | "partner", cov: TemplateCoverage[]) => {
     setLoadedItem({ id, name, kind });
+    setCoverage(cov);
     try {
       window.history.replaceState(null, "", `${window.location.pathname}?load=${id}`);
       sessionStorage.setItem(DEEPLINK_DONE_KEY, id);
-      sessionStorage.setItem(LOADED_ITEM_KEY, JSON.stringify({ id, name, kind }));
+      sessionStorage.setItem(LOADED_ITEM_KEY, JSON.stringify({ id, name, kind, coverage: cov }));
     } catch { /* URL cosmetics only */ }
   };
 
   const handleLibraryLoad = (item: LibraryLoadedItem) => {
-    const { simpleForms, simpleVariants, ...doc } = item.doc;
+    const { simpleForms, simpleVariants: rawVariants, ...rawDoc } = item.doc;
+    // Items saved before photo roles existed can't rehydrate their sidebar
+    // photos or ever shape-match a rebuild, and pre-description-merge items
+    // carry separate company layers — migrate both on the way in.
+    const doc = migrateLegacyPanelDoc(rawDoc);
+    const simpleVariants = rawVariants?.map(migrateLegacyPanelDoc);
     const restored = formsFromDoc(item.kind, doc, simpleForms);
     const nextForm = restored.form ?? form;
     const nextPartner = restored.partner ?? partner;
@@ -484,7 +556,7 @@ export default function SimplePage() {
       ...Object.fromEntries((simpleVariants ?? []).map((d) => [panelShapeKey(d), d])),
     }));
     baselineRef.current = JSON.stringify([restored.template, nextForm, nextPartner, doc.format]);
-    adoptLibraryIdentity(item.id, item.name, restored.template);
+    adoptLibraryIdentity(item.id, item.name, restored.template, bundleCoverage([doc, ...(simpleVariants ?? [])]));
   };
 
   // Deep link: /simple?load=<library-id> opens with that team design active —
@@ -524,18 +596,56 @@ export default function SimplePage() {
     })();
   });
 
+  // The team's canonical Partner Announcement — the library item whose design
+  // (all three logo layouts bundled) is what "Partner Announcement" should
+  // look like by default. Opening the template with nothing of your own loads
+  // it, so everyone starts from the design the team actually ships, not the
+  // built-in generic layout. Silent on failure (signed out, item deleted):
+  // the generic layout is the fallback, not an error.
+  const DEFAULT_PARTNER_ITEM_ID = "7583298d-759b-4f97-9d33-fc2e10776e97";
+  const defaultLoadTried = useRef(false);
+  useEffect(() => {
+    if (!hydrated || defaultLoadTried.current) return;
+    if (template !== "partner") return;
+    // Anything of the user's own wins over the default: an active tuned
+    // design, a loaded library item, a ?load= link (the deep-link effect owns
+    // that), or parked partner tuning waiting to revive.
+    if (custom || loadedItem) return;
+    if (Object.values(parked).some(isPartnerDoc)) return;
+    if (new URLSearchParams(window.location.search).get("load")) return;
+    defaultLoadTried.current = true;
+    (async () => {
+      try {
+        const res = await fetch(`/api/library/${DEFAULT_PARTNER_ITEM_ID}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        handleLibraryLoad({ id: DEFAULT_PARTNER_ITEM_ID, name: data.item.name, kind: data.item.kind, doc: data.item.doc });
+        toast.info(`Loaded the team template "${data.item.name}"`);
+      } catch { /* offline — keep the generic layout */ }
+    })();
+  });
+
   const revertCustom = () => {
     setCustom(null);
     // Forget the parked copy for this shape too — otherwise Revert would undo
-    // the tuning only until the next round-trip brought it back.
+    // the tuning only until the next round-trip brought it back. For partner
+    // docs that means every parked doc of the CURRENT layout, not just the
+    // exact shape: the rebuild effect's layout-family fallback would happily
+    // revive a sibling variant on the next form edit, bringing back the
+    // tuning the user just discarded.
     setParked((p) => {
-      const next = { ...p };
-      if (custom) delete next[panelShapeKey(custom)];
+      const next: typeof p = {};
+      for (const [k, d] of Object.entries(p)) {
+        if (custom && k === panelShapeKey(custom)) continue;
+        if (template === "partner" && isPartnerDoc(d) && partnerLayoutOf(d) === partner.layout) continue;
+        next[k] = d;
+      }
       return next;
     });
     // The address bar and Update button stop claiming a library design we no
     // longer show.
     setLoadedItem(null);
+    setCoverage(null);
     try {
       window.history.replaceState(null, "", window.location.pathname);
       sessionStorage.removeItem(DEEPLINK_DONE_KEY);
@@ -598,7 +708,10 @@ export default function SimplePage() {
       speakers: [
         ...f.speakers,
         ...restored,
-        ...Array.from({ length: needed - restored.length }, () => emptyPerson()),
+        // A brand-new 4th slot starts as the sample speaker (photo + name)
+        // instead of an empty frame; further slots stay blank.
+        ...Array.from({ length: needed - restored.length }, (_, k) =>
+          current + restored.length + k === 3 ? sampleFourthSpeaker() : emptyPerson()),
       ],
     }));
   };
@@ -642,12 +755,31 @@ export default function SimplePage() {
       const data = await res.json();
       if (!res.ok) { toast.error(data.error ?? "Update failed"); return; }
       toast.success(`"${loadedItem.name}" updated — its link now opens this design`);
+      // The template now consists of what was just saved — refresh the
+      // set-up-for hints (a newly added format/layout gets its dot).
+      adoptLibraryIdentity(loadedItem.id, loadedItem.name, template, bundleCoverage([currentBundle, ...currentBundle.simpleVariants]));
     } catch {
       toast.error("Update failed — could not reach the library");
     } finally {
       setUpdatingItem(false);
     }
   };
+
+  // Coverage hints only apply while the sidebar shows the loaded template's
+  // kind — on the other template the buttons are plain.
+  const activeCoverage = loadedItem && template === loadedItem.kind ? coverage : null;
+  const coveredFormats = useMemo(() => new Set((activeCoverage ?? []).map((c) => c.format)), [activeCoverage]);
+  const LAYOUT_NAMES = { single: "One", duo: "Two", quad: "Four" } as const;
+  const currentCovered = !activeCoverage || activeCoverage.some((c) =>
+    c.format === format && (template !== "partner" || c.layout === partner.layout));
+  // "1:1 (One, Two, Four) · 16:9" — what the loaded template consists of.
+  const coverageSummary = FORMATS
+    .filter((f) => (activeCoverage ?? []).some((c) => c.format === f.id))
+    .map((f) => {
+      const layouts = (activeCoverage ?? []).filter((c) => c.format === f.id && c.layout).map((c) => LAYOUT_NAMES[c.layout!]);
+      return layouts.length ? `${f.label} (${layouts.join(", ")})` : f.label;
+    })
+    .join(" · ");
 
   const isEmpty = template === "partner"
     ? !custom && !partner.label.trim() && !partner.logos.some((l) => l?.src)
@@ -687,7 +819,7 @@ export default function SimplePage() {
         currentKind={template}
         currentBundle={currentBundle}
         onLoad={handleLibraryLoad}
-        onSaved={({ id, name, kind }) => adoptLibraryIdentity(id, name, kind)}
+        onSaved={({ id, name, kind }) => adoptLibraryIdentity(id, name, kind, bundleCoverage([currentBundle, ...currentBundle.simpleVariants]))}
       />
       <AnimatedGradient />
       <div className="relative z-10 flex flex-col h-screen overflow-hidden">
@@ -723,29 +855,49 @@ export default function SimplePage() {
               <PencilRuler className="w-3.5 h-3.5" strokeWidth={1.5} />
               Edit &amp; fine-tune
             </Link>
-            <div role="radiogroup" aria-label="Export format" className="flex items-center gap-1 rounded-full bg-card-2 p-1">
-              {(["png", "jpeg"] as const).map((fmt) => (
-                <button
-                  key={fmt}
-                  role="radio"
-                  aria-checked={exportFormat === fmt}
-                  onClick={() => setExportFormat(fmt)}
-                  className={`px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider transition-colors ${exportFormat === fmt ? "bg-surface text-ink" : "text-muted hover:text-foreground"}`}
-                >
-                  {fmt === "jpeg" ? "JPG" : fmt}
-                </button>
-              ))}
+            {/* Save split-button: the main half exports with the current
+                format; the chevron opens the PNG/JPG choice. The always-on
+                radiogroup this replaces read as header noise. */}
+            <div className="flex items-stretch rounded-full bg-surface text-ink overflow-hidden">
+              <button
+                onClick={handleExport}
+                disabled={isExporting || isEmpty}
+                aria-label="Save image"
+                title={isEmpty ? (template === "partner" ? "Add a label or a partner logo first" : "Add a headline or a speaker first") : `Save image as ${exportFormat === "jpeg" ? "JPG" : "PNG"}`}
+                className="flex items-center gap-1.5 pl-5 pr-3.5 py-2 text-xs font-semibold tracking-wide hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isExporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" strokeWidth={1.5} />}
+                {isExporting ? "Exporting…" : "Save image"}
+              </button>
+              <Popover.Root>
+                <Popover.Trigger asChild>
+                  <button
+                    aria-label="Choose image format"
+                    title={`Format: ${exportFormat === "jpeg" ? "JPG" : "PNG"}`}
+                    className="flex items-center pl-2 pr-3 py-2 border-l border-black/15 hover:bg-white transition-colors"
+                  >
+                    <ChevronDown className="w-3.5 h-3.5" strokeWidth={2} />
+                  </button>
+                </Popover.Trigger>
+                <Popover.Portal>
+                  <Popover.Content align="end" sideOffset={8} role="radiogroup" aria-label="Image format" className="z-50 min-w-[150px] rounded-xl border border-white/10 bg-[#15110e] p-1 shadow-xl">
+                    {(["png", "jpeg"] as const).map((fmt) => (
+                      <Popover.Close asChild key={fmt}>
+                        <button
+                          role="radio"
+                          aria-checked={exportFormat === fmt}
+                          onClick={() => setExportFormat(fmt)}
+                          className="w-full flex items-center justify-between gap-6 px-3 py-2 rounded-lg text-xs text-white/85 hover:bg-white/10 transition-colors"
+                        >
+                          <span className="font-medium">{fmt === "jpeg" ? "JPG" : "PNG"}</span>
+                          {exportFormat === fmt && <Check className="w-3.5 h-3.5 text-[#FF6B00]" strokeWidth={2.5} />}
+                        </button>
+                      </Popover.Close>
+                    ))}
+                  </Popover.Content>
+                </Popover.Portal>
+              </Popover.Root>
             </div>
-            <button
-              onClick={handleExport}
-              disabled={isExporting || isEmpty}
-              aria-label="Save image"
-              title={isEmpty ? (template === "partner" ? "Add a label or a partner logo first" : "Add a headline or a speaker first") : "Save image"}
-              className="flex items-center gap-1.5 px-5 py-2 rounded-full bg-surface text-ink text-xs font-semibold tracking-wide hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isExporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" strokeWidth={1.5} />}
-              {isExporting ? "Exporting…" : "Save image"}
-            </button>
           </div>
         </header>
 
@@ -758,8 +910,8 @@ export default function SimplePage() {
                 <span className="text-xs text-white/85 leading-tight">
                   <span className="font-semibold text-[#FF8A3D]">Custom design active — saved.</span>{" "}
                   {template === "partner"
-                    ? "Text edits and logo swaps keep this layout. Changing the logo layout or format rebuilds it."
-                    : "Text edits and photo swaps keep this layout. Changing the speaker count, moderator or format rebuilds it."}
+                    ? "Text edits and logo swaps keep this layout. Switching layout or format shows the design saved for it, when there is one."
+                    : "Text edits and photo swaps keep this layout. Switching format shows the design saved for it; changing the speaker count or moderator rebuilds."}
                 </span>
                 <button
                   onClick={revertCustom}
@@ -790,25 +942,45 @@ export default function SimplePage() {
               </div>
             </section>
 
-            {/* Format */}
+            {/* Format. Switching parks the current tuned design and revives
+                the one saved for the target format, when the template has
+                one — it no longer discards the loaded template identity. */}
             <section className="flex flex-col gap-2">
               <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Format</span>
               <div className="flex gap-1.5">
                 {FORMATS.map((f) => {
                   const active = doc.format === f.id;
+                  const isSet = coveredFormats.has(f.id);
                   return (
                     <button
                       key={f.id}
-                      onClick={() => { revertCustom(); setFormat(f.id); }}
+                      onClick={() => setFormat(f.id)}
                       aria-pressed={active}
+                      title={activeCoverage ? (isSet ? `"${loadedItem!.name}" has a ${f.label} design` : `"${loadedItem!.name}" has no ${f.label} design yet`) : undefined}
                       className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-xs transition-all ${active ? "bg-[#FF0028] text-white" : "bg-white/5 border border-white/10 text-white/70 hover:bg-white/10"}`}
                     >
                       <f.icon className="w-3.5 h-3.5" />
                       <span className="font-medium">{f.label}</span>
+                      {isSet && <span aria-hidden className={`w-1.5 h-1.5 rounded-full ${active ? "bg-white" : "bg-[#FF6B00]"}`} />}
                     </button>
                   );
                 })}
               </div>
+              {activeCoverage && (
+                currentCovered ? (
+                  <p className="text-[11px] leading-snug text-white/45">
+                    &ldquo;{loadedItem!.name}&rdquo; is set up for {coverageSummary}.
+                  </p>
+                ) : (
+                  <div className="rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-xs leading-snug text-amber-100/90">
+                    <span className="font-semibold">
+                      &ldquo;{loadedItem!.name}&rdquo; isn&apos;t set up for {FORMATS.find((f) => f.id === format)?.label}
+                      {template === "partner" ? ` · ${LAYOUT_NAMES[partner.layout]} logo${partner.layout === "single" ? "" : "s"}` : ""} yet.
+                    </span>{" "}
+                    This is the automatic layout. Fine-tune it and press Update to add it to the template.
+                  </div>
+                )
+              )}
             </section>
 
             {template === "partner" && (<>
@@ -825,48 +997,57 @@ export default function SimplePage() {
                   { id: "quad" as const, label: "Four", icon: LayoutGrid },
                 ]).map((opt) => {
                   const active = partner.layout === opt.id;
+                  const isSet = (activeCoverage ?? []).some((c) => c.format === format && c.layout === opt.id);
                   return (
                     <button
                       key={opt.id}
                       onClick={() => setPartner((p) => ({ ...p, layout: opt.id }))}
                       aria-pressed={active}
+                      title={activeCoverage ? (isSet ? `"${loadedItem!.name}" has this layout in this format` : `"${loadedItem!.name}" has no ${opt.label}-logo design in this format yet`) : undefined}
                       className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-xs transition-all ${active ? "bg-[#FF0028] text-white" : "bg-white/5 border border-white/10 text-white/70 hover:bg-white/10"}`}
                     >
                       <opt.icon className="w-3.5 h-3.5" />
                       <span className="font-medium">{opt.label}</span>
+                      {isSet && <span aria-hidden className={`w-1.5 h-1.5 rounded-full ${active ? "bg-white" : "bg-[#FF6B00]"}`} />}
                     </button>
                   );
                 })}
               </div>
-              {partner.layout === "quad" ? (
-                <div className="grid grid-cols-2 gap-2">
-                  {[0, 1, 2, 3].map((i) => (
-                    <LogoSlot
-                      key={i}
-                      small
-                      logo={partner.logos[i] ?? null}
-                      onChange={(l) => setPartnerLogo(i, l)}
-                      onSwapPrev={i > 0 ? () => swapLogos(i, i - 1) : undefined}
-                      onSwapNext={i < 3 ? () => swapLogos(i, i + 1) : undefined}
-                    />
-                  ))}
-                </div>
-              ) : partner.layout === "duo" ? (
-                <div className="grid grid-cols-2 gap-2">
-                  {[0, 1].map((i) => (
-                    <LogoSlot
-                      key={i}
-                      small
-                      logo={partner.logos[i] ?? null}
-                      onChange={(l) => setPartnerLogo(i, l)}
-                      onSwapPrev={i === 1 ? () => swapLogos(1, 0) : undefined}
-                      onSwapNext={i === 0 ? () => swapLogos(0, 1) : undefined}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <LogoSlot logo={partner.logos[0] ?? null} onChange={(l) => setPartnerLogo(0, l)} />
-              )}
+              {/* Fixed-height slot area: One (112px), Two (80px) and Four
+                  (168px) reserve the tallest so switching layouts doesn't
+                  reflow everything below — the jump made the whole sidebar
+                  shake. */}
+              <div className="min-h-[168px]">
+                {partner.layout === "quad" ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    {[0, 1, 2, 3].map((i) => (
+                      <LogoSlot
+                        key={i}
+                        small
+                        logo={partner.logos[i] ?? null}
+                        onChange={(l) => setPartnerLogo(i, l)}
+                        onSwapPrev={i > 0 ? () => swapLogos(i, i - 1) : undefined}
+                        onSwapNext={i < 3 ? () => swapLogos(i, i + 1) : undefined}
+                      />
+                    ))}
+                  </div>
+                ) : partner.layout === "duo" ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    {[0, 1].map((i) => (
+                      <LogoSlot
+                        key={i}
+                        small
+                        logo={partner.logos[i] ?? null}
+                        onChange={(l) => setPartnerLogo(i, l)}
+                        onSwapPrev={i === 1 ? () => swapLogos(1, 0) : undefined}
+                        onSwapNext={i === 0 ? () => swapLogos(0, 1) : undefined}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <LogoSlot logo={partner.logos[0] ?? null} onChange={(l) => setPartnerLogo(0, l)} />
+                )}
+              </div>
             </section>
             </>)}
 
@@ -958,11 +1139,12 @@ export default function SimplePage() {
             <section className="flex flex-col gap-2">
               <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Background</span>
               <BackgroundPicker
+                compact
                 value={template === "partner" ? partner.backgroundId : form.backgroundId}
                 onChange={(id) => template === "partner"
                   ? setPartner((p) => ({ ...p, backgroundId: id }))
                   : setForm((f) => ({ ...f, backgroundId: id }))}
-                excludeGroups={template === "partner" ? ["Tech Stage", "Bonfire Stage", "Founder Stage"] : undefined}
+                excludeGroups={template === "partner" ? ["Tech Stage", "BBQ Stage", "Bonfire Stage", "Founder Stage"] : undefined}
               />
             </section>
           </aside>

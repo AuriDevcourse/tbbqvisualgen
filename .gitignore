@@ -45,3 +45,4 @@ next-env.d.ts
 
 # ship the env template
 !.env.example
+.merge-partner/

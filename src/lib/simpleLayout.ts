@@ -5,7 +5,12 @@ import type { CanvasImage } from "@/components/ImagePlacer";
 
 export interface SimplePerson {
   name: string;
+  /** Free-text description under the name — "job title, company", or anything
+   *  ("Founder at X & Y"). The single sidebar field writes here. */
   title: string;
+  /** Legacy second field (2026-07-29: the sidebar folded it into `title`).
+   *  Kept so old saved forms/snapshots deserialize; always "" going forward —
+   *  `mergePersonDescription` folds any legacy value into `title`. */
   company: string;
   /** Uploaded headshot as a data-URL. Empty = show a placeholder circle. */
   photo?: string;
@@ -22,6 +27,14 @@ export function isBlankPerson(p: SimplePerson): boolean {
   return !p.name.trim() && !p.title.trim() && !p.company.trim() && !p.photo;
 }
 
+/** An empty person/logo slot: the gradient-outlined frame the builders emit
+ *  where a photo or logo would go. */
+const isSlotPlaceholder = (s: ShapeElement) =>
+  s.type === "rectangle" && s.fillType === "outline" && s.colorType === "gradient";
+
+const placeholderCount = (doc: SimpleDoc): number =>
+  (doc.design.shapes ?? []).filter(isSlotPlaceholder).length;
+
 /**
  * Identifies which layers a doc is made of. Two docs sharing a key can swap
  * words via `retargetTunedDoc`, so it doubles as the shelf label for parking a
@@ -37,7 +50,13 @@ export function panelShapeKey(doc: SimpleDoc): string {
   // composition as one without, and a single-logo doc is not a quad doc even
   // when the text roles match.
   const imgRoles = doc.canvasImages.map((i) => i.simpleRole ?? "img").sort();
-  return `${doc.format}|${doc.customSize.width}x${doc.customSize.height}|${roles.join(",")}|imgs:${imgRoles.join(",") || "none"}`;
+  // Placeholder frames count too: a BLANK extra speaker adds no text or image
+  // layer — its only trace is the outlined frame. Without this, a 4-speaker
+  // doc with a blank 4th shares its key with the 3-speaker doc, and the tuned
+  // 3-speaker design revives right over the new card (Auri: "the 4th speaker
+  // card doesn't appear"). Keys are recomputed on every hydrate/load, so
+  // extending the format strands nothing.
+  return `${doc.format}|${doc.customSize.width}x${doc.customSize.height}|${roles.join(",")}|imgs:${imgRoles.join(",") || "none"}|frames:${placeholderCount(doc)}`;
 }
 
 /**
@@ -55,6 +74,11 @@ export function retargetTunedDoc(tuned: SimpleDoc, rebuilt: SimpleDoc): SimpleDo
   if (tuned.format !== rebuilt.format) return null;
   if (tuned.customSize.width !== rebuilt.customSize.width) return null;
   if (tuned.customSize.height !== rebuilt.customSize.height) return null;
+
+  // A blank person leaves no text or image layer — only a placeholder frame.
+  // Role comparison alone is blind to it, so a 3-speaker tuning would absorb
+  // a 4th-blank-speaker rebuild and the new card would never show.
+  if (placeholderCount(tuned) !== placeholderCount(rebuilt)) return null;
 
   // Images match by slot role, the same way texts match below. A REPLACED
   // photo/logo (same slot, new file) carries its src into the tuned layer,
@@ -94,11 +118,386 @@ export function retargetTunedDoc(tuned: SimpleDoc, rebuilt: SimpleDoc): SimpleDo
       // CURRENT pick across, else switching backgrounds does nothing while a
       // tuned design is active.
       backgroundId: rebuilt.design.backgroundId,
-      texts: tuned.design.texts.map((t) =>
-        t.simpleRole && want.has(t.simpleRole) ? { ...t, content: want.get(t.simpleRole) as string } : t,
-      ),
+      texts: tuned.design.texts.map((t) => carryWords(t, want)),
     },
   };
+}
+
+/**
+ * Put the rebuilt doc's words into a tuned text layer. Caption layers
+ * (name/title/…) arrive pre-wrapped for the GENERIC layout's column widths —
+ * when the WORDS are unchanged, the tuned layer keeps its own line breaks
+ * (stamping the generic wrap re-broke "Omolade Adebisi" onto two lines after
+ * a 4→3→4 round-trip even though nobody edited her). Headline/subtitle/label
+ * are verbatim form text (the user's own Enter presses), so they compare
+ * exactly and an edited line break still lands.
+ */
+function carryWords(t: TextElement, want: Map<string, string>): TextElement {
+  if (!t.simpleRole || !want.has(t.simpleRole)) return t;
+  const next = want.get(t.simpleRole) as string;
+  const caption = /\.(name|title|company|secondary)$/.test(t.simpleRole);
+  const flat = (s: string) => s.split("\n").join(" ");
+  if (caption && flat(t.content) === flat(next)) return t;
+  return t.content === next ? t : { ...t, content: next };
+}
+
+/** Which partner logo layout a doc renders — read from its image roles, or
+ *  from the placeholder frames' role tags when no logo is uploaded yet (a
+ *  zero-logo partner doc still has a layout; only untagged legacy docs with
+ *  no images stay null). */
+export function partnerLayoutOf(doc: SimpleDoc): "single" | "duo" | "quad" | null {
+  const of = (r: string) =>
+    r === "logo-single" ? "single" as const
+    : r.startsWith("logo-duo-") ? "duo" as const
+    : /^logo-\d$/.test(r) ? "quad" as const
+    : null;
+  for (const i of doc.canvasImages) {
+    const l = of(i.simpleRole ?? "");
+    if (l) return l;
+  }
+  for (const s of doc.design.shapes ?? []) {
+    const l = of(s.simpleRole ?? "");
+    if (l) return l;
+  }
+  return null;
+}
+
+const SLOT_ROLES = {
+  single: ["logo-single"],
+  duo: ["logo-duo-0", "logo-duo-1"],
+  quad: ["logo-0", "logo-1", "logo-2", "logo-3"],
+} as const;
+
+/** An empty partner slot renders as this outline-gradient frame. */
+/**
+ * Like `retargetTunedDoc`, but for partner docs of the SAME logo layout with a
+ * DIFFERENT fill pattern — a slot gaining or losing its logo. The exact-key
+ * path treats that as a different composition and rebuilds, which bounced
+ * users off their hand-tuned layout the moment a slot changed (Auri hit this
+ * switching One/Two/Four when a saved variant had fewer logos uploaded than
+ * the form). Here the tuned geometry is kept: a slot that gained a logo swaps
+ * its placeholder frame for an image layer at the frame's position, and a
+ * cleared slot swaps its image back to a placeholder frame.
+ *
+ * `layout` comes from the form — the rebuilt doc can't always witness it
+ * (a doc with zero logos has no image roles).
+ */
+export function retargetPartnerLayout(tuned: SimpleDoc, rebuilt: SimpleDoc, layout: "single" | "duo" | "quad"): SimpleDoc | null {
+  if (partnerLayoutOf(tuned) !== layout) return null;
+  if (tuned.format !== rebuilt.format) return null;
+  if (tuned.customSize.width !== rebuilt.customSize.width) return null;
+  if (tuned.customSize.height !== rebuilt.customSize.height) return null;
+
+  // Words move across on the same contract as retargetTunedDoc.
+  const want = new Map(rebuilt.design.texts.filter((t) => t.simpleRole).map((t) => [t.simpleRole as string, t.content]));
+  const have = new Map(tuned.design.texts.filter((t) => t.simpleRole).map((t) => [t.simpleRole as string, t.content]));
+  if (want.size !== have.size) return null;
+  for (const role of want.keys()) if (!have.has(role)) return null;
+
+  const slotRoles: readonly string[] = SLOT_ROLES[layout];
+  const rebuiltImgs = new Map(rebuilt.canvasImages.filter((i) => i.simpleRole).map((i) => [i.simpleRole as string, i]));
+  const tunedImgs = new Map(tuned.canvasImages.filter((i) => i.simpleRole).map((i) => [i.simpleRole as string, i]));
+  // A role outside this layout's slot set means the docs aren't the plain
+  // partner composition this function understands — let the exact path rule.
+  for (const r of rebuiltImgs.keys()) if (!slotRoles.includes(r)) return null;
+  for (const r of tunedImgs.keys()) if (!slotRoles.includes(r)) return null;
+
+  // Map each empty slot to its placeholder frame — by role tag when present
+  // (the builder and this function both tag frames now). Untagged frames
+  // (legacy docs) fall back to array order over whatever roles remain: the
+  // builder emitted slots in role order, so for a doc it produced the k-th
+  // untagged frame is the k-th unclaimed slot. Any inconsistency — a frame
+  // count mismatch (hand-deleted frame), a tag for a slot that has an image —
+  // makes the mapping a guess: bail to a rebuild instead.
+  const placeholders = (tuned.design.shapes ?? []).filter(isSlotPlaceholder);
+  const emptyRoles = slotRoles.filter((r) => !tunedImgs.has(r));
+  if (placeholders.length !== emptyRoles.length) return null;
+  const placeholderOf = new Map<string, ShapeElement>();
+  const untagged: ShapeElement[] = [];
+  for (const p of placeholders) {
+    if (p.simpleRole && slotRoles.includes(p.simpleRole)) {
+      if (!emptyRoles.includes(p.simpleRole) || placeholderOf.has(p.simpleRole)) return null;
+      placeholderOf.set(p.simpleRole, p);
+    } else {
+      untagged.push(p);
+    }
+  }
+  const remaining = emptyRoles.filter((r) => !placeholderOf.has(r));
+  if (untagged.length !== remaining.length) return null;
+  remaining.forEach((r, k) => placeholderOf.set(r, untagged[k]));
+
+  const dropShapeIds = new Set<string>();
+  const dropImageIds = new Set<string>();
+  const addImages: CanvasImage[] = [];
+  const addShapes: ShapeElement[] = [];
+  const orderSwap = new Map<string, string>();
+
+  const nextImages = tuned.canvasImages.map((img) => {
+    const role = img.simpleRole;
+    if (!role) return img;
+    const next = rebuiltImgs.get(role);
+    if (next) {
+      // Filled before, filled now — carry the (possibly new) picture into the
+      // tuned frame. The crop was drawn for the old image.
+      return next.src === img.src ? img : { ...img, src: next.src, naturalWidth: next.naturalWidth, naturalHeight: next.naturalHeight, crop: undefined };
+    }
+    // Slot cleared — the tuned image becomes a placeholder frame with the
+    // same hand-placed geometry, tagged with the slot it stands in for.
+    dropImageIds.add(img.id);
+    const shape: ShapeElement = {
+      id: `shape-${img.id}`, type: "rectangle", x: img.x, y: img.y,
+      width: img.width, height: img.height,
+      fillType: "outline", strokeWidth: 2 / 1500, colorType: "gradient",
+      color1: "#FF6B00", color2: "#FF0028", opacity: 1, blur: 0, rotation: 0,
+      borderRadius: 0.08,
+      simpleRole: role,
+    };
+    addShapes.push(shape);
+    orderSwap.set(`image:${img.id}`, `shape:${shape.id}`);
+    return img;
+  });
+
+  for (const role of slotRoles) {
+    const next = rebuiltImgs.get(role);
+    if (!next || tunedImgs.has(role)) continue;
+    // Slot filled — the tuned placeholder frame becomes the image, keeping
+    // the frame's hand-placed geometry.
+    const ph = placeholderOf.get(role);
+    if (!ph) return null;
+    dropShapeIds.add(ph.id);
+    const img: CanvasImage = {
+      id: `img-${ph.id}`, src: next.src, x: ph.x, y: ph.y,
+      width: ph.width, height: ph.height,
+      cornerRadius: 0, border: false, fit: "contain",
+      naturalWidth: next.naturalWidth, naturalHeight: next.naturalHeight,
+      simpleRole: role,
+    };
+    addImages.push(img);
+    orderSwap.set(`shape:${ph.id}`, `image:${img.id}`);
+  }
+
+  return {
+    ...tuned,
+    canvasImages: [...nextImages.filter((i) => !dropImageIds.has(i.id)), ...addImages],
+    design: {
+      ...tuned.design,
+      backgroundId: rebuilt.design.backgroundId,
+      texts: tuned.design.texts.map((t) => carryWords(t, want)),
+      shapes: [...(tuned.design.shapes ?? []).filter((s) => !dropShapeIds.has(s.id)), ...addShapes],
+      layerOrder: tuned.design.layerOrder?.map((l) => orderSwap.get(l) ?? l),
+    },
+  };
+}
+
+/**
+ * Carry the shared "chrome" of a partner design — the label's position and
+ * styling, hand-added decorations (lines etc.), and the TechBBQ logo settings
+ * — from the doc being left (`from`) into the doc being shown (`to`). Used on
+ * layout switches within the SAME format, so One/Two/Four share one chrome:
+ * tune the label and the line once, switch layouts, they stay put.
+ *
+ * The layout-specific part of `to` is untouched: its slot images, its slot
+ * placeholder frames, its label CONTENT (the plural rule lives in the
+ * builder). `to`'s own role-less extras are replaced by `from`'s — chrome is
+ * last-touched-wins, per Auri's "should stay in the same place".
+ * Cross-format/size pairs are returned unchanged: each format has its own
+ * chrome geometry.
+ */
+export function syncPartnerChrome(from: SimpleDoc, to: SimpleDoc): SimpleDoc {
+  if (from.format !== to.format) return to;
+  if (from.customSize.width !== to.customSize.width) return to;
+  if (from.customSize.height !== to.customSize.height) return to;
+
+  const fromLabel = from.design.texts.find((t) => t.simpleRole === "label");
+  const texts = [
+    ...to.design.texts
+      .filter((t) => t.simpleRole)
+      .map((t) => (t.simpleRole === "label" && fromLabel ? { ...fromLabel, id: t.id, content: t.content } : t)),
+    ...from.design.texts.filter((t) => !t.simpleRole),
+  ];
+  // `to` keeps only its slot placeholder frames; every other shape (the chip
+  // if it still exists, hand-drawn lines, decorations) comes from `from` —
+  // minus `from`'s own placeholders, which belong to the layout being left.
+  const shapes = [
+    ...(to.design.shapes ?? []).filter(isSlotPlaceholder),
+    ...(from.design.shapes ?? []).filter((s) => !isSlotPlaceholder(s)),
+  ];
+  const canvasImages = [
+    ...to.canvasImages.filter((i) => i.simpleRole),
+    ...from.canvasImages.filter((i) => !i.simpleRole),
+  ];
+  // Keep `from`'s z-order for the elements that survived; the renderer's
+  // reconcileLayerOrder slots the rest in predictably.
+  const ids = new Set([
+    ...texts.map((t) => `text:${t.id}`),
+    ...shapes.map((s) => `shape:${s.id}`),
+    ...canvasImages.map((i) => `image:${i.id}`),
+  ]);
+  const layerOrder = from.design.layerOrder?.filter((l) => ids.has(l));
+
+  return {
+    ...to,
+    canvasImages,
+    design: {
+      ...to.design,
+      texts,
+      shapes,
+      layerOrder,
+      showLogo: from.design.showLogo,
+      logoStyle: from.design.logoStyle,
+      logoPosition: from.design.logoPosition,
+      logoCustomPosition: from.design.logoCustomPosition,
+      logoScale: from.design.logoScale,
+    },
+  };
+}
+
+/**
+ * The panel counterpart of `syncPartnerChrome`, scoped to what must not move
+ * when the speaker count changes (Auri: "a three-speaker panel should always
+ * look the same"): the HEADER (headline, subtitle, session label + its chip)
+ * and the MODERATOR (photo card, caption texts, the overlaid "MODERATOR"
+ * word). Speaker cards, their captions and role labels are count-specific and
+ * always stay the target's own.
+ *
+ * Geometry and styling come from `from`; content stays the target's (both
+ * derive from the same form anyway). Cross-format/size pairs and partner docs
+ * are returned unchanged.
+ */
+export function syncPanelChrome(from: SimpleDoc, to: SimpleDoc): SimpleDoc {
+  if (from.format !== to.format) return to;
+  if (from.customSize.width !== to.customSize.width) return to;
+  if (from.customSize.height !== to.customSize.height) return to;
+  if (isPartnerDoc(from) || isPartnerDoc(to)) return to;
+
+  // The chrome roles: header + moderator caption. `moderator.secondary` is
+  // the grid layout's merged "title, company" line.
+  const CHROME = new Set([
+    "headline", "subtitle", "label",
+    "moderator.name", "moderator.title", "moderator.secondary",
+  ]);
+  const fromByRole = new Map(from.design.texts.filter((t) => t.simpleRole).map((t) => [t.simpleRole as string, t]));
+
+  let texts = to.design.texts.map((t) => {
+    if (!t.simpleRole || !CHROME.has(t.simpleRole)) return t;
+    const src = fromByRole.get(t.simpleRole);
+    return src ? { ...src, id: t.id, content: t.content } : t;
+  });
+
+  // The overlaid MODERATOR word is role-less (tagging it would churn
+  // panelShapeKey and strand existing tuned docs), so it's identified by its
+  // content. `from`'s copies replace the target's wholesale — a deleted or
+  // dragged label stays deleted/dragged. A reworded label ("HOST") is not
+  // recognised and keeps the target's generic one.
+  //
+  // Carried only when BOTH docs actually render a moderator — a count change
+  // keeps the moderator, but the moderator TOGGLE also lands here, and an
+  // ungated carry would float a stray "MODERATOR" over a speakers-only layout
+  // (toggle off) or silently delete the target's legitimate one (toggle on).
+  // The role-based carries above need no gate: a missing role no-ops per key.
+  const hasModerator = (d: SimpleDoc) =>
+    d.design.texts.some((t) => t.simpleRole?.startsWith("moderator."))
+    || d.canvasImages.some((i) => i.simpleRole === "moderator.photo");
+  if (hasModerator(from) && hasModerator(to)) {
+    const isModWord = (t: TextElement) => !t.simpleRole && t.content.trim().toUpperCase() === "MODERATOR";
+    const fromModWords = from.design.texts.filter(isModWord);
+    const freedIds = texts.filter(isModWord).map((t) => t.id);
+    texts = texts.filter((t) => !isModWord(t));
+    const taken = new Set(texts.map((t) => t.id));
+    texts.push(...fromModWords.map((t, i) => {
+      let id = freedIds[i] ?? `${t.id}-mc`;
+      while (taken.has(id)) id = `${id}x`;
+      taken.add(id);
+      return { ...t, id };
+    }));
+  }
+
+  // Moderator photo: the target keeps its own picture (src/crop), framed by
+  // `from`'s hand-tuned geometry. Skipped when either side has no photo —
+  // a placeholder frame is a shape and count-agnostic already.
+  const fromMod = from.canvasImages.find((i) => i.simpleRole === "moderator.photo");
+  const canvasImages = fromMod
+    ? to.canvasImages.map((i) => i.simpleRole === "moderator.photo"
+      ? { ...fromMod, id: i.id, src: i.src, naturalWidth: i.naturalWidth, naturalHeight: i.naturalHeight, crop: i.crop }
+      : i)
+    : to.canvasImages;
+
+  // Label chip: tagged "label.chip" by the builder; docs tuned before the tag
+  // existed fall back to "the filled shape under the label text". If `from`
+  // has a label but its chip was deleted, the target's chip is dropped too.
+  const chipOf = (d: SimpleDoc): ShapeElement | undefined => {
+    const tagged = (d.design.shapes ?? []).find((s) => s.simpleRole === "label.chip");
+    if (tagged) return tagged;
+    const lbl = d.design.texts.find((t) => t.simpleRole === "label");
+    if (!lbl) return undefined;
+    return (d.design.shapes ?? []).find((s) =>
+      s.fillType === "fill"
+      && Math.abs(lbl.position.x - s.x) <= s.width / 2 + 0.001
+      && Math.abs(lbl.position.y - s.y) <= s.height / 2 + 0.001);
+  };
+  let shapes = to.design.shapes ?? [];
+  if (fromByRole.has("label")) {
+    const fromChip = chipOf(from);
+    const toChip = chipOf(to);
+    if (fromChip && toChip) shapes = shapes.map((s) => (s === toChip ? { ...fromChip, id: toChip.id } : s));
+    else if (!fromChip && toChip) shapes = shapes.filter((s) => s !== toChip);
+  }
+
+  return {
+    ...to,
+    canvasImages,
+    design: {
+      ...to.design,
+      texts,
+      shapes,
+      // The TechBBQ logo is chrome too — a dragged/custom-positioned logo must
+      // not snap back to the preset corner on a speaker-count switch. Same
+      // five fields the partner sync carries.
+      showLogo: from.design.showLogo,
+      logoStyle: from.design.logoStyle,
+      logoPosition: from.design.logoPosition,
+      logoCustomPosition: from.design.logoCustomPosition,
+      logoScale: from.design.logoScale,
+    },
+  };
+}
+
+/**
+ * Park a doc on the shelf under its shape key, RE-INSERTING at the end — so
+ * the shelf's insertion order doubles as touch recency. The size trim slices
+ * from the end, meaning it drops the least-recently-touched entries first: a
+ * hand-tuned design the user keeps coming back to can never be evicted by
+ * the chrome-only docs the layout tour auto-parks.
+ */
+export function parkDoc(shelf: Record<string, SimpleDoc>, doc: SimpleDoc): Record<string, SimpleDoc> {
+  const key = panelShapeKey(doc);
+  const next = Object.fromEntries(Object.entries(shelf).filter(([k]) => k !== key));
+  next[key] = doc;
+  return next;
+}
+
+/** One (format × layout) combination a template bundle has a tuned design
+ *  for. Panel docs carry no logo layout — their `layout` is null and coverage
+ *  is per-format only. */
+export interface TemplateCoverage {
+  format: PlatformFormat;
+  layout: "single" | "duo" | "quad" | null;
+}
+
+/** What a template bundle consists of: the distinct (format × layout) combos
+ *  across its active doc + bundled variants. Drives the sidebar's "set up
+ *  for / not set up for" hints. */
+export function bundleCoverage(docs: SimpleDoc[]): TemplateCoverage[] {
+  const seen = new Set<string>();
+  const out: TemplateCoverage[] = [];
+  for (const d of docs) {
+    const layout = partnerLayoutOf(d);
+    const key = `${d.format}|${layout}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ format: d.format, layout });
+  }
+  return out;
 }
 
 export interface PartnerLogo {
@@ -143,11 +542,11 @@ export function emptyForm(): SimpleForm {
     headline: "Continuation Capital\n& Venture Secondaries:",
     subtitle: "Financing the Next Phase of European Growth",
     includeModerator: true,
-    moderator: { name: "Pierre Leroy", title: "Managing Director & Co-Head of Secondaries", company: "at Stifel", photo: "/samples/pierre-leroy.jpg" },
+    moderator: { name: "Pierre Leroy", title: "Managing Director & Co-Head of Secondaries at Stifel", company: "", photo: "/samples/pierre-leroy.jpg" },
     speakers: [
-      { name: "Andrei Xydas", title: "Principal", company: "Lightrock", photo: "/samples/andrei-xydas.jpg" },
-      { name: "Nicholas Sando", title: "Partner, Secondaries", company: "Molten", photo: "/samples/nicholas-sando.jpg" },
-      { name: "Omolade Adebisi", title: "Principal & Head of Secondaries", company: "ISOMER Capital", photo: "/samples/omolade-adebisi.jpg" },
+      { name: "Andrei Xydas", title: "Principal, Lightrock", company: "", photo: "/samples/andrei-xydas.jpg" },
+      { name: "Nicholas Sando", title: "Partner, Secondaries, Molten", company: "", photo: "/samples/nicholas-sando.jpg" },
+      { name: "Omolade Adebisi", title: "Principal & Head of Secondaries, ISOMER Capital", company: "", photo: "/samples/omolade-adebisi.jpg" },
     ],
     backgroundId: "orb5",
   };
@@ -190,7 +589,13 @@ export function buildPartnerDesign(form: PartnerForm, format: PlatformFormat): S
   // ── Label chip, top-center — same house chip as the panel's session label
   // (white rounded rectangle, dark uppercase text), anchored by its center. ──
   if (form.label.trim()) {
-    const labelText = form.label.toUpperCase();
+    // A label ending in "partner" pluralizes when the layout shows more than
+    // one logo — "OFFICIAL PARTNER" with one logo, "OFFICIAL PARTNERS" with
+    // two or four. The label field is shared across layouts, so this is the
+    // only place the wording can follow the layout.
+    const labelRaw = form.label.trim();
+    const plural = form.layout !== "single" && /partner$/i.test(labelRaw) ? `${labelRaw}s` : labelRaw;
+    const labelText = plural.toUpperCase();
     const fsFrac = 0.038;
     const fsPx = fsFrac * S;
     const letterSpacingPx = Math.round(0.0005 * S);
@@ -238,6 +643,10 @@ export function buildPartnerDesign(form: PartnerForm, format: PlatformFormat): S
         fillType: "outline", strokeWidth: 2 / 1500, colorType: "gradient",
         color1: "#FF6B00", color2: "#FF0028", opacity: 1, blur: 0, rotation: 0,
         borderRadius: 0.08,
+        // Tagged with the slot it stands in for, so retargetPartnerLayout can
+        // swap the right frame when this slot later gains a logo — array
+        // order stops being trustworthy once frames get added and removed.
+        simpleRole: role,
       });
     }
   };
@@ -396,6 +805,7 @@ export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): Sim
       fillType: "fill", strokeWidth: 0, colorType: "solid",
       color1: "#FFFFFF", color2: "#FF6B00", opacity: 1, blur: 0, rotation: 0,
       borderRadius: 0.22, // rounded rectangle, not a pill
+      simpleRole: "label.chip", // syncPanelChrome moves it with the label
     });
     // Uppercase caps sit high in their line box (descender space below), which
     // reads as extra padding under the text — nudge the text DOWN to optically
@@ -514,12 +924,15 @@ export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): Sim
     const capAllow = 0.04 + 0.06 * vs;
     const rowTop = areaTop + capAllow;
     const bandH = rowBottom - rowTop;
-    const totalW = (areaRight - areaLeft) - gap * (m - 1);
-    const unit = totalW / (1.3 + (m - 1)); // moderator = 1.3 units wide
+    // The moderator card is sized by the band alone, never by how many
+    // speakers share the row — adding or removing a speaker resizes only the
+    // speakers (the moderator picture stays identical for 1..N speakers).
+    const modW = cardWfromH(bandH, 0.85);
+    const spkUnit = m > 1 ? ((areaRight - areaLeft) - modW - gap * (m - 1)) / (m - 1) : 0;
     let x = areaLeft;
     people.forEach((p, i) => {
       const isMod = i === 0;
-      const uw = isMod ? unit * 1.3 : unit;
+      const uw = isMod ? modW : spkUnit;
       let cw = uw;
       let ch = cardHfromW(cw, 0.85);
       if (ch > bandH) { ch = bandH; cw = cardWfromH(ch, 0.85); }
@@ -556,9 +969,11 @@ export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): Sim
       const capAllow = (0.05 + 0.05 * vs) * 1.1;
       const spkTop = areaTop + capAllow;
       const bandH = spkBottom - spkTop;
-      let spkW = n <= 3 ? 0.185 : Math.max(0.12, (spkAreaRight - spkAreaLeft - spkGap * (n - 1)) / n);
-      let spkH = cardHfromW(spkW, 0.9); // portrait, un-squished
-      if (spkH > bandH) { spkH = bandH; spkW = cardWfromH(spkH, 0.9); } // fit the band
+      // 4 speakers use Auri's fixed card size (15% × 17% of canvas, radius
+      // stays the standard 8) — the derived size squeezed them too small.
+      let spkW = n === 4 ? 0.15 : n <= 3 ? 0.185 : Math.max(0.12, (spkAreaRight - spkAreaLeft - spkGap * (n - 1)) / n);
+      let spkH = n === 4 ? 0.17 : cardHfromW(spkW, 0.9); // portrait, un-squished
+      if (spkH > bandH) { const s = bandH / spkH; spkH = bandH; spkW *= s; } // fit the band, keep aspect
       const step = n > 1 ? (spkAreaRight - spkAreaLeft - spkW) / (n - 1) : 0;
       const ascend = n > 1 ? (bandH - spkH) / (n - 1) : 0;
       speakerList.forEach((p, i) => {
@@ -582,13 +997,20 @@ export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): Sim
     const total = gridPeople.length;
     if (total > 0) {
       const peopleBottom = 0.92;
-      const cols = total <= 3 ? total : total === 4 ? 2 : 3;
-      const nameFrac = total <= 4 ? 0.024 : 0.02;
+      // With a moderator the grid commits to 3 columns and the 2-row cell
+      // height for up to 6 people, instead of re-fitting per count — so the
+      // moderator cell (and the header above it) is identical whether the
+      // panel has 1..5 speakers. Speakers-only grids keep filling the area.
+      const pinned = Boolean(moderator) && total <= 6;
+      const cols = pinned ? 3 : total <= 3 ? total : total === 4 ? 2 : 3;
+      const nameFrac = pinned ? 0.02 : total <= 4 ? 0.024 : 0.02;
       const rows = Math.ceil(total / cols);
       const gapPx = 0.024 * W;
       const rowGapPx = 0.024 * H;
       const cellWpx = ((areaRight - areaLeft) * W - gapPx * (cols - 1)) / cols;
-      const availHpx = ((peopleBottom - areaTop) * H - rowGapPx * (rows - 1)) / rows;
+      const availHpx = pinned
+        ? ((peopleBottom - areaTop) * H - rowGapPx) / 2
+        : ((peopleBottom - areaTop) * H - rowGapPx * (rows - 1)) / rows;
       const photoWpx = cellWpx;
       const photoHpx = Math.max(cellWpx * 0.55, Math.min(availHpx, cellWpx * 1.4));
       gridPeople.forEach(({ p, role }, i) => {
@@ -691,9 +1113,150 @@ export function stripFormsForSave(template: "panel" | "partner", form: SimpleFor
 }
 
 /** Partner docs are recognisable by their logo slots — used to pick which
- *  parked layout-variants belong to the template being saved. */
+ *  parked layout-variants belong to the template being saved. Delegates to
+ *  `partnerLayoutOf` so a zero-logo doc with tagged placeholder frames counts
+ *  too (same assumption fix, kept in one place). */
 export function isPartnerDoc(doc: SimpleDoc): boolean {
-  return doc.canvasImages.some((i) => i.simpleRole?.startsWith("logo"));
+  return partnerLayoutOf(doc) !== null;
+}
+
+/**
+ * Panel docs saved before photo layers carried `simpleRole` (pre 2026-07-22)
+ * have role-less headshots. Two things break on such a doc: `formsFromDoc`
+ * can't rehydrate the sidebar photos, and `panelShapeKey` can never match a
+ * rebuild — so a 3 → 2 → 3 speaker round-trip parks the design under a key no
+ * rebuild reproduces and the tuning is stranded (generic layout shows instead).
+ *
+ * The builder has always emitted photos in person order — moderator first,
+ * then speakers by index — so when EVERY image is role-less and the image
+ * count equals the person count (read from the text roles), the roles can be
+ * re-attached by position. Anything ambiguous passes through untouched:
+ * docs that already carry any role, partner docs, and docs where the counts
+ * differ (hand-added extras, or a person whose photo was never uploaded).
+ */
+export function adoptLegacyPanelRoles(doc: SimpleDoc): SimpleDoc {
+  if (doc.canvasImages.length === 0) return doc;
+  if (doc.canvasImages.some((i) => i.simpleRole)) return doc;
+  if (isPartnerDoc(doc)) return doc;
+  const textRoles = doc.design.texts
+    .map((t) => t.simpleRole)
+    .filter((r): r is string => Boolean(r));
+  const speakerIdx = [...new Set(
+    textRoles
+      .map((r) => /^speaker-(\d+)\./.exec(r)?.[1])
+      .filter((n): n is string => Boolean(n))
+      .map(Number),
+  )].sort((a, b) => a - b);
+  const persons = [
+    ...(textRoles.some((r) => r.startsWith("moderator.")) ? ["moderator"] : []),
+    ...speakerIdx.map((i) => `speaker-${i}`),
+  ];
+  if (persons.length !== doc.canvasImages.length) return doc;
+  return {
+    ...doc,
+    canvasImages: doc.canvasImages.map((img, i) => ({ ...img, simpleRole: `${persons[i]}.photo` })),
+  };
+}
+
+/** Fold a legacy two-field person ("Principal" + "Lightrock") into the single
+ *  description field ("Principal, Lightrock"). No-op when company is empty —
+ *  which is every person created after the sidebar merged the fields. */
+export function mergePersonDescription(p: SimplePerson): SimplePerson {
+  if (!p.company.trim()) return p;
+  return { ...p, title: [p.title.trim(), p.company.trim()].filter(Boolean).join(", "), company: "" };
+}
+
+/**
+ * Doc-side counterpart of `mergePersonDescription`: docs built before the
+ * description merge carry separate `<who>.title` and `<who>.company` text
+ * layers, but a rebuild from a merged form emits only `.title` — so the role
+ * sets diverge and every tuned legacy doc would strand (round-8 bug class).
+ * Folds each `.company` layer into its `.title` layer as an extra line
+ * (keeping the tuned title layer's position/styling), or re-roles it to
+ * `.title` when the person had a company but no title. Returns the doc
+ * untouched when there is nothing to merge.
+ */
+export function mergeLegacyCompanyLayers(doc: SimpleDoc): SimpleDoc {
+  const companies = doc.design.texts.filter((t) => t.simpleRole?.endsWith(".company"));
+  if (companies.length === 0) return doc;
+  const titleRoles = new Set(doc.design.texts.map((t) => t.simpleRole).filter((r): r is string => Boolean(r)));
+  const byWho = new Map(companies.map((t) => [(t.simpleRole as string).replace(/\.company$/, ""), t]));
+  return {
+    ...doc,
+    design: {
+      ...doc.design,
+      texts: doc.design.texts.flatMap((t) => {
+        if (t.simpleRole?.endsWith(".company")) {
+          const who = t.simpleRole.replace(/\.company$/, "");
+          // No title layer to merge into — this layer BECOMES the description.
+          return titleRoles.has(`${who}.title`) ? [] : [{ ...t, simpleRole: `${who}.title` }];
+        }
+        if (t.simpleRole?.endsWith(".title")) {
+          const company = byWho.get(t.simpleRole.replace(/\.title$/, ""));
+          // ",\n" — renders as the same two lines, and formsFromDoc's
+          // newline-to-space flatten yields "title, company" for the single
+          // input instead of silently eating the comma. Trailing comma or
+          // whitespace on the old title is stripped first so "Partner," +
+          // "Molten" doesn't double-comma.
+          if (company) return [{ ...t, content: `${t.content.replace(/[,\s]+$/, "")},\n${company.content}` }];
+        }
+        return [t];
+      }),
+    },
+  };
+}
+
+/**
+ * The editor's Duplicate (⌘D) copies a layer's `simpleRole` verbatim, so a
+ * user who clones a speaker's layers to mock up an extra speaker produces a
+ * doc with DUPLICATE roles — which no rebuild can ever shape-match, stranding
+ * the design on any form change (bit Auri's "Panel with 4 People": Omolade's
+ * texts duplicated as a 4th speaker, still tagged speaker-2).
+ *
+ * Repair heuristic: the first occurrence of each role keeps it; later copies
+ * of a `speaker-N.*` role are renumbered to a fresh speaker index (same
+ * duplicate-ordinal → same new index, so a cloned name+title pair becomes ONE
+ * new person). Duplicate copies of any other role (moderator.*, headline…)
+ * just lose the tag and live on as hand-added decorations.
+ */
+export function dedupeSpeakerRoles(doc: SimpleDoc): SimpleDoc {
+  const roles = [...doc.design.texts, ...doc.canvasImages]
+    .map((x) => x.simpleRole)
+    .filter((r): r is string => Boolean(r));
+  if (new Set(roles).size === roles.length) return doc;
+  if (isPartnerDoc(doc)) return doc;
+
+  const spkIdx = (r: string) => { const m = /^speaker-(\d+)\./.exec(r); return m ? Number(m[1]) : null; };
+  const maxIdx = Math.max(-1, ...roles.map(spkIdx).filter((n): n is number => n !== null));
+  const seen = new Map<string, number>();
+  const rerole = <T extends { simpleRole?: string }>(el: T): T => {
+    if (!el.simpleRole) return el;
+    const ordinal = seen.get(el.simpleRole) ?? 0;
+    seen.set(el.simpleRole, ordinal + 1);
+    if (ordinal === 0) return el;
+    const idx = spkIdx(el.simpleRole);
+    if (idx === null) return { ...el, simpleRole: undefined };
+    return { ...el, simpleRole: el.simpleRole.replace(/^speaker-\d+\./, `speaker-${maxIdx + ordinal}.`) };
+  };
+  return {
+    ...doc,
+    canvasImages: doc.canvasImages.map(rerole),
+    design: { ...doc.design, texts: doc.design.texts.map(rerole) },
+  };
+}
+
+/** Everything a doc from storage or the library needs before use: photo roles
+ *  for pre-2026-07-22 items, deduped roles for editor-cloned layers,
+ *  description-merged text layers for pre-merge ones. All no-ops on clean
+ *  current docs. */
+export function migrateLegacyPanelDoc(doc: SimpleDoc): SimpleDoc {
+  return mergeLegacyCompanyLayers(dedupeSpeakerRoles(adoptLegacyPanelRoles(doc)));
+}
+
+/** The identity a newly added 4th speaker starts with (Auri's sample) — a
+ *  real card with a face beats an empty frame for first-run feel. */
+export function sampleFourthSpeaker(): SimplePerson {
+  return { name: "Rajeev Kumal", title: "CTO at 88 Angle", company: "", photo: "/samples/rajeev-kumal.jpg" };
 }
 
 /**
@@ -751,25 +1314,28 @@ export function formsFromDoc(kind: string, doc: SimpleDoc, saved?: SimpleFormsSn
       partner: null,
       form: {
         ...saved.form,
-        moderator: withPhoto(saved.form.moderator, "moderator"),
-        speakers: saved.form.speakers.map((p, i) => withPhoto(p, `speaker-${i}`)),
+        // Old snapshots carry two-field people — fold company into the
+        // description so the single sidebar input shows everything.
+        moderator: mergePersonDescription(withPhoto(saved.form.moderator, "moderator")),
+        speakers: saved.form.speakers.map((p, i) => mergePersonDescription(withPhoto(p, `speaker-${i}`))),
         backgroundId: doc.design.backgroundId || saved.form.backgroundId,
       },
     };
   }
 
-  // Legacy doc (no snapshot): reconstruct from roles. The grid layout merges
-  // title+company into one "secondary" line — split at the LAST comma, since
-  // titles ("Partner, Secondaries") contain commas more often than companies.
+  // Legacy doc (no snapshot): reconstruct from roles. The description is one
+  // field now, so the grid's "secondary" line and any legacy separate
+  // title/company layers all fold into `title`. Builder-wrapped newlines
+  // become spaces — a single-line input can't show them.
+  const flat = (s: string) => s.split("\n").join(" ");
   const person = (who: string): SimplePerson => {
     const secondary = textByRole.get(`${who}.secondary`) ?? "";
-    const cut = secondary.lastIndexOf(", ");
-    return withPhoto({
+    return withPhoto(mergePersonDescription({
       name: textByRole.get(`${who}.name`) ?? "",
-      title: textByRole.get(`${who}.title`) ?? (cut > 0 ? secondary.slice(0, cut) : secondary),
-      company: textByRole.get(`${who}.company`) ?? (cut > 0 ? secondary.slice(cut + 2) : ""),
+      title: flat(textByRole.get(`${who}.title`) ?? secondary),
+      company: flat(textByRole.get(`${who}.company`) ?? ""),
       photo: "",
-    }, who);
+    }), who);
   };
   const roles = [...textByRole.keys(), ...imgByRole.keys()];
   const speakerCount = 1 + Math.max(-1, ...roles
