@@ -636,30 +636,40 @@ export default function SimplePage() {
     })();
   });
 
-  // The team's canonical Partner Announcement — the library item whose design
-  // (all three logo layouts bundled) is what "Partner Announcement" should
-  // look like by default. Opening the template with nothing of your own loads
-  // it, so everyone starts from the design the team actually ships, not the
-  // built-in generic layout. Silent on failure (signed out, item deleted):
+  // The team's canonical templates — the Template toggle is a door into these
+  // library items, not into the built-in generic layouts. Pressing Panel opens
+  // "Official Panel Discussions", Partner Announcement opens "Official
+  // Partner" — unless the user already has work of that kind (an active tuned
+  // design, a loaded item, parked tuning, or a pending ?load= deep link).
+  // One-shot per kind per tab; silent on failure (signed out, item deleted):
   // the generic layout is the fallback, not an error.
-  const DEFAULT_PARTNER_ITEM_ID = "7583298d-759b-4f97-9d33-fc2e10776e97";
-  const defaultLoadTried = useRef(false);
+  const DEFAULT_ITEM_IDS = {
+    panel: "c20fddbb-d4c5-455d-ac10-3c802ea7a3d6",
+    partner: "7583298d-759b-4f97-9d33-fc2e10776e97",
+  } as const;
+  const defaultLoadTried = useRef<{ panel?: boolean; partner?: boolean }>({});
   useEffect(() => {
-    if (!hydrated || defaultLoadTried.current) return;
-    if (template !== "partner") return;
-    // Anything of the user's own wins over the default: an active tuned
-    // design, a loaded library item, a ?load= link (the deep-link effect owns
-    // that), or parked partner tuning waiting to revive.
-    if (custom || loadedItem) return;
-    if (Object.values(parked).some(isPartnerDoc)) return;
-    if (new URLSearchParams(window.location.search).get("load")) return;
-    defaultLoadTried.current = true;
+    if (!hydrated) return;
+    const kind = template;
+    if (defaultLoadTried.current[kind]) return;
+    const isPartnerKind = kind === "partner";
+    // Anything of the user's own FOR THIS KIND wins over the default. Work of
+    // the other kind doesn't block — switching templates should still land on
+    // that template's official design.
+    if (custom && isPartnerDoc(custom) === isPartnerKind) return;
+    if (loadedItem?.kind === kind) return;
+    if (Object.values(parked).some((d) => isPartnerDoc(d) === isPartnerKind)) return;
+    // A deep link that hasn't been applied yet owns the first load; once its
+    // marker is set the param is just address-bar residue.
+    const pending = new URLSearchParams(window.location.search).get("load");
+    try { if (pending && sessionStorage.getItem(DEEPLINK_DONE_KEY) !== pending) return; } catch { /* treat as applied */ }
+    defaultLoadTried.current[kind] = true;
     (async () => {
       try {
-        const res = await fetch(`/api/library/${DEFAULT_PARTNER_ITEM_ID}`);
+        const res = await fetch(`/api/library/${DEFAULT_ITEM_IDS[kind]}`);
         if (!res.ok) return;
         const data = await res.json();
-        handleLibraryLoad({ id: DEFAULT_PARTNER_ITEM_ID, name: data.item.name, kind: data.item.kind, doc: data.item.doc });
+        handleLibraryLoad({ id: DEFAULT_ITEM_IDS[kind], name: data.item.name, kind: data.item.kind, doc: data.item.doc });
         toast.info(`Loaded the team template "${data.item.name}"`);
       } catch { /* offline — keep the generic layout */ }
     })();
