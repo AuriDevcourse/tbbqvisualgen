@@ -650,6 +650,12 @@ export default function SimplePage() {
     panel: "c20fddbb-d4c5-455d-ac10-3c802ea7a3d6",
     partner: "7583298d-759b-4f97-9d33-fc2e10776e97",
   } as const;
+  // The two flavours of Partner Announcement, offered as a picker above
+  // Format. Each is a door into its team-library item.
+  const ANNOUNCEMENTS = [
+    { key: "official", label: "Official Announcement", itemId: DEFAULT_ITEM_IDS.partner },
+    { key: "community", label: "Community Announcement", itemId: "431c22ac-a5a2-46a4-aec7-ad39923eae7d" },
+  ] as const;
   const defaultLoadTried = useRef<{ panel?: boolean; partner?: boolean }>({});
   useEffect(() => {
     if (!hydrated) return;
@@ -677,6 +683,25 @@ export default function SimplePage() {
       } catch { /* offline — keep the generic layout */ }
     })();
   });
+
+  // Explicit load of a library item (announcement picker) — same path as the
+  // modal's Load button, with the deep link's sign-in fallback.
+  const loadItemById = async (id: string) => {
+    try {
+      const res = await fetch(`/api/library/${id}`);
+      if (res.status === 401) {
+        toast.info("Sign in with your TechBBQ account to open the team templates");
+        setLibraryOpen(true);
+        return;
+      }
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "Couldn't open the template"); return; }
+      handleLibraryLoad({ id, name: data.item.name, kind: data.item.kind, doc: data.item.doc });
+      toast.success(`Loaded "${data.item.name}"`);
+    } catch {
+      toast.error("Couldn't reach the team library");
+    }
+  };
 
   const revertCustom = () => {
     setCustom(null);
@@ -955,23 +980,6 @@ export default function SimplePage() {
         <div className="flex-1 flex flex-col lg:flex-row min-h-0 px-4 sm:px-6 pb-4 sm:pb-6 gap-4 sm:gap-6 overflow-y-auto lg:overflow-hidden">
           {/* Form */}
           <aside className="w-full lg:w-[420px] shrink-0 flex flex-col gap-4 lg:max-h-full lg:overflow-y-auto lg:pr-1">
-            {/* Fine-tuned banner — the preview is a saved editor version */}
-            {custom && (
-              <div className="flex items-center justify-between gap-2 rounded-lg border border-[#FF6B00]/40 bg-[#FF6B00]/10 px-3 py-2">
-                <span className="text-xs text-white/85 leading-tight">
-                  <span className="font-semibold text-[#FF8A3D]">Custom design active — saved.</span>{" "}
-                  {template === "partner"
-                    ? "Text edits and logo swaps keep this layout. Switching layout or format shows the design saved for it, when there is one."
-                    : "Text edits and photo swaps keep this layout. Switching format shows the design saved for it; changing the speaker count or moderator rebuilds."}
-                </span>
-                <button
-                  onClick={revertCustom}
-                  className="shrink-0 px-2.5 py-1 rounded-md text-[11px] font-medium bg-white/10 text-white hover:bg-white/20 transition-colors"
-                >
-                  Revert
-                </button>
-              </div>
-            )}
             {/* Template — which quick template this form builds */}
             <section className="flex flex-col gap-2">
               <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Template</span>
@@ -992,6 +1000,29 @@ export default function SimplePage() {
                 })}
               </div>
             </section>
+
+            {/* Announcement flavour — each button opens its team-library
+                item, so Official/Community are one press away. */}
+            {template === "partner" && (
+              <section className="flex flex-col gap-2">
+                <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Announcement</span>
+                <div className="flex gap-1.5">
+                  {ANNOUNCEMENTS.map((a) => {
+                    const active = loadedItem?.id === a.itemId;
+                    return (
+                      <button
+                        key={a.key}
+                        onClick={() => { if (!active) void loadItemById(a.itemId); }}
+                        aria-pressed={active}
+                        className={`flex-1 px-2 py-2 rounded-lg text-xs font-medium transition-all ${active ? "bg-[#FF0028] text-white" : "bg-white/5 border border-white/10 text-white/70 hover:bg-white/10"}`}
+                      >
+                        {a.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
 
             {/* Format. Switching parks the current tuned design and revives
                 the one saved for the target format, when the template has
@@ -1206,6 +1237,25 @@ export default function SimplePage() {
 
           {/* Preview */}
           <main ref={previewRef} className="flex-1 min-h-[55vh] lg:min-h-0 min-w-0 flex items-center justify-center overflow-hidden rounded-2xl bg-card relative">
+            {/* Fine-tuned indicator — compact pill over the preview, so the
+                form column doesn't jump when a custom design activates. The
+                full explanation lives in the tooltip. */}
+            {custom && (
+              <div
+                className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 rounded-full border border-[#FF6B00]/40 bg-black/70 backdrop-blur-sm pl-3 pr-1.5 py-1"
+                title={template === "partner"
+                  ? "Text edits and logo swaps keep this layout. Switching layout or format shows the design saved for it, when there is one."
+                  : "Text edits and photo swaps keep this layout. Switching format shows the design saved for it; changing the speaker count or moderator rebuilds."}
+              >
+                <span className="text-[11px] font-medium text-[#FF8A3D]">Custom design active · saved</span>
+                <button
+                  onClick={revertCustom}
+                  className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-white/10 text-white hover:bg-white/20 transition-colors"
+                >
+                  Revert
+                </button>
+              </div>
+            )}
             {isEmpty && (
               <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
                 <div className="text-center rounded-2xl bg-black/60 backdrop-blur-sm px-7 py-6">
