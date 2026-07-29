@@ -849,7 +849,7 @@ export default function SimplePage() {
               <Library className="w-3.5 h-3.5" strokeWidth={1.5} />
               Team library
             </button>
-            <Link href="/" onClick={handleOpenAdvanced} title="Open this panel in the full editor to drag & fine-tune, then save" className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium border border-surface/40 text-foreground hover:bg-white/5 transition-colors">
+            <Link href="/editor" onClick={handleOpenAdvanced} title="Open this panel in the full editor to drag & fine-tune, then save" className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium border border-surface/40 text-foreground hover:bg-white/5 transition-colors">
               <PencilRuler className="w-3.5 h-3.5" strokeWidth={1.5} />
               Edit &amp; fine-tune
             </Link>
