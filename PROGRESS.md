@@ -345,6 +345,8 @@ In rough priority order. **Top priority is first-run intuitiveness** (Auri, 2026
 
 Newer at the top.
 
+**Session 2026-07-29, round 32 — host-mode sidebar: just "Hosts 1-2".** With the Host flavour loaded (`hostMode` = loadedItem is the Host item), the Setup section hides the Moderator toggle and says **Hosts** with the 1-2 stepper; person cards read "Host 1/2", section "Hosts (N)", button "Add host"; the Moderator editor section never renders in host mode. Regular panels unchanged. Verified live both ways (seeded loadedItem sessionStorage signed-out). 73/73 vitest, tsc + eslint + build clean.
+
 **Session 2026-07-29, round 31 — Host words (HOSTS / BBQ Stage) + label chips refit on retarget (code + LIVE DB write).** Auri: Host template must say headline "HOSTS", label "BBQ Stage", and the white chip must run slightly longer than the label text. Two layers:
 
 - **Mechanism — `resizeLabelChip`** (called by `retargetTunedDoc` AND `retargetPartnerLayout`): when a carried label's content changes, the chip resizes by the text-width delta (keeps hand-tuned extra width) with a FLOOR of newText + the builder's padding — so the chip is always slightly longer than the text even when the old chip was already too tight (his square doc was; the floor is what fixes the reported symptom class, incl. the earlier "OFFICIAL COMMUNITY" chip clipping). Center-aligned labels keep the chip centered; left-aligned keep the left edge. Chip found by `label.chip` tag or the positional fallback. Test added (74/74).

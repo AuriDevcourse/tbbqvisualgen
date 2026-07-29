@@ -872,8 +872,11 @@ export default function SimplePage() {
     if (dropped && !isBlankPerson(dropped)) setStash((s) => [dropped, ...s]);
     setForm((f) => ({ ...f, speakers: f.speakers.filter((_, idx) => idx !== i) }));
   };
-  // Hosts cap at 2 (there is no 3-host visual); panels go up to 9.
-  const MAX_SPEAKERS = loadedItem?.id === HOST_ITEM_ID ? 2 : 9;
+  // The Host flavour: people are "hosts" (max 2, no moderator concept) — the
+  // sidebar renames itself and hides the moderator toggle.
+  const hostMode = loadedItem?.id === HOST_ITEM_ID;
+  const MAX_SPEAKERS = hostMode ? 2 : 9;
+  const personNoun = hostMode ? "Host" : "Speaker";
   // Lowering the count parks the dropped people in `stash` instead of binning
   // them, so stepping 3 -> 2 -> 3 gives back the same panel rather than a
   // blank card. Only filled-in people are worth keeping.
@@ -1274,6 +1277,8 @@ export default function SimplePage() {
             <section className="flex flex-col gap-2">
               <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Setup</span>
               <div className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                {/* Hosts have no moderator — the toggle only exists for panels. */}
+                {!hostMode && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-white/85">Moderator</span>
                   <button
@@ -1286,8 +1291,9 @@ export default function SimplePage() {
                     <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all ${form.includeModerator ? "left-[18px]" : "left-0.5"}`} />
                   </button>
                 </div>
+                )}
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-white/85">Speakers</span>
+                  <span className="text-sm text-white/85">{hostMode ? "Hosts" : "Speakers"}</span>
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => setSpeakerCount(form.speakers.length - 1)}
@@ -1318,8 +1324,8 @@ export default function SimplePage() {
               <Field label="Session label" value={form.label} onChange={(v) => setForm((f) => ({ ...f, label: v }))} placeholder="Fireside Chat" />
             </section>
 
-            {/* Moderator — only when the setup toggle is on */}
-            {form.includeModerator && (
+            {/* Moderator — only when the setup toggle is on (never for hosts) */}
+            {!hostMode && form.includeModerator && (
               <section className="flex flex-col gap-2">
                 <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Moderator</span>
                 <PersonEditor person={form.moderator} onChange={setModerator} roleLabel="Moderator" />
@@ -1329,7 +1335,7 @@ export default function SimplePage() {
             {/* Speakers */}
             <section className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Speakers ({form.speakers.length})</span>
+                <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">{hostMode ? "Hosts" : "Speakers"} ({form.speakers.length})</span>
               </div>
               <div className="flex flex-col gap-2">
                 {form.speakers.map((s, i) => (
@@ -1338,7 +1344,7 @@ export default function SimplePage() {
                     person={s}
                     onChange={(patch) => setSpeaker(i, patch)}
                     onRemove={form.speakers.length > 1 ? () => removeSpeaker(i) : undefined}
-                    roleLabel={`Speaker ${i + 1}`}
+                    roleLabel={`${personNoun} ${i + 1}`}
                   />
                 ))}
               </div>
@@ -1347,7 +1353,7 @@ export default function SimplePage() {
                   onClick={addSpeaker}
                   className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-dashed border-white/15 text-xs text-white/70 hover:border-[#FF6B00]/50 hover:text-white transition-colors"
                 >
-                  <Plus className="w-3.5 h-3.5" /> Add speaker
+                  <Plus className="w-3.5 h-3.5" /> Add {personNoun.toLowerCase()}
                 </button>
               )}
             </section>
