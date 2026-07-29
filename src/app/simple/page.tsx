@@ -142,23 +142,35 @@ function PersonEditor({
 }
 
 // One partner-logo upload slot: dropzone → contain-fit preview + remove.
-// A logo file can be DROPPED straight onto any slot, and a filled slot can be
-// DRAGGED onto another to move/swap it via the GRIP HANDLE in its top-left
-// corner (`onReorder`). The ‹ › buttons remain as the keyboard-friendly path.
-const LOGO_DRAG_TYPE = "application/x-logo-slot";
+// A logo file can be DROPPED straight onto any slot. Moving a logo between
+// slots is a POINTER drag with a click-vs-drag threshold (same pattern as the
+// editor canvas): press and hold anywhere on the logo, move past ~5px, drop
+// on another slot. A sub-threshold press stays a plain click and opens the
+// file picker. HTML5 drag-and-drop is NOT used for the reorder — a draggable
+// container hijacked plain clicks, and a grip handle demanded pixel-precise
+// aim; both live-failed. The ‹ › buttons remain the keyboard path.
 function LogoSlot({ logo, onChange, small, onSwapPrev, onSwapNext, index, onReorder }: { logo: PartnerLogo | null; onChange: (l: PartnerLogo | null) => void; small?: boolean; onSwapPrev?: () => void; onSwapNext?: () => void; index?: number; onReorder?: (from: number, to: number) => void }) {
   const [dragOver, setDragOver] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  // Pointer-drag bookkeeping: where the press started, and whether the
+  // threshold was crossed (=> the following click must not open the picker).
+  const pressRef = useRef<{ x: number; y: number } | null>(null);
+  const draggedRef = useRef(false);
   const reorderable = index !== undefined && Boolean(onReorder);
+
+  const slotIndexAt = (x: number, y: number): number | null => {
+    const el = document.elementFromPoint(x, y)?.closest("[data-logo-slot]");
+    const raw = el?.getAttribute("data-logo-slot");
+    return raw == null ? null : Number(raw);
+  };
+
   return (
-    // NB: the container itself is NOT draggable — that hijacked plain clicks
-    // on the upload label (press-and-hold started a drag, so the file picker
-    // needed a second click). The reorder drag starts from the grip handle
-    // below; the whole slot stays a drop target.
     <div
-      className="relative"
+      data-logo-slot={reorderable ? index : undefined}
+      className="relative select-none"
       onDragOver={(e) => {
-        // Accept slot reorders and image files; let everything else pass.
-        if (e.dataTransfer.types.includes(LOGO_DRAG_TYPE) || e.dataTransfer.types.includes("Files")) {
+        // External image files can still be dropped straight onto a slot.
+        if (e.dataTransfer.types.includes("Files")) {
           e.preventDefault();
           setDragOver(true);
         }
@@ -166,13 +178,6 @@ function LogoSlot({ logo, onChange, small, onSwapPrev, onSwapNext, index, onReor
       onDragLeave={() => setDragOver(false)}
       onDrop={async (e) => {
         setDragOver(false);
-        const fromRaw = e.dataTransfer.getData(LOGO_DRAG_TYPE);
-        if (fromRaw !== "" && reorderable) {
-          e.preventDefault();
-          const from = Number(fromRaw);
-          if (Number.isInteger(from) && from !== index) onReorder!(from, index as number);
-          return;
-        }
         const file = e.dataTransfer.files?.[0];
         if (file && file.type.startsWith("image/")) {
           e.preventDefault();
@@ -185,7 +190,41 @@ function LogoSlot({ logo, onChange, small, onSwapPrev, onSwapNext, index, onReor
         }
       }}
     >
-      <label className={`relative flex items-center justify-center ${small ? "h-20" : "h-28"} rounded-xl overflow-hidden border cursor-pointer transition-colors group ${dragOver ? "border-[#FF6B00] bg-[#FF6B00]/10" : logo?.src ? "border-white/15 bg-white/5" : "border-dashed border-white/15 bg-white/[0.03] hover:border-[#FF6B00]/60"}`}>
+      <label
+        onPointerDown={(e) => {
+          if (!reorderable || !logo?.src || e.button !== 0) return;
+          pressRef.current = { x: e.clientX, y: e.clientY };
+          draggedRef.current = false;
+          e.currentTarget.setPointerCapture(e.pointerId);
+        }}
+        onPointerMove={(e) => {
+          if (!pressRef.current) return;
+          const dx = e.clientX - pressRef.current.x;
+          const dy = e.clientY - pressRef.current.y;
+          if (!draggedRef.current && Math.hypot(dx, dy) > 5) {
+            draggedRef.current = true;
+            setDragging(true);
+            window.getSelection()?.removeAllRanges();
+          }
+          if (draggedRef.current) e.preventDefault(); // no text-selection rectangle
+        }}
+        onPointerUp={(e) => {
+          if (!pressRef.current) return;
+          pressRef.current = null;
+          if (!draggedRef.current) return; // plain click — the label opens the picker
+          setDragging(false);
+          const to = slotIndexAt(e.clientX, e.clientY);
+          if (to !== null && to !== index) onReorder!(index as number, to);
+        }}
+        onPointerCancel={() => { pressRef.current = null; draggedRef.current = false; setDragging(false); }}
+        onClickCapture={(e) => {
+          // A drag ends with a click on the label — swallow it so the file
+          // picker doesn't open on top of the reorder.
+          if (draggedRef.current) { e.preventDefault(); e.stopPropagation(); draggedRef.current = false; }
+        }}
+        className={`relative flex items-center justify-center ${small ? "h-20" : "h-28"} rounded-xl overflow-hidden border transition-colors group ${dragging ? "opacity-60 cursor-grabbing border-[#FF6B00]" : "cursor-pointer"} ${dragOver ? "border-[#FF6B00] bg-[#FF6B00]/10" : logo?.src ? "border-white/15 bg-white/5" : "border-dashed border-white/15 bg-white/[0.03] hover:border-[#FF6B00]/60"}`}
+        style={{ touchAction: "none" }}
+      >
         {logo?.src ? (
           // draggable={false}: the browser's native image drag would fight
           // both the label click and the handle's reorder payload.
@@ -225,15 +264,12 @@ function LogoSlot({ logo, onChange, small, onSwapPrev, onSwapNext, index, onReor
         </button>
       )}
       {logo?.src && reorderable && (
+        // Pure affordance — the drag itself works from anywhere on the logo
+        // (pointer handlers on the label above), so this must not eat events.
         <span
-          draggable
-          onDragStart={(e) => {
-            e.dataTransfer.setData(LOGO_DRAG_TYPE, String(index));
-            e.dataTransfer.effectAllowed = "move";
-          }}
-          aria-label="Drag to move this logo to another slot"
-          title="Drag to move this logo to another slot"
-          className="absolute top-2 left-2 w-6 h-6 flex items-center justify-center rounded-full bg-black/75 border border-white/20 text-white/80 hover:bg-black hover:text-white transition-colors cursor-grab active:cursor-grabbing"
+          aria-hidden
+          title="Hold and drag to move this logo to another slot"
+          className="absolute top-2 left-2 w-6 h-6 flex items-center justify-center rounded-full bg-black/75 border border-white/20 text-white/60 pointer-events-none"
         >
           <GripVertical className="w-3.5 h-3.5" strokeWidth={2} />
         </span>
