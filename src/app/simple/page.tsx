@@ -536,8 +536,19 @@ export default function SimplePage() {
     // needlessly bins the fine-tuned override.
     if (!hydrated) return;
     const key = JSON.stringify([template, form, partner, format]);
-    if (baselineRef.current === "") { baselineRef.current = key; return; }
-    if (key === baselineRef.current) return;
+    // A custom doc of the WRONG KIND for this template — a panel doc on the
+    // canvas while the partner form is up (Auri's screenshot: Host design
+    // under the Partner Announcement sidebar) — must never survive, however
+    // the state was reached (effect races on fast template/flavour clicks,
+    // or a corrupted tab persisted to localStorage). It bypasses the baseline
+    // early-returns, so the mismatch heals even when the form is unchanged
+    // and even on the first run after hydrate; the normal flow below then
+    // parks the doc (recoverable) and revives/builds the right kind.
+    const kindMismatch = Boolean(custom && isPartnerDoc(custom) !== (template === "partner"));
+    if (!kindMismatch) {
+      if (baselineRef.current === "") { baselineRef.current = key; return; }
+      if (key === baselineRef.current) return;
+    }
     baselineRef.current = key;
 
     const rebuilt = template === "partner" ? buildPartnerDesign(partner, format) : buildSimpleDesign(form, format);
