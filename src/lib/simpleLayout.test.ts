@@ -180,6 +180,26 @@ describe("retargetTunedDoc — keeping a hand-tuned panel through a text edit", 
     expect(out2.design.texts.find((t) => t.simpleRole === "speaker-2.name")!.content).toBe("Someone\nElse");
   });
 
+  it("a changed label refits the white chip to the new text (Auri's BBQ Stage chip)", () => {
+    const form = panelOf3PlusModerator();
+    const tuned = buildSimpleDesign({ ...form, label: "Meet your hosts" }, "square");
+    const chipOf = (d: ReturnType<typeof buildSimpleDesign>) => (d.design.shapes ?? []).find((s) => s.simpleRole === "label.chip")!;
+    const labelOf = (d: ReturnType<typeof buildSimpleDesign>) => d.design.texts.find((t) => t.simpleRole === "label")!;
+
+    const out = retargetTunedDoc(tuned, buildSimpleDesign({ ...form, label: "BBQ Stage" }, "square"))!;
+    expect(labelOf(out).content).toBe("BBQ STAGE");
+    // Shorter text → narrower chip, but still longer than the text itself.
+    expect(chipOf(out).width).toBeLessThan(chipOf(tuned).width);
+    const textW = (labelOf(out).content.length * labelOf(out).fontSize * 0.62) / 1500;
+    expect(chipOf(out).width).toBeGreaterThan(textW);
+    // Left-aligned label keeps the chip's left edge.
+    expect(chipOf(out).x - chipOf(out).width / 2).toBeCloseTo(chipOf(tuned).x - chipOf(tuned).width / 2, 5);
+
+    // Unchanged label leaves the chip untouched.
+    const same = retargetTunedDoc(tuned, buildSimpleDesign({ ...form, label: "Meet your hosts", subtitle: "New words" }, "square"))!;
+    expect(chipOf(same).width).toBe(chipOf(tuned).width);
+  });
+
   it("refuses when a field is cleared — that layer no longer exists", () => {
     const form = panelOf3PlusModerator();
     const tuned = tuneByHand(buildSimpleDesign(form, "square"));

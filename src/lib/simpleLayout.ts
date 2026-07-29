@@ -103,7 +103,7 @@ export function retargetTunedDoc(tuned: SimpleDoc, rebuilt: SimpleDoc): SimpleDo
   if (want.size !== have.size) return null;
   for (const role of want.keys()) if (!have.has(role)) return null;
 
-  return {
+  const result: SimpleDoc = {
     ...tuned,
     canvasImages: tuned.canvasImages.map((img) => {
       const next = img.simpleRole ? wantImgs.get(img.simpleRole) : undefined;
@@ -120,6 +120,39 @@ export function retargetTunedDoc(tuned: SimpleDoc, rebuilt: SimpleDoc): SimpleDo
       backgroundId: rebuilt.design.backgroundId,
       texts: tuned.design.texts.map((t) => carryWords(t, want)),
     },
+  };
+  // A changed label needs its white chip refitted to the new text.
+  return resizeLabelChip(result, tuned.design.texts.find((t) => t.simpleRole === "label")?.content);
+}
+
+/**
+ * The white chip behind the session/partner label is sized for its TEXT — so
+ * when a retarget carries a different label into a tuned doc, the chip must
+ * be resized too, else "BBQ Stage" swims in a chip cut for "Meet your hosts"
+ * (or a long label overflows a short chip, as on Auri's community partner).
+ * Width changes by the estimated text-width delta (padding stays); a
+ * center-aligned label keeps the chip centered, a left-aligned one keeps the
+ * chip's left edge.
+ */
+function resizeLabelChip(doc: SimpleDoc, oldContent: string | undefined, role = "label"): SimpleDoc {
+  const label = doc.design.texts.find((t) => t.simpleRole === role);
+  if (!label || oldContent === undefined || label.content === oldContent) return doc;
+  const chip = (doc.design.shapes ?? []).find((s) => s.simpleRole === "label.chip")
+    ?? (doc.design.shapes ?? []).find((s) =>
+      s.fillType === "fill"
+      && Math.abs(label.position.x - s.x) <= s.width / 2 + 0.001
+      && Math.abs(label.position.y - s.y) <= s.height / 2 + 0.02);
+  if (!chip) return doc;
+  const textW = (s: string) => (Math.max(...s.split("\n").map((l) => l.length), 1) * label.fontSize * 0.62) / doc.customSize.width;
+  // Delta keeps hand-tuned extra width; the floor guarantees the chip is
+  // always slightly LONGER than the text (builder's padding), even when the
+  // old chip was already too tight for its old label.
+  const minW = textW(label.content) + (0.076 * Math.min(doc.customSize.width, doc.customSize.height)) / doc.customSize.width;
+  const width = Math.min(0.94, Math.max(minW, chip.width - textW(oldContent) + textW(label.content)));
+  const x = label.align === "center" ? chip.x : chip.x - chip.width / 2 + width / 2;
+  return {
+    ...doc,
+    design: { ...doc.design, shapes: (doc.design.shapes ?? []).map((s) => (s === chip ? { ...s, width, x } : s)) },
   };
 }
 
@@ -276,7 +309,7 @@ export function retargetPartnerLayout(tuned: SimpleDoc, rebuilt: SimpleDoc, layo
     orderSwap.set(`shape:${ph.id}`, `image:${img.id}`);
   }
 
-  return {
+  const result: SimpleDoc = {
     ...tuned,
     canvasImages: [...nextImages.filter((i) => !dropImageIds.has(i.id)), ...addImages],
     design: {
@@ -287,6 +320,8 @@ export function retargetPartnerLayout(tuned: SimpleDoc, rebuilt: SimpleDoc, layo
       layerOrder: tuned.design.layerOrder?.map((l) => orderSwap.get(l) ?? l),
     },
   };
+  // A changed label (rename, singular↔plural) needs its white chip refitted.
+  return resizeLabelChip(result, tuned.design.texts.find((t) => t.simpleRole === "label")?.content);
 }
 
 /**
