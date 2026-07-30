@@ -340,6 +340,18 @@ interface CanvasBackgroundProps {
   paused?: boolean;
 }
 
+/**
+ * Does this background MOVE? True for the liquid-metal shaders (`BG_REGISTRY`)
+ * and the 2D-canvas orb presets (`ORB_REGISTRY`); false for the static season /
+ * stage JPGs in `IMAGE_BG_REGISTRY`, and false for an unknown id.
+ *
+ * Gates the MP4 export: recording 3 seconds of a still image would just produce
+ * a heavy file that looks exactly like the PNG.
+ */
+export function isAnimatedBackground(id: string): boolean {
+  return Boolean(BG_REGISTRY[id] || ORB_REGISTRY[id]);
+}
+
 // Memoized: all props are primitives (id/width/height/paused), so the shader
 // subtree only re-renders when one actually changes — not on every drag tick
 // when the surrounding document re-renders.

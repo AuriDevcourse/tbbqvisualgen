@@ -598,8 +598,15 @@ export function DynamicTemplate({
         background: COLORS.background,
       }}
     >
-      {/* Background — liquid metal shader */}
-      <CanvasBackground id={design.backgroundId} width={dims.width} height={dims.height} paused={paused} />
+      {/* Background — liquid metal shader / orbs / static image.
+          Wrapped and tagged so the MP4 export can find it: video capture hides
+          this layer, rasterizes everything else ONCE, then composites the LIVE
+          background canvas under it every frame. Re-rasterizing the whole DOM
+          per frame capped the video at ~5fps. The wrapper has no z-index, so it
+          creates no stacking context and the layer order is unchanged. */}
+      <div data-canvas-bg="1" style={{ position: "absolute", inset: 0 }}>
+        <CanvasBackground id={design.backgroundId} width={dims.width} height={dims.height} paused={paused} />
+      </div>
 
       {/* Color overlay */}
       {showOverlay && (
