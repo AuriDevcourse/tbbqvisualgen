@@ -28,7 +28,7 @@ export function checkRate(key: string): NextResponse | null {
   return null;
 }
 
-const KINDS = new Set(["panel", "partner", "editor"]);
+const KINDS = new Set(["panel", "partner", "sales", "editor"]);
 /** Keep well under Vercel's ~4.5MB serverless body cap so failures are OURS
  *  (a clear 413) rather than an opaque platform error. */
 const MAX_BYTES = 4_000_000;

@@ -217,6 +217,23 @@ const SLOT_ROLES = {
  */
 export function retargetPartnerLayout(tuned: SimpleDoc, rebuilt: SimpleDoc, layout: "single" | "duo" | "quad"): SimpleDoc | null {
   if (partnerLayoutOf(tuned) !== layout) return null;
+  return retargetSlotDoc(tuned, rebuilt, SLOT_ROLES[layout]);
+}
+
+/**
+ * The sales template's counterpart: one photo slot that can be filled or
+ * cleared without binning the tuned design. Same machinery as the partner
+ * layouts — the tuned frame keeps its hand-placed geometry and only its
+ * contents change.
+ */
+export function retargetSalesLayout(tuned: SimpleDoc, rebuilt: SimpleDoc, layout: "countdown" | "discount"): SimpleDoc | null {
+  if (salesLayoutOf(tuned) !== layout) return null;
+  return retargetSlotDoc(tuned, rebuilt, [`sales-${layout}.photo`]);
+}
+
+/** The slot reconciliation shared by `retargetPartnerLayout` and
+ *  `retargetSalesLayout`: same composition, different fill pattern. */
+function retargetSlotDoc(tuned: SimpleDoc, rebuilt: SimpleDoc, slotRoles: readonly string[]): SimpleDoc | null {
   if (tuned.format !== rebuilt.format) return null;
   if (tuned.customSize.width !== rebuilt.customSize.width) return null;
   if (tuned.customSize.height !== rebuilt.customSize.height) return null;
@@ -227,7 +244,6 @@ export function retargetPartnerLayout(tuned: SimpleDoc, rebuilt: SimpleDoc, layo
   if (want.size !== have.size) return null;
   for (const role of want.keys()) if (!have.has(role)) return null;
 
-  const slotRoles: readonly string[] = SLOT_ROLES[layout];
   const rebuiltImgs = new Map(rebuilt.canvasImages.filter((i) => i.simpleRole).map((i) => [i.simpleRole as string, i]));
   const tunedImgs = new Map(tuned.canvasImages.filter((i) => i.simpleRole).map((i) => [i.simpleRole as string, i]));
   // A role outside this layout's slot set means the docs aren't the plain
@@ -517,11 +533,11 @@ export function parkDoc(shelf: Record<string, SimpleDoc>, doc: SimpleDoc): Recor
 }
 
 /** One (format × layout) combination a template bundle has a tuned design
- *  for. Panel docs carry no logo layout — their `layout` is null and coverage
+ *  for. Panel docs carry no layout — their `layout` is null and coverage
  *  is per-format only. */
 export interface TemplateCoverage {
   format: PlatformFormat;
-  layout: "single" | "duo" | "quad" | null;
+  layout: "single" | "duo" | "quad" | "countdown" | "discount" | null;
 }
 
 /** What a template bundle consists of: the distinct (format × layout) combos
@@ -531,7 +547,7 @@ export function bundleCoverage(docs: SimpleDoc[]): TemplateCoverage[] {
   const seen = new Set<string>();
   const out: TemplateCoverage[] = [];
   for (const d of docs) {
-    const layout = partnerLayoutOf(d);
+    const layout = salesLayoutOf(d) ?? partnerLayoutOf(d);
     const key = `${d.format}|${layout}`;
     if (seen.has(key)) continue;
     seen.add(key);
@@ -541,10 +557,16 @@ export function bundleCoverage(docs: SimpleDoc[]): TemplateCoverage[] {
 }
 
 export interface PartnerLogo {
-  /** Uploaded logo as a data-URL. */
+  /** Uploaded logo as a data-URL. When `tint` is set this is the RECOLOURED
+   *  copy — the doc only ever sees a finished image. */
   src: string;
   naturalWidth?: number;
   naturalHeight?: number;
+  /** The untouched artwork, kept so "Original" can restore it and so switching
+   *  colours never compounds (a multi-colour logo cannot be un-flattened). */
+  originalSrc?: string;
+  /** The colour the logo was restained to, for the active swatch. */
+  tint?: string;
 }
 
 export interface PartnerForm {
@@ -560,6 +582,92 @@ export interface PartnerForm {
 
 export function emptyPartnerForm(): PartnerForm {
   return { label: "Partner Announcement", layout: "single", logos: [], backgroundId: "orb7" };
+}
+
+/**
+ * Sales / ticket announcement — the countdown and discount visuals.
+ *
+ * Two layouts, same form (like the partner template's One/Two/Four):
+ *  - "countdown": giant number + caption ("48" / "days left") with a wide
+ *    photo band along the bottom.
+ *  - "discount": headline, giant value ("10%"), a white CTA pill, a small
+ *    footer line, and a portrait photo card on the right.
+ *
+ * Every field is plain text — nothing is computed from today's date, so a
+ * saved design never silently changes its number.
+ */
+export interface SalesForm {
+  layout: "countdown" | "discount";
+  /** The big figure: "48", "10%", "2". */
+  value: string;
+  /** The line under the figure — "days left", "off your ticket". */
+  caption: string;
+  /** Discount layout only: the sentence above the figure. */
+  headline: string;
+  /** Discount layout only: white pill under the figure. Empty = no pill. */
+  cta: string;
+  /** Discount layout only: small line along the bottom edge. */
+  footer: string;
+  /** Diagonal corner ribbon across the top-right. Empty = no ribbon. */
+  ribbon: string;
+  /** The one photo this layout frames. Same {src, natural*} shape as a
+   *  partner logo, so the upload slot component is shared. */
+  photo: PartnerLogo | null;
+  backgroundId: string;
+}
+
+export function emptySalesForm(): SalesForm {
+  return {
+    layout: "countdown",
+    value: "48",
+    caption: "days left",
+    headline: "Less than 2 weeks\nleft to save",
+    cta: "BOOK NOW",
+    footer: "COPENHAGEN  |  26-27 AUGUST 2026",
+    ribbon: "TECHBBQ · TECHBBQ · TECHBBQ",
+    photo: null,
+    backgroundId: "orb7",
+  };
+}
+
+/** Which sales layout a doc renders. Read from the photo slot's role (image or
+ *  placeholder frame, the partner trick — countdown and discount use distinct
+ *  role names so their docs can never shape-match each other), falling back to
+ *  the text roles for a doc whose photo layer was deleted by hand. */
+export function salesLayoutOf(doc: SimpleDoc): "countdown" | "discount" | null {
+  const of = (r: string) =>
+    r === "sales-countdown.photo" ? "countdown" as const
+    : r === "sales-discount.photo" ? "discount" as const
+    : null;
+  for (const i of doc.canvasImages) {
+    const l = of(i.simpleRole ?? "");
+    if (l) return l;
+  }
+  for (const s of doc.design.shapes ?? []) {
+    const l = of(s.simpleRole ?? "");
+    if (l) return l;
+  }
+  const roles = doc.design.texts.map((t) => t.simpleRole ?? "");
+  if (!roles.some((r) => r.startsWith("sales."))) return null;
+  // The CTA pill and the footer line only exist on the discount layout.
+  return roles.includes("sales.cta") || roles.includes("sales.footer") ? "discount" : "countdown";
+}
+
+export function isSalesDoc(doc: SimpleDoc): boolean {
+  return salesLayoutOf(doc) !== null;
+}
+
+/**
+ * Which template a doc belongs to. The single source of truth for every
+ * kind guard — a doc of the wrong kind for the active sidebar is a bug the
+ * page heals (see `kindMismatch` in /simple), and the parked shelf is
+ * partitioned by this too. Sales is checked first: it has no logo slots, so
+ * the checks are disjoint, but the order documents the intent.
+ */
+export function docKindOf(doc: SimpleDoc): "panel" | "partner" | "sales" {
+  if (isSalesDoc(doc)) return "sales";
+  if (isPartnerDoc(doc)) return "partner";
+  return "panel";
 }
 
 export interface SimpleForm {
@@ -723,6 +831,245 @@ export function buildPartnerDesign(form: PartnerForm, format: PlatformFormat): S
     showLogo: true,
     logoStyle: "white",
     logoPosition: "bottom-center",
+  };
+
+  return {
+    format,
+    customSize: { width: W, height: H },
+    design,
+    canvasImages,
+  };
+}
+
+/**
+ * Build a Sales Announcement visual — the ticket-deadline and discount posts.
+ *
+ * Both layouts are left-aligned down the same margin as the panel builder,
+ * with one framed photo and an optional diagonal ribbon across the top-right
+ * corner. Sizes derive from the SHORTER side `S`, so a figure reads the same
+ * across 1:1, 16:9 and 9:16.
+ *
+ *   countdown → figure + caption stacked top-left, wide photo band at the bottom
+ *   discount  → headline, figure, white CTA pill, footer line, portrait photo right
+ */
+export function buildSalesDesign(form: SalesForm, format: PlatformFormat): SimpleDoc {
+  seq = 0;
+  const dims = FORMAT_DIMENSIONS[format] ?? FORMAT_DIMENSIONS.square;
+  const W = dims.width;
+  const H = dims.height;
+  const S = Math.min(W, H);
+  const vs = S / H; // one line of a font-fraction, expressed in H-fractions
+
+  const texts: TextElement[] = [];
+  const shapes: ShapeElement[] = [];
+  const canvasImages: CanvasImage[] = [];
+
+  const lineCount = (s: string) => (s.trim() ? s.split("\n").length : 0);
+  // Left-aligned text (x = left edge, y = vertical centre of the block).
+  const mkText = (content: string, x: number, y: number, sizeFrac: number, opts: Partial<TextElement> = {}): void => {
+    if (!content.trim()) return;
+    texts.push({
+      id: uid("text"), content, position: { x, y },
+      fontSize: Math.round(sizeFrac * S), align: "left",
+      weight: 600, font: "onest", color: "#FFFFFF",
+      ...opts,
+    });
+  };
+  // Shrink a font until its longest line fits `maxWfrac` of the canvas width.
+  const fitFont = (text: string, baseFrac: number, maxWfrac: number, avgChar = 0.56): number => {
+    const longest = Math.max(1, ...text.split("\n").map((l) => l.trim().length));
+    return Math.min(baseFrac * S, (maxWfrac * W) / (longest * avgChar)) / S;
+  };
+
+  // ── Diagonal corner ribbon, top-right ─────────────────────────────────────
+  // Geometry is computed in PIXELS: the band is rotated 45° in pixel space, so
+  // the cut must be measured there too, else it would skew on 16:9 / 9:16.
+  // The band always overshoots both canvas edges, and grows with a long
+  // ribbon text so the words never run off the white.
+  if (form.ribbon.trim()) {
+    const ribbonText = form.ribbon.trim().toUpperCase();
+    const ls = Math.round(0.0006 * S);
+    const cut = 0.3 * S;        // distance from the corner where the band crosses each edge
+    const bandHpx = 0.078 * S;
+    // Only the stretch between the two canvas edges is actually visible — the
+    // rest of the band hangs off-canvas. The font shrinks to fit that chord, so
+    // a long ribbon reads in full instead of running off the corner.
+    const visiblePx = cut * Math.SQRT2 - 0.03 * S;
+    const fsPx = Math.max(0.012 * S, Math.min(0.03 * S, (visiblePx - Math.max(0, ribbonText.length - 1) * ls) / (ribbonText.length * 0.62)));
+    const textWpx = ribbonText.length * fsPx * 0.62 + Math.max(0, ribbonText.length - 1) * ls;
+    const lenPx = Math.max(cut * Math.SQRT2 + 0.34 * S, textWpx + 0.1 * S);
+    const cx = (W - cut / 2) / W;
+    const cy = (cut / 2) / H;
+    shapes.push({
+      id: uid("shape"), type: "rectangle", x: cx, y: cy,
+      width: lenPx / W, height: bandHpx / H,
+      fillType: "fill", strokeWidth: 0, colorType: "solid",
+      color1: "#FFFFFF", color2: "#FF6B00", opacity: 1, blur: 0, rotation: 45,
+      borderRadius: 0,
+      simpleRole: "ribbon.band",
+    });
+    texts.push({
+      id: uid("text"), content: ribbonText,
+      position: { x: cx, y: cy },
+      fontSize: Math.round(fsPx), align: "center",
+      weight: 800, uppercase: true, font: "onest",
+      color: "#15110E", letterSpacing: ls, rotation: 45,
+      simpleRole: "sales.ribbon",
+    });
+  }
+
+  // The ribbon eats the top-right corner, so text near the top has to stop
+  // short of it — without this the discount headline ran under the white band.
+  const ribbonGuard = form.ribbon.trim() ? (0.18 * S) / W : 0;
+
+  // ── The photo — an image when uploaded, otherwise the same gradient-outlined
+  // frame every other template uses for an empty slot. Both carry the
+  // LAYOUT-SPECIFIC role, which is what `salesLayoutOf` reads. ──
+  const photoRole = `sales-${form.layout}.photo`;
+  const emitPhoto = (cx: number, cy: number, w: number, h: number, radius: number): void => {
+    if (form.photo?.src) {
+      canvasImages.push({
+        id: uid("img"), src: form.photo.src, x: cx, y: cy, width: w, height: h,
+        cornerRadius: radius, border: true, borderWidth: 3 / 1500, fit: "cover",
+        naturalWidth: form.photo.naturalWidth, naturalHeight: form.photo.naturalHeight,
+        simpleRole: photoRole,
+      });
+    } else {
+      shapes.push({
+        id: uid("shape"), type: "rectangle", x: cx, y: cy, width: w, height: h,
+        fillType: "outline", strokeWidth: 2 / 1500, colorType: "gradient",
+        color1: "#FF6B00", color2: "#FF0028", opacity: 1, blur: 0, rotation: 0,
+        borderRadius: radius / 100,
+        simpleRole: photoRole,
+      });
+    }
+  };
+
+  if (form.layout === "countdown") {
+    // ── Countdown: the figure and its caption fill the upper two thirds, the
+    // photo runs edge-to-edge along the bottom. ──
+    const photoH = (0.26 * S) / H;
+    const photoBottom = 0.94;
+    const photoW = 0.94 - MARGIN;
+    emitPhoto(MARGIN + photoW / 2, photoBottom - photoH / 2, photoW, photoH, 6);
+
+    const textTop = 0.04;
+    const textBottom = photoBottom - photoH - 0.03;
+    const maxW = 0.94 - MARGIN - ribbonGuard;
+    let valueF = fitFont(form.value, 0.42, maxW, 0.68);
+    let captionF = fitFont(form.caption, 0.25, maxW);
+    // The two blocks are set tight (the reference has the caption almost
+    // touching the digits), then scaled down together if they'd reach the photo.
+    const gap = -0.035 * vs;
+    const blockH = () => lineCount(form.value) * valueF * vs + (form.caption.trim() ? gap + lineCount(form.caption) * captionF * vs : 0);
+    const room = textBottom - textTop;
+    if (blockH() > room) {
+      const k = room / blockH();
+      valueF *= k;
+      captionF *= k;
+    }
+    let y = textTop;
+    if (form.value.trim()) {
+      const h = lineCount(form.value) * valueF * vs;
+      mkText(form.value, MARGIN, y + h / 2, valueF, { weight: 500, simpleRole: "sales.value" });
+      y += h + gap;
+    }
+    if (form.caption.trim()) {
+      const h = lineCount(form.caption) * captionF * vs;
+      mkText(form.caption, MARGIN, y + h / 2, captionF, { weight: 500, simpleRole: "sales.caption" });
+    }
+  } else {
+    // ── Discount: portrait photo card bottom-right, text column down the left. ──
+    const photoW = (0.27 * S) / W;
+    const photoH = (0.56 * S) / H;
+    const photoRight = 0.94;
+    const photoBottom = 0.94;
+    emitPhoto(photoRight - photoW / 2, photoBottom - photoH / 2, photoW, photoH, 10);
+
+    // The text column clears the photo card; the headline may run wider
+    // because it sits above the card's top edge.
+    const colW = photoRight - photoW - 0.04 - MARGIN;
+    const headW = 0.94 - MARGIN - ribbonGuard;
+
+    let y = 0.1;
+    if (form.headline.trim()) {
+      const f = fitFont(form.headline, 0.082, headW);
+      const h = lineCount(form.headline) * f * vs;
+      mkText(form.headline, MARGIN, y + h / 2, f, { weight: 600, simpleRole: "sales.headline" });
+      y += h;
+    }
+
+    // Figure: centred in the room between the headline and the CTA pill.
+    const ctaText = form.cta.trim().toUpperCase();
+    const pillH = ctaText ? (0.088 * S) / H : 0;
+    const footerF = form.footer.trim() ? 0.026 : 0;
+    const footerH = footerF ? footerF * vs : 0;
+    const bottomBlock = (ctaText ? pillH + 0.03 : 0) + (footerH ? footerH + 0.03 : 0);
+    const figureBottom = photoBottom - bottomBlock;
+    let valueF = fitFont(form.value, 0.34, colW, 0.68);
+    const captionF = fitFont(form.caption, 0.05, colW);
+    const captionH = form.caption.trim() ? lineCount(form.caption) * captionF * vs + 0.012 : 0;
+    const figureRoom = figureBottom - y - 0.02;
+    if (lineCount(form.value) * valueF * vs + captionH > figureRoom) {
+      valueF = Math.max(0.08, (figureRoom - captionH) / (lineCount(form.value) * vs));
+    }
+    const valueH = form.value.trim() ? lineCount(form.value) * valueF * vs : 0;
+    // Centred in the room between the headline and the CTA. Bottom-anchoring it
+    // left a tall void in the middle of the 9:16 story format.
+    let fy = figureBottom - figureRoom + Math.max(0, (figureRoom - valueH - captionH) / 2);
+    if (form.value.trim()) {
+      mkText(form.value, MARGIN, fy + valueH / 2, valueF, { weight: 500, simpleRole: "sales.value" });
+      fy += valueH;
+    }
+    if (form.caption.trim()) {
+      const h = lineCount(form.caption) * captionF * vs;
+      mkText(form.caption, MARGIN, fy + 0.012 + h / 2, captionF, { weight: 500, color: "rgba(255,255,255,0.95)", simpleRole: "sales.caption" });
+    }
+
+    // ── CTA pill: white rounded pill, brand-red uppercase text. ──
+    if (ctaText) {
+      const ls = Math.round(0.0012 * S);
+      const padX = 0.055 * S;
+      // The pill can't grow past the text column, so a long CTA shrinks its
+      // font instead of overflowing the white ("BOOK YOUR TICKET BEFORE…").
+      const roomPx = colW * W - padX * 2 - Math.max(0, ctaText.length - 1) * ls;
+      const fsFrac = Math.max(0.014, Math.min(0.032, roomPx / (ctaText.length * 0.62) / S));
+      const fsPx = fsFrac * S;
+      const textWpx = ctaText.length * fsPx * 0.62 + Math.max(0, ctaText.length - 1) * ls;
+      const pillW = Math.min((textWpx + padX * 2) / W, colW);
+      const pillY = photoBottom - (footerH ? footerH + 0.03 : 0) - pillH / 2;
+      shapes.push({
+        id: uid("shape"), type: "rectangle",
+        x: MARGIN + pillW / 2, y: pillY, width: pillW, height: pillH,
+        fillType: "fill", strokeWidth: 0, colorType: "solid",
+        color1: "#FFFFFF", color2: "#FF6B00", opacity: 1, blur: 0, rotation: 0,
+        borderRadius: 0.5, // a pill, unlike the panel/partner label chip
+        simpleRole: "cta.pill",
+      });
+      // Caps sit high in their line box — nudge down to optically centre them.
+      mkText(ctaText, MARGIN + padX / W, pillY + fsFrac * vs * 0.11, fsFrac, {
+        weight: 800, uppercase: true, color: "#C4161C", letterSpacing: ls,
+        simpleRole: "sales.cta",
+      });
+    }
+
+    if (form.footer.trim()) {
+      mkText(form.footer, MARGIN, photoBottom - footerH / 2, footerF, {
+        weight: 600, uppercase: true, color: "rgba(255,255,255,0.92)",
+        letterSpacing: Math.round(0.0008 * S), simpleRole: "sales.footer",
+      });
+    }
+  }
+
+  const design: DesignConfig = {
+    backgroundId: form.backgroundId || "orb7",
+    texts,
+    shapes,
+    // The ribbon already brands the corner — a second logo in it would collide,
+    // so the TechBBQ mark only shows when the ribbon is off.
+    showLogo: !form.ribbon.trim(),
+    logoStyle: "white",
+    logoPosition: "top-right",
   };
 
   return {
@@ -1145,17 +1492,21 @@ export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): Sim
  * carries the current layout's slots, so stripping would lose the others.
  */
 export interface SimpleFormsSnapshot {
-  template: "panel" | "partner";
+  template: "panel" | "partner" | "sales";
   form?: SimpleForm;
   partner?: PartnerForm;
+  sales?: SalesForm;
 }
 
-export function stripFormsForSave(template: "panel" | "partner", form: SimpleForm, partner: PartnerForm): SimpleFormsSnapshot {
+export function stripFormsForSave(template: "panel" | "partner" | "sales", form: SimpleForm, partner: PartnerForm, sales?: SalesForm): SimpleFormsSnapshot {
   const strip = (p: SimplePerson): SimplePerson => ({ ...p, photo: "", naturalWidth: undefined, naturalHeight: undefined });
   return {
     template,
     form: { ...form, moderator: strip(form.moderator), speakers: form.speakers.map(strip) },
     partner,
+    // Kept whole, like the partner logos: countdown and discount each own a
+    // photo, and the active doc only carries the current layout's slot.
+    sales,
   };
 }
 
@@ -1184,7 +1535,7 @@ export function isPartnerDoc(doc: SimpleDoc): boolean {
 export function adoptLegacyPanelRoles(doc: SimpleDoc): SimpleDoc {
   if (doc.canvasImages.length === 0) return doc;
   if (doc.canvasImages.some((i) => i.simpleRole)) return doc;
-  if (isPartnerDoc(doc)) return doc;
+  if (docKindOf(doc) !== "panel") return doc;
   const textRoles = doc.design.texts
     .map((t) => t.simpleRole)
     .filter((r): r is string => Boolean(r));
@@ -1271,7 +1622,7 @@ export function dedupeSpeakerRoles(doc: SimpleDoc): SimpleDoc {
     .map((x) => x.simpleRole)
     .filter((r): r is string => Boolean(r));
   if (new Set(roles).size === roles.length) return doc;
-  if (isPartnerDoc(doc)) return doc;
+  if (docKindOf(doc) !== "panel") return doc;
 
   const spkIdx = (r: string) => { const m = /^speaker-(\d+)\./.exec(r); return m ? Number(m[1]) : null; };
   const maxIdx = Math.max(-1, ...roles.map(spkIdx).filter((n): n is number => n !== null));
@@ -1292,12 +1643,12 @@ export function dedupeSpeakerRoles(doc: SimpleDoc): SimpleDoc {
   };
 }
 
-/** A partner doc has no people, so role-less MODERATOR/SPEAKER words on one
- *  are leakage from the pre-guard `syncPartnerChrome` bug (panel chrome
+/** A partner or sales doc has no people, so role-less MODERATOR/SPEAKER words
+ *  on one are leakage from the pre-guard `syncPartnerChrome` bug (panel chrome
  *  carried across a template switch) — drop them so docs contaminated before
  *  the fix heal on their next load. Panel docs keep their words, of course. */
 export function stripLeakedPanelWords(doc: SimpleDoc): SimpleDoc {
-  if (!isPartnerDoc(doc)) return doc;
+  if (docKindOf(doc) === "panel") return doc;
   const leaked = (t: TextElement) => !t.simpleRole && ["MODERATOR", "SPEAKER"].includes(t.content.trim());
   if (!doc.design.texts.some(leaked)) return doc;
   return { ...doc, design: { ...doc.design, texts: doc.design.texts.filter((t) => !leaked(t)) } };
@@ -1323,15 +1674,21 @@ export function sampleFourthSpeaker(): SimplePerson {
  * Partner announcements are just "16x9 - Partner Announcement" (their label is
  * generic). Colons are illegal in Windows file names, so 16:9 → 16x9.
  */
-export function simpleExportName(template: "panel" | "partner", format: PlatformFormat, headline: string): string {
+export function simpleExportName(template: "panel" | "partner" | "sales", format: PlatformFormat, headline: string, salesLabel?: string): string {
   const fmt = format === "presentation" ? "16x9" : format === "story" ? "9x16" : "1x1";
-  if (template === "partner") return `${fmt} - Partner Announcement`;
-  const clean = headline
+  const clean = (s: string) => s
     .split("\n").join(" ")
     .replace(/[\\/:*?"<>|]/g, "")
     .replace(/\s+/g, " ")
     .trim();
-  return clean ? `${fmt} - Panel - ${clean}` : `${fmt} - Panel`;
+  if (template === "partner") return `${fmt} - Partner Announcement`;
+  // Sales: the figure and its caption say what the post is — "48 days left".
+  if (template === "sales") {
+    const label = clean(salesLabel ?? "");
+    return label ? `${fmt} - Sale - ${label}` : `${fmt} - Sale`;
+  }
+  const head = clean(headline);
+  return head ? `${fmt} - Panel - ${head}` : `${fmt} - Panel`;
 }
 
 /**
@@ -1342,14 +1699,43 @@ export function simpleExportName(template: "panel" | "partner", format: Platform
  * Returns null for the form that doesn't belong to the doc's kind, so the
  * caller leaves that side of the state alone.
  */
-export function formsFromDoc(kind: string, doc: SimpleDoc, saved?: SimpleFormsSnapshot): { template: "panel" | "partner"; form: SimpleForm | null; partner: PartnerForm | null } {
-  const template: "panel" | "partner" = saved?.template ?? (kind === "partner" ? "partner" : "panel");
+export function formsFromDoc(kind: string, doc: SimpleDoc, saved?: SimpleFormsSnapshot): { template: "panel" | "partner" | "sales"; form: SimpleForm | null; partner: PartnerForm | null; sales: SalesForm | null } {
+  const template: "panel" | "partner" | "sales" = saved?.template
+    ?? (kind === "partner" ? "partner" : kind === "sales" ? "sales" : "panel");
   const imgByRole = new Map(doc.canvasImages.filter((i) => i.simpleRole).map((i) => [i.simpleRole as string, i]));
   const textByRole = new Map(doc.design.texts.filter((t) => t.simpleRole).map((t) => [t.simpleRole as string, t.content]));
   const asLogo = (role: string): PartnerLogo | null => {
     const i = imgByRole.get(role);
     return i ? { src: i.src, naturalWidth: i.naturalWidth, naturalHeight: i.naturalHeight } : null;
   };
+
+  if (template === "sales") {
+    const base = saved?.sales ?? emptySalesForm();
+    // The doc's own photo role witnesses the layout; the snapshot is the only
+    // witness for a doc whose photo was never uploaded AND whose frame was
+    // hand-deleted (salesLayoutOf then reads the text roles).
+    const layout = salesLayoutOf(doc) ?? base.layout;
+    const photoImg = imgByRole.get(`sales-${layout}.photo`);
+    return {
+      template,
+      form: null,
+      partner: null,
+      sales: {
+        ...base,
+        layout,
+        // Text comes from the snapshot when there is one; older/hand-made
+        // items are reconstructed from the role-tagged layers.
+        value: saved?.sales ? base.value : (textByRole.get("sales.value") ?? base.value),
+        caption: saved?.sales ? base.caption : (textByRole.get("sales.caption") ?? base.caption),
+        headline: saved?.sales ? base.headline : (textByRole.get("sales.headline") ?? base.headline),
+        cta: saved?.sales ? base.cta : (textByRole.get("sales.cta") ?? base.cta),
+        footer: saved?.sales ? base.footer : (textByRole.get("sales.footer") ?? base.footer),
+        ribbon: saved?.sales ? base.ribbon : (textByRole.get("sales.ribbon") ?? base.ribbon),
+        photo: base.photo?.src ? base.photo : (photoImg ? { src: photoImg.src, naturalWidth: photoImg.naturalWidth, naturalHeight: photoImg.naturalHeight } : null),
+        backgroundId: doc.design.backgroundId || base.backgroundId,
+      },
+    };
+  }
 
   if (template === "partner") {
     const base = saved?.partner ?? emptyPartnerForm();
@@ -1366,6 +1752,7 @@ export function formsFromDoc(kind: string, doc: SimpleDoc, saved?: SimpleFormsSn
     return {
       template,
       form: null,
+      sales: null,
       partner: {
         ...base,
         label: saved?.partner ? base.label : (textByRole.get("label") ?? base.label),
@@ -1387,6 +1774,7 @@ export function formsFromDoc(kind: string, doc: SimpleDoc, saved?: SimpleFormsSn
     return {
       template,
       partner: null,
+      sales: null,
       form: {
         ...saved.form,
         // Old snapshots carry two-field people — fold company into the
@@ -1421,6 +1809,7 @@ export function formsFromDoc(kind: string, doc: SimpleDoc, saved?: SimpleFormsSn
   return {
     template,
     partner: null,
+    sales: null,
     form: {
       label: textByRole.get("label") ?? "",
       headline: textByRole.get("headline") ?? "",

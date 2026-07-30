@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Check, ChevronDown, Download, GripVertical, Loader2, Plus, Minus, Trash2, ImagePlus, X, Square, Presentation, Smartphone, PencilRuler, Users, Handshake, Columns2, LayoutGrid, ChevronLeft, ChevronRight, Library, Save } from "lucide-react";
+import { Check, ChevronDown, Download, Film, GripVertical, Loader2, Plus, Minus, Trash2, ImagePlus, X, Square, Presentation, Smartphone, PencilRuler, Users, Handshake, Columns2, LayoutGrid, ChevronLeft, ChevronRight, Library, Save, Ticket, Timer, BadgePercent } from "lucide-react";
 import { Popover } from "radix-ui";
 import { TeamLibrary, type LibraryLoadedItem } from "@/components/TeamLibrary";
 import { AuthChip } from "@/components/AuthChip";
@@ -11,14 +11,31 @@ import { AnimatedGradient } from "@/components/AnimatedGradient";
 import { DynamicTemplate } from "@/components/templates/DynamicTemplate";
 import { BackgroundPicker } from "@/components/BackgroundPicker";
 import { useExport, type ExportFormat } from "@/hooks/useExport";
+import { isAnimatedBackground } from "@/components/CanvasBackground";
+import { LogoLibraryPicker } from "@/components/LogoLibraryPicker";
+import { isSvgDataUrl, tintSvgDataUrl } from "@/lib/svgTint";
+import { ColorPicker } from "@/components/ColorPicker";
 import type { PlatformFormat } from "@/types/template";
-import { buildSimpleDesign, buildPartnerDesign, bundleCoverage, emptyForm, emptyPartnerForm, emptyPerson, formsFromDoc, isBlankPerson, isPartnerDoc, mergePersonDescription, migrateLegacyPanelDoc, panelShapeKey, parkDoc, partnerLayoutOf, retargetPartnerLayout, retargetTunedDoc, sampleFourthSpeaker, simpleExportName, stripFormsForSave, syncPanelChrome, syncPartnerChrome, type SimpleForm, type PartnerForm, type PartnerLogo, type SimplePerson, type SimpleDoc, type TemplateCoverage } from "@/lib/simpleLayout";
+import { buildSimpleDesign, buildPartnerDesign, buildSalesDesign, bundleCoverage, docKindOf, emptyForm, emptyPartnerForm, emptyPerson, emptySalesForm, formsFromDoc, isBlankPerson, isPartnerDoc, mergePersonDescription, migrateLegacyPanelDoc, panelShapeKey, parkDoc, partnerLayoutOf, retargetPartnerLayout, retargetSalesLayout, retargetTunedDoc, salesLayoutOf, sampleFourthSpeaker, simpleExportName, stripFormsForSave, syncPanelChrome, syncPartnerChrome, type SimpleForm, type PartnerForm, type PartnerLogo, type SalesForm, type SimplePerson, type SimpleDoc, type TemplateCoverage } from "@/lib/simpleLayout";
 
-type TemplateKind = "panel" | "partner";
+type TemplateKind = "panel" | "partner" | "sales";
+
+/** What the Save button produces: a still image, or a 3-second MP4 of the
+ *  animated background. */
+type SaveFormat = ExportFormat | "mp4";
+const SAVE_LABELS: Record<SaveFormat, string> = { png: "PNG", jpeg: "JPG", mp4: "MP4 · 3s video" };
 
 const TEMPLATES: { id: TemplateKind; label: string; icon: typeof Users }[] = [
   { id: "panel", label: "Panel", icon: Users },
-  { id: "partner", label: "Partner Announcement", icon: Handshake },
+  { id: "partner", label: "Partner", icon: Handshake },
+  { id: "sales", label: "Sale", icon: Ticket },
+];
+
+// The sales template's two compositions — the countdown post and the discount
+// post. Same form, like the partner template's One/Two/Four.
+const SALES_LAYOUTS: { id: SalesForm["layout"]; label: string; icon: typeof Square }[] = [
+  { id: "countdown", label: "Countdown", icon: Timer },
+  { id: "discount", label: "Discount", icon: BadgePercent },
 ];
 
 const FORMATS: { id: PlatformFormat; label: string; sub: string; icon: typeof Square }[] = [
@@ -141,6 +158,42 @@ function PersonEditor({
   );
 }
 
+/** Swatches for logo recolouring. White and black lead: a knockout is the
+ *  common case on the dark canvas, brand colours come after. */
+const LOGO_SWATCHES = [
+  { value: "#FFFFFF", label: "White" },
+  { value: "#15110E", label: "Black" },
+  { value: "#FF0028", label: "TechBBQ red" },
+  { value: "#FF6B00", label: "Orange" },
+  { value: "#FFD000", label: "Gold" },
+];
+
+/**
+ * Recolour control for a filled logo slot — one swatch button that opens the
+ * standard colour popover (brand row, recents, hex input), with clear = back to
+ * the original artwork. SVG only: a raster has no colours to rewrite, so nothing
+ * renders for a PNG. Multi-colour marks flatten to a single colour, which is the
+ * point when you need a knockout, hence "original" is always one click away.
+ */
+function LogoTintRow({ tint, onTint }: { tint?: string; onTint: (colour: string | null) => void }) {
+  return (
+    <div className="flex items-center gap-1.5 pt-1">
+      <ColorPicker
+        compact
+        allowClear
+        color={tint}
+        defaultColor="#FFFFFF"
+        ariaLabel="Recolour this logo"
+        swatches={LOGO_SWATCHES}
+        onChange={(c) => onTint(c ?? null)}
+      />
+      <span className="text-[10px] leading-tight text-white/45">
+        {tint ? "Recoloured" : "Recolour"}
+      </span>
+    </div>
+  );
+}
+
 // One partner-logo upload slot: dropzone → contain-fit preview + remove.
 // A logo file can be DROPPED straight onto any slot. Moving a logo between
 // slots is a POINTER drag with a click-vs-drag threshold (same pattern as the
@@ -149,7 +202,7 @@ function PersonEditor({
 // file picker. HTML5 drag-and-drop is NOT used for the reorder — a draggable
 // container hijacked plain clicks, and a grip handle demanded pixel-precise
 // aim; both live-failed. The ‹ › buttons remain the keyboard path.
-function LogoSlot({ logo, onChange, small, onSwapPrev, onSwapNext, index, onReorder }: { logo: PartnerLogo | null; onChange: (l: PartnerLogo | null) => void; small?: boolean; onSwapPrev?: () => void; onSwapNext?: () => void; index?: number; onReorder?: (from: number, to: number) => void }) {
+function LogoSlot({ logo, onChange, small, onSwapPrev, onSwapNext, index, onReorder, onTint, emptyLabel = "Upload the partner's logo" }: { logo: PartnerLogo | null; onChange: (l: PartnerLogo | null) => void; small?: boolean; onSwapPrev?: () => void; onSwapNext?: () => void; index?: number; onReorder?: (from: number, to: number) => void; onTint?: (colour: string | null) => void; emptyLabel?: string }) {
   const [dragOver, setDragOver] = useState(false);
   const [dragging, setDragging] = useState(false);
   // Pointer-drag bookkeeping: where the press started, and whether the
@@ -229,11 +282,11 @@ function LogoSlot({ logo, onChange, small, onSwapPrev, onSwapNext, index, onReor
           // draggable={false}: the browser's native image drag would fight
           // both the label click and the handle's reorder payload.
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={logo.src} alt="Partner logo" draggable={false} className="max-w-[85%] max-h-[80%] object-contain" />
+          <img src={logo.src} alt="" draggable={false} className="max-w-[85%] max-h-[80%] object-contain" />
         ) : (
           <span className="flex flex-col items-center gap-1.5 text-white/40 group-hover:text-white/70 transition-colors">
             <ImagePlus className={small ? "w-5 h-5" : "w-6 h-6"} />
-            {!small && <span className="text-xs">Upload the partner&apos;s logo</span>}
+            {!small && <span className="text-xs">{emptyLabel}</span>}
           </span>
         )}
         <input
@@ -273,6 +326,10 @@ function LogoSlot({ logo, onChange, small, onSwapPrev, onSwapNext, index, onReor
         >
           <GripVertical className="w-3.5 h-3.5" strokeWidth={2} />
         </span>
+      )}
+      {/* Recolour: SVG logos only (see LogoTintRow). */}
+      {onTint && isSvgDataUrl(logo?.originalSrc ?? logo?.src) && (
+        <LogoTintRow tint={logo?.tint} onTint={onTint} />
       )}
       {logo?.src && onSwapPrev && (
         <button
@@ -323,15 +380,17 @@ interface PersistedForm {
   stash: SimplePerson[];
   template?: TemplateKind;
   partner?: PartnerForm;
+  sales?: SalesForm;
 }
 
 /** Drop dataURL photos — the fallback when the full form busts the quota. */
-function withoutPhotos({ form, format, stash, template, partner }: PersistedForm): PersistedForm {
+function withoutPhotos({ form, format, stash, template, partner, sales }: PersistedForm): PersistedForm {
   const strip = (p: SimplePerson): SimplePerson => ({ ...p, photo: "", naturalWidth: undefined, naturalHeight: undefined });
   return {
     format,
     template,
     partner: partner ? { ...partner, logos: [] } : undefined,
+    sales: sales ? { ...sales, photo: null } : undefined,
     form: { ...form, moderator: strip(form.moderator), speakers: form.speakers.map(strip) },
     stash: stash.map(strip),
   };
@@ -396,6 +455,7 @@ export default function SimplePage() {
   const [form, setForm] = useState<SimpleForm>(emptyForm);
   const [template, setTemplate] = useState<TemplateKind>("panel");
   const [partner, setPartner] = useState<PartnerForm>(emptyPartnerForm);
+  const [sales, setSales] = useState<SalesForm>(emptySalesForm);
   const [format, setFormat] = useState<PlatformFormat>("square");
   // Gates the persist + override-drop effects until the one-time hydrate has
   // landed, so restoring a saved form doesn't read as "the user edited it".
@@ -403,7 +463,9 @@ export default function SimplePage() {
   // People parked by lowering the speaker count — popped back in order when
   // the count goes up again, so a mis-click doesn't cost you their details.
   const [stash, setStash] = useState<SimplePerson[]>([]);
-  const [exportFormat, setExportFormat] = useState<ExportFormat>("jpeg");
+  // "mp4" is a save format alongside the two image ones — offered only when
+  // the background actually animates (see canAnimate below).
+  const [exportFormat, setExportFormat] = useState<SaveFormat>("jpeg");
   const [paused, setPaused] = useState(false);
   // When the user fine-tunes in the advanced editor, we adopt their edited doc
   // here and render THAT instead of the form-generated layout — so coming back
@@ -415,7 +477,7 @@ export default function SimplePage() {
   const [parked, setParked] = useState<Record<string, SimpleDoc>>({});
   // Which library item the design on screen belongs to — set by loading or
   // saving, cleared by Revert. Drives the header "Update <name>" button.
-  const [loadedItem, setLoadedItem] = useState<{ id: string; name: string; kind: "panel" | "partner" } | null>(null);
+  const [loadedItem, setLoadedItem] = useState<{ id: string; name: string; kind: TemplateKind } | null>(null);
   const [updatingItem, setUpdatingItem] = useState(false);
   // What the loaded template consists of — its (format × layout) combos.
   // Shown as dots on the Format / logo-layout buttons plus a "set up for /
@@ -423,10 +485,12 @@ export default function SimplePage() {
   // a template only exists in 1:1.
   const [coverage, setCoverage] = useState<TemplateCoverage[] | null>(null);
 
-  const { exportRef, isExporting, exportImage } = useExport();
+  const { exportRef, isExporting, isExportingVideo, videoProgress, exportImage, exportMp4 } = useExport();
   const genDoc = useMemo(
-    () => (template === "partner" ? buildPartnerDesign(partner, format) : buildSimpleDesign(form, format)),
-    [template, partner, form, format],
+    () => (template === "partner" ? buildPartnerDesign(partner, format)
+      : template === "sales" ? buildSalesDesign(sales, format)
+      : buildSimpleDesign(form, format)),
+    [template, partner, sales, form, format],
   );
   const doc = custom ?? genDoc;
   const { width: W, height: H } = doc.customSize;
@@ -501,6 +565,7 @@ export default function SimplePage() {
           if (saved.format) setFormat(saved.format);
           setStash((saved.stash ?? []).map(mergePersonDescription));
           if (saved.template) setTemplate(saved.template);
+          if (saved.sales) setSales({ ...emptySalesForm(), ...saved.sales });
           if (saved.partner) {
             // Migrate the short-lived single-`logo` shape (2026-07-21 morning)
             // to the slot-array shape.
@@ -522,8 +587,8 @@ export default function SimplePage() {
   // form from overwriting a saved panel before it has been read back.
   useEffect(() => {
     if (!hydrated) return;
-    persistForm({ form, format, stash, template, partner });
-  }, [hydrated, form, format, stash, template, partner]);
+    persistForm({ form, format, stash, template, partner, sales });
+  }, [hydrated, form, format, stash, template, partner, sales]);
 
   // A form edit used to bin the fine-tuned design outright. Now the words are
   // re-pointed at the tuned layers instead, so retyping a title costs you
@@ -535,7 +600,7 @@ export default function SimplePage() {
     // Wait for the hydrate, else restoring a saved form looks like an edit and
     // needlessly bins the fine-tuned override.
     if (!hydrated) return;
-    const key = JSON.stringify([template, form, partner, format]);
+    const key = JSON.stringify([template, form, partner, sales, format]);
     // A custom doc of the WRONG KIND for this template — a panel doc on the
     // canvas while the partner form is up (Auri's screenshot: Host design
     // under the Partner Announcement sidebar) — must never survive, however
@@ -544,21 +609,25 @@ export default function SimplePage() {
     // early-returns, so the mismatch heals even when the form is unchanged
     // and even on the first run after hydrate; the normal flow below then
     // parks the doc (recoverable) and revives/builds the right kind.
-    const kindMismatch = Boolean(custom && isPartnerDoc(custom) !== (template === "partner"));
+    const kindMismatch = Boolean(custom && docKindOf(custom) !== template);
     if (!kindMismatch) {
       if (baselineRef.current === "") { baselineRef.current = key; return; }
       if (key === baselineRef.current) return;
     }
     baselineRef.current = key;
 
-    const rebuilt = template === "partner" ? buildPartnerDesign(partner, format) : buildSimpleDesign(form, format);
+    const rebuilt = template === "partner" ? buildPartnerDesign(partner, format)
+      : template === "sales" ? buildSalesDesign(sales, format)
+      : buildSimpleDesign(form, format);
 
     if (custom) {
       // Same shape → carry the tuning across, only the words change. For a
       // partner doc, a slot gaining/losing its logo changes the shape but not
       // the layout — reconcile the slots instead of binning the tuning.
       const retargeted = retargetTunedDoc(custom, rebuilt)
-        ?? (template === "partner" ? retargetPartnerLayout(custom, rebuilt, partner.layout) : null);
+        ?? (template === "partner" ? retargetPartnerLayout(custom, rebuilt, partner.layout)
+          : template === "sales" ? retargetSalesLayout(custom, rebuilt, sales.layout)
+          : null);
       if (retargeted) {
         setCustom(retargeted);
         return;
@@ -580,6 +649,15 @@ export default function SimplePage() {
     if (!next && template === "partner") {
       for (const d of Object.values(parked).reverse()) {
         next = retargetPartnerLayout(d, rebuilt, partner.layout);
+        if (next) break;
+      }
+    }
+    // Same fallback for the sales template: a tuned countdown/discount design
+    // must revive even when its photo slot is filled differently than when it
+    // was parked (uploading the photo changes the shape, not the composition).
+    if (!next && template === "sales") {
+      for (const d of Object.values(parked).reverse()) {
+        next = retargetSalesLayout(d, rebuilt, sales.layout);
         if (next) break;
       }
     }
@@ -608,7 +686,7 @@ export default function SimplePage() {
       next = syncPanelChrome(custom, next ?? rebuilt);
     }
     setCustom(next);
-  }, [hydrated, template, form, partner, format, custom, parked]);
+  }, [hydrated, template, form, partner, sales, format, custom, parked]);
 
   // Keep the tuned designs across tab closes — they were session-only, so
   // shutting the tab silently threw the fine-tuning away.
@@ -625,7 +703,7 @@ export default function SimplePage() {
   // doesn't read as an edit and retarget (or bin) the doc we just loaded.
   // Adopt a library item as "what I'm working on": header Update button, the
   // re-copyable ?load= URL, and the applied-marker so a refresh keeps edits.
-  const adoptLibraryIdentity = (id: string, name: string, kind: "panel" | "partner", cov: TemplateCoverage[]) => {
+  const adoptLibraryIdentity = (id: string, name: string, kind: TemplateKind, cov: TemplateCoverage[]) => {
     setLoadedItem({ id, name, kind });
     setCoverage(cov);
     try {
@@ -645,9 +723,11 @@ export default function SimplePage() {
     const restored = formsFromDoc(item.kind, doc, simpleForms);
     const nextForm = restored.form ?? form;
     const nextPartner = restored.partner ?? partner;
+    const nextSales = restored.sales ?? sales;
     setTemplate(restored.template);
     setForm(nextForm);
     setPartner(nextPartner);
+    setSales(nextSales);
     setFormat(doc.format);
     setCustom(doc);
     // The loaded item becomes the source of truth for its template: purge the
@@ -656,12 +736,11 @@ export default function SimplePage() {
     // purge matters even without variants — stale parked docs otherwise
     // resurface later when an upload makes the shape key match again (Auri
     // hit this: adding a second logo revived an old tuned duo experiment).
-    const isPartnerKind = item.kind === "partner";
     setParked((p) => ({
-      ...Object.fromEntries(Object.entries(p).filter(([, d]) => isPartnerDoc(d) !== isPartnerKind)),
+      ...Object.fromEntries(Object.entries(p).filter(([, d]) => docKindOf(d) !== restored.template)),
       ...Object.fromEntries((simpleVariants ?? []).map((d) => [panelShapeKey(d), d])),
     }));
-    baselineRef.current = JSON.stringify([restored.template, nextForm, nextPartner, doc.format]);
+    baselineRef.current = JSON.stringify([restored.template, nextForm, nextPartner, nextSales, doc.format]);
     adoptLibraryIdentity(item.id, item.name, restored.template, bundleCoverage([doc, ...(simpleVariants ?? [])]));
   };
 
@@ -712,10 +791,13 @@ export default function SimplePage() {
   const DEFAULT_ITEM_IDS = {
     panel: "c20fddbb-d4c5-455d-ac10-3c802ea7a3d6",
     partner: "7583298d-759b-4f97-9d33-fc2e10776e97",
-  } as const;
+    // The team has no official Sale item yet: the built-in countdown/discount
+    // layouts ARE the template until someone saves one.
+    sales: undefined,
+  } as const satisfies Record<TemplateKind, string | undefined>;
   // Each template's flavours, offered as a picker above Format. Every button
   // is a door into its team-library item.
-  const FLAVOURS = {
+  const FLAVOURS: Partial<Record<TemplateKind, { heading: string; options: readonly { key: string; label: string; itemId: string }[] }>> = {
     panel: {
       heading: "Panel type",
       options: [
@@ -730,7 +812,9 @@ export default function SimplePage() {
         { key: "community", label: "Community Announcement", itemId: "431c22ac-a5a2-46a4-aec7-ad39923eae7d" },
       ],
     },
-  } as const;
+    // Sales has no library flavours yet — the layout picker below is its
+    // equivalent, so the section simply does not render.
+  };
   // All official templates are PREFETCHED into memory right after mount, so
   // pressing an Announcement button (or switching Template) applies instantly
   // — the network round-trip happens once in the background, never on the
@@ -760,25 +844,28 @@ export default function SimplePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated]);
 
-  const defaultLoadTried = useRef<{ panel?: boolean; partner?: boolean }>({});
+  const defaultLoadTried = useRef<Partial<Record<TemplateKind, boolean>>>({});
   useEffect(() => {
     if (!hydrated) return;
     const kind = template;
     if (defaultLoadTried.current[kind]) return;
-    const isPartnerKind = kind === "partner";
+    // No official item for this template yet (sales) — the built-in layout IS
+    // the template until the team saves one.
+    const defaultId = DEFAULT_ITEM_IDS[kind];
+    if (!defaultId) { defaultLoadTried.current[kind] = true; return; }
     // Anything of the user's own FOR THIS KIND wins over the default. Work of
-    // the other kind doesn't block — switching templates should still land on
+    // the other kinds doesn't block — switching templates should still land on
     // that template's official design.
-    if (custom && isPartnerDoc(custom) === isPartnerKind) return;
+    if (custom && docKindOf(custom) === kind) return;
     if (loadedItem?.kind === kind) return;
-    if (Object.values(parked).some((d) => isPartnerDoc(d) === isPartnerKind)) return;
+    if (Object.values(parked).some((d) => docKindOf(d) === kind)) return;
     // A deep link that hasn't been applied yet owns the first load; once its
     // marker is set the param is just address-bar residue.
     const pending = new URLSearchParams(window.location.search).get("load");
     try { if (pending && sessionStorage.getItem(DEEPLINK_DONE_KEY) !== pending) return; } catch { /* treat as applied */ }
     defaultLoadTried.current[kind] = true;
     (async () => {
-      const item = await fetchLibraryItem(DEFAULT_ITEM_IDS[kind]);
+      const item = await fetchLibraryItem(defaultId);
       if (!item) return; // signed out/offline — the generic layout is the fallback
       handleLibraryLoad(item);
       toast.info(`Loaded the team template "${item.name}"`);
@@ -826,6 +913,7 @@ export default function SimplePage() {
       for (const [k, d] of Object.entries(p)) {
         if (custom && k === panelShapeKey(custom)) continue;
         if (template === "partner" && isPartnerDoc(d) && partnerLayoutOf(d) === partner.layout) continue;
+        if (template === "sales" && salesLayoutOf(d) === sales.layout) continue;
         next[k] = d;
       }
       return next;
@@ -915,6 +1003,35 @@ export default function SimplePage() {
       return { ...p, logos };
     });
 
+  // A library pick needs a destination. First empty slot of the current
+  // layout, falling back to the last one when they are all filled — so
+  // clicking is predictable and the hint can say where it goes.
+  const partnerSlotCount = partner.layout === "quad" ? 4 : partner.layout === "duo" ? 2 : 1;
+  const nextLogoSlot = (() => {
+    for (let i = 0; i < partnerSlotCount; i++) if (!partner.logos[i]?.src) return i;
+    return partnerSlotCount - 1;
+  })();
+
+  /**
+   * Restain a slot's logo. Always derived from `originalSrc` so switching
+   * colours never compounds, and `null` puts the original artwork back.
+   */
+  const setPartnerLogoTint = (i: number, colour: string | null) => {
+    const logo = partner.logos[i];
+    if (!logo?.src) return;
+    const base = logo.originalSrc ?? logo.src;
+    if (!colour) {
+      setPartnerLogo(i, { src: base, naturalWidth: logo.naturalWidth, naturalHeight: logo.naturalHeight });
+      return;
+    }
+    const tinted = tintSvgDataUrl(base, colour);
+    if (!tinted) {
+      toast.error("Only SVG logos can be recoloured — this one is a bitmap.");
+      return;
+    }
+    setPartnerLogo(i, { ...logo, src: tinted, originalSrc: base, tint: colour });
+  };
+
   // Swap two quad cells — works with an empty neighbour too, which reads as
   // "move the logo there".
   const swapLogos = (i: number, j: number) =>
@@ -928,9 +1045,9 @@ export default function SimplePage() {
   // + the tuned docs of this template's other layouts (from the parked shelf).
   const currentBundle = useMemo(() => ({
     ...doc,
-    simpleForms: stripFormsForSave(template, form, partner),
-    simpleVariants: Object.values(parked).filter((d) => isPartnerDoc(d) === (template === "partner")),
-  }), [doc, template, form, partner, parked]);
+    simpleForms: stripFormsForSave(template, form, partner, sales),
+    simpleVariants: Object.values(parked).filter((d) => docKindOf(d) === template),
+  }), [doc, template, form, partner, sales, parked]);
 
   // Header shortcut: overwrite the loaded library item with everything on
   // screen — same id, so its shared link keeps working.
@@ -963,9 +1080,12 @@ export default function SimplePage() {
   // kind — on the other template the buttons are plain.
   const activeCoverage = loadedItem && template === loadedItem.kind ? coverage : null;
   const coveredFormats = useMemo(() => new Set((activeCoverage ?? []).map((c) => c.format)), [activeCoverage]);
-  const LAYOUT_NAMES = { single: "One", duo: "Two", quad: "Four" } as const;
+  const LAYOUT_NAMES = { single: "One", duo: "Two", quad: "Four", countdown: "Countdown", discount: "Discount" } as const;
+  // The layout a covered combo must match for THIS template — partner logo
+  // layout, sales composition, or nothing at all for a panel.
+  const activeLayout = template === "partner" ? partner.layout : template === "sales" ? sales.layout : null;
   const currentCovered = !activeCoverage || activeCoverage.some((c) =>
-    c.format === format && (template !== "partner" || c.layout === partner.layout));
+    c.format === format && (activeLayout === null || c.layout === activeLayout));
   // "1:1 (One, Two, Four) · 16:9" — what the loaded template consists of.
   const coverageSummary = FORMATS
     .filter((f) => (activeCoverage ?? []).some((c) => c.format === f.id))
@@ -977,13 +1097,31 @@ export default function SimplePage() {
 
   const isEmpty = template === "partner"
     ? !custom && !partner.label.trim() && !partner.logos.some((l) => l?.src)
-    : !custom && !form.headline.trim() && !form.label.trim() && form.speakers.every((s) => !s.name.trim()) && !form.moderator.name.trim();
+    : template === "sales"
+      ? !custom && !sales.value.trim() && !sales.caption.trim() && !sales.headline.trim() && !sales.photo?.src
+      : !custom && !form.headline.trim() && !form.label.trim() && form.speakers.every((s) => !s.name.trim()) && !form.moderator.name.trim();
+
+  // Only an animated background has anything to record; a static season/stage
+  // JPG would give a 3-second video of a still frame.
+  const canAnimate = isAnimatedBackground(doc.design.backgroundId);
+  const saveFormats: SaveFormat[] = canAnimate ? ["png", "jpeg", "mp4"] : ["png", "jpeg"];
+  // A background switch can strand the choice on MP4 — fall back to JPG.
+  const effectiveFormat: SaveFormat = exportFormat === "mp4" && !canAnimate ? "jpeg" : exportFormat;
 
   const handleExport = () => {
+    const salesLabel = [sales.value, sales.caption].map((t) => t.trim()).filter(Boolean).join(" ");
+    const base = simpleExportName(template, format, form.headline, salesLabel);
+    if (effectiveFormat === "mp4") {
+      // The animation has to be RUNNING for the capture, so resume instead of
+      // pausing (the shader is paused while a still export is in flight).
+      setPaused(false);
+      void exportMp4(`${base}.mp4`, () => setPaused(false));
+      return;
+    }
     setPaused(true);
     setTimeout(() => {
-      const ext = exportFormat === "jpeg" ? "jpg" : "png";
-      exportImage(`${simpleExportName(template, format, form.headline)}.${ext}`, exportFormat).finally(() => setPaused(false));
+      const ext = effectiveFormat === "jpeg" ? "jpg" : "png";
+      exportImage(`${base}.${ext}`, effectiveFormat).finally(() => setPaused(false));
     }, 100);
   };
 
@@ -1032,7 +1170,9 @@ export default function SimplePage() {
               className="flex items-center gap-2 rounded-full border border-[#FF6B00]/40 bg-[#FF6B00]/10 pl-3 pr-1.5 py-1"
               title={template === "partner"
                 ? "Text edits and logo swaps keep this layout. Switching layout or format shows the design saved for it, when there is one."
-                : "Text edits and photo swaps keep this layout. Switching format shows the design saved for it; changing the speaker count or moderator rebuilds."}
+                : template === "sales"
+                  ? "Text edits and photo swaps keep this layout. Switching sale type or format shows the design saved for it, when there is one."
+                  : "Text edits and photo swaps keep this layout. Switching format shows the design saved for it; changing the speaker count or moderator rebuilds."}
             >
               <span className="text-[11px] font-medium text-[#FF8A3D] whitespace-nowrap">Custom design active · saved</span>
               <button
@@ -1074,39 +1214,45 @@ export default function SimplePage() {
             <div className="flex items-stretch rounded-full bg-surface text-ink overflow-hidden">
               <button
                 onClick={handleExport}
-                disabled={isExporting || isEmpty}
-                aria-label="Save image"
-                title={isEmpty ? (template === "partner" ? "Add a label or a partner logo first" : "Add a headline or a speaker first") : `Save image as ${exportFormat === "jpeg" ? "JPG" : "PNG"}`}
+                disabled={isExporting || isExportingVideo || isEmpty}
+                aria-label={effectiveFormat === "mp4" ? "Save video" : "Save image"}
+                title={isEmpty ? (template === "partner" ? "Add a label or a partner logo first" : template === "sales" ? "Add the figure or a photo first" : "Add a headline or a speaker first") : `Save as ${SAVE_LABELS[effectiveFormat]}`}
                 className="flex items-center gap-1.5 pl-5 pr-3.5 py-2 text-xs font-semibold tracking-wide hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isExporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" strokeWidth={1.5} />}
-                {isExporting ? "Exporting…" : "Save image"}
+                {isExporting || isExportingVideo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : effectiveFormat === "mp4" ? <Film className="w-3.5 h-3.5" strokeWidth={1.5} /> : <Download className="w-3.5 h-3.5" strokeWidth={1.5} />}
+                {isExportingVideo ? `Recording… ${videoProgress}%` : isExporting ? "Exporting…" : effectiveFormat === "mp4" ? "Save video" : "Save image"}
               </button>
               <Popover.Root>
                 <Popover.Trigger asChild>
                   <button
-                    aria-label="Choose image format"
-                    title={`Format: ${exportFormat === "jpeg" ? "JPG" : "PNG"}`}
+                    aria-label="Choose save format"
+                    title={`Format: ${SAVE_LABELS[effectiveFormat]}`}
                     className="flex items-center pl-2 pr-3 py-2 border-l border-black/15 hover:bg-white transition-colors"
                   >
                     <ChevronDown className="w-3.5 h-3.5" strokeWidth={2} />
                   </button>
                 </Popover.Trigger>
                 <Popover.Portal>
-                  <Popover.Content align="end" sideOffset={8} role="radiogroup" aria-label="Image format" className="z-50 min-w-[150px] rounded-xl border border-white/10 bg-[#15110e] p-1 shadow-xl">
-                    {(["png", "jpeg"] as const).map((fmt) => (
+                  <Popover.Content align="end" sideOffset={8} role="radiogroup" aria-label="Save format" className="z-50 min-w-[180px] rounded-xl border border-white/10 bg-[#15110e] p-1 shadow-xl">
+                    {saveFormats.map((fmt) => (
                       <Popover.Close asChild key={fmt}>
                         <button
                           role="radio"
-                          aria-checked={exportFormat === fmt}
+                          aria-checked={effectiveFormat === fmt}
                           onClick={() => setExportFormat(fmt)}
                           className="w-full flex items-center justify-between gap-6 px-3 py-2 rounded-lg text-xs text-white/85 hover:bg-white/10 transition-colors"
                         >
-                          <span className="font-medium">{fmt === "jpeg" ? "JPG" : "PNG"}</span>
-                          {exportFormat === fmt && <Check className="w-3.5 h-3.5 text-[#FF6B00]" strokeWidth={2.5} />}
+                          <span className="font-medium">{SAVE_LABELS[fmt]}</span>
+                          {effectiveFormat === fmt && <Check className="w-3.5 h-3.5 text-[#FF6B00]" strokeWidth={2.5} />}
                         </button>
                       </Popover.Close>
                     ))}
+                    {/* Says WHY there is no video option, instead of just hiding it. */}
+                    {!canAnimate && (
+                      <p className="px-3 py-2 text-[11px] leading-snug text-white/45">
+                        MP4 needs a moving background · pick a Liquid metal or orb one.
+                      </p>
+                    )}
                   </Popover.Content>
                 </Popover.Portal>
               </Popover.Root>
@@ -1139,11 +1285,13 @@ export default function SimplePage() {
             </section>
 
             {/* Template flavour — each button opens its team-library item, so
-                the official designs are one press away (prefetched). */}
+                the official designs are one press away (prefetched). Templates
+                without official items yet (Sale) skip this section. */}
+            {FLAVOURS[template] && (
             <section className="flex flex-col gap-2">
-              <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">{FLAVOURS[template].heading}</span>
+              <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">{FLAVOURS[template]!.heading}</span>
               <div className="flex gap-1.5">
-                {FLAVOURS[template].options.map((a) => {
+                {FLAVOURS[template]!.options.map((a) => {
                   const active = loadedItem?.id === a.itemId;
                   return (
                     <button
@@ -1158,6 +1306,7 @@ export default function SimplePage() {
                 })}
               </div>
             </section>
+            )}
 
             {/* Format. Switching parks the current tuned design and revives
                 the one saved for the target format, when the template has
@@ -1192,7 +1341,8 @@ export default function SimplePage() {
                   <div className="rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-xs leading-snug text-amber-100/90">
                     <span className="font-semibold">
                       &ldquo;{loadedItem!.name}&rdquo; isn&apos;t set up for {FORMATS.find((f) => f.id === format)?.label}
-                      {template === "partner" ? ` · ${LAYOUT_NAMES[partner.layout]} logo${partner.layout === "single" ? "" : "s"}` : ""} yet.
+                      {template === "partner" ? ` · ${LAYOUT_NAMES[partner.layout]} logo${partner.layout === "single" ? "" : "s"}` : ""}
+                      {template === "sales" ? ` · ${LAYOUT_NAMES[sales.layout]}` : ""} yet.
                     </span>{" "}
                     This is the automatic layout. Fine-tune it and press Update to add it to the template.
                   </div>
@@ -1245,6 +1395,7 @@ export default function SimplePage() {
                         onReorder={swapLogos}
                         logo={partner.logos[i] ?? null}
                         onChange={(l) => setPartnerLogo(i, l)}
+                        onTint={(c) => setPartnerLogoTint(i, c)}
                         onSwapPrev={i > 0 ? () => swapLogos(i, i - 1) : undefined}
                         onSwapNext={i < 3 ? () => swapLogos(i, i + 1) : undefined}
                       />
@@ -1260,15 +1411,74 @@ export default function SimplePage() {
                         onReorder={swapLogos}
                         logo={partner.logos[i] ?? null}
                         onChange={(l) => setPartnerLogo(i, l)}
+                        onTint={(c) => setPartnerLogoTint(i, c)}
                         onSwapPrev={i === 1 ? () => swapLogos(1, 0) : undefined}
                         onSwapNext={i === 0 ? () => swapLogos(0, 1) : undefined}
                       />
                     ))}
                   </div>
                 ) : (
-                  <LogoSlot logo={partner.logos[0] ?? null} onChange={(l) => setPartnerLogo(0, l)} />
+                  <LogoSlot logo={partner.logos[0] ?? null} onChange={(l) => setPartnerLogo(0, l)} onTint={(c) => setPartnerLogoTint(0, c)} />
                 )}
               </div>
+              {/* Saved logos — search the ones committed under public/logos
+                  instead of going to find the company's logo on the web. */}
+              <span className="mt-1 text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Logo Library</span>
+              <LogoLibraryPicker
+                onPick={(logo) => setPartnerLogo(nextLogoSlot, logo)}
+                targetHint={partnerSlotCount > 1 ? `slot ${nextLogoSlot + 1}` : undefined}
+              />
+            </section>
+            </>)}
+
+            {template === "sales" && (<>
+            {/* Sale composition — countdown post or discount post. Each keeps
+                its own tuned design per format, like the partner layouts. */}
+            <section className="flex flex-col gap-2">
+              <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Sale type</span>
+              <div className="flex gap-1.5">
+                {SALES_LAYOUTS.map((opt) => {
+                  const active = sales.layout === opt.id;
+                  const isSet = (activeCoverage ?? []).some((c) => c.format === format && c.layout === opt.id);
+                  return (
+                    <button
+                      key={opt.id}
+                      onClick={() => setSales((p) => ({ ...p, layout: opt.id }))}
+                      aria-pressed={active}
+                      title={activeCoverage ? (isSet ? `"${loadedItem!.name}" has this sale type in this format` : `"${loadedItem!.name}" has no ${opt.label} design in this format yet`) : undefined}
+                      className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-xs transition-all ${active ? "bg-[#FF0028] text-white" : "bg-white/5 border border-white/10 text-white/70 hover:bg-white/10"}`}
+                    >
+                      <opt.icon className="w-3.5 h-3.5" />
+                      <span className="font-medium">{opt.label}</span>
+                      {isSet && <span aria-hidden className={`w-1.5 h-1.5 rounded-full ${active ? "bg-white" : "bg-[#FF6B00]"}`} />}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+            <section className="flex flex-col gap-3">
+              {/* The discount post opens with a sentence; the countdown post
+                  leads with the figure itself. */}
+              {sales.layout === "discount" && (
+                <Field label="Headline" hint="Enter = new line" multiline value={sales.headline} onChange={(v) => setSales((p) => ({ ...p, headline: v }))} placeholder={"Less than 2 weeks\nleft to save"} />
+              )}
+              <Field label="Big figure" value={sales.value} onChange={(v) => setSales((p) => ({ ...p, value: v }))} placeholder={sales.layout === "countdown" ? "48" : "10%"} />
+              <Field label="Caption" value={sales.caption} onChange={(v) => setSales((p) => ({ ...p, caption: v }))} placeholder={sales.layout === "countdown" ? "days left" : "off your ticket"} />
+              {sales.layout === "discount" && (<>
+                <Field label="Button" hint="empty = no button" value={sales.cta} onChange={(v) => setSales((p) => ({ ...p, cta: v }))} placeholder="BOOK NOW" />
+                <Field label="Footer line" value={sales.footer} onChange={(v) => setSales((p) => ({ ...p, footer: v }))} placeholder="COPENHAGEN  |  26-27 AUGUST 2026" />
+              </>)}
+              <Field label="Corner ribbon" hint="empty = no ribbon" value={sales.ribbon} onChange={(v) => setSales((p) => ({ ...p, ribbon: v }))} placeholder="DISCOUNT ENDS 23 JULY" />
+            </section>
+
+            <section className="flex flex-col gap-2">
+              <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Photo</span>
+              <LogoSlot
+                logo={sales.photo}
+                onChange={(l) => setSales((p) => ({ ...p, photo: l }))}
+                emptyLabel="Upload the photo"
+              />
             </section>
             </>)}
 
@@ -1364,11 +1574,13 @@ export default function SimplePage() {
               <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Background</span>
               <BackgroundPicker
                 compact
-                value={template === "partner" ? partner.backgroundId : form.backgroundId}
+                value={template === "partner" ? partner.backgroundId : template === "sales" ? sales.backgroundId : form.backgroundId}
                 onChange={(id) => template === "partner"
                   ? setPartner((p) => ({ ...p, backgroundId: id }))
-                  : setForm((f) => ({ ...f, backgroundId: id }))}
-                excludeGroups={template === "partner" ? ["Tech Stage", "BBQ Stage", "Bonfire Stage", "Founder Stage"] : undefined}
+                  : template === "sales"
+                    ? setSales((p) => ({ ...p, backgroundId: id }))
+                    : setForm((f) => ({ ...f, backgroundId: id }))}
+                excludeGroups={template === "panel" ? undefined : ["Tech Stage", "BBQ Stage", "Bonfire Stage", "Founder Stage"]}
               />
             </section>
           </aside>
@@ -1379,7 +1591,7 @@ export default function SimplePage() {
               <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
                 <div className="text-center rounded-2xl bg-black/60 backdrop-blur-sm px-7 py-6">
                   <p className="text-base text-white/90">Fill in the form to build your visual</p>
-                  <p className="text-xs mt-1 text-white/60">{template === "partner" ? "Add a label and the partner's logo on the left" : "Add a headline and your speakers on the left"}</p>
+                  <p className="text-xs mt-1 text-white/60">{template === "partner" ? "Add a label and the partner's logo on the left" : template === "sales" ? "Add the figure and its caption on the left" : "Add a headline and your speakers on the left"}</p>
                 </div>
               </div>
             )}

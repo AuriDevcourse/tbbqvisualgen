@@ -34,14 +34,14 @@ export function TeamLibrary({
 }: {
   open: boolean;
   onClose: () => void;
-  currentKind: "panel" | "partner";
+  currentKind: "panel" | "partner" | "sales";
   /** The full save payload, built by the page: active doc + sidebar snapshot
    *  + the tuned docs for this template's other layouts. */
   currentBundle: SimpleDoc & { simpleForms: SimpleFormsSnapshot; simpleVariants: SimpleDoc[] };
   onLoad: (item: LibraryLoadedItem) => void;
   /** Called after a successful save/overwrite, so the page can adopt the item
    *  as "what I'm working on" (header Update button + URL). */
-  onSaved?: (item: { id: string; name: string; kind: "panel" | "partner" }) => void;
+  onSaved?: (item: { id: string; name: string; kind: "panel" | "partner" | "sales" }) => void;
 }) {
   const [items, setItems] = useState<LibraryListItem[] | null>(null);
   const [needsAuth, setNeedsAuth] = useState(false);
@@ -205,7 +205,7 @@ export function TeamLibrary({
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-white truncate">{it.name}</p>
                     <p className="text-[11px] text-white/45">
-                      {it.kind === "partner" ? "Partner" : "Panel"} · {it.updated_by.split("@")[0]} · {new Date(it.updated_at).toLocaleDateString("da-DK")}
+                      {it.kind === "partner" ? "Partner" : it.kind === "sales" ? "Sale" : "Panel"} · {it.updated_by.split("@")[0]} · {new Date(it.updated_at).toLocaleDateString("da-DK")}
                     </p>
                   </div>
                   <button

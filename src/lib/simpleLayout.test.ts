@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { adoptLegacyPanelRoles, buildPartnerDesign, buildSimpleDesign, bundleCoverage, dedupeSpeakerRoles, emptyForm, parkDoc, emptyPartnerForm, emptyPerson, formsFromDoc, isBlankPerson, mergePersonDescription, migrateLegacyPanelDoc, panelShapeKey, partnerLayoutOf, retargetPartnerLayout, retargetTunedDoc, sampleFourthSpeaker, simpleExportName, stripFormsForSave, syncPanelChrome, syncPartnerChrome, type PartnerForm, type SimpleForm } from "./simpleLayout";
+import { adoptLegacyPanelRoles, buildPartnerDesign, buildSalesDesign, buildSimpleDesign, bundleCoverage, dedupeSpeakerRoles, docKindOf, emptyForm, parkDoc, emptyPartnerForm, emptyPerson, emptySalesForm, formsFromDoc, isBlankPerson, mergePersonDescription, migrateLegacyPanelDoc, panelShapeKey, partnerLayoutOf, retargetPartnerLayout, retargetSalesLayout, retargetTunedDoc, salesLayoutOf, sampleFourthSpeaker, simpleExportName, stripFormsForSave, syncPanelChrome, syncPartnerChrome, type PartnerForm, type SalesForm, type SimpleDoc, type SimpleForm } from "./simpleLayout";
 import type { PlatformFormat } from "@/types/template";
 
 /**
@@ -1044,5 +1044,272 @@ describe("Panel Maker — 3 speakers + 1 moderator, square geometry", () => {
       expect(img.x + img.width / 2).toBeLessThanOrEqual(1);
       expect(img.y + img.height / 2).toBeLessThanOrEqual(1);
     }
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sales Announcement — the countdown and discount posts.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const salesForm = (patch: Partial<SalesForm> = {}): SalesForm => ({ ...emptySalesForm(), ...patch });
+const roleOf = (doc: SimpleDoc, role: string) => doc.design.texts.find((t) => t.simpleRole === role);
+
+describe("Sales Maker — layout", () => {
+  it.each(FORMATS)("countdown layout is stable for %s", (format) => {
+    expect(normalize(buildSalesDesign(salesForm(), format))).toMatchSnapshot();
+  });
+
+  it.each(FORMATS)("discount layout is stable for %s", (format) => {
+    expect(normalize(buildSalesDesign(salesForm({ layout: "discount", value: "10%", caption: "" }), format))).toMatchSnapshot();
+  });
+
+  it("is deterministic — same input, same ids and geometry", () => {
+    expect(buildSalesDesign(salesForm(), "square")).toEqual(buildSalesDesign(salesForm(), "square"));
+  });
+
+  it("countdown stacks the figure above its caption, both on the left margin", () => {
+    const doc = buildSalesDesign(salesForm({ value: "48", caption: "days left" }), "square");
+    const value = roleOf(doc, "sales.value")!;
+    const caption = roleOf(doc, "sales.caption")!;
+    expect(value.content).toBe("48");
+    expect(value.position.y).toBeLessThan(caption.position.y);
+    expect(value.position.x).toBe(caption.position.x);
+  });
+
+  it.each(FORMATS)("countdown keeps the figure block clear of the photo band (%s)", (format) => {
+    // A long figure ("100" at full size) used to run into the photo.
+    const doc = buildSalesDesign(salesForm({ value: "100", caption: "days left to book" }), format);
+    const frame = (doc.design.shapes ?? []).find((s) => s.simpleRole === "sales-countdown.photo")!;
+    const photoTop = frame.y - frame.height / 2;
+    const caption = roleOf(doc, "sales.caption")!;
+    const captionBottom = caption.position.y + (caption.fontSize / 2) / doc.customSize.height;
+    expect(captionBottom).toBeLessThanOrEqual(photoTop);
+  });
+
+  it("discount emits the headline, figure, CTA pill and footer; countdown emits none of the extras", () => {
+    const discount = buildSalesDesign(salesForm({ layout: "discount", value: "10%" }), "square");
+    expect(roleOf(discount, "sales.headline")).toBeDefined();
+    expect(roleOf(discount, "sales.cta")?.content).toBe("BOOK NOW");
+    expect(roleOf(discount, "sales.footer")).toBeDefined();
+    expect((discount.design.shapes ?? []).some((s) => s.simpleRole === "cta.pill")).toBe(true);
+
+    const countdown = buildSalesDesign(salesForm(), "square");
+    expect(roleOf(countdown, "sales.cta")).toBeUndefined();
+    expect(roleOf(countdown, "sales.footer")).toBeUndefined();
+    expect((countdown.design.shapes ?? []).some((s) => s.simpleRole === "cta.pill")).toBe(false);
+  });
+
+  it("an empty CTA or footer drops the layer instead of rendering a stray pill", () => {
+    const doc = buildSalesDesign(salesForm({ layout: "discount", cta: "", footer: "" }), "square");
+    expect(roleOf(doc, "sales.cta")).toBeUndefined();
+    expect((doc.design.shapes ?? []).some((s) => s.simpleRole === "cta.pill")).toBe(false);
+    expect(roleOf(doc, "sales.footer")).toBeUndefined();
+  });
+
+  it("the CTA pill is always at least as wide as its text", () => {
+    for (const cta of ["GO", "BOOK NOW", "BOOK YOUR TICKET BEFORE IT IS TOO LATE"]) {
+      const doc = buildSalesDesign(salesForm({ layout: "discount", cta }), "square");
+      const pill = (doc.design.shapes ?? []).find((s) => s.simpleRole === "cta.pill")!;
+      const text = roleOf(doc, "sales.cta")!;
+      const textW = (text.content.length * text.fontSize * 0.62) / doc.customSize.width;
+      expect(pill.width).toBeGreaterThanOrEqual(textW);
+    }
+  });
+
+  it("the ribbon band is rotated, crosses both corner edges, and grows with a long text", () => {
+    const doc = buildSalesDesign(salesForm({ ribbon: "DISCOUNT ENDS 23 JULY" }), "square");
+    const band = (doc.design.shapes ?? []).find((s) => s.simpleRole === "ribbon.band")!;
+    const text = roleOf(doc, "sales.ribbon")!;
+    expect(band.rotation).toBe(45);
+    expect(text.rotation).toBe(45);
+    expect(text.content).toBe("DISCOUNT ENDS 23 JULY");
+    // Band and text share a centre, so the words sit on the white.
+    expect(text.position.x).toBeCloseTo(band.x, 5);
+    expect(text.position.y).toBeCloseTo(band.y, 5);
+    // Long enough to overshoot the corner it cuts.
+    const cut = 0.3; // fraction of the shorter side, per the builder
+    const visible = cut * Math.SQRT2;
+    expect(band.width).toBeGreaterThan(visible);
+
+    // A long ribbon shrinks its font instead of running off the corner: the
+    // text stays inside the stretch of band that is actually on canvas.
+    const long = buildSalesDesign(salesForm({ ribbon: "EARLY BIRD PRICING ENDS THIS FRIDAY AT MIDNIGHT" }), "square");
+    const longText = roleOf(long, "sales.ribbon")!;
+    expect(longText.fontSize).toBeLessThan(text.fontSize);
+    for (const t of [text, longText]) {
+      const w = (t.content.length * t.fontSize * 0.62) / 1500;
+      expect(w).toBeLessThanOrEqual(visible);
+    }
+  });
+
+  it("an empty ribbon drops the band and shows the TechBBQ logo instead", () => {
+    const withRibbon = buildSalesDesign(salesForm(), "square");
+    expect(withRibbon.design.showLogo).toBe(false);
+
+    const bare = buildSalesDesign(salesForm({ ribbon: "" }), "square");
+    expect((bare.design.shapes ?? []).some((s) => s.simpleRole === "ribbon.band")).toBe(false);
+    expect(roleOf(bare, "sales.ribbon")).toBeUndefined();
+    expect(bare.design.showLogo).toBe(true);
+  });
+
+  it("an uploaded photo replaces the placeholder frame at the same slot role", () => {
+    const empty = buildSalesDesign(salesForm(), "square");
+    expect(empty.canvasImages).toHaveLength(0);
+    const frame = (empty.design.shapes ?? []).find((s) => s.simpleRole === "sales-countdown.photo")!;
+    expect(frame).toBeDefined();
+
+    const filled = buildSalesDesign(salesForm({ photo: { src: "photo.jpg" } }), "square");
+    expect((filled.design.shapes ?? []).some((s) => s.simpleRole === "sales-countdown.photo")).toBe(false);
+    const img = filled.canvasImages.find((i) => i.simpleRole === "sales-countdown.photo")!;
+    expect(img.src).toBe("photo.jpg");
+    expect(img.x).toBeCloseTo(frame.x, 5);
+    expect(img.width).toBeCloseTo(frame.width, 5);
+  });
+
+  it.each(FORMATS)("keeps the photo inside the canvas bounds (%s)", (format) => {
+    for (const layout of ["countdown", "discount"] as const) {
+      const doc = buildSalesDesign(salesForm({ layout, photo: { src: "p.jpg" } }), format);
+      const img = doc.canvasImages[0];
+      expect(img.x - img.width / 2).toBeGreaterThanOrEqual(0);
+      expect(img.y - img.height / 2).toBeGreaterThanOrEqual(0);
+      expect(img.x + img.width / 2).toBeLessThanOrEqual(1);
+      expect(img.y + img.height / 2).toBeLessThanOrEqual(1);
+    }
+  });
+});
+
+describe("sales doc identity — kinds and layouts never cross", () => {
+  it("reads the layout from the photo slot, and from the text roles when the frame is gone", () => {
+    const countdown = buildSalesDesign(salesForm(), "square");
+    const discount = buildSalesDesign(salesForm({ layout: "discount" }), "square");
+    expect(salesLayoutOf(countdown)).toBe("countdown");
+    expect(salesLayoutOf(discount)).toBe("discount");
+
+    // Hand-deleted photo frame: the text roles still witness the layout, so the
+    // doc keeps its kind instead of being healed away as a panel doc.
+    const noFrame = { ...discount, design: { ...discount.design, shapes: (discount.design.shapes ?? []).filter((s) => s.simpleRole !== "sales-discount.photo") } };
+    expect(salesLayoutOf(noFrame)).toBe("discount");
+  });
+
+  it("docKindOf separates sales, partner and panel docs", () => {
+    expect(docKindOf(buildSalesDesign(salesForm(), "square"))).toBe("sales");
+    expect(docKindOf(buildSalesDesign(salesForm({ layout: "discount" }), "square"))).toBe("sales");
+    expect(docKindOf(buildPartnerDesign(emptyPartnerForm(), "square"))).toBe("partner");
+    expect(docKindOf(buildSimpleDesign(emptyForm(), "square"))).toBe("panel");
+  });
+
+  it("countdown and discount docs never share a shape key", () => {
+    const countdown = buildSalesDesign(salesForm(), "square");
+    const discount = buildSalesDesign(salesForm({ layout: "discount" }), "square");
+    expect(panelShapeKey(countdown)).not.toBe(panelShapeKey(discount));
+  });
+
+  it("a rebuild shape-matches a tuned sales doc, which is what revives a parked design", () => {
+    const built = buildSalesDesign(salesForm(), "square");
+    const tuned = { ...built, design: { ...built.design, texts: built.design.texts.map((t) => (t.simpleRole === "sales.value" ? { ...t, position: { x: 0.5, y: 0.2 } } : t)) } };
+    const shelf = parkDoc({}, tuned);
+    expect(shelf[panelShapeKey(buildSalesDesign(salesForm(), "square"))]).toBe(tuned);
+  });
+
+  it("the panel migrations leave sales docs untouched", () => {
+    const doc = buildSalesDesign(salesForm({ photo: { src: "p.jpg" } }), "square");
+    expect(migrateLegacyPanelDoc(doc)).toBe(doc);
+    expect(adoptLegacyPanelRoles(doc)).toBe(doc);
+  });
+});
+
+describe("retargetSalesLayout — a photo upload keeps the tuned sales design", () => {
+  const tunedCountdown = () => {
+    const doc = buildSalesDesign(salesForm(), "square");
+    return {
+      ...doc,
+      design: {
+        ...doc.design,
+        // Hand-moved figure + hand-resized photo frame.
+        texts: doc.design.texts.map((t) => (t.simpleRole === "sales.value" ? { ...t, position: { x: 0.4, y: 0.18 } } : t)),
+        shapes: (doc.design.shapes ?? []).map((s) => (s.simpleRole === "sales-countdown.photo" ? { ...s, y: 0.7, height: 0.3 } : s)),
+      },
+    };
+  };
+
+  it("fills the tuned frame with the new photo at the frame's own geometry", () => {
+    const tuned = tunedCountdown();
+    const rebuilt = buildSalesDesign(salesForm({ photo: { src: "crowd.jpg" } }), "square");
+    const out = retargetSalesLayout(tuned, rebuilt, "countdown")!;
+    expect(out).not.toBeNull();
+    const img = out.canvasImages.find((i) => i.simpleRole === "sales-countdown.photo")!;
+    expect(img.src).toBe("crowd.jpg");
+    expect(img.y).toBe(0.7);
+    expect(img.height).toBe(0.3);
+    // The hand-placed figure survives, and edited words still land.
+    expect(roleOf(out, "sales.value")!.position).toEqual({ x: 0.4, y: 0.18 });
+    expect((out.design.shapes ?? []).some((s) => s.simpleRole === "sales-countdown.photo")).toBe(false);
+  });
+
+  it("carries new words into a tuned doc and turns a cleared photo back into a frame", () => {
+    const built = buildSalesDesign(salesForm({ photo: { src: "crowd.jpg" } }), "square");
+    const tuned = { ...built, canvasImages: built.canvasImages.map((i) => ({ ...i, y: 0.72 })) };
+    const rebuilt = buildSalesDesign(salesForm({ value: "12", caption: "days left" }), "square");
+    const out = retargetSalesLayout(tuned, rebuilt, "countdown")!;
+    expect(out.canvasImages).toHaveLength(0);
+    const frame = (out.design.shapes ?? []).find((s) => s.simpleRole === "sales-countdown.photo")!;
+    expect(frame.y).toBe(0.72);
+    expect(roleOf(out, "sales.value")!.content).toBe("12");
+  });
+
+  it("refuses the other sale type, another format, and partner docs", () => {
+    const tuned = tunedCountdown();
+    const discount = buildSalesDesign(salesForm({ layout: "discount" }), "square");
+    expect(retargetSalesLayout(tuned, discount, "discount")).toBeNull();
+    expect(retargetSalesLayout(tuned, buildSalesDesign(salesForm(), "story"), "countdown")).toBeNull();
+    expect(retargetSalesLayout(buildPartnerDesign(emptyPartnerForm(), "square"), tuned, "countdown")).toBeNull();
+  });
+});
+
+describe("sales form round-trip through the library", () => {
+  it("the saved snapshot restores every field, layout and photo", () => {
+    const form = salesForm({ layout: "discount", value: "10%", cta: "BOOK NOW", photo: { src: "p.jpg" } });
+    const doc = buildSalesDesign(form, "presentation");
+    const snapshot = stripFormsForSave("sales", emptyForm(), emptyPartnerForm(), form);
+    const restored = formsFromDoc("sales", doc, snapshot);
+    expect(restored.template).toBe("sales");
+    expect(restored.form).toBeNull();
+    expect(restored.partner).toBeNull();
+    expect(restored.sales).toEqual({ ...form, backgroundId: doc.design.backgroundId });
+  });
+
+  it("reconstructs the form from role-tagged layers for a snapshot-less item", () => {
+    const form = salesForm({ layout: "discount", value: "25%", caption: "off", headline: "Last chance", cta: "GET YOURS", footer: "COPENHAGEN", ribbon: "ENDS FRIDAY", photo: { src: "p.jpg" } });
+    const doc = buildSalesDesign(form, "square");
+    const restored = formsFromDoc("sales", doc).sales!;
+    expect(restored.layout).toBe("discount");
+    expect(restored.value).toBe("25%");
+    expect(restored.caption).toBe("off");
+    expect(restored.headline).toBe("Last chance");
+    // The builder uppercases the CTA, ribbon and footer on canvas.
+    expect(restored.cta).toBe("GET YOURS");
+    expect(restored.ribbon).toBe("ENDS FRIDAY");
+    expect(restored.photo?.src).toBe("p.jpg");
+  });
+
+  it("bundleCoverage lists the sale types a template is set up for", () => {
+    const docs = [
+      buildSalesDesign(salesForm(), "square"),
+      buildSalesDesign(salesForm({ layout: "discount" }), "square"),
+      buildSalesDesign(salesForm(), "story"),
+    ];
+    expect(bundleCoverage(docs)).toEqual([
+      { format: "square", layout: "countdown" },
+      { format: "square", layout: "discount" },
+      { format: "story", layout: "countdown" },
+    ]);
+  });
+
+  it("names the exported file after the figure and its caption", () => {
+    expect(simpleExportName("sales", "square", "", "48 days left")).toBe("1x1 - Sale - 48 days left");
+    expect(simpleExportName("sales", "presentation", "", "10% off")).toBe("16x9 - Sale - 10% off");
+    expect(simpleExportName("sales", "story", "", "")).toBe("9x16 - Sale");
+    // The panel and partner names are unchanged.
+    expect(simpleExportName("partner", "square", "ignored")).toBe("1x1 - Partner Announcement");
   });
 });
