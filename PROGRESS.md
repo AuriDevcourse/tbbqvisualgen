@@ -1,8 +1,248 @@
 # TechBBQ Visual Generator — Progress
 
-Single living doc for picking the project back up. **Architecture** and
-**Open work** sections matter most. Historical log at the bottom is for
-context.
+Single living doc for picking the project back up. Read **SESSION HANDOFF**
+first, then **Architecture**. The chronological log at the bottom is reference,
+not required reading.
+
+---
+
+## SESSION HANDOFF — 2026-07-30 (end of a long session, rounds 34-49)
+
+### Round 47 — site-export import, done after the handoff was first written
+
+Steps 1-2 below are **done**, and decision 4 (import the site export) is **done**:
+
+- `Innovation.svg` → **`Innovationsfonden.svg`**. Rendered both first: it is the
+  Danish wordmark, and `Innovation Fund Denmark.svg` is the English one. Two real
+  logos, not a duplicate. The false HSBC / Innovation District pairings are gone.
+- The 4 UI-icon files are parked in `Temp/logos-removed/ui-icons/`.
+- New **`npm run logos:import -- <folder>`** (`scripts/import-site-logos.mjs`).
+  Matches incoming files on ARTWORK, not filename, because a site export ships
+  `svgexport-N.svg`. Skips anything within 12% silhouette distance of a library
+  logo, stages the rest, and renders contact sheets for naming. Nothing is ever
+  written into `public/logos` by the script itself.
+- Ran it on `Downloads/techbbq-dk`: 176 already had, **55 new**. Named and
+  imported **53**. Library **778 → 829**.
+- 7 names collided with existing logos, resolved by looking at both at full size:
+  kept as variants (`Remote White`, `Imec White`, `IDA White`,
+  `Founders Running Club White`, `Crispa AI`), and **replaced** two where the
+  export is simply better artwork — `Mountside Ventures` (text-only → the chevron
+  mark, which closes stale-logo decision 3) and `EdTech Denmark` (webp → svg).
+  Both originals parked in `Temp/logos-removed/replaced-by-site-export/`.
+- **2 files could not be identified and were NOT imported** — a hand-drawn
+  8-point star and a rounded-square mark, staged at
+  `…/scratchpad/logo-import/new/027.svg` and `030.svg`. They sit between imec,
+  the Indian state emblem and Helsinki in the export, so they are probably
+  country/city delegation marks. No `<title>` or id hints in the SVG. Auri to name.
+- `logos:match` gained a **word-boundary prefix rule** ("CSE" → "CSE Advisory"),
+  which is safe for short acronyms in a way the old substring rule was not.
+- **Partners with no logo: 22 → 12.** (It read 20 before only because the generic
+  "Innovation" name was falsely claiming two of them.) Remaining:
+  Erhvervsfremmebestyrelsen, Innovation District Copenhagen, Owl VC, Closing
+  Loops, HSBC Innovation Banking, InvestEU, BSI Group, ENFA, EIT Urban Mobility,
+  Copenhagen Fintech, Creative Girls Club, Nova Talent.
+- Worth noting: the export shows **ESA BIC is still live branding on techbbq.dk**,
+  which contradicts the "renamed to Space Ventures DK" verdict in decision 3.
+  Treat the site export as the authority on what TechBBQ actually uses.
+
+Gates after round 47: **123/123 vitest, tsc clean.**
+
+### Round 49 — picker windowing, and where the partner SVGs actually live
+
+**The "See all" grid was janky** because it rendered every logo at once: ~6000 DOM
+nodes on open, rebuilt on every keystroke. `loading="lazy"` does not help — it
+defers the download, not the element creation. Now it renders `PAGE_SIZE = 60`
+and grows on scroll via an IntersectionObserver, with a real "Loading more"
+button as the fallback so it works without the observer and by keyboard.
+
+**Gotcha worth remembering: refs are null in an effect keyed on dialog-open.**
+Radix mounts the portal content in a LATER commit than the one where `allOpen`
+flips, so `scrollRef.current` / `sentinelRef.current` read null, the effect
+returned early, and nothing re-triggered it — the observer was never created and
+the grid was stuck at 60 with no way to scroll. Both nodes are now held in STATE
+via callback refs, so the effect runs exactly when the node appears. Verified in
+the browser: 60 on open, growing 120 → 180 → 240 on scroll, search narrows to 1
+and clearing resets the window instead of rendering all 824.
+
+**WordPress media is the wrong source for partner logos.** Measured, not assumed:
+
+- `techbbq.dk/wp-json/wp/v2/media` is **401** for anonymous reads, and the host
+  (Simply.com) answers curl with **455 Security Incident Detected** — a real
+  browser gets through where curl cannot.
+- SVG upload IS enabled there (`/wp-content/uploads/2024/11/TechBBQ-Logo-resized.svg`),
+  but the **partner logos are not files at all** — the page carries **245 inline
+  `<svg>` elements**, which is exactly what Auri's 231-file `svgexport-N.svg`
+  download was. Elementor inlines them, so the media library has almost no logos
+  in it. An application password would buy nothing here.
+- The page itself is the source, and it needs no credentials. Pulled the 10
+  remaining missing partners straight out of the DOM by finding the `<svg>` inside
+  each partner's own outbound link.
+
+Imported 6 verified: **Erhvervsfremmebestyrelsen, Owl Ventures, BSI Group,
+Copenhagen Fintech, Creative Girls Club, Nova Talent**.
+
+- **Creative Girls Club identifies the hand-drawn star** that was staged as
+  `027.svg` and unnamed in round 47 — 0.0% shape difference. One unknown left.
+- Climbing ancestors to find a tile's SVG grabs the NEIGHBOUR's logo: it returned
+  dealroom.co for Innovation District Copenhagen and boardway for Closing Loops.
+  Scope the search to the anchor and its immediate parent.
+- **Partners with no logo: 12 → 5**, and 2 of those 5 are matcher artifacts
+  (`Owl VC` vs our `Owl Ventures.svg`, `ENFA` vs our
+  `Euro Nordic Funding Alliance (ENFA).svg` — the matcher cannot read an acronym
+  in parentheses). Genuinely missing: **Innovation District Copenhagen, Closing
+  Loops, EIT Urban Mobility** — none has an inline SVG on the page.
+
+Library is **830 files**: Auri deleted ~11 through the picker mid-session (they
+are in `.logos-trash/`), so 835 − 11 + 6 = 830. Gates: 123/123, tsc clean,
+eslint clean.
+
+### Round 48 — SVG versions of the raster logos, and a real bug in `signature()`
+
+Question was "can we get SVG files for the companies we only have as PNG?".
+**152 of 737 companies were raster-only** (208 png, 5 webp, 5 jpg, 174 files).
+
+New **`npm run logos:svgify -- <batch.txt>`** (`scripts/svgify-logos.mjs`). Takes
+`Our file.png|domain.com` rows, fetches the site's header logo, keeps it only if
+it is genuinely vector, then **scores it against the raster we already have** —
+the whole risk is silently swapping in the wrong artwork, and a marketing page
+will happily hand over a customer's mark. Stages candidates + renders a
+side-by-side sheet; never writes to `public/logos`.
+
+**Measured yield, so nobody re-runs this expecting more:**
+
+| Batch | Rows | Vector found | Usable |
+|---|---|---|---|
+| Raster-only current partners | 13 | 5 | 1 clean + 2 renames |
+| Well-known global brands | 74 | 9 | 4 |
+
+**Scraping global brands does not work** — 43 of 74 returned no logo and 22 were
+raster too, because those sites are JS-rendered or bot-blocked, so the header
+HTML has nothing in it. The shape check earned its keep: it caught aiesec.dk
+handing over "Global Talent", pleo.io handing over "SOHO HOUSE", startuplab.no
+handing over "Ardoq", and uipath.com handing over a checkmark.
+
+Applied (all verified at full size against the company's own site):
+
+- **Upgraded raster → SVG**, originals parked in `Temp/logos-removed/upgraded-to-svg/`:
+  Twilio, Leapfunder, Ververica, Stripe, Greylock.
+- **Added** as a different lockup rather than a replacement: `Discord.svg`,
+  `Khosla Ventures.svg`, `HSBC.svg`, `Impact Fund Denmark.svg`,
+  `Danish Life Science Cluster.svg`.
+- **Two files were misnamed**, which the comparison exposed: `HSBC.png` is
+  actually **HSBC Innovation Banking**, and `Impact.png` is **Impact Partners**,
+  not Impact Fund Denmark. Renamed. `Discord.webp` → `Discord Icon.webp` (it is
+  the app-icon tile).
+
+**Bug found and fixed in `signature()` (`scripts/lib/logo-web.mjs`).** It read
+background from the top-left pixel. Trimming crops to the artwork, so a wordmark
+whose first letter sits flush in the corner (Uber, Revolut, Accenture, Y
+Combinator) puts INK at pixel 0 — every ink pixel then counted as background,
+the mask emptied and it threw "blank". Now transparency decides whenever the file
+has any, and only a genuinely opaque image falls back to the **median border**
+colour. Reading the border alone is NOT enough (first attempt: 763 → 712), since
+a tightly trimmed wordmark has an ink-heavy border too.
+
+- Library coverage **763/778 → 829/829**.
+- It was hiding wrong answers, not just missing ones: re-running `logos:import`
+  found **InvestEU** in the site export, which the old mask had matched to
+  "Bits Pretzels Kickstart Europe" at 9.5% and skipped. Imported.
+- This function backs `logos:dupes`, `logos:import`, `logos:compare` and
+  `logos:svgify`, so **earlier duplicate reports were run on the broken mask** and
+  are worth regenerating before acting on them.
+
+**Partners with no logo: 22 → 10.** `ENFA` in that list is a false gap — we hold
+`Euro Nordic Funding Alliance (ENFA).svg`, and the matcher cannot see an acronym
+inside parentheses. Library now **835 files**. Gates: 123/123, tsc clean.
+
+Still open on this thread: **Simple Icons** (simpleicons.org, CC0, 3443 brands)
+covers 21 of the 152 raster-only companies and all 21 download clean. They are
+monochrome and often the symbol rather than the wordmark (Stripe's S, Tesla's T,
+Meta's infinity), which suits the dark templates and the in-app SVG recolour but
+is a different lockup from what we hold. **Auri's call whether to bring them in.**
+The biggest remaining chunk is ~35 TechBBQ event brands (TalkBBQ, TechBBQueer,
+Life Science, LP Forum, Nordic iPO, Startup Showcase, Urban Tech, Tech Talent) —
+no site to scrape, so the vector should come out of TechBBQ's own design files.
+
+### Where the code is
+
+Branch **`sales-announcement`**, branched off `master` at `b97fb15`.
+**Everything is UNCOMMITTED** — nothing has been pushed, prod is untouched.
+Gates at handoff: **123/123 vitest, tsc clean, `npm run build` clean**, changed
+files eslint-clean (10 pre-existing errors elsewhere in `src/hooks`, unrelated).
+
+Dev server may still be running on localhost:3000.
+
+### What this session added (detail in rounds 34-46 below)
+
+1. **Sales Announcement template** — a third template kind (`panel` | `partner` |
+   **`sales`**) with two layouts, Countdown and Discount. `docKindOf()` is now the
+   single source of truth for doc kind. No official library item yet.
+2. **MP4 export** — was dormant AND broken; now PNG/JPG/MP4 with MP4 gated on an
+   animated background, rebuilt as compositing at a constant 30fps.
+3. **Editor "Save & back to Quick Templates"** button.
+4. **Logo Library** — 830 logos in `public/logos/`, searchable, per-logo plate
+   colour, "See all" modal, select-and-delete (dev-only route), SVG recolouring,
+   file-type badges. Every file renamed to its real company name.
+5. **Logo verification tooling** — four npm scripts (below) that check library
+   logos against companies' live websites.
+
+### Decisions waiting on Auri (nothing is blocked on code)
+
+1. **Delete 9 confirmed duplicate logos?** Verified pair-by-pair at full size.
+2. **Delete the 4 font-dependent TechBBQ Investor Day copies?** The files named
+   `… 2.svg` use live text referencing HelveticaNeue; the ones without "2" are
+   outlined and safe. Same artwork otherwise.
+3. **Replace the remaining stale logos?** e-conomic → now "e-conomic by VISMA";
+   CPH Labs → now "CPH.LABS" with a flask; Slush → 2025 dates, live is Nov 18-19
+   2026; Vaekstfonden → brand became EIFO. **PSV is correct, do not touch.**
+   Mountside Ventures is DONE (round 47). ESA BIC is now doubtful — the site
+   export still uses ESA BIC branding.
+4. ~~Import the 59 new logos from `Downloads/techbbq-dk`~~ **DONE** in round 47
+   (53 imported, 2 unidentified and still staged — see round 47).
+5. **3 current partners have no logo** (Innovation District Copenhagen, Closing Loops, EIT Urban Mobility — round 49). Chase artwork.
+   Nordea, Mastercard, Visma, Flatpay, Nebius and Grant Thornton came in with the
+   site-export import.
+6. **WordPress media needs an application password** — `/wp-json/` is open but
+   `/wp-json/wp/v2/media` is 401 and `/wp-content/uploads/` is 403. With a
+   read-only app password the media library becomes the cleanest logo source.
+7. **Commit + merge to `master`** (auto-deploys). Note: committing adds ~20MB
+   across 830 logo files to git history permanently — that was accepted as the
+   price of the simple approach, but it is a one-way door.
+
+### Immediate next steps, in order
+
+1. ~~Rename `Innovation.svg`~~ and ~~bin the 4 UI-icon files~~ — **both done in
+   round 47.**
+2. Name the 2 unidentified staged logos (round 47) or drop them.
+3. Take decisions 1-3 above, then commit in logical chunks (sales template / MP4
+   / editor button / logo library / verification tooling). Note the library is now
+   **830 files**, so the git-history size point in decision 7 is bigger than the
+   ~20MB written there.
+4. Tune a Sale design, save it as an official library item, and put its id in
+   `DEFAULT_ITEM_IDS.sales` in `src/app/simple/page.tsx`.
+
+### New npm scripts
+
+| Script | Does |
+|---|---|
+| `npm run logos` | Rebuild `src/data/logoLibrary.json` (also measures brightness; cached). Runs on `predev`/`prebuild`. |
+| `npm run logos:dupes` | Report duplicate logos. READ-ONLY, deletes nothing. |
+| `npm run logos:match` | Join `scripts/logo-checks/techbbq-partners.txt` to logo files → `partner-batch.txt`. |
+| `npm run logos:compare -- scripts/logo-checks/partner-batch.txt` | Fetch each partner's live logo, score it against ours, render sheets only for disagreements. |
+| `npm run logos:verify -- <batch>` | Side-by-side sheet for a supplied `file|domain` list. |
+| `npm run logos:sweep` | Domain status for the whole library. Weak — see its header comment. |
+| `npm run logos:svgify -- <batch>` | Find SVG versions of raster logos on the companies own sites. Shape-verified, staged for review. |
+| `npm run logos:import -- <folder>` | Import a site export. Artwork-matches against the library, stages only the new files, renders naming sheets. Never writes to `public/logos`. |
+
+### Gotchas discovered this session
+
+- **Windows case-only renames** need a temp hop (`os.rename(a, tmp); os.rename(tmp, b)`) — the target "exists" because it IS the same file.
+- **Long CMS filenames blow the 260-char path limit** when moving into a deep backup dir; shorten the destination root.
+- **`titleFromFile` no longer re-capitalises** — the filename is the display name verbatim, so curated names like `byFounders` survive. Underscores are the only thing replaced.
+- **A 1500×1500 video frame at 30fps crashes the Chrome renderer.** Video frames are pixel-capped to Full HD (`videoFrameSize`); still exports are unaffected.
+- **`mp4-muxer` rejects a non-zero first timestamp** — needs `firstTimestampBehavior: "offset"`.
+- **Guessing domains from company names does not work** (217 non-resolving, 56 parked out of 782). Use real URLs from the partner list.
+- **Removed logo files are parked, not destroyed**, in `C:/Users/User/AppData/Local/Temp/logos-removed/<group>/` with `WHY.tsv`. **That is a Temp dir — rescue anything wanted before Windows cleans it.**
 
 ---
 
@@ -285,6 +525,28 @@ resumes after. Two passes — first warms up font loading, second captures.
 | `src/components/steps/StepElements.tsx` | Shape add buttons + per-shape editor. |
 | `src/components/Stepper.tsx`, `StepNavigator.tsx`, `FormatPicker.tsx`, `OverlayPicker.tsx`, `FeedbackButton.tsx`, `LiquidMetalBg.tsx` (deleted), `GlassCard.tsx`, `AnimatedGradient.tsx` | Glue UI. |
 
+**Added 2026-07-30 (rounds 34-46):**
+
+| Path | What it does |
+|---|---|
+| `src/app/simple/page.tsx` | Quick Templates. Now three template kinds; holds `LogoTintRow`, `setPartnerLogoTint`, `SALES_LAYOUTS`, `DEFAULT_ITEM_IDS` (no `sales` id yet). |
+| `src/lib/simpleLayout.ts` | `buildSalesDesign`, `salesLayoutOf`, `isSalesDoc`, **`docKindOf`** (the kind guard everything uses), `retargetSalesLayout`, `retargetSlotDoc` (shared with partner). |
+| `src/lib/svgTint.ts` + `.test.ts` | Recolour an SVG logo in place (rewrites fills/strokes/gradient stops, sets root `fill` because it inherits, leaves `fill="none"`). 8 tests. |
+| `src/lib/logoFiles.ts` + `.test.ts` | Path safety for the logo-delete route: only files listed in the manifest resolve, which rules out traversal. 4 tests. |
+| `src/app/api/logos/route.ts` + `.test.ts` | DELETE logos. **404s in production**, moves files to a gitignored `.logos-trash/`, rewrites the manifest. 5 guard tests. |
+| `src/components/LogoLibraryPicker.tsx` | Logo Library: search, per-logo plate colour by measured brightness, file-type badge, "See all" modal (Radix Dialog), select-and-delete. |
+| `src/components/ColorPicker.tsx` | Gained an optional `swatches` prop so logo recolouring leads with White/Black. |
+| `src/hooks/useExport.ts` | MP4 export: AVC level picked via `isConfigSupported`, frames pixel-capped by `videoFrameSize`, compositing capture at a constant 30fps. |
+| `src/components/templates/DynamicTemplate.tsx` | Background wrapped in `data-canvas-bg` so the video export can composite it per frame. |
+| `public/logos/` (830 files) + `README.md` | The logo library. README carries the naming convention and the verification workflow. |
+| `src/data/logoLibrary.json` | Generated index (name, tags, bytes, tone). Committed AND regenerated on `predev`/`prebuild`. |
+| `scripts/logo-manifest.mjs` | Builds the index; measures per-logo brightness (cached by `src|bytes` + `TONE_ALGO`). |
+| `scripts/find-duplicate-logos.mjs` | Duplicate report. Read-only. |
+| `scripts/verify-logos-online.mjs`, `compare-logos-online.mjs`, `match-partner-domains.mjs`, `sweep-logo-domains.mjs`, `lib/logo-web.mjs` | Website verification tooling. `lib/logo-web.mjs` holds the shared fetch / header-scoped logo extraction / signature comparison. |
+| `scripts/logo-checks/techbbq-partners.txt` | ~95 partners with real URLs, read off techbbq.dk/partners. Refresh when the partner list changes. |
+| `scripts/svgify-logos.mjs` | Raster -> SVG upgrade hunt. Keeps only genuine vectors, scores them against our raster so a wrong logo cannot slip in. |
+| `scripts/import-site-logos.mjs` | Import a site export by matching ARTWORK against the library (export filenames are meaningless). Stages new files + renders naming sheets; never writes to `public/logos`. |
+
 ---
 
 ## Conventions
@@ -306,6 +568,22 @@ resumes after. Two passes — first warms up font loading, second captures.
 ---
 
 ## Open work / suggested next steps
+
+**For what to do RIGHT NOW, read SESSION HANDOFF at the top of this file** — it
+carries the live decisions and next steps. This section is the standing backlog
+underneath that.
+
+Two items here have real teeth and predate this session:
+
+- **sessionStorage quota is swallowed silently** (`writeSession`, editor page).
+  A doc with big base64 images stops persisting with no warning, and a reload
+  loses everything since the last successful write (proven live: a 521-element
+  doc restored as 121). Cheapest fix: toast once on the first failed write.
+  Better: downscale/recompress images on ingest (≤2048px JPEG), which also cuts
+  drag-persist work and library 413 risk. **This is the only open item that
+  loses user work.**
+- **Layers panel docks open on an empty canvas** — default it closed until there
+  is ≥1 user layer.
 
 In rough priority order. **Top priority is first-run intuitiveness** (Auri, 2026-07-02): everything below the P0 block is secondary to making the cold entry make sense.
 
@@ -344,6 +622,136 @@ In rough priority order. **Top priority is first-run intuitiveness** (Auri, 2026
 ## Verified-shipped features (chronological hits)
 
 Newer at the top.
+
+**Session 2026-07-30, round 46 — partner-URL verification results + one colour control (same branch, UNCOMMITTED).**
+
+- **The domain problem was solved with DATA, not tooling.** Auri suggested a third-party agent-web-access toolkit; not needed — the built-in search resolves domains ("Akademikernes A-kasse" → aka.dk, which no name-guess reaches), but 782 searches would cost ~1.2M tokens. `techbbq.dk/partners` lists ~95 partners WITH their real URLs, in one fetch, and is inherently the right subset. New `npm run logos:match` joins that list to logo files (`scripts/logo-checks/techbbq-partners.txt` → `partner-batch.txt`), and `logos:compare` now accepts that batch directly.
+- **Result over 105 pairings:** 24 match, 41 needed eyes (all reviewed), 28 no extractable logo, 12 unreadable download. **Six real findings:** ESA BIC now trades as **Space Ventures DK**; **e-conomic** is now "e-conomic **by VISMA**" and ours lacks the endorsement; **CPH Labs** ships "CPH.LABS" with a flask mark; **Mountside Ventures** added a chevron mark; plus Slush (2025 dates) and Vækstfonden (now EIFO) from round 45. **PSV: Auri confirms ours is correct** — the "PSV Tech" difference is not a problem.
+- **Also surfaced: 20 current partners have NO logo in the library** (Nordea, Mastercard, Visma, Flatpay, Nebius, BSI Group, Grant Thornton, Copenhagen Fintech, EIT Urban Mobility, Closing Loops…).
+- **Two flaws in my own tooling, recorded so they are not rediscovered:** the matcher mis-pairs generic filenames (`Innovation.svg`, which is actually Innovationsfonden, matched HSBC Innovation Banking AND Nordic Innovation; `Commu.svg` matched "community"), and the extractor still grabs campaign banners on ~1 site in 3 (amazon ads for omr.com, SOHO HOUSE for pleo.io). Human-reviewed shortlist, never an automatic verdict.
+- **WordPress media is NOT reachable:** `/wp-json/` is open but `/wp-json/wp/v2/media` returns **401** and `/wp-content/uploads/` **403**; the partner page's logos are lazy-loaded placeholders, so no image URLs exist in the HTML. Would need an application password to use the media library.
+- **Auri's `Downloads/techbbq-dk` export (231 unnamed `svgexport-*.svg` from the site) matched against our library by silhouette: 172 are already ours** (most at 0-2% difference — independent confirmation that those are current), **59 are not**, i.e. candidates to import and name. Report in `scratchpad/techbbq-import.json`.
+- **UI (Auri: "a bit tight, just allow the colour wheel and in there the first option would be white or black"):** the five-control tint row is now ONE swatch button opening the standard `ColorPicker` — new optional `swatches` prop so logo recolouring leads with **White, Black**, then TechBBQ red/orange/gold, with H/S/L sliders, hex input and "Clear color" as the restore-original. Verified live: trigger renders, swatch order correct, zero console errors.
+
+**Session 2026-07-30, round 45 — verifying logos against the companies' own websites (same branch, UNCOMMITTED).** Auri: "can we verify if these are still correct logos, by checking their respective websites? Doing reverse image search and with the name?"
+
+- **No reverse image search is available** as a tool here, so the honest substitute is built instead: `npm run logos:verify -- scripts/logo-checks/batch1.txt` (`scripts/verify-logos-online.mjs`). Per `Our file.svg|domain.com` row it fetches the homepage, extracts the logo, downloads it, and composes it BESIDE our copy on one grey plate for a human verdict. Outbound network from this environment works (curl, verified).
+- **Extraction had to be scoped to the header.** The first pass searched the whole page and returned CUSTOMER logos: "Lovable" for antler.co, "FOSSIL" for cloudflare.com, "AKOOL" for salesforge.ai. Now it looks only up to the first `</header>`, prefers an inline `<svg>` whose markup mentions logo/brand/the company name (where most modern sites keep the wordmark — it is written straight out to a file), then a header `<img>` scored on logo/brand/company keywords, and only then falls back to any path containing "logo". Hit rate went from 6/15 to 11/15 useful, 8 of them clean verifications.
+- **Verified current:** Antler, Stripe, KPMG, Cloudflare, Dealroom, Copenhagen Capacity, Danske Bank, byFounders all match what the company ships today.
+- **Two real problems found:**
+  - **`Slush2025 Dates White.png` is out of date** — slush.org now shows "SLUSH · NOV 18-19, 2026 · HELSINKI". Ours carries the 2025 dates.
+  - **`Vaekstfonden.svg` is a dead brand** — vaekstfonden.dk resolves to eifo.dk, titled "Danmarks Eksport- og Investeringsfond". Vækstfonden became EIFO, and the library already has EIFO logos.
+- **Cost, honestly:** a domain has to be supplied per company (guessing fails for Nordic orgs), and ~1 row in 4 grabs the wrong asset and needs a manual look. A batch of 15 takes a couple of minutes; all 782 logos would be ~52 batches. **Recommended scope: verify the partners actually appearing in 2026 material, not the whole library.** Documented in `public/logos/README.md` with the limits stated.
+
+**Session 2026-07-30, round 44 — every logo renamed to its real name: 494 files (same branch, UNCOMMITTED).** Auri deleted 46 himself via the new UI (840 → 794), asked for a fresh duplicate check, then: "can you check over all of them and rename accordingly, with spaces and all, full names."
+
+- **Duplicate re-check first (wide net, then eyes).** Name clusters (variant words stripped) + loose shape matching with colour IGNORED gave 83 candidate groups / 224 files; a shape+ink pass cut that to 22 pairs; all 22 rendered large on ONE mid-grey plate. Verdict: **zero new duplicates**. Every flagged pair was a legitimate variant (TechBBQ Investor Day colour-arc vs mono, techtalent/StartupCapital black vs white sub-text, UrbanTech "Pitch Competition" vs "Shaping Future Cities", TechBBQ wordmark white/grey/orange) or a different entity (European Investment **Bank** vs **Fund**, EIT Community vs EIT Community **Supernovas**, Venture Café London vs Warsaw). The 9 same-artwork pairs found earlier this session remain the only real ones, still pending Auri's word.
+- **Renaming: rules for the safe 289, eyes for the 205 that needed them.** Mechanical rules handled separators, trailing export digits, noise words (logo/svgexport/rgb/copy…), acronym preservation and lowercase small words ("of", "and", "in"). But blind camelCase splitting mangles brands, so all **191 camelCase files + 14 junk-named files were rendered as contact sheets and read off the artwork**, producing a 170-entry override map: `AleSac`, `AstraZeneca`, `BioNa`, `BlackWood Ventures`, `byFounders`, `Clexbio`, `DanBAN`, `LazySundays`, `NetApp`, `Snapchat`, `SoftBank`, `Speedinvest`, `TheStorage`, `UiPath`, `VentriLabs`, `identity.vc`, `all·u·me` all keep their own casing.
+- **Names recovered from artwork rather than filenames:** `c5e5a767-be7f-…png` → **OMNIT**, `svgexport-1.svg` → **NordicNinja**, `-2` → **Lunar**, `-4` → **Virksomhedsguiden**, `-11` → **Skiftr**, `-13` → **FBV**, `-30` → **Microsoft**, `-52` → **Danish Entrepreneurs**, `-1 (2)` → **Nova**, `-1 (3)` → **OMR Reviews**, `MuchSkil0` → **Muchskills**, `HellowWORKS` → **Hello Workr**, `NExtGen` → **ITU NextGen**, `SwapLanguages0` → **Swap Languages**, `PSV` → **PreSeed Ventures**, `NSW` → **Nord Star Medical**, `CSE` → **CBS Copenhagen School of Entrepreneurship**, `MQS` → **MQS Molecular Quantum Solutions**, `ESN` → **ESN European Startup Network**, `SVG/Things.svg` → **Things** (also flattened the stray subfolder).
+- **Three mislabelled files fixed:** `Dtu SciencePark.svg` was the **Future Box** logo, `EIC Color0.png` was **European Investment Bank** (not the Innovation Council), `MedicalVillage.svg` was **Medicon Village**. Two typos fixed too (`HikinEnergy` → **Hykin Energy**, `EndlesssFood` → **Endless Food Co**).
+- **The four TechBBQ Investor Day pairs got named to expose a real trap:** the `_1` exports have their text OUTLINED, the `0` exports reference **HelveticaNeue** as live text and would render in a fallback font on any machine without it. They are now `TechBBQ Investor Day <variant>.svg` (outlined, safe) and `… <variant> 2.svg` (font-dependent, the one to drop).
+- **The filename is now the display name, verbatim.** `titleFromFile` no longer replaces separators or re-capitalises: that logic existed for scraped names like `blackwoodventures.svg` and now only corrupts curated ones ("byFounders" → "ByFounders", "A-kasse" → "A Kasse"). Underscores stay the one exception. README's naming convention rewritten to match.
+- **Evidence:** 782 logos, 0 underscores, 0 leftover junk names except 4 files that are UI icons rather than logos (a clock, a map pin, an arrow, one unidentifiable purple mark — Auri can bin them in the Select UI). 123/123 vitest, tsc clean, build clean. Live probes: "black wood", "byfounders", "astrazeneca", "akademikernes", "future box", "nordic ninja", "investor day", "preseed", "omnit", "virksomheds", "techbbq white" all resolve, and both "göteborg" and "goteborg" find `Business Region Göteborg`.
+
+**Session 2026-07-30, round 43 — "Logo Library": file-type badges + select-and-delete (same branch, UNCOMMITTED).** Auri: "Have a small icon that would indicate that it is svg file and png in the saved logos. Also rename instead of saved logos, Logo Library. Allow myself to also select and delete some of them."
+
+- **Renamed** everywhere: the sidebar heading, the modal title, the empty state and the search placeholder now say **Logo Library** (`Search 840 logos`).
+- **File-type badge on every tile**, top-left: `SVG` in brand orange, raster types (`PNG` / `WEBP` / `JPG`) in muted black. Orange for SVG on purpose — it is the format that scales AND can be recoloured in the slot (round 42), so the badge answers "can I restain this?" at a glance. The tooltip now reads "Name (12KB, SVG) — add to slot 2".
+- **Select and delete, in the modal.** A `Select` toggle turns the grid into a picker: tiles show a checkbox, a click selects instead of placing, selected tiles go red, and the footer gains "N selected · Select all matching · Delete" with a confirm listing the names. The list updates immediately from component state rather than waiting for the manifest module to hot-reload.
+- **How deletion works, and why it is dev-only.** `public/logos` is committed, so removing a logo IS a repo change. New `DELETE /api/logos` therefore: **404s in production** (Vercel's filesystem is read-only and the files are baked into the build, so a working-looking button there would be a lie); accepts only `src` values already present in `src/data/logoLibrary.json`, which makes traversal impossible by construction; **moves** files to a gitignored `.logos-trash/` instead of unlinking, so a mis-click is recoverable; caps a request at 200 files; and rewrites the manifest so the picker matches without a rebuild.
+- **`src/lib/logoFiles.ts`** holds the path check (`libraryFileFromSrc`) as a pure function so it is testable: 4 tests cover encoded/unencoded matching, subfolders, unknown paths, `../` and `%2e%2e` traversal, drive-letter and absolute paths, a manifest that itself contains a traversal entry, and a malformed percent escape. 5 more tests cover the route's guards (production 404, bad JSON, empty/non-array `srcs`, the 200-file cap, unknown paths reported as failures with nothing deleted).
+- **Evidence:** 123/123 vitest (9 new), tsc clean, build clean (`ƒ /api/logos` in the route list), eslint errors unchanged at 10 pre-existing. Live: heading and modal read "Logo Library (840)", badges correct across a sample (BBC White → PNG, Abion → SVG, Adyen → PNG, Accel → SVG), and a real delete ran end to end — file moved to `.logos-trash/`, manifest 840 → 839, modal title updated live, confirm text listed the name. The test victim was restored afterwards, so the library is back at 840; screenshot `scratchpad/select-mode.png`.
+
+**Session 2026-07-30, round 42 — recolour an SVG logo in place (same branch, UNCOMMITTED).** Auri: "Delete PNG one from accell, and then implement a possibility to change colours of the svg on the spot." `Accel.png` (black raster) removed; `Accel.svg` (white vector) kept — 840 logos.
+
+- **Why this matters more than it looks:** 591 of 840 logos are white/light artwork and ~197 are dark-only, and the canvas is dark. For those dark-only partners there was previously no usable version at all. Antler was the trigger: `Antler.svg` is white `#FFFFFF`, `Antler Invest.svg` is red `#ED4746` — the same wordmark twice, which is why the dedupe kept both.
+- **`src/lib/svgTint.ts`** (pure, 8 tests): rewrites every `fill` / `stroke` / `stop-color` / `flood-color` / `lighting-color`, in presentation attributes AND in CSS (both `<style>` blocks and `style=""`), then sets `fill` on the root `<svg>` — because `fill` INHERITS, which is what catches shapes that declare no colour and would otherwise render default black. `fill="none"` and `url(#gradient)` references are left alone, so an outline logo stays an outline. Idempotent, and handles both base64 and percent-encoded data URLs incl. non-ASCII (chunked `btoa` — spreading a big byte array into `String.fromCharCode` blows the stack).
+- **UI: a swatch row under each filled logo slot** — White · Black · TechBBQ red · custom colour picker · Original. Renders only for SVGs (a raster has no colours to rewrite, so no dead control is offered). `PartnerLogo` gained `originalSrc` + `tint`: every recolour derives from the ORIGINAL, so switching colours never compounds and "Original" always restores — which matters because a multi-colour mark flattens to one colour and cannot be un-flattened.
+- **Output is a normal SVG data URL**, so the export pipeline, the team library and `retargetTunedDoc` (which already carries an `src` change into a tuned doc) needed no changes at all.
+- **Evidence:** 114/114 vitest (8 new), tsc clean, build clean, eslint errors unchanged at 10 pre-existing (none in the touched files). Live: placed the red Antler logo, White → all colours become `#FFFFFF` and the root fill is set, canvas re-renders (screenshot `scratchpad/tint-white.png` shows white Antler on the dark partner canvas), custom `#22c55e` applies, Black sets `#15110E` with the swatch showing `aria-pressed`, Original returns to `#ED4746`. Zero console errors. NB the first custom-colour test failed for a TEST reason — React's value tracker ignores a directly-assigned `input.value`, so the native setter is needed; a real user picking a colour is unaffected.
+- **Known limit:** a design loaded from the team library reconstructs its logos from the doc's images, which carry no `originalSrc`/`tint`, so the tinted artwork is correct but the swatch shows no active state and "Original" would restore the tinted version. Only cosmetic; re-tinting still works.
+
+**Session 2026-07-30, round 41 — SVG/raster twins: 847 → 841 (same branch, UNCOMMITTED).** Auri: "if there is svg and png files that are the same, please delete png."
+
+- **29 name twins found** (same folded filename, one vector one raster), but only **6 were actually the same logo**. In this library the SVG is usually the WHITE KNOCKOUT version and the PNG the COLOUR version — Google, KPMG, Accel, Symbion, DISIE, hackyourfuture, Startup Wise Guys, UbuntuBiz, Terkko Health Hub are all colour-vs-mono pairs, so a blanket "delete the PNG" would have destroyed the colour artwork. Those stay.
+- **Two metrics were wrong before the right one worked.** (1) Whole-image pixel difference is diluted by empty background — a white-on-transparent SVG next to a colour PNG scored 11.8/255, i.e. "nearly identical", because the glyphs are a small share of the frame. (2) Comparing shape + mean ink colour separately was much better, but still mis-scored `thehub` (white SVG vs navy PNG) as ink-identical. **What settled every case was rendering each pair side by side at full size on a mid-grey plate and looking.** The numbers narrowed 841 files down to 29 pairs; the eyes made the call.
+- **Deleted (raster twin of an identical vector):** the four `Techbbq Investor Day {B0,CB0,CW0,W0}.png` (their 12% "shape difference" was export padding — at full size they are pixel-for-pixel the same lockups as the SVGs, ink Δ 0-3), plus `proptech.png` (both carry the DENMARK line) and `The Economist.png` (both white). Parked in `Temp/logos-removed/raster-twins/` with a `WHY.tsv`.
+- **Evidence:** 841 logos, 106/106 vitest, tsc clean, build clean. Comparison sheets kept: `scratchpad/previews/pairs-{0,1,2}.png` (all 29 twins), `tbbq-pairs.png` and `three-pairs.png` (the full-size checks that decided the 6 deletions and saved `thehub.png`).
+
+**Session 2026-07-30, round 40 — logo tiles get a plate they can be SEEN on + "See all" modal; 854 → 847 (same branch, UNCOMMITTED).** Auri: "I can't see some of them, so perhaps adjust it so you can see the white ones as well, the background a bit darker" + "I want to be able to press see all logos and the popup with all the logos would appear."
+
+- **Per-logo plate, not one darker plate.** Darkening the plate would have hidden the ~200 dark logos instead. `npm run logos` now measures each logo's brightness with `sharp` and stores `tone`: light artwork gets a **dark** tile (`#1b1b1b`), dark artwork a **white** tile, colourful a **neutral-200** tile. Current split: 591 light, 197 dark, 66 mixed — i.e. most of this library is white knockout artwork, which is exactly why so much of it was invisible. Measurements are cached by `src|bytes` + a `TONE_ALGO` version, so a rebuild re-measures nothing (`predev`/`prebuild` stay fast).
+- **The first brightness pass was wrong and the screenshot proved it.** It treated opaque near-white pixels as background, but a white-on-transparent logo's glyphs ARE opaque white — so its ink was thrown away, it fell back to "mixed", and it stayed invisible. Rewritten: the CORNER pixels decide what background means (transparent corners → every visible pixel is ink; opaque corners → that corner colour is the card and is excluded), with whole-image luminance as the fallback.
+- **"See all" modal** (Radix Dialog: Esc, click-outside and focus trap for free): a button beside the search opens every logo in a 8-column grid with its own search box, bigger tiles, `loading="lazy"` images (opening it doesn't fetch 20MB), and a footer saying which slot a click fills. Clicking a logo places it and closes. The sidebar list still shows 12 by default / 24 when searching, and now says "keep typing, or press See all".
+- **7 files were broken, not just badly plated** — found by auditing every file's actual render. Four `Bits Pretzels *.svg` files contain BINARY GARBAGE rather than SVG markup (both the browser and sharp refuse them); `YahoooJapan.svg` is corrupt XML; `AktiviteEjere-01.svg` and `BloxHub.svg` are empty exports (a viewBox with no artwork). All removed to `Temp/logos-removed/broken/` with a `WHY.tsv`. The intact copies of those four Bits&Pretzels marks were still sitting there under scraped `logo_31..34_…` names (the earlier rename had refused to overwrite) and now carry the clean names — so nothing was lost, and the last generic filenames are gone.
+- **Evidence:** live audit of the open modal — 847 tiles in the DOM, 192 images loaded on first paint, **zero broken**; screenshot `scratchpad/modal-final.png` shows white logos on dark tiles and dark logos on white tiles, with the previously blank Bits&Pretzels tiles now rendering. 106/106 vitest, tsc clean, eslint clean, build clean.
+
+**Session 2026-07-30, round 39 — duplicate logos: 883 → 854 (same branch, UNCOMMITTED).** Auri: "Check if we have any duplicated and delete them."
+
+- **New `npm run logos:dupes`** (`scripts/find-duplicate-logos.mjs`, READ-ONLY, report written to a gitignored JSON). Byte-identical (md5) plus visually identical: **trim to the ink box**, stretch to a 48×48 ink mask, then require similar trimmed aspect ratio + similar ink density + similar ink COLOUR + ≤3% mask difference, unioned so A~B~C lands in one group.
+- **Two detector iterations were wrong and the images proved it.** A 16×16 "contain" hash grouped 27 unrelated companies, because most of these SVGs are a wide wordmark centred in a square 100×100 viewBox — letterboxed into a 16×16 box they all became "a bar across the middle". Trimming to the ink box first, hashing stretched, and bucketing on the TRIMMED aspect ratio fixed it. Ink colour is compared separately so a white knockout is never deleted as a copy of the black original.
+- **Every group was eyeballed before anything was removed** (contact sheets on mid-grey so white and dark artwork both show: `scratchpad/previews/dupes-{0,1,2}.png`). That caught two classes the algorithm got wrong: **European Investment Bank vs European Investment Fund** (near-identical EU-flag lockups, different institutions) and variant sets that are NOT copies — TechBBQ Investor Day colour-icon vs mono-icon, techtalent black vs white sub-text, and UrbanTech "Pitch Competition" vs "Shaping Future Cities". Those 7 groups (11 files) are deliberately kept and the README now warns about them.
+- **29 confirmed duplicates removed**, keeper chosen by: vector over raster, then resolution, then the cleaner name. Examples: `Microsoft Logo0.png` (6148px, 92KB) dropped for `Microsoft.png` (1024px is plenty), `cop cap.png` for `copcap-logo-black.svg`, `Kicthen_logo_tag_en_white_rgb (1).svg` for `The Kitchen.svg`, `SplitTechCiity.svg` (typo) for `SplitTechcity.svg`.
+- **Acronym searchability preserved on 3 survivors** — deleting `EIF.svg` / `ENFA.svg` would have made those acronyms unfindable (the folded search has no "eif" inside "europeaninvestmentfund"), so the keepers were renamed `European Investment Fund (EIF).svg` and `Euro Nordic Funding Alliance (ENFA).svg`. Also fixed `Novo Nordisk FOundation.svg` → `Novo Nordisk Foundation.svg` (a case-only rename needs a temp name on Windows) and `ververica0.png` → `Ververica.png` (kept over the 814px webp for its 1870px).
+- **Evidence:** re-scan reports 0 byte-identical and only the 7 known variant groups; live probes resolve "adyen", "stripe", "microsoft", "eif", "enfa", "novo nordisk", "ververica" to single clean tiles, and placing Stripe wrote a 13.8KB PNG data URL into a slot. Zero console errors. 106/106 vitest, tsc clean, build clean. Removed files parked in `Temp/logos-removed/duplicates/` with a `WHY.tsv` giving the keeper for each.
+
+**Session 2026-07-30, round 38 — logo library cleaned up: 986 files → 883 real logos, 92 renamed (same branch, UNCOMMITTED).** Auri: "Did you rename them? I want to rename it if there is some clear indication what is the logo" + "sections is not logo, so we delete". No, round 37 only changed how names DISPLAY; the files were untouched. So:
+
+- **92 files renamed to the company name.** 8 identified by LOOKING at them (rasterized each unclear file onto a light and a dark plate with `sharp`, since white artwork is invisible on white): `61f7d24fbf599.webp` → Terkko Health Hub, `unnamed.png` → Google, `logo_15_download-1.png` → Huawei, `1651484817-edtech-logo.webp` → EdTech Denmark, plus Sustainary, Ververica, Horizon Partners, WR. The other 84 were derived mechanically from filenames that already carried the name (`logo_20_Adyen_Logo.png` → `Adyen.png`, `logo_16_bloomberg-logo-aspect-ratio-1104-214.png` → `Bloomberg.png`): strip the `logo_NN_` prefix, drop 12+ char hashes, dimension tokens and noise words (logo/aspect/ratio/cropped/copy/rgb…), KEEP variant words (white/black/colour/horizontal) so two versions of one logo stay distinguishable. Collisions are reported, never overwritten, and identical-content collisions are flagged as duplicates.
+- **103 files were not logos at all** — found by contact-sheeting the 37 remaining `logo_N.svg` files (4-col grid, light + dark) and reading the names of the rest: 34 scraped website UI fragments (chevrons, checkmarks, corner blobs — three real social icons among them were renamed instead: LinkedIn/Instagram/Facebook), 24 Bits&Pretzels event photos and hover images, 8 speaker headshots (400x400 CMS thumbnails: Toto Wolff, Sebastian Siemiatkowski, Robert Habeck…), 13 country flags, 12 unusable files (9 `.ai`, `New folder.7z`, `TechBBQInvestorDay.zip`), 5 unidentifiable leftovers, 7 byte-identical duplicate copies. Auri approved removing all of them; `sections.svg` (32.8MB, a solid artboard) was deleted outright on his instruction.
+- **Moved, not deleted.** `public/logos/` is UNTRACKED, so a delete would have been unrecoverable — everything went to `C:/Users/User/AppData/Local/Temp/logos-removed/<group>/` with a `MOVED.tsv` mapping. **NB: that is a Temp directory; if any of it matters, rescue it before Windows cleans Temp.** Long CMS filenames blew the Windows 260-char path limit mid-move (the first attempt crashed on `…Philipp_FreiseFreise400x400.webp`), hence the short backup root and truncated destination names recorded in the TSV.
+- **Result:** 883 logos, folder 58MB → 20MB, 3 oversized files left (Crane 732KB, Høje-Taastrup 522KB, Hero Academy Orange 471KB — all still usable, just badged). Live-verified after the cleanup: "adyen", "visa", "huawei", "google", "terkko", "edtech", "sustainary", "ververica", "louis vuitton", "goldman" all resolve to properly named tiles, `logo_` matches nothing generic any more, and placing Visa wrote a 19KB PNG data URL into a slot. Zero console errors. 106/106 vitest, tsc clean, build clean.
+- **Still open:** one unidentified lime-green "SP" monogram kept as `image.webp` — Auri is naming it. Several near-duplicate variants remain by design (e.g. "Terkko" / "Terkko Health Hub" / "TerkkoHealthHub", "Adyen" / "Adyen0") since they are different artwork, not copies.
+
+**Session 2026-07-30, round 37 — the logo library met 975 REAL files (same branch, UNCOMMITTED).** Auri filled `public/logos/` (975 indexed, 58MB on disk: 607 svg, 267 png, 41 webp, 10 jpg/jpeg). Real filenames broke the naive search immediately, so:
+
+- **Folded search.** Query and index are both reduced to bare lowercase letters+digits — accents stripped, spaces/dashes/underscores dropped — and the raw filename joins the name and folder tags in the haystack. Verified live: "adyen" finds `Adyen0.png`, "alliancevc" finds `AllianceVC logo white0.png`, "arctic startup" finds `ArcticStartup_logo.png`, "aarhus" finds `StartupAarhus`.
+- **Danish letters needed an explicit map.** Unicode NFD does not decompose `ø`, `æ`, `ß`, `ð`, `ł` — they are their own characters, not base+accent — so "hoje" found nothing for `Høje-Taastrup_vertical.png`. Added a transliteration pass (ø→o, æ→ae, œ→oe, å→a, ð/đ→d, ł→l, ß→ss, þ→th, ı→i) BEFORE normalization. Now "hoje", "høje" and "taastrup" all hit it.
+- **`titleFromFile` mangled the same names.** The `\b\w` capitalisation treated the "j" in "Høje" as a word start (ø isn't a word character) and produced "HøJe". Now only the first letter of each space-separated word is touched, so "AllianceVC" and "AiDenmark" keep their internal caps.
+- **A 32.8MB `sections.svg` would have hung the tab.** A picked file is embedded as a data URL (~1.33× as base64) and the library refuses a design over 4MB, so the picker now hard-blocks anything over 2MB with an explanation, badges anything over 400KB with its size (amber, red when blocked), and shows the size in every tile's tooltip. Verified: searching "sections" shows "Sections — 32.8MB, too big to use" and clicking it refuses.
+- **The script now reports what it cannot use.** 12 files a browser can't display (9 `.ai`, `New folder.7z`, `TechBBQInvestorDay.zip`, plus one more `.ai`) are listed as a warning instead of being silently skipped. Match count is surfaced in the UI too ("Showing 24 of 87 matches — keep typing to narrow").
+- **Evidence:** 7 live search probes + a real placement (clicking "Antler" wrote a 3358-char SVG data URL into slot 2 and the canvas rendered it), zero console errors. 106/106 vitest, tsc clean, eslint clean on both files, build clean.
+- **Left for Auri (housekeeping, not blocking):** delete the 12 unusable files and re-export `sections.svg` / `Crane.svg` / `Design uden navn.svg` / `Høje-Taastrup_vertical.png` / `Hero Academy Orange.png` smaller — the first is 32MB of the repo's 58MB logo folder. Also note the generated `logoLibrary.json` is ~110KB and ships in the client bundle; if it grows past a few thousand entries, move it to `public/` and `fetch()` it on first open instead of importing it.
+
+**Session 2026-07-30, round 36 — searchable logo library (same branch `sales-announcement`, UNCOMMITTED).** Auri: "the problem right now is that you have to find logos yourself. If I have a bunch of them in svg format, where can I save it, so if you write their name you can just upload it right away?"
+
+- **Where they live: `public/logos/`.** Committed to the repo, so Vercel ships them and the whole team has the same set. Chosen over a DB/blob upload flow because SVGs are a few KB, it needs zero new infra or auth surface, and it makes the files addressable BY NAME for hand-editing sessions too (Auri says "add Molten Ventures", the file is at a predictable path). `public/logos/README.md` documents the convention.
+- **The filename IS the search name.** `scripts/logo-manifest.mjs` walks the folder (svg/png/jpg/webp, subfolders included) and writes `src/data/logoLibrary.json`: `molten-ventures.svg` → name "Molten Ventures", searchable by "molten", "ventures" or the full name; a subfolder becomes an extra search term (`logos/2026/foo.svg` also matches "2026"). Wired as `npm run logos` plus `predev`/`prebuild`, so starting dev or building regenerates it — no stale index. The script warns about any file over 400KB, because a picked logo becomes a data URL inside the design and would eat the library's 4MB save cap.
+- **UI: a "Saved logos" search under the Partner logo slots** (`LogoLibraryPicker.tsx`) — type a name, click a tile, done. A pick lands in the first EMPTY slot of the current layout (last one when all are full) and the hint says which ("Clicking a logo fills slot 2"), so it is predictable rather than magic. Tiles sit on a white plate because most partner artwork is dark and would be invisible on the sidebar. Empty library renders instructions instead of a dead search box.
+- **Picks are converted to data URLs, not `/logos/…` references** — a saved design must not break when a file is later renamed or deleted, and `retargetPartnerLayout` already treats slot images as uploads. Natural dimensions are measured, and left undefined for an SVG with no intrinsic size instead of writing zeroes.
+- **Evidence:** live walkthrough with 3 temporary test files — search "molten" filtered to 1 tile, click filled slot 1 as an SVG data URL (4302 chars), the hint advanced to slot 2, "danske" (a file in the `2026/` subfolder) filled slot 2, and both logos rendered on canvas; zero console errors; screenshot `scratchpad/logo-library.png`. Test files then removed and the empty-state verified. 106/106 vitest, tsc clean, eslint clean on new files, `npm run build` clean (the prebuild hook regenerating the manifest is visible in its output).
+- **Next step for Auri:** drop the real SVGs into `public/logos/`, run `npm run logos`, commit both the files and the regenerated JSON. If self-service ever matters more than simplicity (teammates adding logos without a deploy), the upgrade path is an upload route + Vercel Blob behind the existing @techbbq.org gate, keeping the same picker.
+
+**Session 2026-07-30, round 35 — MP4 save option + the editor's missing save button + drag-churn hardening (same branch `sales-announcement`, UNCOMMITTED).** Three reports from Auri's first run of round 34:
+
+- **"We are missing save as mp4… it should be for the liquid metal as a background option condition."** `exportMp4` had existed in `useExport` with no UI since forever (listed under Dormant code). Now the save control is a THREE-way format choice — PNG · JPG · MP4 — in both `/simple` (the split-button popover) and `/editor` (the header radiogroup). New `isAnimatedBackground(id)` in `CanvasBackground.tsx` is the gate: true for `BG_REGISTRY` (liquid metal) + `ORB_REGISTRY` (the drifting orbs, animated too — and the default `orb7`, so gating on liquid-metal alone would have hidden the feature in the default state), false for the static season/stage JPGs. When it's false the MP4 row is replaced by a line saying WHY ("MP4 needs a moving background · pick a Liquid metal or orb one") instead of silently vanishing, and a stranded `exportFormat === "mp4"` falls back to JPG. The video path resumes the animation instead of pausing it (the still-image path pauses; recording a paused shader gives 3s of one frame) and the button reads "Recording… N%".
+- **"There wasn't a save button after fine tuning."** The handoff always worked (the editor's unmount effect flushes the doc, so `/simple` re-adopted it) — but the only way back was a bare "Quick Templates" link, so nothing said the tuning was kept. The editor now shows **"Save & back to Quick Templates"** (orange, `Save` icon) whenever it was entered from Quick Templates (`HANDOFF_FLAG_KEY` present in sessionStorage); it clears the 350ms persist debounce, writes the session synchronously, toasts "Fine-tuning saved" and routes to `/simple`. Entered directly, `/editor` keeps the plain link.
+- **"Maximum update depth exceeded at ShapeDragOverlay[handleMouseMove]".** NOT REPRODUCED on a clean server: real-mouse move-drags and corner resize-drags (60 mousemove steps each) on a sale doc produced zero console errors. Same signature as the 2026-07-29 round-8 sighting, which was also only ever seen against a hot-reloading dev server (Auri's tab was open through ~8 HMR cycles while this session edited `simpleLayout.ts`) — a hard reload clears it. Hardened the pattern anyway: overlays call `onGuidesChange` with a FRESH object on every drag tick, so `setGuides` re-rendered the whole editor on every mousemove even when the guides were unchanged. New `setGuidesIfChanged` collapses the no-op updates (all 4 overlay call sites), which cuts drag churn and removes the cascade that React's update-depth guard trips on. **If it recurs on a production build, re-investigate — that would be a real bug, not stale chunks.**
+- **The hydration-mismatch error in the same report is not ours:** the diff shows `autocomplete="name"` / `autocomplete="organization"` and a `background-image: url(data…)` style injected onto the PersonEditor inputs — a password manager decorating the fields before React hydrates. Nothing in the app sets those.
+- **MP4 export was actually BROKEN, not just UI-less** (found by recording one instead of trusting the "works" note in Dormant code). Three real bugs in `useExport.exportMp4`: (1) the codec string was hardcoded `avc1.640028` = AVC **level 4.0**, capped at 2,097,152 coded pixels — a 1500×1500 square is 2,262,016, so every square export died with `NotSupportedError` (16:9 and 9:16 are 2,073,600 and squeaked under, which is why it ever looked fine); now `pickAvcCodec` asks `VideoEncoder.isConfigSupported` for levels 5.2 → 4.0 and picks the first that works, falling back to a half-size (even-dimension) recording with a toast rather than failing. (2) An encoder error CLOSES the codec, and the loop kept calling `encode()` on it for the rest of the 3 seconds, then hung forever in `encoder.flush()` — the export never resolved and no error ever surfaced (a 120s Playwright wait timed out). Now the failure is captured, the loop breaks, and the real message is thrown into the toast. (3) A throwing `encode()` leaked its `VideoFrame` ("garbage collected without being closed") — `close()` moved into `finally`.
+- **Evidence:** 106/106 vitest, tsc clean, changed files eslint-clean (1 pre-existing error in `CanvasBackground.tsx`, verified by stashing), build clean. Live: the Save popover lists PNG/JPG/MP4 on `orb7`, drops to PNG/JPG + the explanation on `season1` (Molten Gold); a real 1:1 MP4 downloaded and was byte-inspected — 515KB, `ftyp`+`moov`, **1500×1500** AVC track, 16 frames. The editor round-trip was walked with a real mouse: the return button is labelled, a text drag made 300ms before the click survived the trip (sessionStorage still held the PRE-drag position, so the synchronous flush is what saved it) and `/simple` shows "Custom design active".
+- **Then: "the video is lagging, it has to be smooth like on the preview" — rebuilt the capture as COMPOSITING. 5fps → 27.5fps.** The old loop re-rasterized the entire DOM with `html-to-image` every frame (~180ms each), which is what capped it. Now: `DynamicTemplate` wraps the background in `<div data-canvas-bg="1">`; the export hides that layer (and forces the canvas root's opaque `background` transparent, else the overlay would cover the background), rasterizes everything else **once** into a transparent overlay canvas, then per frame does two `drawImage` calls — live shader/orb canvas, then the overlay — on a `requestAnimationFrame` clock at 30fps. Measured: compositing alone sustains 240fps, so the frame rate is now encoder-bound, not capture-bound. The old per-frame path is kept as a fallback for a background layer whose pixels can't be read (`canReadPixels` probes it; an unreadable WebGL context would otherwise yield an all-black video).
+- **Two more real bugs found by recording it:**
+  - **A 1500×1500 frame at 30fps CRASHES the Chrome renderer** (tab died twice mid-test). Measured the neighbourhood: 1440×1440, 1920×1080 and 1080×1920 — all ≤ 2,073,600 px — each encoded 3s cleanly. So `videoFrameSize()` caps video frames at Full-HD's pixel count with the aspect kept and dimensions even: the three formats record at **1440×1440 / 1920×1080 / 1080×1920**. Still images keep the full canvas resolution at 2× supersampling; social platforms re-encode to ≤1080 anyway. Encoder queue capped at 4 in-flight frames (the measured-stable value).
+  - **`mp4-muxer` rejects a non-zero first timestamp** and threw for all 82 chunks (then died in `finalize()` with a null `colorSpace`). Wall-clock timestamps start a few ms in because the loop waits for the first rAF tick, so the muxer now gets `firstTimestampBehavior: "offset"`.
+- **Round 2 of the same complaint ("it still doesn't feel as smooth even") — the problem was frame SPACING, not throughput.** Parsed the `stts` (frame-duration) table out of the exported files instead of eyeballing them:
+  - **wall-clock timestamps:** 83 frames / 3.02s but **14 distinct frame gaps** — 33.4ms, a pile of 37.x, and one **89.4ms stall**. Temporally accurate, visibly juddery. Frame timestamps were the real elapsed time, so any late frame permanently widened its own gap.
+  - **uniform timestamps** (`timestamp = frameIndex / FPS`): one gap, 33.3ms × 83 — even playback, but still only 83 of 90 slots, so the motion was SAMPLED unevenly and shown evenly (a subtler wobble).
+  - **uniform + absolute schedule:** **91 frames / 3.03s, a single 33.3ms gap.** The pacing bug was `dueAt = elapsed + frameMs`, which accumulates drift — with animation frames arriving faster than the target, a 33ms slot kept landing on the next-but-one tick. Frame *n* is now due at `n × frameMs` from the start, absolute. Measured slot fill: 83/90 → 91/90. Encoder queue cap 4 → 8 (measured: the point where backpressure waits drop from 30 to 0 at 30fps), plus `framerate` + `latencyMode: "quality"` on the encoder and `frameRate` on the muxer track so players see constant-frame-rate video.
+- **Why 30fps and not 60:** measured at 1440², 60fps fills only **73%** of slots (533 backpressure waits) — the encoder, not the capture, is the ceiling. 30fps fills 100%. Also verified the source isn't the problem: the live shader canvas changes on EVERY animation frame (473/473 ticks sampled), so there are no duplicated source frames to begin with.
+- **Video evidence (byte-inspected + frame-decoded, not just "it downloaded"):** final 1:1 sale export = 1.9MB, **1440×1440** AVC track, **91 frames over 3.03s = constant 30fps**. Decoded frames at 0.2s / 1.5s / 2.9s and screenshotted them: the liquid-metal background has visibly moved between all three while the figure, ribbon and photo band stay put — the composite is correct, not a black box (`scratchpad/mp4-frames.png`). Sample files kept in the session scratchpad (`smooth-square.mp4` = wall-clock, `uniform.mp4` = uniform stamps, `final30.mp4` = shipped).
+- **If it STILL reads as choppy to Auri, the remaining lever is a deterministic clock:** stop sampling real time and step the animation itself — `LiquidMetal` takes a `frame` prop and `webGlContextAttributes={{ preserveDrawingBuffer: true }}` is already set, so with `speed=0` the shader can be rendered at exact 1/60s steps (and `OrbCanvasBackground` has its own `timeRef` that could take an explicit time). That decouples smoothness from encoder throughput entirely — perfect 60fps regardless of machine — but it means threading a video-time override from `useExport` through the page → `DynamicTemplate` → `CanvasBackground`, which is why it was not done first.
+
+**Session 2026-07-30, round 34 — third template: Sales Announcement (branch `sales-announcement`, UNCOMMITTED).** Auri's ask, with two reference JPGs (`Desktop/TBBQ/2026 Season/48 days left.jpg`, `Less than 2 weeks 10percent.jpg`): a sale post that says the discount or how many days are left. Built as a THIRD template kind (`panel` | `partner` | **`sales`**) with two layouts, the same shape as the partner template's One/Two/Four:
+
+- **`buildSalesDesign(form, format)`** (`simpleLayout.ts`). `countdown` = giant figure + caption top-left ("48" / "days left") with a wide photo band along the bottom. `discount` = headline, giant figure, white CTA pill (brand-red text), small footer line, portrait photo card bottom-right. Both share an optional **diagonal ribbon** across the top-right (rotated 45° band + text, geometry computed in PIXELS so it doesn't skew on 16:9/9:16). Roles: `sales.value/.caption/.headline/.cta/.footer/.ribbon`, shapes tagged `ribbon.band` / `cta.pill`, photo slot `sales-countdown.photo` / `sales-discount.photo` (layout-specific, so the two layouts can never shape-match each other — the `logo-duo-N` trick).
+- **Auto-fits that the live walkthrough forced (each was a real defect on screen):** ribbon text shrinks to the VISIBLE chord of the band (a 3× "TECHBBQ" default ran off the corner); `ribbonGuard` pulls top-area text left of the ribbon (the discount headline ran under the white band); the figure uses a 0.68em advance estimate (the "%" touched the photo card); the CTA font shrinks when the text can't fit the column; the discount figure is CENTRED in the room between headline and pill (bottom-anchoring left a void on 9:16).
+- **`docKindOf(doc)`** is the new single source of truth for kind: sales → partner → panel. Replaces every `isPartnerDoc(d) === (template === "partner")` binary guard in `/simple` (kind-mismatch heal, parked-shelf partitioning, library-load purge, bundle variants) and gates the panel migrations (`adoptLegacyPanelRoles`, `dedupeSpeakerRoles`, `stripLeakedPanelWords`).
+- **`retargetSalesLayout`** — the partner slot reconciliation generalized: `retargetPartnerLayout` and it now share `retargetSlotDoc(tuned, rebuilt, slotRoles)`, so uploading or clearing the sale photo keeps a hand-tuned design instead of rebuilding. Parked revival scans sales docs the same way partner docs are scanned. **No `syncSalesChrome`:** countdown and discount are structurally different compositions, so each owns its own tuning per format (parking handles round-trips).
+- **Plumbing:** `SalesForm` + `emptySalesForm`, `salesLayoutOf` / `isSalesDoc`, `SimpleFormsSnapshot.sales` (kept whole like partner logos — each layout owns a photo), `formsFromDoc` sales branch (snapshot first, role-tagged layers as the fallback), `bundleCoverage` reports sale types, `TemplateCoverage.layout` widened, `simpleExportName` → "1x1 - Sale - 48 days left", `"sales"` added to the API's `KINDS`, TeamLibrary row label + prop types.
+- **No official library item yet.** `DEFAULT_ITEM_IDS.sales` is deliberately `undefined`, so the Sale template has no flavour picker and no auto-load — the built-in layouts ARE the template until Auri tunes one and saves it (then the Update/coverage machinery works exactly as for the other two).
+- **Evidence:** 106/106 vitest (32 new: golden snapshots for both layouts × 3 formats, ribbon fit + chord containment, CTA pill ≥ text, photo-in-bounds, figure clears the photo band, layout/kind disjointness, `retargetSalesLayout` fill/clear/refusal, snapshot + legacy form round-trip, coverage, export naming), tsc clean, changed files eslint-clean (10 pre-existing errors elsewhere in `src/hooks`), `npm run build` clean. Live Playwright walkthrough on all three formats: both layouts render, photo upload fills the frame with the gradient border, template switch Sale ↔ Panel ↔ Partner leaks nothing either way, zero console errors (only the signed-out 401 library prefetches).
+- **Next steps:** 1. Auri eyeballs both layouts (screenshots in `C:/Users/User/sales-*.png`) and tunes them in the editor. 2. Save as an official "Sale" library item, then add its id to `DEFAULT_ITEM_IDS.sales` so the team lands on it. 3. Review the diff on `sales-announcement`, merge to `master` (auto-deploys). **Note:** the CTA default is "BOOK NOW" without the reference's arrow glyph — type "BOOK NOW →" in the Button field if you want it.
 
 **Session 2026-07-29, round 33 — tuned 16:9 Host doc "switches" on format round-trips (code + LIVE DB write).** Auri tuned the 1-host 16:9 design (headline renamed to singular "HOST", his own hand-made description layer), but returning to 16:9 showed an older design. TWO causes found by emulating his walk on the live bundle:
 
