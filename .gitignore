@@ -46,3 +46,12 @@ next-env.d.ts
 # ship the env template
 !.env.example
 .merge-partner/
+
+# Output of `npm run logos:dupes` — a local report, not a source file
+duplicate-logos-report.json
+
+# Logos deleted from the library via the picker (recoverable, not committed)
+.logos-trash/
+
+# Local Claude Code state (incl. agent worktrees and their build output)
+.claude/
