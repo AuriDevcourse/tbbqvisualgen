@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Pause, Play, X, RotateCcw, Layers as LayersIcon, Download, LayoutTemplate, Type, Image as ImageIcon, Shapes, Undo2, Redo2, Lock, Unlock, Trash2, Copy, LibraryBig, AlignStartVertical, AlignCenterVertical, AlignEndVertical, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignHorizontalDistributeCenter, AlignVerticalDistributeCenter, Grid3x3, Magnet, Group, Ungroup, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Loader2, Users } from "lucide-react";
+import { Pause, Play, X, RotateCcw, Layers as LayersIcon, Download, Film, LayoutTemplate, Type, Image as ImageIcon, Shapes, Undo2, Redo2, Lock, Unlock, Trash2, Copy, LibraryBig, AlignStartVertical, AlignCenterVertical, AlignEndVertical, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignHorizontalDistributeCenter, AlignVerticalDistributeCenter, Grid3x3, Magnet, Group, Ungroup, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Loader2, Users, Save } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as Popover from "@radix-ui/react-popover";
 import { toast } from "sonner";
 import { AnimatedGradient } from "@/components/AnimatedGradient";
@@ -14,6 +15,7 @@ import { LogoDragOverlay } from "@/components/LogoDragOverlay";
 import type { Bbox } from "@/lib/snap";
 import { DynamicTemplate } from "@/components/templates/DynamicTemplate";
 import { useExport, type ExportFormat } from "@/hooks/useExport";
+import { isAnimatedBackground } from "@/components/CanvasBackground";
 import { useUndoableDoc } from "@/hooks/useUndoableDoc";
 import { FORMAT_DIMENSIONS, DEFAULT_DESIGN, reconcileLayerOrder } from "@/types/template";
 import type { PlatformFormat, DesignConfig } from "@/types/template";
@@ -39,6 +41,13 @@ import { useTemplates, type SavedTemplate } from "@/hooks/useTemplates";
 
 // Bumped storage key because the design schema changed (partnerLogo removed).
 const STORAGE_KEY = "tbbqvisualgen.session.v4";
+// Set by Quick Templates on the way in, so we know to offer "Save & back".
+const HANDOFF_FLAG_KEY = "tbbqvisualgen.simple.handoff";
+
+/** What Save produces: a still image, or a 3-second MP4 of the animated
+ *  background (only offered when the background actually moves). */
+type SaveFormat = ExportFormat | "mp4";
+const SAVE_LABELS: Record<SaveFormat, string> = { png: "PNG", jpeg: "JPG", mp4: "MP4" };
 
 // Single icon-button used inside the align popover.
 function AlignBtn({ icon: Icon, label, onClick }: { icon: typeof AlignStartVertical; label: string; onClick: () => void }) {
@@ -123,15 +132,24 @@ export default function Home() {
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [overflow, setOverflow] = useState({ left: false, right: false, top: false, bottom: false });
   const [guides, setGuides] = useState<{ x: number | null; y: number | null }>({ x: null, y: null });
+  // Every drag tick reports its snap guides, and the overlays pass a FRESH
+  // object each time — so a plain setGuides re-rendered the whole editor on
+  // every mousemove even when the guides were unchanged (usually null/null).
+  // Collapsing the no-op updates cuts that churn and removes the state-update
+  // cascade that React's "maximum update depth" guard trips on mid-drag.
+  const setGuidesIfChanged = useCallback((next: { x: number | null; y: number | null }) => {
+    setGuides((prev) => (prev.x === next.x && prev.y === next.y ? prev : next));
+  }, []);
   const [showEditTip, setShowEditTip] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [showLayers, setShowLayers] = useState(true);
   // "Start from a template" gallery — shown over the empty canvas until the
   // user picks a template or chooses "start blank".
   const [galleryDismissed, setGalleryDismissed] = useState(false);
-  const [exportFormat, setExportFormat] = useState<ExportFormat>("jpeg");
+  // "mp4" joins PNG/JPG as a save format, offered only when the background moves.
+  const [exportFormat, setExportFormat] = useState<SaveFormat>("jpeg");
 
-  const { exportRef, isExporting, isExportingVideo, exportImage } = useExport();
+  const { exportRef, isExporting, isExportingVideo, videoProgress, exportImage, exportMp4 } = useExport();
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const canvasWrapRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.4);
@@ -718,17 +736,44 @@ export default function Home() {
     };
   }, [calculateScale]);
 
-  const handleExport = useCallback((formatOverride?: ExportFormat) => {
-    const fmt = formatOverride ?? exportFormat;
+  // A still image of a moving background is fine; a VIDEO of a static one is
+  // just a heavy PNG, so MP4 is gated on the background actually animating.
+  const canAnimate = isAnimatedBackground(design.backgroundId);
+  const effectiveFormat: SaveFormat = exportFormat === "mp4" && !canAnimate ? "jpeg" : exportFormat;
+
+  const handleExport = useCallback((formatOverride?: SaveFormat) => {
+    const fmt = formatOverride ?? (exportFormat === "mp4" && !isAnimatedBackground(design.backgroundId) ? "jpeg" : exportFormat);
+    const date = new Date();
+    const stamp = `${date.toISOString().slice(0, 10)}-${String(date.getHours()).padStart(2, "0")}${String(date.getMinutes()).padStart(2, "0")}`;
+    const base = `techbbq-visual-${format}-${dims.width}x${dims.height}-${stamp}`;
+    if (fmt === "mp4") {
+      // Resume the animation — there is nothing to record while it is paused.
+      setBgPaused(false);
+      void exportMp4(`${base}.mp4`, () => setBgPaused(false));
+      return;
+    }
     setBgPaused(true);
     setTimeout(() => {
-      const date = new Date();
-      const stamp = `${date.toISOString().slice(0, 10)}-${String(date.getHours()).padStart(2, "0")}${String(date.getMinutes()).padStart(2, "0")}`;
-      const ext = fmt === "jpeg" ? "jpg" : "png";
-      const filename = `techbbq-visual-${format}-${dims.width}x${dims.height}-${stamp}.${ext}`;
-      exportImage(filename, fmt).finally(() => setBgPaused(false));
+      exportImage(`${base}.${fmt === "jpeg" ? "jpg" : "png"}`, fmt).finally(() => setBgPaused(false));
     }, 100);
-  }, [format, dims.width, dims.height, exportFormat, exportImage]);
+  }, [format, dims.width, dims.height, exportFormat, exportImage, exportMp4, design.backgroundId]);
+
+  // Quick Templates hands off through sessionStorage and re-adopts whatever is
+  // stored when you come back — but the only way back used to be a bare
+  // "Quick Templates" link, so fine-tuning felt unsaved ("there was no save
+  // button after fine tuning"). This button says what it does and flushes the
+  // doc synchronously instead of trusting the 350ms persist debounce.
+  const router = useRouter();
+  const [cameFromQuickTemplates, setCameFromQuickTemplates] = useState(false);
+  useEffect(() => {
+    try { setCameFromQuickTemplates(Boolean(sessionStorage.getItem(HANDOFF_FLAG_KEY))); } catch { /* ignore */ }
+  }, []);
+  const handleBackToQuickTemplates = useCallback(() => {
+    if (persistTimerRef.current) clearTimeout(persistTimerRef.current);
+    writeSession(latestDocRef.current);
+    toast.success("Fine-tuning saved — back to Quick Templates");
+    router.push("/simple");
+  }, [router, writeSession]);
 
   const handleReset = useCallback(() => {
     if (canvasImages.length === 0 && design.texts.length === 0) return;
@@ -1302,15 +1347,27 @@ export default function Home() {
             </h1>
           </div>
           <div className="ml-auto flex items-center gap-2">
-            <Link
-              href="/simple"
-              aria-label="Open Quick Templates"
-              title="Quick Templates — build a visual from a simple form"
-              className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium border border-surface/40 bg-transparent text-foreground hover:border-surface hover:bg-white/5 transition-colors"
-            >
-              <Users className="w-3.5 h-3.5" strokeWidth={1.5} />
-              Quick Templates
-            </Link>
+            {cameFromQuickTemplates ? (
+              <button
+                onClick={handleBackToQuickTemplates}
+                aria-label="Save fine-tuning and go back to Quick Templates"
+                title="Keep this fine-tuned design and return to Quick Templates — it stays on the canvas there, ready to save into the team library"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium border border-[#FF6B00]/50 bg-[#FF6B00]/10 text-[#FF8A3D] hover:bg-[#FF6B00]/20 transition-colors"
+              >
+                <Save className="w-3.5 h-3.5" strokeWidth={1.5} />
+                Save &amp; back to Quick Templates
+              </button>
+            ) : (
+              <Link
+                href="/simple"
+                aria-label="Open Quick Templates"
+                title="Quick Templates — build a visual from a simple form"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium border border-surface/40 bg-transparent text-foreground hover:border-surface hover:bg-white/5 transition-colors"
+              >
+                <Users className="w-3.5 h-3.5" strokeWidth={1.5} />
+                Quick Templates
+              </Link>
+            )}
             <button
               onClick={() => setTemplatesOpen(true)}
               aria-label="Templates"
@@ -1341,29 +1398,30 @@ export default function Home() {
               aria-label="Export format"
               className="flex items-center gap-1 rounded-full bg-card-2 p-1"
             >
-              {(["png", "jpeg"] as const).map((fmt) => (
+              {(canAnimate ? (["png", "jpeg", "mp4"] as const) : (["png", "jpeg"] as const)).map((fmt) => (
                 <button
                   key={fmt}
                   role="radio"
-                  aria-checked={exportFormat === fmt}
+                  aria-checked={effectiveFormat === fmt}
                   onClick={() => setExportFormat(fmt)}
+                  title={fmt === "mp4" ? "Record 3 seconds of the animated background as an MP4" : `Save a still ${SAVE_LABELS[fmt]}`}
                   className={`px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider transition-colors ${
-                    exportFormat === fmt ? "bg-surface text-ink" : "text-muted hover:text-foreground"
+                    effectiveFormat === fmt ? "bg-surface text-ink" : "text-muted hover:text-foreground"
                   }`}
                 >
-                  {fmt === "jpeg" ? "JPG" : fmt}
+                  {SAVE_LABELS[fmt]}
                 </button>
               ))}
             </div>
             <button
               onClick={() => handleExport()}
-              disabled={isExporting || canvasIsEmpty}
-              aria-label="Save image"
-              title={canvasIsEmpty ? "Add something to the canvas first" : "Save image (⌘E)"}
+              disabled={isExporting || isExportingVideo || canvasIsEmpty}
+              aria-label={effectiveFormat === "mp4" ? "Save video" : "Save image"}
+              title={canvasIsEmpty ? "Add something to the canvas first" : effectiveFormat === "mp4" ? "Record 3 seconds of animation as an MP4 (⌘E)" : "Save image (⌘E)"}
               className="flex items-center gap-1.5 px-5 py-2 rounded-full bg-surface text-ink text-xs font-semibold tracking-wide hover:bg-white active:bg-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isExporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" strokeWidth={1.5} />}
-              {isExporting ? "Exporting…" : "Save image"}
+              {isExporting || isExportingVideo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : effectiveFormat === "mp4" ? <Film className="w-3.5 h-3.5" strokeWidth={1.5} /> : <Download className="w-3.5 h-3.5" strokeWidth={1.5} />}
+              {isExportingVideo ? `Recording… ${videoProgress}%` : isExporting ? "Exporting…" : effectiveFormat === "mp4" ? "Save video" : "Save image"}
             </button>
           </div>
         </header>
@@ -1729,7 +1787,7 @@ export default function Home() {
                           : next,
                       );
                     }}
-                    onGuidesChange={setGuides}
+                    onGuidesChange={setGuidesIfChanged}
                     onEditStart={beginTransaction}
                     onEditEnd={endTransaction}
                   />
@@ -1931,7 +1989,7 @@ export default function Home() {
                     onChange={(updated) => setCanvasImages((prev) =>
                       prev.map((ci) => (ci.id === updated.id ? updated : ci))
                     )}
-                    onGuidesChange={setGuides}
+                    onGuidesChange={setGuidesIfChanged}
                     onEditStart={beginTransaction}
                     onEditEnd={endTransaction}
                     onBeginDrag={beginGroupDrag}
@@ -2059,7 +2117,7 @@ export default function Home() {
                           shapes: (prev.shapes ?? []).map((s) => (s.id === updated.id ? updated : s)),
                         }))
                       }
-                      onGuidesChange={setGuides}
+                      onGuidesChange={setGuidesIfChanged}
                       onEditStart={beginTransaction}
                       onEditEnd={endTransaction}
                       onBeginDrag={beginGroupDrag}
@@ -2096,7 +2154,7 @@ export default function Home() {
                         return next;
                       })
                     }
-                    onGuidesChange={setGuides}
+                    onGuidesChange={setGuidesIfChanged}
                     onEditStart={beginTransaction}
                     onEditEnd={endTransaction}
                     onBeginDrag={beginGroupDrag}
