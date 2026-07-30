@@ -8,7 +8,17 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "logos": "node scripts/logo-manifest.mjs",
+    "predev": "node scripts/logo-manifest.mjs",
+    "prebuild": "node scripts/logo-manifest.mjs",
+    "logos:dupes": "node scripts/find-duplicate-logos.mjs",
+    "logos:verify": "node scripts/verify-logos-online.mjs",
+    "logos:sweep": "node scripts/sweep-logo-domains.mjs",
+    "logos:compare": "node scripts/compare-logos-online.mjs",
+    "logos:match": "node scripts/match-partner-domains.mjs",
+    "logos:import": "node scripts/import-site-logos.mjs",
+    "logos:svgify": "node scripts/svgify-logos.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

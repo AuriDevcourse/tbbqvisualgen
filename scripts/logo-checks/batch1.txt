@@ -1,0 +1,15 @@
+Vaekstfonden.svg|eifo.dk
+Adyen.png|adyen.com
+Antler.svg|antler.co
+Stripe.png|stripe.com
+KPMG.svg|kpmg.com
+Revolut.png|revolut.com
+Cloudflare.svg|cloudflare.com
+UiPath.png|uipath.com
+Dealroom.svg|dealroom.co
+Copenhagen Capacity.svg|copcap.com
+Danske.svg|danskebank.dk
+Slush2025 Dates White.png|slush.org
+EIFO Full.svg|eifo.dk
+Salesforge.svg|salesforge.ai
+byFounders.svg|byfounders.vc

@@ -1,0 +1,98 @@
+# Partner name | website — read off techbbq.dk/partners (the site blocks curl with
+# HTTP 455, so this was extracted via the built-in fetcher). Refresh it when the
+# partner list changes; `npm run logos:match` joins these to logo files.
+Nordea | https://www.nordea.dk/
+Realdania | https://realdania.dk/
+Danish Life Science Cluster | https://www.danishlifesciencecluster.dk/
+Novo Nordisk Fonden | https://novonordiskfonden.dk/
+Industriens Fond | https://industriensfond.dk/
+Erhvervsfremmebestyrelsen | https://erhvervsfremmebestyrelsen.dk/
+Beyond Beta | https://www.beyondbeta.dk/
+Dealroom | https://dealroom.co/
+Innovation District Copenhagen | https://innovationdistrictcopenhagen.com/
+Mesh Community | https://meshcommunity.com/
+Mastercard | https://mastercard.com/
+Repodo | https://www.repodo.com/
+EIFO | https://eifo.dk/
+ICDK | https://icdk.dk/
+Investing Gothenburg | https://www.investingothenburg.com/
+Owl VC | https://www.owlvc.com/
+Wezeo | https://www.wezeo.com/
+Nebius | https://nebius.com/
+Danske Bank | https://danskebank.dk/
+Lab08 | https://lab08.com/
+Microsoft | https://www.microsoft.com/
+Google Cloud | https://cloud.google.com/
+European Innovation Council | https://eic.ec.europa.eu/
+Ooono | https://ooono.com/
+Women in Tech | https://www.womenintech.dk/
+Closing Loops | https://closingloops.dk/
+Boardway | https://www.boardway.co/
+EY | https://www.ey.com/
+Jyske Bank | https://www.jyskebank.dk/
+Copcap | https://www.copcap.com/
+HSBC Innovation Banking | https://www.hsbcinnovationbanking.com/
+Tonik | https://tonik.fo/
+Crispa AI | https://crispa.ai/
+InvestEU | https://investeu.europa.eu/
+Eryk | https://eryk.com/
+Tech Savvy Media | https://www.techsavvy.media/
+Skytek | https://www.skytek.dk/
+Impact Fund | https://impactfund.dk/
+World Fund | https://www.worldfund.vc/
+BSI Group | https://www.bsigroup.com/
+Flatpay | https://www.flatpay.com/
+Mountside Ventures | https://www.mountsideventures.com/
+Deel | https://www.deel.com/
+Pleo | https://www.pleo.io/
+Valencia Innovation Capital | https://valenciainnovationcapital.com/
+CPH Labs | https://cphlabs.dk/
+Akademikernes A-kasse | https://www.aka.dk/
+ESA BIC | https://esabic.dk/
+Visma | https://www.visma.com/
+Wonderful Copenhagen | https://www.wonderfulcopenhagen.com/
+Fonden for Entreprenørskab | https://ffefonden.dk/
+Falck | https://www.falck.com/
+Force Technology | https://forcetechnology.com/
+Symbion | https://symbion.dk/
+Skiftr | https://skiftr.com/
+Adeo Web | https://www.adeoweb.com/
+Grant Thornton | https://www.grantthornton.dk/
+PreSeed Ventures | https://www.psv.xyz/
+e-conomic | https://www.e-conomic.dk/
+Virksomhedsguiden | https://virksomhedsguiden.dk/
+FBV | https://www.fbv.dk/
+N.Rich | https://nrich.io/
+AstraZeneca | https://www.astrazeneca.com/
+OMR Reviews | https://omr.com/
+CSE | https://www.cse-advisory.com/
+Cloudflare | https://www.cloudflare.com/
+Clickhouse | https://www.clickhouse.com/
+High Bridge | https://highbridge.dk/
+Ada Ventures | https://www.adaventures.com/
+Dania Accounting | https://www.daniaaccounting.com/
+Move Innovation | https://moveinnovation.dk/
+PROSA | https://www.prosa.dk/
+Swap Languages | https://www.swaplanguage.com/
+Staria | https://www.staria.com/
+AIESEC | https://www.aiesec.dk/
+Innovation Fund Denmark | https://innovationsfonden.dk/
+EIT Community Supernovas | https://supernovas.eitcommunity.eu/
+Stripe | https://stripe.com/
+Abion | https://abion.com/
+Accura | https://accura.dk/
+Finaman AI | https://www.finaman.ai/
+Nordic Innovation | https://www.nordicinnovation.org/
+ENFA | https://www.enfa.org/
+Nomono | https://nomono.co/
+EIT Urban Mobility | https://www.eiturbanmobility.eu/
+Health Tech Hub Copenhagen | https://healthtechhub.org/
+Copenhagen Fintech | https://www.copenhagenfintech.dk/
+IMEC | https://www.imec.be/
+Teknologisk | https://www.teknologisk.ai/
+TechStation | https://www.techstation.nu/
+Creative Girls Club | https://www.creativegirlsclub.org/
+Odense Robotics | https://odenserobotics.dk/
+Nova Talent | https://www.novatalent.com/
+Nordic Women's Health Hub | https://nordicwomenshealthhub.com/
+Danish Startup Group | https://www.danishstartupgroup.com/
