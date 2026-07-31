@@ -37,6 +37,36 @@ interface BgEntry {
   config: LmConfig;
 }
 
+/**
+ * Static image backgrounds — official 2026-season gradient exports, served
+ * from /public/backgrounds. Rendered as a plain cover-fit <img>, so they
+ * export cleanly through html-to-image and cost no WebGL context.
+ */
+export const IMAGE_BG_REGISTRY: Record<string, { label: string; src: string }> = {
+  season1: { label: "Molten Gold", src: "/backgrounds/season-1.jpg" },
+  season2: { label: "Flame Wash", src: "/backgrounds/season-2.jpg" },
+  season3: { label: "Signal Red", src: "/backgrounds/season-3.jpg" },
+  season4: { label: "Berry Glow", src: "/backgrounds/season-4.jpg" },
+  seasonGreen1: { label: "Lime Glow", src: "/backgrounds/season-green-1.jpg" },
+  seasonGreen2: { label: "Lime Shadow", src: "/backgrounds/season-green-2.jpg" },
+  seasonPurple1: { label: "Violet Haze", src: "/backgrounds/season-purple-1.jpg" },
+  seasonPurple2: { label: "Violet Shadow", src: "/backgrounds/season-purple-2.jpg" },
+  // Per-stage backgrounds — pick the one matching where the session happens.
+  // Three variants per stage.
+  stageTech: { label: "Tech Stage 1", src: "/backgrounds/stage-tech.jpg" },
+  stageTech2: { label: "Tech Stage 2", src: "/backgrounds/stage-tech-2.jpg" },
+  stageTech3: { label: "Tech Stage 3", src: "/backgrounds/stage-tech-3.jpg" },
+  stageBbq: { label: "BBQ Stage 1", src: "/backgrounds/stage-bbq.jpg" },
+  stageBbq2: { label: "BBQ Stage 2", src: "/backgrounds/stage-bbq-2.jpg" },
+  stageBbq3: { label: "BBQ Stage 3", src: "/backgrounds/stage-bbq-3.jpg" },
+  stageBonfire: { label: "Bonfire Stage 1", src: "/backgrounds/stage-bonfire.jpg" },
+  stageBonfire2: { label: "Bonfire Stage 2", src: "/backgrounds/stage-bonfire-2.jpg" },
+  stageBonfire3: { label: "Bonfire Stage 3", src: "/backgrounds/stage-bonfire-3.jpg" },
+  stageFounder: { label: "Founder Stage 1", src: "/backgrounds/stage-founder.jpg" },
+  stageFounder2: { label: "Founder Stage 2", src: "/backgrounds/stage-founder-2.jpg" },
+  stageFounder3: { label: "Founder Stage 3", src: "/backgrounds/stage-founder-3.jpg" },
+};
+
 export const BG_REGISTRY: Record<string, BgEntry> = {
   // ---- Yellow / gold ----
   lm1: { label: "Honey Glow",      config: { colorBack: "#1a0d00", colorTint: "#FFC400", shape: "none",      scale: 2.0, speed: 0.2,  repetition: 1.8, softness: 0.55, distortion: 0.05, contour: 0.2,  angle: 45,  shiftRed: 0.2,   shiftBlue: -0.25, frame: 5  } },
@@ -310,10 +340,30 @@ interface CanvasBackgroundProps {
   paused?: boolean;
 }
 
+/**
+ * Does this background MOVE? True for the liquid-metal shaders (`BG_REGISTRY`)
+ * and the 2D-canvas orb presets (`ORB_REGISTRY`); false for the static season /
+ * stage JPGs in `IMAGE_BG_REGISTRY`, and false for an unknown id.
+ *
+ * Gates the MP4 export: recording 3 seconds of a still image would just produce
+ * a heavy file that looks exactly like the PNG.
+ */
+export function isAnimatedBackground(id: string): boolean {
+  return Boolean(BG_REGISTRY[id] || ORB_REGISTRY[id]);
+}
+
 // Memoized: all props are primitives (id/width/height/paused), so the shader
 // subtree only re-renders when one actually changes — not on every drag tick
 // when the surrounding document re-renders.
 export const CanvasBackground = memo(function CanvasBackground({ id, width, height, paused }: CanvasBackgroundProps) {
+  // Static image backgrounds — plain cover-fit <img>.
+  const img = IMAGE_BG_REGISTRY[id];
+  if (img) {
+    // eslint-disable-next-line @next/next/no-img-element
+    // draggable={false}: click-dragging the canvas must never start the
+    // browser's native image drag ("it grabs the background").
+    return <img src={img.src} alt="" draggable={false} style={{ position: "absolute", inset: 0, width, height, objectFit: "cover" }} />;
+  }
   // "New styling" orb presets render on a 2D canvas.
   if (ORB_REGISTRY[id]) {
     return <OrbCanvasBackground id={id} width={width} height={height} paused={paused} />;
@@ -363,6 +413,8 @@ function previewStyle(c: LmConfig): React.CSSProperties {
 }
 
 export function BackgroundThumbnail({ id }: { id: string; size?: number }) {
+  const img = IMAGE_BG_REGISTRY[id];
+  if (img) return <div className="w-full h-full" style={{ backgroundImage: `url(${img.src})`, backgroundSize: "cover", backgroundPosition: "center" }} />;
   const orb = ORB_REGISTRY[id];
   if (orb) return <div className="w-full h-full" style={{ background: orb.thumb }} />;
   const entry = BG_REGISTRY[id];

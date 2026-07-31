@@ -17,6 +17,9 @@ interface ColorPickerProps {
   compact?: boolean;
   /** Optional label for screen readers. */
   ariaLabel?: string;
+  /** Override the swatch row. Logo recolouring leads with white and black,
+   *  since a knockout is the common case on the dark canvas. */
+  swatches?: { value: string; label: string }[];
 }
 
 const HEX_RE = /^#([0-9A-F]{3}){1,2}$/i;
@@ -143,6 +146,7 @@ export function ColorPicker({
   defaultColor = "#FF0028",
   allowClear = false,
   compact = false,
+  swatches = BRAND_SWATCHES,
   ariaLabel = "Pick a color",
 }: ColorPickerProps) {
   const active = color ?? defaultColor;
@@ -222,7 +226,7 @@ export function ColorPicker({
             <div className="flex flex-col gap-1">
               <span className="text-[9px] uppercase tracking-wider text-white/65">TechBBQ brand</span>
               <div className="grid grid-cols-8 gap-1">
-                {BRAND_SWATCHES.map((s) => (
+                {swatches.map((s) => (
                   <button
                     key={s.value}
                     type="button"

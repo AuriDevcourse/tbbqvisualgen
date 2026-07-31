@@ -19,6 +19,29 @@ export const FORMAT_DIMENSIONS: Record<PlatformFormat, FormatDimensions> = {
 export const BACKGROUND_OPTIONS: { id: string; label: string; group: string }[] = [
   // New styling — ported from the newer TechBBQ design-system project: 2D-canvas
   // orbs (#FA7000 -> #CE0F2E) drifting on dark or deep-red bases.
+  // Per-stage backgrounds — each stage is its own picker group so the stage
+  // name reads as the section heading. Two variants per stage.
+  { id: "stageTech", label: "Tech Stage 1", group: "Tech Stage" },
+  { id: "stageTech2", label: "Tech Stage 2", group: "Tech Stage" },
+  { id: "stageTech3", label: "Tech Stage 3", group: "Tech Stage" },
+  { id: "stageBbq", label: "BBQ Stage 1", group: "BBQ Stage" },
+  { id: "stageBbq2", label: "BBQ Stage 2", group: "BBQ Stage" },
+  { id: "stageBbq3", label: "BBQ Stage 3", group: "BBQ Stage" },
+  { id: "stageBonfire", label: "Bonfire Stage 1", group: "Bonfire Stage" },
+  { id: "stageBonfire2", label: "Bonfire Stage 2", group: "Bonfire Stage" },
+  { id: "stageBonfire3", label: "Bonfire Stage 3", group: "Bonfire Stage" },
+  { id: "stageFounder", label: "Founder Stage 1", group: "Founder Stage" },
+  { id: "stageFounder2", label: "Founder Stage 2", group: "Founder Stage" },
+  { id: "stageFounder3", label: "Founder Stage 3", group: "Founder Stage" },
+  // Official 2026-season gradient exports (static images in /public/backgrounds).
+  { id: "season1", label: "Molten Gold", group: "New styling" },
+  { id: "season2", label: "Flame Wash", group: "New styling" },
+  { id: "season3", label: "Signal Red", group: "New styling" },
+  { id: "season4", label: "Berry Glow", group: "New styling" },
+  { id: "seasonGreen1", label: "Lime Glow", group: "New styling" },
+  { id: "seasonGreen2", label: "Lime Shadow", group: "New styling" },
+  { id: "seasonPurple1", label: "Violet Haze", group: "New styling" },
+  { id: "seasonPurple2", label: "Violet Shadow", group: "New styling" },
   { id: "orb5", label: "Soft Ember", group: "New styling" },
   { id: "orb6", label: "Right Bloom", group: "New styling" },
   { id: "orb7", label: "Corner Heat", group: "New styling" },
@@ -116,6 +139,10 @@ export interface ShapeBorderRadii {
 export interface ShapeElement {
   id: string;
   type: ShapeType;
+  /** Which Panel Maker slot this shape stands in for — set on the partner
+   *  templates' empty-logo placeholder frames (e.g. "logo-duo-1") so a slot
+   *  edit can swap the right frame. Absent on hand-added shapes. */
+  simpleRole?: string;
   /** Center position in 0–1 fractional canvas coords. */
   x: number;
   y: number;

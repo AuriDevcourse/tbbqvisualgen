@@ -27,6 +27,11 @@ export interface CanvasImage {
   borderWidth?: number;
   /** Optional crop region in 0–1 fractions of the natural source image. */
   crop?: { x: number; y: number; width: number; height: number };
+  /** Which Quick Templates slot this image came from (e.g. "logo-0",
+   *  "logo-single") — mirrors `TextElement.simpleRole`. Lets the retarget
+   *  compatibility check see structural changes (slot swaps, single↔quad)
+   *  that pure src comparison can't. Absent on hand-added editor images. */
+  simpleRole?: string;
   /** When true the image can't be selected via marquee or dragged. */
   locked?: boolean;
   /** Shared group identifier — clicking any member selects the whole group. */

@@ -1,0 +1,6642 @@
+[
+  {
+    "src": "/logos/Aalborg%20Universitet.svg",
+    "name": "Aalborg Universitet",
+    "tags": [],
+    "bytes": 8363,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Abion.svg",
+    "name": "Abion",
+    "tags": [],
+    "bytes": 1651,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Abzu.png",
+    "name": "Abzu",
+    "tags": [],
+    "bytes": 28916,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Accel.svg",
+    "name": "Accel",
+    "tags": [],
+    "bytes": 2531,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Accenture%20Colour.png",
+    "name": "Accenture Colour",
+    "tags": [],
+    "bytes": 78454,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Accura.svg",
+    "name": "Accura",
+    "tags": [],
+    "bytes": 2091,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Aceon.svg",
+    "name": "Aceon",
+    "tags": [],
+    "bytes": 4790,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Ada%20Ventures.png",
+    "name": "Ada Ventures",
+    "tags": [],
+    "bytes": 48990,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Adeo%20Web%20White.svg",
+    "name": "Adeo Web White",
+    "tags": [],
+    "bytes": 8320,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Adobe.png",
+    "name": "Adobe",
+    "tags": [],
+    "bytes": 15547,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Advores.svg",
+    "name": "Advores",
+    "tags": [],
+    "bytes": 10377,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Adyen.png",
+    "name": "Adyen",
+    "tags": [],
+    "bytes": 6417,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/AEDIB.svg",
+    "name": "AEDIB",
+    "tags": [],
+    "bytes": 2877,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Affecture.svg",
+    "name": "Affecture",
+    "tags": [],
+    "bytes": 8437,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Agroprene.svg",
+    "name": "Agroprene",
+    "tags": [],
+    "bytes": 2601,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/AI%20Denmark.svg",
+    "name": "AI Denmark",
+    "tags": [],
+    "bytes": 7265,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Aiesec.png",
+    "name": "Aiesec",
+    "tags": [],
+    "bytes": 45013,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Aistart.svg",
+    "name": "Aistart",
+    "tags": [],
+    "bytes": 6026,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/AIStart%20Incubator.svg",
+    "name": "AIStart Incubator",
+    "tags": [],
+    "bytes": 5002,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Akademikernes%20A-kasse.svg",
+    "name": "Akademikernes A-kasse",
+    "tags": [],
+    "bytes": 9936,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Akademikernes%20A-kasse%20Colour.png",
+    "name": "Akademikernes A-kasse Colour",
+    "tags": [],
+    "bytes": 9662,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Aktive%20Ejere.svg",
+    "name": "Aktive Ejere",
+    "tags": [],
+    "bytes": 14738,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Alba%20Health.svg",
+    "name": "Alba Health",
+    "tags": [],
+    "bytes": 5368,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/AleSac.svg",
+    "name": "AleSac",
+    "tags": [],
+    "bytes": 2481,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Aline%20Technology.svg",
+    "name": "Aline Technology",
+    "tags": [],
+    "bytes": 11250,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Alliance%20VC.png",
+    "name": "Alliance VC",
+    "tags": [],
+    "bytes": 27978,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Alliance%20VC%20White.png",
+    "name": "Alliance VC White",
+    "tags": [],
+    "bytes": 29240,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/all%C2%B7u%C2%B7me.svg",
+    "name": "all·u·me",
+    "tags": [],
+    "bytes": 1997,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Alter%20Echo.svg",
+    "name": "Alter Echo",
+    "tags": [],
+    "bytes": 1435,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Amazon%20WSV.png",
+    "name": "Amazon WSV",
+    "tags": [],
+    "bytes": 7903,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Andreessen%20Horowitz%20Wsv.png",
+    "name": "Andreessen Horowitz Wsv",
+    "tags": [],
+    "bytes": 28146,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Anemo%20Robotics.svg",
+    "name": "Anemo Robotics",
+    "tags": [],
+    "bytes": 10621,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Angella%20Invest.svg",
+    "name": "Angella Invest",
+    "tags": [],
+    "bytes": 11951,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Angella%20Invest%20Colour.svg",
+    "name": "Angella Invest Colour",
+    "tags": [],
+    "bytes": 12236,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Angular%20Ventures.svg",
+    "name": "Angular Ventures",
+    "tags": [],
+    "bytes": 10171,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Aniva.svg",
+    "name": "Aniva",
+    "tags": [],
+    "bytes": 3140,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Aniva%20Health.svg",
+    "name": "Aniva Health",
+    "tags": [],
+    "bytes": 22996,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Anthemis.svg",
+    "name": "Anthemis",
+    "tags": [],
+    "bytes": 4150,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Antler%20Invest.svg",
+    "name": "Antler Invest",
+    "tags": [],
+    "bytes": 3003,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/Apitoolkit.svg",
+    "name": "Apitoolkit",
+    "tags": [],
+    "bytes": 7032,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/App%20Store.png",
+    "name": "App Store",
+    "tags": [],
+    "bytes": 5485,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Apple.png",
+    "name": "Apple",
+    "tags": [],
+    "bytes": 1016,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/APX.svg",
+    "name": "APX",
+    "tags": [],
+    "bytes": 2126,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Arcana%20Bio.svg",
+    "name": "Arcana Bio",
+    "tags": [],
+    "bytes": 5478,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/ArcticStartup%20Events.svg",
+    "name": "ArcticStartup Events",
+    "tags": [],
+    "bytes": 3806,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/ArcticStartup%20Mark.svg",
+    "name": "ArcticStartup Mark",
+    "tags": [],
+    "bytes": 590,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Arrow.png",
+    "name": "Arrow",
+    "tags": [],
+    "bytes": 17602,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/AstraZeneca%20Colour.svg",
+    "name": "AstraZeneca Colour",
+    "tags": [],
+    "bytes": 4299,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Atlas.svg",
+    "name": "Atlas",
+    "tags": [],
+    "bytes": 572,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Auth0.svg",
+    "name": "Auth0",
+    "tags": [],
+    "bytes": 3915,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Automat-it.svg",
+    "name": "Automat-it",
+    "tags": [],
+    "bytes": 6376,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/AUXXO%20Female%20Catalyst%20Fund.svg",
+    "name": "AUXXO Female Catalyst Fund",
+    "tags": [],
+    "bytes": 11159,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Axios.svg",
+    "name": "Axios",
+    "tags": [],
+    "bytes": 1983,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Baeta.svg",
+    "name": "Baeta",
+    "tags": [],
+    "bytes": 4383,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Balderton.svg",
+    "name": "Balderton",
+    "tags": [],
+    "bytes": 2569,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Ballerup.png",
+    "name": "Ballerup",
+    "tags": [],
+    "bytes": 17069,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Ballerup%20Kommune.svg",
+    "name": "Ballerup Kommune",
+    "tags": [],
+    "bytes": 35106,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Bartisan.svg",
+    "name": "Bartisan",
+    "tags": [],
+    "bytes": 5767,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/BBC.svg",
+    "name": "BBC",
+    "tags": [],
+    "bytes": 6081,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/BCG.png",
+    "name": "BCG",
+    "tags": [],
+    "bytes": 72529,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/Bellacenter%20Light.svg",
+    "name": "Bellacenter Light",
+    "tags": [],
+    "bytes": 5425,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Benchmark.png",
+    "name": "Benchmark",
+    "tags": [],
+    "bytes": 3154,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/Berlingske.svg",
+    "name": "Berlingske",
+    "tags": [],
+    "bytes": 72096,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Bestseller%20Foundation.svg",
+    "name": "Bestseller Foundation",
+    "tags": [],
+    "bytes": 4533,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Beta%20Heath.svg",
+    "name": "Beta Heath",
+    "tags": [],
+    "bytes": 1666,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Beyond%20Beta.svg",
+    "name": "Beyond Beta",
+    "tags": [],
+    "bytes": 38606,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Beyond%20Beta%20Building.svg",
+    "name": "Beyond Beta Building",
+    "tags": [],
+    "bytes": 40416,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Binarapps.svg",
+    "name": "Binarapps",
+    "tags": [],
+    "bytes": 6304,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Bioadvio.svg",
+    "name": "Bioadvio",
+    "tags": [],
+    "bytes": 3124,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Bioinnovate%20Africa.svg",
+    "name": "Bioinnovate Africa",
+    "tags": [],
+    "bytes": 14551,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/BioMedical%20Design.svg",
+    "name": "BioMedical Design",
+    "tags": [],
+    "bytes": 11710,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Biomush.svg",
+    "name": "Biomush",
+    "tags": [],
+    "bytes": 5516,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/BioNa.svg",
+    "name": "BioNa",
+    "tags": [],
+    "bytes": 3362,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Biotope.svg",
+    "name": "Biotope",
+    "tags": [],
+    "bytes": 2526,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Bits%20Pretzels%20CXO%20Summit.svg",
+    "name": "Bits Pretzels CXO Summit",
+    "tags": [],
+    "bytes": 6342,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Bits%20Pretzels%20European%20Pitch%20Contest.svg",
+    "name": "Bits Pretzels European Pitch Contest",
+    "tags": [],
+    "bytes": 9636,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Bits%20Pretzels%20Investor%20Summit.svg",
+    "name": "Bits Pretzels Investor Summit",
+    "tags": [],
+    "bytes": 8005,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Bits%20Pretzels%20Kickstart%20Europe.svg",
+    "name": "Bits Pretzels Kickstart Europe",
+    "tags": [],
+    "bytes": 7735,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/BlackWood%20Ventures.svg",
+    "name": "BlackWood Ventures",
+    "tags": [],
+    "bytes": 11969,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/BlackWood%20Ventures%20Colour.png",
+    "name": "BlackWood Ventures Colour",
+    "tags": [],
+    "bytes": 40622,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Bloomberg.png",
+    "name": "Bloomberg",
+    "tags": [],
+    "bytes": 10638,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Boardway.svg",
+    "name": "Boardway",
+    "tags": [],
+    "bytes": 3450,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/BPOC.svg",
+    "name": "BPOC",
+    "tags": [],
+    "bytes": 11290,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Breakit.svg",
+    "name": "Breakit",
+    "tags": [],
+    "bytes": 1154,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/Brella.png",
+    "name": "Brella",
+    "tags": [],
+    "bytes": 1431,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/BSI.svg",
+    "name": "BSI",
+    "tags": [],
+    "bytes": 1097,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/BSI%20Group.svg",
+    "name": "BSI Group",
+    "tags": [],
+    "bytes": 916,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/BSR.png",
+    "name": "BSR",
+    "tags": [],
+    "bytes": 57696,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Buildtomatter.svg",
+    "name": "Buildtomatter",
+    "tags": [],
+    "bytes": 9098,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Business%20Iceland.svg",
+    "name": "Business Iceland",
+    "tags": [],
+    "bytes": 13035,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Business%20Iceland%202.svg",
+    "name": "Business Iceland 2",
+    "tags": [],
+    "bytes": 14835,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Business%20Post.svg",
+    "name": "Business Post",
+    "tags": [],
+    "bytes": 5452,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Business%20Region%20G%C3%B6teborg.svg",
+    "name": "Business Region Göteborg",
+    "tags": [],
+    "bytes": 10688,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Businessturku.svg",
+    "name": "Businessturku",
+    "tags": [],
+    "bytes": 6255,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/byFounders.svg",
+    "name": "byFounders",
+    "tags": [],
+    "bytes": 4062,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Cactohealth.svg",
+    "name": "Cactohealth",
+    "tags": [],
+    "bytes": 6840,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Camp.svg",
+    "name": "Camp",
+    "tags": [],
+    "bytes": 2234,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Carerclubdk.svg",
+    "name": "Carerclubdk",
+    "tags": [],
+    "bytes": 4782,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Carta.png",
+    "name": "Carta",
+    "tags": [],
+    "bytes": 55333,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/CBS.svg",
+    "name": "CBS",
+    "tags": [],
+    "bytes": 16606,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/CBS%20Copenhagen%20School%20of%20Entrepreneurship.png",
+    "name": "CBS Copenhagen School of Entrepreneurship",
+    "tags": [],
+    "bytes": 14697,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/CBS%20CSE.svg",
+    "name": "CBS CSE",
+    "tags": [],
+    "bytes": 57244,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/CBS%20Department%20of%20Strategy%20and%20Innovation.svg",
+    "name": "CBS Department of Strategy and Innovation",
+    "tags": [],
+    "bytes": 6207,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/CBS%20Department%20of%20Strategy%20and%20Innovation%20White.svg",
+    "name": "CBS Department of Strategy and Innovation White",
+    "tags": [],
+    "bytes": 5866,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/CBS%20Ventures.svg",
+    "name": "CBS Ventures",
+    "tags": [],
+    "bytes": 2296,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Cbslogo%20Extended.svg",
+    "name": "Cbslogo Extended",
+    "tags": [],
+    "bytes": 9835,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/Cemasys.png",
+    "name": "Cemasys",
+    "tags": [],
+    "bytes": 23475,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/Ch%20Print.png",
+    "name": "Ch Print",
+    "tags": [],
+    "bytes": 5423,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/City.svg",
+    "name": "City",
+    "tags": [],
+    "bytes": 3858,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Clarmacapital.png",
+    "name": "Clarmacapital",
+    "tags": [],
+    "bytes": 14237,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Clean%20Cluster.svg",
+    "name": "Clean Cluster",
+    "tags": [],
+    "bytes": 6793,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Clexbio.svg",
+    "name": "Clexbio",
+    "tags": [],
+    "bytes": 6409,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Clickhouse.svg",
+    "name": "Clickhouse",
+    "tags": [],
+    "bytes": 5994,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Climentum%20Capitall.png",
+    "name": "Climentum Capitall",
+    "tags": [],
+    "bytes": 38010,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/CloudCamp%204SMEs.svg",
+    "name": "CloudCamp 4SMEs",
+    "tags": [],
+    "bytes": 18460,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Cloudflare.svg",
+    "name": "Cloudflare",
+    "tags": [],
+    "bytes": 2911,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Cnbc.png",
+    "name": "Cnbc",
+    "tags": [],
+    "bytes": 7215,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/CNN.png",
+    "name": "CNN",
+    "tags": [],
+    "bytes": 68025,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Cognes.svg",
+    "name": "Cognes",
+    "tags": [],
+    "bytes": 7192,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Comicsstudio.svg",
+    "name": "Comicsstudio",
+    "tags": [],
+    "bytes": 8336,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Commu.svg",
+    "name": "Commu",
+    "tags": [],
+    "bytes": 3655,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Completion.svg",
+    "name": "Completion",
+    "tags": [],
+    "bytes": 2160,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Computerworld.svg",
+    "name": "Computerworld",
+    "tags": [],
+    "bytes": 4699,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Concentric.svg",
+    "name": "Concentric",
+    "tags": [],
+    "bytes": 7324,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Contechlab.svg",
+    "name": "Contechlab",
+    "tags": [],
+    "bytes": 2115,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Copcap%20Black.svg",
+    "name": "Copcap Black",
+    "tags": [],
+    "bytes": 5230,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Copenhagen%20Capacity.svg",
+    "name": "Copenhagen Capacity",
+    "tags": [],
+    "bytes": 7715,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Copenhagen%20Fintech.svg",
+    "name": "Copenhagen Fintech",
+    "tags": [],
+    "bytes": 16317,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Copenhagen%20Institute%20for%20Futures%20Studies.svg",
+    "name": "Copenhagen Institute for Futures Studies",
+    "tags": [],
+    "bytes": 3899,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Copenhagen%20Solution%20Lab.png",
+    "name": "Copenhagen Solution Lab",
+    "tags": [],
+    "bytes": 23941,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Copenhagen%20Solutions%20Lab.svg",
+    "name": "Copenhagen Solutions Lab",
+    "tags": [],
+    "bytes": 11992,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/CPH%20Fintech.png",
+    "name": "CPH Fintech",
+    "tags": [],
+    "bytes": 13000,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/CPH%20Kommune%20Besk.svg",
+    "name": "CPH Kommune Besk",
+    "tags": [],
+    "bytes": 19361,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/CPH%20Post.svg",
+    "name": "CPH Post",
+    "tags": [],
+    "bytes": 22890,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/CPH%20Volunteers.svg",
+    "name": "CPH Volunteers",
+    "tags": [],
+    "bytes": 19420,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/CPHLABS.svg",
+    "name": "CPHLABS",
+    "tags": [],
+    "bytes": 3913,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Crane.svg",
+    "name": "Crane",
+    "tags": [],
+    "bytes": 749750,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Creandum.svg",
+    "name": "Creandum",
+    "tags": [],
+    "bytes": 1602,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/CreateMedTech.svg",
+    "name": "CreateMedTech",
+    "tags": [],
+    "bytes": 4060,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Creative%20Girls%20Club.svg",
+    "name": "Creative Girls Club",
+    "tags": [],
+    "bytes": 8509,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Criipto.svg",
+    "name": "Criipto",
+    "tags": [],
+    "bytes": 15802,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Crispa.svg",
+    "name": "Crispa",
+    "tags": [],
+    "bytes": 4099,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Crispa%20AI.svg",
+    "name": "Crispa AI",
+    "tags": [],
+    "bytes": 2776,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Crowberry%20Capital.svg",
+    "name": "Crowberry Capital",
+    "tags": [],
+    "bytes": 18810,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/CSE%20Advisory.svg",
+    "name": "CSE Advisory",
+    "tags": [],
+    "bytes": 4172,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/CZech%20Founders.svg",
+    "name": "CZech Founders",
+    "tags": [],
+    "bytes": 6230,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/DanBAN.svg",
+    "name": "DanBAN",
+    "tags": [],
+    "bytes": 33015,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/DanBAN%20Danish%20Business%20Angels.svg",
+    "name": "DanBAN Danish Business Angels",
+    "tags": [],
+    "bytes": 6345,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Daniaaccounting.svg",
+    "name": "Daniaaccounting",
+    "tags": [],
+    "bytes": 663,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Danish%20Board%20of%20Business%20Development.svg",
+    "name": "Danish Board of Business Development",
+    "tags": [],
+    "bytes": 9738,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Danish%20Business%20Authority.svg",
+    "name": "Danish Business Authority",
+    "tags": [],
+    "bytes": 8275,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Danish%20Business%20Authority%202.svg",
+    "name": "Danish Business Authority 2",
+    "tags": [],
+    "bytes": 13198,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Danish%20Entrepreneurs.svg",
+    "name": "Danish Entrepreneurs",
+    "tags": [],
+    "bytes": 9192,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Danish%20Life%20Science%20Cluster.svg",
+    "name": "Danish Life Science Cluster",
+    "tags": [],
+    "bytes": 18820,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Danish%20Startup%20Group.svg",
+    "name": "Danish Startup Group",
+    "tags": [],
+    "bytes": 11197,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Danishlifecluster.svg",
+    "name": "Danishlifecluster",
+    "tags": [],
+    "bytes": 18820,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Dansk%20AM%20Hub.svg",
+    "name": "Dansk AM Hub",
+    "tags": [],
+    "bytes": 3015,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Dansk%20Industri.svg",
+    "name": "Dansk Industri",
+    "tags": [],
+    "bytes": 5714,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Dansk%20Industri%20Mark.svg",
+    "name": "Dansk Industri Mark",
+    "tags": [],
+    "bytes": 587,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Danske%20Bank.svg",
+    "name": "Danske Bank",
+    "tags": [],
+    "bytes": 3270,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Danske%20Growth.svg",
+    "name": "Danske Growth",
+    "tags": [],
+    "bytes": 10861,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Danskerhverv.png",
+    "name": "Danskerhverv",
+    "tags": [],
+    "bytes": 22515,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Dasnke%20Growth%20Colour.png",
+    "name": "Dasnke Growth Colour",
+    "tags": [],
+    "bytes": 76192,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/Dassault%20Syst%C3%A8mes.svg",
+    "name": "Dassault Systèmes",
+    "tags": [],
+    "bytes": 3766,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Datadog.webp",
+    "name": "Datadog",
+    "tags": [],
+    "bytes": 28582,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Dealroom.svg",
+    "name": "Dealroom",
+    "tags": [],
+    "bytes": 7711,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Deel.svg",
+    "name": "Deel",
+    "tags": [],
+    "bytes": 4130,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Deep%20Tech%20Stories.svg",
+    "name": "Deep Tech Stories",
+    "tags": [],
+    "bytes": 8385,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Defb.svg",
+    "name": "Defb",
+    "tags": [],
+    "bytes": 13915,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Delegation%20from%20Southern%20Sweden.svg",
+    "name": "Delegation from Southern Sweden",
+    "tags": [],
+    "bytes": 8352,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Deloitte.svg",
+    "name": "Deloitte",
+    "tags": [],
+    "bytes": 8828,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Delphinus%20Venture%20Capital.svg",
+    "name": "Delphinus Venture Capital",
+    "tags": [],
+    "bytes": 12013,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Det%20Kongelige%20Akademi%20Lang.png",
+    "name": "Det Kongelige Akademi Lang",
+    "tags": [],
+    "bytes": 65725,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Deutsche%20Welle.png",
+    "name": "Deutsche Welle",
+    "tags": [],
+    "bytes": 46768,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Dif%20Innovation%20Lab%20Sort.png",
+    "name": "Dif Innovation Lab Sort",
+    "tags": [],
+    "bytes": 46072,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Digitalwell.png",
+    "name": "Digitalwell",
+    "tags": [],
+    "bytes": 92384,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/Discord.svg",
+    "name": "Discord",
+    "tags": [],
+    "bytes": 6292,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Discord%20Icon.webp",
+    "name": "Discord Icon",
+    "tags": [],
+    "bytes": 21764,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/DISIE.png",
+    "name": "DISIE",
+    "tags": [],
+    "bytes": 42453,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/DISIE.svg",
+    "name": "DISIE",
+    "tags": [],
+    "bytes": 82206,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Divers.svg",
+    "name": "Divers",
+    "tags": [],
+    "bytes": 5364,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Drata.svg",
+    "name": "Drata",
+    "tags": [],
+    "bytes": 1191,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Dreamcraft.svg",
+    "name": "Dreamcraft",
+    "tags": [],
+    "bytes": 27574,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/DTCP.svg",
+    "name": "DTCP",
+    "tags": [],
+    "bytes": 4520,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/DTU%20Science%20Park.png",
+    "name": "DTU Science Park",
+    "tags": [],
+    "bytes": 11793,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/DTU%20Science%20Park.svg",
+    "name": "DTU Science Park",
+    "tags": [],
+    "bytes": 4916,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/DTU%20Skylab.png",
+    "name": "DTU Skylab",
+    "tags": [],
+    "bytes": 39643,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/DTU%20Skylab.svg",
+    "name": "DTU Skylab",
+    "tags": [],
+    "bytes": 2488,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/E%20Conomic%20Primary%20Pos.svg",
+    "name": "E Conomic Primary Pos",
+    "tags": [],
+    "bytes": 6183,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Earlybird.svg",
+    "name": "Earlybird",
+    "tags": [],
+    "bytes": 6633,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/EDB%20Singapore.svg",
+    "name": "EDB Singapore",
+    "tags": [],
+    "bytes": 33762,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/EdTech%20Denmark.svg",
+    "name": "EdTech Denmark",
+    "tags": [],
+    "bytes": 5987,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/EdTech%20Denmark%20Large.png",
+    "name": "EdTech Denmark Large",
+    "tags": [],
+    "bytes": 23986,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/EIFO.svg",
+    "name": "EIFO",
+    "tags": [],
+    "bytes": 1808,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Eight%20Roads.svg",
+    "name": "Eight Roads",
+    "tags": [],
+    "bytes": 4963,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/EIT.png",
+    "name": "EIT",
+    "tags": [],
+    "bytes": 52187,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/EIT%20CKIC.png",
+    "name": "EIT CKIC",
+    "tags": [],
+    "bytes": 243058,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/EIT%20Climate.svg",
+    "name": "EIT Climate",
+    "tags": [],
+    "bytes": 71189,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/EIT%20Community.svg",
+    "name": "EIT Community",
+    "tags": [],
+    "bytes": 43116,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/EIT%20Community%20Supernovas.svg",
+    "name": "EIT Community Supernovas",
+    "tags": [],
+    "bytes": 22189,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/EIT%20Digital.svg",
+    "name": "EIT Digital",
+    "tags": [],
+    "bytes": 3857,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Embankment.svg",
+    "name": "Embankment",
+    "tags": [],
+    "bytes": 4151,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Embassy%20of%20Slovakia.svg",
+    "name": "Embassy of Slovakia",
+    "tags": [],
+    "bytes": 9325,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Endless%20Food%20Co.svg",
+    "name": "Endless Food Co",
+    "tags": [],
+    "bytes": 15590,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Enterprise%20Ireland.png",
+    "name": "Enterprise Ireland",
+    "tags": [],
+    "bytes": 189405,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Enterprise%20Ireland.svg",
+    "name": "Enterprise Ireland",
+    "tags": [],
+    "bytes": 5774,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/EQT%20Ventures.svg",
+    "name": "EQT Ventures",
+    "tags": [],
+    "bytes": 10733,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Erhvervsfremmebestyrelsen.svg",
+    "name": "Erhvervsfremmebestyrelsen",
+    "tags": [],
+    "bytes": 14378,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Erhvervsstyrelsen%20White.png",
+    "name": "Erhvervsstyrelsen White",
+    "tags": [],
+    "bytes": 15301,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/ERYK.svg",
+    "name": "ERYK",
+    "tags": [],
+    "bytes": 3731,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/ESA%20BIC.svg",
+    "name": "ESA BIC",
+    "tags": [],
+    "bytes": 8120,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/ESA%20Business%20Incubation%20Centre%20Denmark.svg",
+    "name": "ESA Business Incubation Centre Denmark",
+    "tags": [],
+    "bytes": 43309,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/ESN%20European%20Startup%20Network.svg",
+    "name": "ESN European Startup Network",
+    "tags": [],
+    "bytes": 3962,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Ethan%20Partners.png",
+    "name": "Ethan Partners",
+    "tags": [],
+    "bytes": 35540,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/EU%20Startups.svg",
+    "name": "EU Startups",
+    "tags": [],
+    "bytes": 5798,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Euro%20Nordic%20Funding%20Alliance%20(ENFA).svg",
+    "name": "Euro Nordic Funding Alliance (ENFA)",
+    "tags": [],
+    "bytes": 12135,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Euronews.png",
+    "name": "Euronews",
+    "tags": [],
+    "bytes": 29129,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/European%20Innovation%20Council.svg",
+    "name": "European Innovation Council",
+    "tags": [],
+    "bytes": 9524,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/European%20Innovation%20Council%20Colour.png",
+    "name": "European Innovation Council Colour",
+    "tags": [],
+    "bytes": 131026,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/European%20Investment%20Bank.svg",
+    "name": "European Investment Bank",
+    "tags": [],
+    "bytes": 8944,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/European%20Investment%20Bank%20Colour.png",
+    "name": "European Investment Bank Colour",
+    "tags": [],
+    "bytes": 120485,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/European%20Investment%20Fund%20(EIF).svg",
+    "name": "European Investment Fund (EIF)",
+    "tags": [],
+    "bytes": 5424,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/European%20Women%20in%20VC.png",
+    "name": "European Women in VC",
+    "tags": [],
+    "bytes": 14327,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/European%20Women%20in%20VC.svg",
+    "name": "European Women in VC",
+    "tags": [],
+    "bytes": 11528,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/EUVC.png",
+    "name": "EUVC",
+    "tags": [],
+    "bytes": 17355,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Even.png",
+    "name": "Even",
+    "tags": [],
+    "bytes": 5819,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Evli%20Growth%20Partners.svg",
+    "name": "Evli Growth Partners",
+    "tags": [],
+    "bytes": 5608,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/EY%20White.png",
+    "name": "EY White",
+    "tags": [],
+    "bytes": 13688,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Facebook%20Icon.svg",
+    "name": "Facebook Icon",
+    "tags": [],
+    "bytes": 530,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Fail%20Forward.svg",
+    "name": "Fail Forward",
+    "tags": [],
+    "bytes": 8634,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/FALCK.svg",
+    "name": "FALCK",
+    "tags": [],
+    "bytes": 3427,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/FBV.svg",
+    "name": "FBV",
+    "tags": [],
+    "bytes": 1056,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/FBV%20EN%20Inverted.svg",
+    "name": "FBV EN Inverted",
+    "tags": [],
+    "bytes": 7636,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Female%20Foundry%202.svg",
+    "name": "Female Foundry 2",
+    "tags": [],
+    "bytes": 18203,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Femella.svg",
+    "name": "Femella",
+    "tags": [],
+    "bytes": 7478,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Feminvest.svg",
+    "name": "Feminvest",
+    "tags": [],
+    "bytes": 3558,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Femtechstudios.svg",
+    "name": "Femtechstudios",
+    "tags": [],
+    "bytes": 3405,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Fiftyfive%20Capital.svg",
+    "name": "Fiftyfive Capital",
+    "tags": [],
+    "bytes": 4310,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Finaks.svg",
+    "name": "Finaks",
+    "tags": [],
+    "bytes": 3839,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Finaman%20AI.svg",
+    "name": "Finaman AI",
+    "tags": [],
+    "bytes": 5226,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Fivetran.svg",
+    "name": "Fivetran",
+    "tags": [],
+    "bytes": 5377,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Flanders.svg",
+    "name": "Flanders",
+    "tags": [],
+    "bytes": 25193,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Flatpay.svg",
+    "name": "Flatpay",
+    "tags": [],
+    "bytes": 2431,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Florent%20Venture%20Partners.svg",
+    "name": "Florent Venture Partners",
+    "tags": [],
+    "bytes": 5740,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Fonden%20for%20Entrepren%C3%B8rskab.svg",
+    "name": "Fonden for Entreprenørskab",
+    "tags": [],
+    "bytes": 6872,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Food%20Planet%20Prize.svg",
+    "name": "Food Planet Prize",
+    "tags": [],
+    "bytes": 11787,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Footprint.svg",
+    "name": "Footprint",
+    "tags": [],
+    "bytes": 3506,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Foras%20Ventures.svg",
+    "name": "Foras Ventures",
+    "tags": [],
+    "bytes": 3567,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Forbes.png",
+    "name": "Forbes",
+    "tags": [],
+    "bytes": 4989,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Force.svg",
+    "name": "Force",
+    "tags": [],
+    "bytes": 2873,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Force%20Technology.svg",
+    "name": "Force Technology",
+    "tags": [],
+    "bytes": 5057,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Forcetechnology.svg",
+    "name": "Forcetechnology",
+    "tags": [],
+    "bytes": 4633,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Forsikring%20Og%20Pension.svg",
+    "name": "Forsikring Og Pension",
+    "tags": [],
+    "bytes": 1382,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Fortune.svg",
+    "name": "Fortune",
+    "tags": [],
+    "bytes": 1297,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Fortune.webp",
+    "name": "Fortune",
+    "tags": [],
+    "bytes": 5096,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/Founder%20to%20Leader.png",
+    "name": "Founder to Leader",
+    "tags": [],
+    "bytes": 12720,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Founder%20to%20Leader.svg",
+    "name": "Founder to Leader",
+    "tags": [],
+    "bytes": 11394,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Founders%20Fund.png",
+    "name": "Founders Fund",
+    "tags": [],
+    "bytes": 8013,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/Founders%20House.svg",
+    "name": "Founders House",
+    "tags": [],
+    "bytes": 4536,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Founders%20Running%20Club.png",
+    "name": "Founders Running Club",
+    "tags": [],
+    "bytes": 7274,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Founders%20Running%20Club%20White.svg",
+    "name": "Founders Running Club White",
+    "tags": [],
+    "bytes": 10645,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Fox%20News.png",
+    "name": "Fox News",
+    "tags": [],
+    "bytes": 78929,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/Framer.svg",
+    "name": "Framer",
+    "tags": [],
+    "bytes": 3233,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Frontline.svg",
+    "name": "Frontline",
+    "tags": [],
+    "bytes": 26453,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/FundingBox.svg",
+    "name": "FundingBox",
+    "tags": [],
+    "bytes": 14824,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Future%20Box.svg",
+    "name": "Future Box",
+    "tags": [],
+    "bytes": 33042,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Future%20Box%202.svg",
+    "name": "Future Box 2",
+    "tags": [],
+    "bytes": 1407,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Futuremanufacturers.svg",
+    "name": "Futuremanufacturers",
+    "tags": [],
+    "bytes": 6380,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/G%20Venture%20Partner.svg",
+    "name": "G Venture Partner",
+    "tags": [],
+    "bytes": 9034,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/GC%20Purple.png",
+    "name": "GC Purple",
+    "tags": [],
+    "bytes": 56372,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Generect%20White.svg",
+    "name": "Generect White",
+    "tags": [],
+    "bytes": 3095,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Getaccept.svg",
+    "name": "Getaccept",
+    "tags": [],
+    "bytes": 5399,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/GEYSER.svg",
+    "name": "GEYSER",
+    "tags": [],
+    "bytes": 3163,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Giant%20Ventures.svg",
+    "name": "Giant Ventures",
+    "tags": [],
+    "bytes": 22424,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Giveeffe.svg",
+    "name": "Giveeffe",
+    "tags": [],
+    "bytes": 134084,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Goldman%20Sachs.png",
+    "name": "Goldman Sachs",
+    "tags": [],
+    "bytes": 44205,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Google.svg",
+    "name": "Google",
+    "tags": [],
+    "bytes": 2688,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Google%20Cloud.svg",
+    "name": "Google Cloud",
+    "tags": [],
+    "bytes": 7920,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Gothenburg.svg",
+    "name": "Gothenburg",
+    "tags": [],
+    "bytes": 3642,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Gothenburg%20Tech%20Week.svg",
+    "name": "Gothenburg Tech Week",
+    "tags": [],
+    "bytes": 7032,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Government%20of%20India.svg",
+    "name": "Government of India",
+    "tags": [],
+    "bytes": 60823,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Grant%20Thornton.svg",
+    "name": "Grant Thornton",
+    "tags": [],
+    "bytes": 6097,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Greencubator.svg",
+    "name": "Greencubator",
+    "tags": [],
+    "bytes": 2645,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Greylock.svg",
+    "name": "Greylock",
+    "tags": [],
+    "bytes": 3396,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Gridlinx.svg",
+    "name": "Gridlinx",
+    "tags": [],
+    "bytes": 4110,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/GRocaptal.png",
+    "name": "GRocaptal",
+    "tags": [],
+    "bytes": 44080,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Hackyourfuture.png",
+    "name": "Hackyourfuture",
+    "tags": [],
+    "bytes": 14481,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Hackyourfuture.svg",
+    "name": "Hackyourfuture",
+    "tags": [],
+    "bytes": 8832,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Header.svg",
+    "name": "Header",
+    "tags": [],
+    "bytes": 77745,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Health%20Tech%20Hub%20Copenhagen.svg",
+    "name": "Health Tech Hub Copenhagen",
+    "tags": [],
+    "bytes": 7451,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Heartcore.png",
+    "name": "Heartcore",
+    "tags": [],
+    "bytes": 25222,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Heartcore.svg",
+    "name": "Heartcore",
+    "tags": [],
+    "bytes": 4067,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Hello%20Ada.svg",
+    "name": "Hello Ada",
+    "tags": [],
+    "bytes": 10978,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Hello%20Workr.svg",
+    "name": "Hello Workr",
+    "tags": [],
+    "bytes": 3048,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Helsinki.svg",
+    "name": "Helsinki",
+    "tags": [],
+    "bytes": 3106,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Helsinki%20Times.svg",
+    "name": "Helsinki Times",
+    "tags": [],
+    "bytes": 62407,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Hemispherian.svg",
+    "name": "Hemispherian",
+    "tags": [],
+    "bytes": 4447,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Hero%20Academy%20Black.png",
+    "name": "Hero Academy Black",
+    "tags": [],
+    "bytes": 14065,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Hero%20Academy%20Orange.png",
+    "name": "Hero Academy Orange",
+    "tags": [],
+    "bytes": 482328,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/Hero%20Academy%20White.png",
+    "name": "Hero Academy White",
+    "tags": [],
+    "bytes": 13247,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/HHC.svg",
+    "name": "HHC",
+    "tags": [],
+    "bytes": 1336,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/High%20Bridge.svg",
+    "name": "High Bridge",
+    "tags": [],
+    "bytes": 1694,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Highfive%20Girls.svg",
+    "name": "Highfive Girls",
+    "tags": [],
+    "bytes": 6484,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Highland%20Europe.svg",
+    "name": "Highland Europe",
+    "tags": [],
+    "bytes": 4298,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/H%C3%B8je%20Taastrup%20Vertical.png",
+    "name": "Høje Taastrup Vertical",
+    "tags": [],
+    "bytes": 534290,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/Home.svg",
+    "name": "Home",
+    "tags": [],
+    "bytes": 2050,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Horizon%20Partners.png",
+    "name": "Horizon Partners",
+    "tags": [],
+    "bytes": 23017,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/HSBC.svg",
+    "name": "HSBC",
+    "tags": [],
+    "bytes": 1739,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/HSBC%20Innovation%20Banking.png",
+    "name": "HSBC Innovation Banking",
+    "tags": [],
+    "bytes": 40285,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/HSBC%20Long.svg",
+    "name": "HSBC Long",
+    "tags": [],
+    "bytes": 15011,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Huawei.png",
+    "name": "Huawei",
+    "tags": [],
+    "bytes": 3307,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/Hubfor%20Inovation%20and%20Tourism.png",
+    "name": "Hubfor Inovation and Tourism",
+    "tags": [],
+    "bytes": 24070,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Hubforinnovationandtourism.svg",
+    "name": "Hubforinnovationandtourism",
+    "tags": [],
+    "bytes": 15769,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/HubLearn.svg",
+    "name": "HubLearn",
+    "tags": [],
+    "bytes": 5494,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Hugskotid.svg",
+    "name": "Hugskotid",
+    "tags": [],
+    "bytes": 3602,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Hydram.svg",
+    "name": "Hydram",
+    "tags": [],
+    "bytes": 4616,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Hykin%20Energy.svg",
+    "name": "Hykin Energy",
+    "tags": [],
+    "bytes": 10691,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/ICDK.svg",
+    "name": "ICDK",
+    "tags": [],
+    "bytes": 9963,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Iceland%20Innovation%20Week.svg",
+    "name": "Iceland Innovation Week",
+    "tags": [],
+    "bytes": 27119,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Ida%20Ireland.png",
+    "name": "Ida Ireland",
+    "tags": [],
+    "bytes": 8568,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/IDA%20White.svg",
+    "name": "IDA White",
+    "tags": [],
+    "bytes": 1497,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/identity.vc.svg",
+    "name": "identity.vc",
+    "tags": [],
+    "bytes": 4995,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Ideon%20Science%20Park.svg",
+    "name": "Ideon Science Park",
+    "tags": [],
+    "bytes": 2685,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Ignite%20Powered%20by%20SISP.svg",
+    "name": "Ignite Powered by SISP",
+    "tags": [],
+    "bytes": 7558,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Imagineyouknow.svg",
+    "name": "Imagineyouknow",
+    "tags": [],
+    "bytes": 6577,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Imec.svg",
+    "name": "Imec",
+    "tags": [],
+    "bytes": 2128,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Impact%20Fund%20Denmark.svg",
+    "name": "Impact Fund Denmark",
+    "tags": [],
+    "bytes": 6507,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Impact%20Hub%20Vienna.svg",
+    "name": "Impact Hub Vienna",
+    "tags": [],
+    "bytes": 2981,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Impact%20Partners.png",
+    "name": "Impact Partners",
+    "tags": [],
+    "bytes": 33138,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Impactfund.svg",
+    "name": "Impactfund",
+    "tags": [],
+    "bytes": 4108,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Impulsemedia.svg",
+    "name": "Impulsemedia",
+    "tags": [],
+    "bytes": 14121,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Inc.svg",
+    "name": "Inc",
+    "tags": [],
+    "bytes": 1094,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/INCUBA.svg",
+    "name": "INCUBA",
+    "tags": [],
+    "bytes": 2553,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Indexventures.png",
+    "name": "Indexventures",
+    "tags": [],
+    "bytes": 44707,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Industriens%20Fond%20Colour.png",
+    "name": "Industriens Fond Colour",
+    "tags": [],
+    "bytes": 43916,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Inginorenen.svg",
+    "name": "Inginorenen",
+    "tags": [],
+    "bytes": 829,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Innherji.svg",
+    "name": "Innherji",
+    "tags": [],
+    "bytes": 1661,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Innovation%20Fund%20Denmark.svg",
+    "name": "Innovation Fund Denmark",
+    "tags": [],
+    "bytes": 6994,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Innovation%20Norway.svg",
+    "name": "Innovation Norway",
+    "tags": [],
+    "bytes": 3829,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Innovationsfonden.svg",
+    "name": "Innovationsfonden",
+    "tags": [],
+    "bytes": 2454,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Innovx.svg",
+    "name": "Innovx",
+    "tags": [],
+    "bytes": 2232,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Instagram%20Icon.svg",
+    "name": "Instagram Icon",
+    "tags": [],
+    "bytes": 995,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Intercom.svg",
+    "name": "Intercom",
+    "tags": [],
+    "bytes": 8102,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Interhuman.svg",
+    "name": "Interhuman",
+    "tags": [],
+    "bytes": 4172,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Intro%20Africa.svg",
+    "name": "Intro Africa",
+    "tags": [],
+    "bytes": 1999,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Inventures.svg",
+    "name": "Inventures",
+    "tags": [],
+    "bytes": 5227,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Invest%20Estonia.svg",
+    "name": "Invest Estonia",
+    "tags": [],
+    "bytes": 20452,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Invest%20in%20Denmark%20Ministry.svg",
+    "name": "Invest in Denmark Ministry",
+    "tags": [],
+    "bytes": 36602,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Invest%20in%20Estonia.svg",
+    "name": "Invest in Estonia",
+    "tags": [],
+    "bytes": 6105,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Invest%20in%20Valencia.svg",
+    "name": "Invest in Valencia",
+    "tags": [],
+    "bytes": 4472,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/InvestEU.svg",
+    "name": "InvestEU",
+    "tags": [],
+    "bytes": 2144,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/IPO%20Fbv.svg",
+    "name": "IPO Fbv",
+    "tags": [],
+    "bytes": 3816,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Irish%20Tech%20News.png",
+    "name": "Irish Tech News",
+    "tags": [],
+    "bytes": 380787,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/Islanding%20Innovation.png",
+    "name": "Islanding Innovation",
+    "tags": [],
+    "bytes": 90347,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/IT%20Brancheforeningen.svg",
+    "name": "IT Brancheforeningen",
+    "tags": [],
+    "bytes": 12656,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Ite%20Wiki.svg",
+    "name": "Ite Wiki",
+    "tags": [],
+    "bytes": 3396,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/ITU%20NextGen.svg",
+    "name": "ITU NextGen",
+    "tags": [],
+    "bytes": 8959,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/IVCA.svg",
+    "name": "IVCA",
+    "tags": [],
+    "bytes": 18560,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/IVN.png",
+    "name": "IVN",
+    "tags": [],
+    "bytes": 6317,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/IVN.svg",
+    "name": "IVN",
+    "tags": [],
+    "bytes": 1552,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/IVN%20Powered%20by%20Shine.svg",
+    "name": "IVN Powered by Shine",
+    "tags": [],
+    "bytes": 7310,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/IWG%20International%20Workplace%20Group.svg",
+    "name": "IWG International Workplace Group",
+    "tags": [],
+    "bytes": 20051,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/JB%20Web.png",
+    "name": "JB Web",
+    "tags": [],
+    "bytes": 5946,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Jetro.svg",
+    "name": "Jetro",
+    "tags": [],
+    "bytes": 5852,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Juice.png",
+    "name": "Juice",
+    "tags": [],
+    "bytes": 36218,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Jumpcloud.svg",
+    "name": "Jumpcloud",
+    "tags": [],
+    "bytes": 3543,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Junction.png",
+    "name": "Junction",
+    "tags": [],
+    "bytes": 8981,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Jyllandsposten.svg",
+    "name": "Jyllandsposten",
+    "tags": [],
+    "bytes": 19406,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Jyske%20Bank%20Growth.svg",
+    "name": "Jyske Bank Growth",
+    "tags": [],
+    "bytes": 5387,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Kalvebod%20Skole.svg",
+    "name": "Kalvebod Skole",
+    "tags": [],
+    "bytes": 6143,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Kapitalwatch.svg",
+    "name": "Kapitalwatch",
+    "tags": [],
+    "bytes": 4477,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Karma%20VC.svg",
+    "name": "Karma VC",
+    "tags": [],
+    "bytes": 5090,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Kaspar%20AI.svg",
+    "name": "Kaspar AI",
+    "tags": [],
+    "bytes": 8133,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/KBH%20Kommune%20Beskaeftigelses%20Og%20Integration.png",
+    "name": "KBH Kommune Beskaeftigelses Og Integration",
+    "tags": [],
+    "bytes": 258573,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Keepr.svg",
+    "name": "Keepr",
+    "tags": [],
+    "bytes": 1970,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Keypitt.svg",
+    "name": "Keypitt",
+    "tags": [],
+    "bytes": 2600,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Keystones.svg",
+    "name": "Keystones",
+    "tags": [],
+    "bytes": 3492,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Khosla.png",
+    "name": "Khosla",
+    "tags": [],
+    "bytes": 2000,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Khosla%20Ventures.svg",
+    "name": "Khosla Ventures",
+    "tags": [],
+    "bytes": 21117,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Kickstart%20Aalborg.png",
+    "name": "Kickstart Aalborg",
+    "tags": [],
+    "bytes": 8129,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Kiip.svg",
+    "name": "Kiip",
+    "tags": [],
+    "bytes": 1166,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Kind%20Share.svg",
+    "name": "Kind Share",
+    "tags": [],
+    "bytes": 13934,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Kinnevik.svg",
+    "name": "Kinnevik",
+    "tags": [],
+    "bytes": 3978,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/KK%20Integrations.svg",
+    "name": "KK Integrations",
+    "tags": [],
+    "bytes": 16649,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/KLAK%20Icelandic%20Startups.svg",
+    "name": "KLAK Icelandic Startups",
+    "tags": [],
+    "bytes": 11353,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/KNews.svg",
+    "name": "KNews",
+    "tags": [],
+    "bytes": 9848,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Koebenhavns%20Erhvervshus.png",
+    "name": "Koebenhavns Erhvervshus",
+    "tags": [],
+    "bytes": 13531,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/KPMG.svg",
+    "name": "KPMG",
+    "tags": [],
+    "bytes": 2951,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/KRING.svg",
+    "name": "KRING",
+    "tags": [],
+    "bytes": 3881,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Kveikja.svg",
+    "name": "Kveikja",
+    "tags": [],
+    "bytes": 3055,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Lab08.svg",
+    "name": "Lab08",
+    "tags": [],
+    "bytes": 8979,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Lake%20Star.svg",
+    "name": "Lake Star",
+    "tags": [],
+    "bytes": 2573,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/LastObject.svg",
+    "name": "LastObject",
+    "tags": [],
+    "bytes": 8223,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Layerlogic.svg",
+    "name": "Layerlogic",
+    "tags": [],
+    "bytes": 3811,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/LazySundays.svg",
+    "name": "LazySundays",
+    "tags": [],
+    "bytes": 26899,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Le%20Monde.png",
+    "name": "Le Monde",
+    "tags": [],
+    "bytes": 136708,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Leapfunder.svg",
+    "name": "Leapfunder",
+    "tags": [],
+    "bytes": 6181,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Lecho.svg",
+    "name": "Lecho",
+    "tags": [],
+    "bytes": 2901,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Lego%20Ventures.svg",
+    "name": "Lego Ventures",
+    "tags": [],
+    "bytes": 7025,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Life%20Science%20Black.png",
+    "name": "Life Science Black",
+    "tags": [],
+    "bytes": 21572,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Life%20Science%20Black%202.png",
+    "name": "Life Science Black 2",
+    "tags": [],
+    "bytes": 23119,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Life%20Science%20Center.png",
+    "name": "Life Science Center",
+    "tags": [],
+    "bytes": 55959,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Life%20Science%20Pitch%20Competition%20Black.png",
+    "name": "Life Science Pitch Competition Black",
+    "tags": [],
+    "bytes": 38941,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Life%20Science%20Pitch%20Competition%20White.png",
+    "name": "Life Science Pitch Competition White",
+    "tags": [],
+    "bytes": 37252,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Life%20Science%20White.png",
+    "name": "Life Science White",
+    "tags": [],
+    "bytes": 21725,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Life%20Science%20White%202.png",
+    "name": "Life Science White 2",
+    "tags": [],
+    "bytes": 26856,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Lifescience%20Grey.png",
+    "name": "Lifescience Grey",
+    "tags": [],
+    "bytes": 79042,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Linked%20in%20Icon.svg",
+    "name": "Linked in Icon",
+    "tags": [],
+    "bytes": 1592,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Lithuania%20Bio.svg",
+    "name": "Lithuania Bio",
+    "tags": [],
+    "bytes": 4429,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Louis%20Vuitton.png",
+    "name": "Louis Vuitton",
+    "tags": [],
+    "bytes": 30766,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/LP%20Forum%20Black.png",
+    "name": "LP Forum Black",
+    "tags": [],
+    "bytes": 44129,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/LP%20Forum%20White.png",
+    "name": "LP Forum White",
+    "tags": [],
+    "bytes": 44318,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Lucero.svg",
+    "name": "Lucero",
+    "tags": [],
+    "bytes": 6165,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Luggagehero.png",
+    "name": "Luggagehero",
+    "tags": [],
+    "bytes": 62929,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Luna%20Rail.png",
+    "name": "Luna Rail",
+    "tags": [],
+    "bytes": 38330,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Lunar.svg",
+    "name": "Lunar",
+    "tags": [],
+    "bytes": 1612,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Lunar%202.svg",
+    "name": "Lunar 2",
+    "tags": [],
+    "bytes": 873,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Lunar%20Ventures.svg",
+    "name": "Lunar Ventures",
+    "tags": [],
+    "bytes": 13365,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Lundgrens.svg",
+    "name": "Lundgrens",
+    "tags": [],
+    "bytes": 1744,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/LYS.svg",
+    "name": "LYS",
+    "tags": [],
+    "bytes": 6330,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Maersk.png",
+    "name": "Maersk",
+    "tags": [],
+    "bytes": 83432,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/M%C3%A6rsk.svg",
+    "name": "Mærsk",
+    "tags": [],
+    "bytes": 10056,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Magnotherm.png",
+    "name": "Magnotherm",
+    "tags": [],
+    "bytes": 36975,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/Maki%20VC.svg",
+    "name": "Maki VC",
+    "tags": [],
+    "bytes": 7454,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Marfketingconnect.svg",
+    "name": "Marfketingconnect",
+    "tags": [],
+    "bytes": 4321,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Maria.svg",
+    "name": "Maria",
+    "tags": [],
+    "bytes": 6016,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Mastercard.svg",
+    "name": "Mastercard",
+    "tags": [],
+    "bytes": 4681,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Matrikel.svg",
+    "name": "Matrikel",
+    "tags": [],
+    "bytes": 3751,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Medicon%20Valley%20Alliance.svg",
+    "name": "Medicon Valley Alliance",
+    "tags": [],
+    "bytes": 8127,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Medicon%20Village.svg",
+    "name": "Medicon Village",
+    "tags": [],
+    "bytes": 4289,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Mercedes%20Benz%20Vertical.png",
+    "name": "Mercedes Benz Vertical",
+    "tags": [],
+    "bytes": 233399,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Mesh%20Community.png",
+    "name": "Mesh Community",
+    "tags": [],
+    "bytes": 11770,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Mesh%20Matrikel1.png",
+    "name": "Mesh Matrikel1",
+    "tags": [],
+    "bytes": 7696,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Meta.png",
+    "name": "Meta",
+    "tags": [],
+    "bytes": 347650,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/MFA.svg",
+    "name": "MFA",
+    "tags": [],
+    "bytes": 14130,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Microsoft.png",
+    "name": "Microsoft",
+    "tags": [],
+    "bytes": 18524,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/Microsoft%20White.svg",
+    "name": "Microsoft White",
+    "tags": [],
+    "bytes": 5498,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Mimbly.svg",
+    "name": "Mimbly",
+    "tags": [],
+    "bytes": 3138,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/MIRNC.svg",
+    "name": "MIRNC",
+    "tags": [],
+    "bytes": 1213,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/MIT%20Technology%20Review.svg",
+    "name": "MIT Technology Review",
+    "tags": [],
+    "bytes": 3580,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Monocle.svg",
+    "name": "Monocle",
+    "tags": [],
+    "bytes": 4174,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Monocle%202.svg",
+    "name": "Monocle 2",
+    "tags": [],
+    "bytes": 3445,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Monterro.svg",
+    "name": "Monterro",
+    "tags": [],
+    "bytes": 2880,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Mountside%20Ventures.svg",
+    "name": "Mountside Ventures",
+    "tags": [],
+    "bytes": 4806,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Moveinnovation.svg",
+    "name": "Moveinnovation",
+    "tags": [],
+    "bytes": 5519,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/MQS%20Molecular%20Quantum%20Solutions.svg",
+    "name": "MQS Molecular Quantum Solutions",
+    "tags": [],
+    "bytes": 6265,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Mubadala.svg",
+    "name": "Mubadala",
+    "tags": [],
+    "bytes": 12034,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Much%20Skill.svg",
+    "name": "Much Skill",
+    "tags": [],
+    "bytes": 5440,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Myco4Food.svg",
+    "name": "Myco4Food",
+    "tags": [],
+    "bytes": 21528,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Mycoverse.svg",
+    "name": "Mycoverse",
+    "tags": [],
+    "bytes": 5101,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/N.Rich.svg",
+    "name": "N.Rich",
+    "tags": [],
+    "bytes": 2346,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/NEA%20Enterprise%20Associates.png",
+    "name": "NEA Enterprise Associates",
+    "tags": [],
+    "bytes": 27297,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Nebius.svg",
+    "name": "Nebius",
+    "tags": [],
+    "bytes": 2538,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/NeoCare%20Nordic.svg",
+    "name": "NeoCare Nordic",
+    "tags": [],
+    "bytes": 3666,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/NetApp.svg",
+    "name": "NetApp",
+    "tags": [],
+    "bytes": 2204,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Neural%20Sourcing.svg",
+    "name": "Neural Sourcing",
+    "tags": [],
+    "bytes": 30521,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Nikkei%20Asia.svg",
+    "name": "Nikkei Asia",
+    "tags": [],
+    "bytes": 13453,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/NL%20Netherlands.svg",
+    "name": "NL Netherlands",
+    "tags": [],
+    "bytes": 3413,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/NN%20Foundation%20White.svg",
+    "name": "NN Foundation White",
+    "tags": [],
+    "bytes": 7541,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Nomono.svg",
+    "name": "Nomono",
+    "tags": [],
+    "bytes": 1489,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Noon%20Ventures.svg",
+    "name": "Noon Ventures",
+    "tags": [],
+    "bytes": 6703,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Norban.svg",
+    "name": "Norban",
+    "tags": [],
+    "bytes": 1754,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Nord%20Star%20Medical.svg",
+    "name": "Nord Star Medical",
+    "tags": [],
+    "bytes": 5035,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Nordea%20Startup%20%26%20Growth.svg",
+    "name": "Nordea Startup & Growth",
+    "tags": [],
+    "bytes": 8452,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Nordic%20Blockchain%20Association.svg",
+    "name": "Nordic Blockchain Association",
+    "tags": [],
+    "bytes": 8653,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Nordic%20Edge.png",
+    "name": "Nordic Edge",
+    "tags": [],
+    "bytes": 17953,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/Nordic%20Health%20Lab.png",
+    "name": "Nordic Health Lab",
+    "tags": [],
+    "bytes": 11523,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Nordic%20Health%20Lab.svg",
+    "name": "Nordic Health Lab",
+    "tags": [],
+    "bytes": 5951,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Nordic%20Innovation.svg",
+    "name": "Nordic Innovation",
+    "tags": [],
+    "bytes": 7867,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Nordic%20iPO%20Black.png",
+    "name": "Nordic iPO Black",
+    "tags": [],
+    "bytes": 27244,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Nordic%20iPO%20Grey.png",
+    "name": "Nordic iPO Grey",
+    "tags": [],
+    "bytes": 27828,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Nordic%20iPO%20White.png",
+    "name": "Nordic iPO White",
+    "tags": [],
+    "bytes": 25679,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Nordic%20Music%20Tech.svg",
+    "name": "Nordic Music Tech",
+    "tags": [],
+    "bytes": 4279,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Nordic%20Secondary%20Fund.svg",
+    "name": "Nordic Secondary Fund",
+    "tags": [],
+    "bytes": 11548,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Nordic%20Women's%20Health%20Hub.svg",
+    "name": "Nordic Women's Health Hub",
+    "tags": [],
+    "bytes": 6900,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/NordicNinja.svg",
+    "name": "NordicNinja",
+    "tags": [],
+    "bytes": 3405,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/NordicNinja%20Mark.svg",
+    "name": "NordicNinja Mark",
+    "tags": [],
+    "bytes": 8720,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/NordicNinja%20White.svg",
+    "name": "NordicNinja White",
+    "tags": [],
+    "bytes": 5317,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Nordiq.svg",
+    "name": "Nordiq",
+    "tags": [],
+    "bytes": 9037,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Nornorm.png",
+    "name": "Nornorm",
+    "tags": [],
+    "bytes": 88747,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Norrsken.svg",
+    "name": "Norrsken",
+    "tags": [],
+    "bytes": 10408,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/North%20Star%20Pitch.svg",
+    "name": "North Star Pitch",
+    "tags": [],
+    "bytes": 5389,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/North%20Star%20Pitch%20Black.png",
+    "name": "North Star Pitch Black",
+    "tags": [],
+    "bytes": 20304,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/North%20Star%20Pitch%20Colour.png",
+    "name": "North Star Pitch Colour",
+    "tags": [],
+    "bytes": 19421,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Northzone.svg",
+    "name": "Northzone",
+    "tags": [],
+    "bytes": 4089,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Norway%20Health%20Tech.svg",
+    "name": "Norway Health Tech",
+    "tags": [],
+    "bytes": 5707,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Notion.svg",
+    "name": "Notion",
+    "tags": [],
+    "bytes": 6471,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Nova.svg",
+    "name": "Nova",
+    "tags": [],
+    "bytes": 2047,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Nova%20Talent.svg",
+    "name": "Nova Talent",
+    "tags": [],
+    "bytes": 1340,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Novo%20Nordisk%20Fonden%20White.png",
+    "name": "Novo Nordisk Fonden White",
+    "tags": [],
+    "bytes": 19256,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Novo%20Nordisk%20Foundation.png",
+    "name": "Novo Nordisk Foundation",
+    "tags": [],
+    "bytes": 22699,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Novo%20Nordisk%20Foundation.svg",
+    "name": "Novo Nordisk Foundation",
+    "tags": [],
+    "bytes": 5215,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Novo%20Nordisk%20Foundation%202.svg",
+    "name": "Novo Nordisk Foundation 2",
+    "tags": [],
+    "bytes": 6927,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Novo%20Nordisk%20Foundation%20Grey.png",
+    "name": "Novo Nordisk Foundation Grey",
+    "tags": [],
+    "bytes": 138349,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/NTNU.svg",
+    "name": "NTNU",
+    "tags": [],
+    "bytes": 10455,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Nucleate.svg",
+    "name": "Nucleate",
+    "tags": [],
+    "bytes": 1110,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Nyctea.svg",
+    "name": "Nyctea",
+    "tags": [],
+    "bytes": 9041,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Oceanflagship.svg",
+    "name": "Oceanflagship",
+    "tags": [],
+    "bytes": 13138,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Octupus.svg",
+    "name": "Octupus",
+    "tags": [],
+    "bytes": 31032,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Octupus%20Club.svg",
+    "name": "Octupus Club",
+    "tags": [],
+    "bytes": 18756,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Odense%20Rob.svg",
+    "name": "Odense Rob",
+    "tags": [],
+    "bytes": 9547,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/OMNIT.png",
+    "name": "OMNIT",
+    "tags": [],
+    "bytes": 11790,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/OMR%20Reviews.svg",
+    "name": "OMR Reviews",
+    "tags": [],
+    "bytes": 3002,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/One%20Plus.png",
+    "name": "One Plus",
+    "tags": [],
+    "bytes": 19569,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/OOONO.svg",
+    "name": "OOONO",
+    "tags": [],
+    "bytes": 1218,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Orbis%20Links.jpg",
+    "name": "Orbis Links",
+    "tags": [],
+    "bytes": 179322,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/Orbislinks.svg",
+    "name": "Orbislinks",
+    "tags": [],
+    "bytes": 4984,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Orkla%20Ventures.svg",
+    "name": "Orkla Ventures",
+    "tags": [],
+    "bytes": 12928,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Orrick.svg",
+    "name": "Orrick",
+    "tags": [],
+    "bytes": 3442,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Ortelius.svg",
+    "name": "Ortelius",
+    "tags": [],
+    "bytes": 3436,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Owl%20Blue.svg",
+    "name": "Owl Blue",
+    "tags": [],
+    "bytes": 5625,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Owl%20Ventures.svg",
+    "name": "Owl Ventures",
+    "tags": [],
+    "bytes": 5439,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Pact.svg",
+    "name": "Pact",
+    "tags": [],
+    "bytes": 9626,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Pale%20Blue%20Dot.svg",
+    "name": "Pale Blue Dot",
+    "tags": [],
+    "bytes": 4411,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Pandora.svg",
+    "name": "Pandora",
+    "tags": [],
+    "bytes": 2557,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Paragit.svg",
+    "name": "Paragit",
+    "tags": [],
+    "bytes": 11567,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Parastruct.svg",
+    "name": "Parastruct",
+    "tags": [],
+    "bytes": 2933,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/ParkingAid.svg",
+    "name": "ParkingAid",
+    "tags": [],
+    "bytes": 4441,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Partners.svg",
+    "name": "Partners",
+    "tags": [],
+    "bytes": 5279,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Peak.svg",
+    "name": "Peak",
+    "tags": [],
+    "bytes": 1538,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Peak%20Emulsion.svg",
+    "name": "Peak Emulsion",
+    "tags": [],
+    "bytes": 2706,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Pendrum.svg",
+    "name": "Pendrum",
+    "tags": [],
+    "bytes": 2180,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/People%20Ventures.svg",
+    "name": "People Ventures",
+    "tags": [],
+    "bytes": 13508,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Perplant.svg",
+    "name": "Perplant",
+    "tags": [],
+    "bytes": 7386,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Pleo.png",
+    "name": "Pleo",
+    "tags": [],
+    "bytes": 29833,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Plug%20and%20Play.svg",
+    "name": "Plug and Play",
+    "tags": [],
+    "bytes": 1748,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Polestar.svg",
+    "name": "Polestar",
+    "tags": [],
+    "bytes": 8999,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Poul%20Schmith.svg",
+    "name": "Poul Schmith",
+    "tags": [],
+    "bytes": 12108,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Poweringspace.svg",
+    "name": "Poweringspace",
+    "tags": [],
+    "bytes": 4134,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/PreSeed%20Ventures.svg",
+    "name": "PreSeed Ventures",
+    "tags": [],
+    "bytes": 12343,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/PropTech%20Denmark.svg",
+    "name": "PropTech Denmark",
+    "tags": [],
+    "bytes": 5179,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Prosa.svg",
+    "name": "Prosa",
+    "tags": [],
+    "bytes": 6516,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Prowoc.svg",
+    "name": "Prowoc",
+    "tags": [],
+    "bytes": 3375,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/PSV.svg",
+    "name": "PSV",
+    "tags": [],
+    "bytes": 1886,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Psventures.svg",
+    "name": "Psventures",
+    "tags": [],
+    "bytes": 4772,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/PwC.svg",
+    "name": "PwC",
+    "tags": [],
+    "bytes": 2414,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/PWN%20Copenhagen.svg",
+    "name": "PWN Copenhagen",
+    "tags": [],
+    "bytes": 5709,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Qool.svg",
+    "name": "Qool",
+    "tags": [],
+    "bytes": 4761,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Radia.svg",
+    "name": "Radia",
+    "tags": [],
+    "bytes": 895,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Rail.svg",
+    "name": "Rail",
+    "tags": [],
+    "bytes": 1020,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Rainmaking.png",
+    "name": "Rainmaking",
+    "tags": [],
+    "bytes": 10613,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Rainmaking.svg",
+    "name": "Rainmaking",
+    "tags": [],
+    "bytes": 2894,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Rappi.png",
+    "name": "Rappi",
+    "tags": [],
+    "bytes": 53659,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/Realdania.svg",
+    "name": "Realdania",
+    "tags": [],
+    "bytes": 2643,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Red%20Stone.svg",
+    "name": "Red Stone",
+    "tags": [],
+    "bytes": 1007,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/ReDI%20School%20of%20Digital%20Integration.svg",
+    "name": "ReDI School of Digital Integration",
+    "tags": [],
+    "bytes": 12917,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Redpoint.png",
+    "name": "Redpoint",
+    "tags": [],
+    "bytes": 48166,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Relow.svg",
+    "name": "Relow",
+    "tags": [],
+    "bytes": 2798,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/ReLowCode.png",
+    "name": "ReLowCode",
+    "tags": [],
+    "bytes": 234999,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/REmote.png",
+    "name": "REmote",
+    "tags": [],
+    "bytes": 34042,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/Remote%20White.svg",
+    "name": "Remote White",
+    "tags": [],
+    "bytes": 5370,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Rental%20Buddy.svg",
+    "name": "Rental Buddy",
+    "tags": [],
+    "bytes": 9363,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Repod.svg",
+    "name": "Repod",
+    "tags": [],
+    "bytes": 2727,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Repodo%20(white).svg",
+    "name": "Repodo (white)",
+    "tags": [],
+    "bytes": 6382,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Resonate.svg",
+    "name": "Resonate",
+    "tags": [],
+    "bytes": 4791,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Revolut.png",
+    "name": "Revolut",
+    "tags": [],
+    "bytes": 32119,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Rheia%20Medical.svg",
+    "name": "Rheia Medical",
+    "tags": [],
+    "bytes": 30001,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Ringo.svg",
+    "name": "Ringo",
+    "tags": [],
+    "bytes": 2978,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Robomed.svg",
+    "name": "Robomed",
+    "tags": [],
+    "bytes": 3796,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Rockawayventures.svg",
+    "name": "Rockawayventures",
+    "tags": [],
+    "bytes": 4774,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Rockit.svg",
+    "name": "Rockit",
+    "tags": [],
+    "bytes": 2370,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Rockstart.svg",
+    "name": "Rockstart",
+    "tags": [],
+    "bytes": 6101,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Rodovre%20Ehrver.svg",
+    "name": "Rodovre Ehrver",
+    "tags": [],
+    "bytes": 9736,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Roskilde%20University.svg",
+    "name": "Roskilde University",
+    "tags": [],
+    "bytes": 1616,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Rostartup.svg",
+    "name": "Rostartup",
+    "tags": [],
+    "bytes": 3516,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Royal%20Danish%20Academy.svg",
+    "name": "Royal Danish Academy",
+    "tags": [],
+    "bytes": 131744,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/RUC.png",
+    "name": "RUC",
+    "tags": [],
+    "bytes": 3635,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/S%20Allume%20Black.png",
+    "name": "S Allume Black",
+    "tags": [],
+    "bytes": 8438,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/S%20AP%20Itoolkit.svg",
+    "name": "S AP Itoolkit",
+    "tags": [],
+    "bytes": 18337,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/S%20Giv%20Effektivt.svg",
+    "name": "S Giv Effektivt",
+    "tags": [],
+    "bytes": 212581,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/S%20Sabbia.svg",
+    "name": "S Sabbia",
+    "tags": [],
+    "bytes": 2926,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/S%20Salesforge.svg",
+    "name": "S Salesforge",
+    "tags": [],
+    "bytes": 6545,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Sabbia.svg",
+    "name": "Sabbia",
+    "tags": [],
+    "bytes": 3099,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Sagava.svg",
+    "name": "Sagava",
+    "tags": [],
+    "bytes": 2910,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Salesforge.svg",
+    "name": "Salesforge",
+    "tags": [],
+    "bytes": 5811,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Samsung%20Orig%20BLUE.png",
+    "name": "Samsung Orig BLUE",
+    "tags": [],
+    "bytes": 31823,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/San%20Francisco.svg",
+    "name": "San Francisco",
+    "tags": [],
+    "bytes": 4219,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/SAP.svg",
+    "name": "SAP",
+    "tags": [],
+    "bytes": 9150,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Scale%20Capital.svg",
+    "name": "Scale Capital",
+    "tags": [],
+    "bytes": 1249,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Scale%20Incubator.svg",
+    "name": "Scale Incubator",
+    "tags": [],
+    "bytes": 24942,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Scaleup%20Finance.svg",
+    "name": "Scaleup Finance",
+    "tags": [],
+    "bytes": 16323,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Schibsted.svg",
+    "name": "Schibsted",
+    "tags": [],
+    "bytes": 13268,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Schibsted%20Ventures.svg",
+    "name": "Schibsted Ventures",
+    "tags": [],
+    "bytes": 32904,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Scrut%20Automation.svg",
+    "name": "Scrut Automation",
+    "tags": [],
+    "bytes": 36789,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/SDU.svg",
+    "name": "SDU",
+    "tags": [],
+    "bytes": 1366,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/SDU%20Startup%20Station.svg",
+    "name": "SDU Startup Station",
+    "tags": [],
+    "bytes": 6476,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/SDU%20Starup%20Station.png",
+    "name": "SDU Starup Station",
+    "tags": [],
+    "bytes": 91368,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Sea%20Growth.svg",
+    "name": "Sea Growth",
+    "tags": [],
+    "bytes": 5874,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Seahouse%20Capital%20Part.svg",
+    "name": "Seahouse Capital Part",
+    "tags": [],
+    "bytes": 26373,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Seal%20Square%20Black.svg",
+    "name": "Seal Square Black",
+    "tags": [],
+    "bytes": 130134,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Seaqurelabs.svg",
+    "name": "Seaqurelabs",
+    "tags": [],
+    "bytes": 11671,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Secondary%20En.svg",
+    "name": "Secondary En",
+    "tags": [],
+    "bytes": 16612,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Seed%20Capital.svg",
+    "name": "Seed Capital",
+    "tags": [],
+    "bytes": 3182,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Seedrs.svg",
+    "name": "Seedrs",
+    "tags": [],
+    "bytes": 17882,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Selected.svg",
+    "name": "Selected",
+    "tags": [],
+    "bytes": 20499,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Self.svg",
+    "name": "Self",
+    "tags": [],
+    "bytes": 2591,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Senovo.svg",
+    "name": "Senovo",
+    "tags": [],
+    "bytes": 16588,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/SensiMate.svg",
+    "name": "SensiMate",
+    "tags": [],
+    "bytes": 3973,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Sequoia%20Capital%20WSV.png",
+    "name": "Sequoia Capital WSV",
+    "tags": [],
+    "bytes": 1659,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/Sextechnordics.svg",
+    "name": "Sextechnordics",
+    "tags": [],
+    "bytes": 4404,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Shanghai%20Eye.svg",
+    "name": "Shanghai Eye",
+    "tags": [],
+    "bytes": 5909,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Shey%20Theylogo.svg",
+    "name": "Shey Theylogo",
+    "tags": [],
+    "bytes": 12706,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Shift.svg",
+    "name": "Shift",
+    "tags": [],
+    "bytes": 2485,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Shift%20Strong.svg",
+    "name": "Shift Strong",
+    "tags": [],
+    "bytes": 4739,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Sie%20Ventures.svg",
+    "name": "Sie Ventures",
+    "tags": [],
+    "bytes": 19452,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Siemenshealth.svg",
+    "name": "Siemenshealth",
+    "tags": [],
+    "bytes": 4808,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Sigrid.svg",
+    "name": "Sigrid",
+    "tags": [],
+    "bytes": 2482,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Silicon%20Vikings.png",
+    "name": "Silicon Vikings",
+    "tags": [],
+    "bytes": 169933,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Skiftr.svg",
+    "name": "Skiftr",
+    "tags": [],
+    "bytes": 4915,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/Skynews.svg",
+    "name": "Skynews",
+    "tags": [],
+    "bytes": 4863,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/SKYtek.svg",
+    "name": "SKYtek",
+    "tags": [],
+    "bytes": 3498,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/SkyTek%20ApS.png",
+    "name": "SkyTek ApS",
+    "tags": [],
+    "bytes": 4573,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Slize.svg",
+    "name": "Slize",
+    "tags": [],
+    "bytes": 3534,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Snapchat.svg",
+    "name": "Snapchat",
+    "tags": [],
+    "bytes": 6350,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/SN%C3%96.svg",
+    "name": "SNÖ",
+    "tags": [],
+    "bytes": 8485,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Social%20Vibes.svg",
+    "name": "Social Vibes",
+    "tags": [],
+    "bytes": 6967,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Soefart.svg",
+    "name": "Soefart",
+    "tags": [],
+    "bytes": 10792,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/SoftBank.png",
+    "name": "SoftBank",
+    "tags": [],
+    "bytes": 28656,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/SOHO.svg",
+    "name": "SOHO",
+    "tags": [],
+    "bytes": 1858,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Solid.svg",
+    "name": "Solid",
+    "tags": [],
+    "bytes": 2479,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/SourceAngel.svg",
+    "name": "SourceAngel",
+    "tags": [],
+    "bytes": 39221,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/SourceAngel%202.svg",
+    "name": "SourceAngel 2",
+    "tags": [],
+    "bytes": 33126,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/South%20Pole.svg",
+    "name": "South Pole",
+    "tags": [],
+    "bytes": 1746,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Southern%20Sweden.svg",
+    "name": "Southern Sweden",
+    "tags": [],
+    "bytes": 23268,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Space%20Denmark.svg",
+    "name": "Space Denmark",
+    "tags": [],
+    "bytes": 5842,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Space%20Ventures.svg",
+    "name": "Space Ventures",
+    "tags": [],
+    "bytes": 8333,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Speedinvest.svg",
+    "name": "Speedinvest",
+    "tags": [],
+    "bytes": 4950,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Spintop%20Ventures.svg",
+    "name": "Spintop Ventures",
+    "tags": [],
+    "bytes": 8573,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Split%20Tech%20City.svg",
+    "name": "Split Tech City",
+    "tags": [],
+    "bytes": 5794,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Split%20Tech%20City%20Colour.png",
+    "name": "Split Tech City Colour",
+    "tags": [],
+    "bytes": 18623,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Sri%20Sathya.svg",
+    "name": "Sri Sathya",
+    "tags": [],
+    "bytes": 24872,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Staria.svg",
+    "name": "Staria",
+    "tags": [],
+    "bytes": 1316,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Start%20Munich.png",
+    "name": "Start Munich",
+    "tags": [],
+    "bytes": 13216,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Startup%20Aarhus.svg",
+    "name": "Startup Aarhus",
+    "tags": [],
+    "bytes": 23198,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Startup%20Basecamp.png",
+    "name": "Startup Basecamp",
+    "tags": [],
+    "bytes": 10281,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Startup%20Capital%20Colour.png",
+    "name": "Startup Capital Colour",
+    "tags": [],
+    "bytes": 24497,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Startup%20Capital%20Green%20Tech%20White.png",
+    "name": "Startup Capital Green Tech White",
+    "tags": [],
+    "bytes": 21745,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Startup%20Capital%20White.png",
+    "name": "Startup Capital White",
+    "tags": [],
+    "bytes": 22706,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Startup%20City%20Sapporo.svg",
+    "name": "Startup City Sapporo",
+    "tags": [],
+    "bytes": 14624,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Startup%20Flanders.svg",
+    "name": "Startup Flanders",
+    "tags": [],
+    "bytes": 10778,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Startup%20Flanders%20Grey.svg",
+    "name": "Startup Flanders Grey",
+    "tags": [],
+    "bytes": 7042,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Startup%20Hokkaido.svg",
+    "name": "Startup Hokkaido",
+    "tags": [],
+    "bytes": 10788,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Startup%20Hokkaido%20Colour.png",
+    "name": "Startup Hokkaido Colour",
+    "tags": [],
+    "bytes": 45314,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Startup%20Lab.png",
+    "name": "Startup Lab",
+    "tags": [],
+    "bytes": 15703,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/Startup%20Lithuania.png",
+    "name": "Startup Lithuania",
+    "tags": [],
+    "bytes": 31731,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Startup%20Norway.svg",
+    "name": "Startup Norway",
+    "tags": [],
+    "bytes": 6166,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Startup%20Showcase%20Black.png",
+    "name": "Startup Showcase Black",
+    "tags": [],
+    "bytes": 21059,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Startup%20Showcase%20White.png",
+    "name": "Startup Showcase White",
+    "tags": [],
+    "bytes": 19157,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Startup%20Valencia.svg",
+    "name": "Startup Valencia",
+    "tags": [],
+    "bytes": 5578,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Startup%20Wise%20Guys.svg",
+    "name": "Startup Wise Guys",
+    "tags": [],
+    "bytes": 18981,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Startup%20Wise%20Guys%20Colour.png",
+    "name": "Startup Wise Guys Colour",
+    "tags": [],
+    "bytes": 39494,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Startup%20World%20Cup.png",
+    "name": "Startup World Cup",
+    "tags": [],
+    "bytes": 317002,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Startupcentral.svg",
+    "name": "Startupcentral",
+    "tags": [],
+    "bytes": 5391,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Startupnorth.svg",
+    "name": "Startupnorth",
+    "tags": [],
+    "bytes": 1620,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/STELOE.svg",
+    "name": "STELOE",
+    "tags": [],
+    "bytes": 1770,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/STHLM%20Music%20City.svg",
+    "name": "STHLM Music City",
+    "tags": [],
+    "bytes": 26010,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Stikk.svg",
+    "name": "Stikk",
+    "tags": [],
+    "bytes": 8116,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Sting.svg",
+    "name": "Sting",
+    "tags": [],
+    "bytes": 1618,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Stripe.svg",
+    "name": "Stripe",
+    "tags": [],
+    "bytes": 1922,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Strive.svg",
+    "name": "Strive",
+    "tags": [],
+    "bytes": 4945,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Sunion.svg",
+    "name": "Sunion",
+    "tags": [],
+    "bytes": 1518,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Superseed.svg",
+    "name": "Superseed",
+    "tags": [],
+    "bytes": 2427,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Sustainary.jpg",
+    "name": "Sustainary",
+    "tags": [],
+    "bytes": 34224,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Sveppa.svg",
+    "name": "Sveppa",
+    "tags": [],
+    "bytes": 5550,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/SVT%20Nyheter.svg",
+    "name": "SVT Nyheter",
+    "tags": [],
+    "bytes": 1927,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Swap%20Languages.svg",
+    "name": "Swap Languages",
+    "tags": [],
+    "bytes": 1438,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Sweden%20Bio.svg",
+    "name": "Sweden Bio",
+    "tags": [],
+    "bytes": 2687,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Swissnex.svg",
+    "name": "Swissnex",
+    "tags": [],
+    "bytes": 2761,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Swisstech.svg",
+    "name": "Swisstech",
+    "tags": [],
+    "bytes": 3391,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Switzerland%20Global%20Enterprise.svg",
+    "name": "Switzerland Global Enterprise",
+    "tags": [],
+    "bytes": 5056,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/SW%C3%96M.svg",
+    "name": "SWÖM",
+    "tags": [],
+    "bytes": 1977,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Sylvia%20Health.svg",
+    "name": "Sylvia Health",
+    "tags": [],
+    "bytes": 5358,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Symbio.png",
+    "name": "Symbio",
+    "tags": [],
+    "bytes": 41079,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Symbio.svg",
+    "name": "Symbio",
+    "tags": [],
+    "bytes": 2995,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Symbion.png",
+    "name": "Symbion",
+    "tags": [],
+    "bytes": 25808,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Symbion.svg",
+    "name": "Symbion",
+    "tags": [],
+    "bytes": 3737,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Syncable.svg",
+    "name": "Syncable",
+    "tags": [],
+    "bytes": 3035,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Synthetic%20AI%20Data.svg",
+    "name": "Synthetic AI Data",
+    "tags": [],
+    "bytes": 4774,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Systematic.svg",
+    "name": "Systematic",
+    "tags": [],
+    "bytes": 6158,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Talent%20Garden.svg",
+    "name": "Talent Garden",
+    "tags": [],
+    "bytes": 5629,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Talent%20Garden%20Copenhagen.svg",
+    "name": "Talent Garden Copenhagen",
+    "tags": [],
+    "bytes": 12353,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/TalkBBQ%20Black.png",
+    "name": "TalkBBQ Black",
+    "tags": [],
+    "bytes": 11877,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/TalkBBQ%20White.png",
+    "name": "TalkBBQ White",
+    "tags": [],
+    "bytes": 11256,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/TDC.png",
+    "name": "TDC",
+    "tags": [],
+    "bytes": 66768,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Teamtailor.svg",
+    "name": "Teamtailor",
+    "tags": [],
+    "bytes": 11772,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Tech%20BBQ%20Smaller%20Gradient.png",
+    "name": "Tech BBQ Smaller Gradient",
+    "tags": [],
+    "bytes": 5428,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/Tech%20Nordic%20Advocates.svg",
+    "name": "Tech Nordic Advocates",
+    "tags": [],
+    "bytes": 28461,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Tech%20Scale.svg",
+    "name": "Tech Scale",
+    "tags": [],
+    "bytes": 3929,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Tech%20Talent%20Black.png",
+    "name": "Tech Talent Black",
+    "tags": [],
+    "bytes": 16925,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Tech%20Talent%20Colour%20Black%202.png",
+    "name": "Tech Talent Colour Black 2",
+    "tags": [],
+    "bytes": 22904,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/Tech%20Talent%20Colour%20White%202.png",
+    "name": "Tech Talent Colour White 2",
+    "tags": [],
+    "bytes": 22753,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/Tech%20Talent%20White.png",
+    "name": "Tech Talent White",
+    "tags": [],
+    "bytes": 15478,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/TechBBQ%20Grey.png",
+    "name": "TechBBQ Grey",
+    "tags": [],
+    "bytes": 62300,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/TechBBQ%20Investor%20Day.png",
+    "name": "TechBBQ Investor Day",
+    "tags": [],
+    "bytes": 25528,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/TechBBQ%20Investor%20Day%20Black.svg",
+    "name": "TechBBQ Investor Day Black",
+    "tags": [],
+    "bytes": 5731,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/TechBBQ%20Investor%20Day%20Black%202.svg",
+    "name": "TechBBQ Investor Day Black 2",
+    "tags": [],
+    "bytes": 1603,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/TechBBQ%20Investor%20Day%20Colour%20Black.svg",
+    "name": "TechBBQ Investor Day Colour Black",
+    "tags": [],
+    "bytes": 6323,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/TechBBQ%20Investor%20Day%20Colour%20Black%202.svg",
+    "name": "TechBBQ Investor Day Colour Black 2",
+    "tags": [],
+    "bytes": 2152,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/TechBBQ%20Investor%20Day%20Colour%20White.svg",
+    "name": "TechBBQ Investor Day Colour White",
+    "tags": [],
+    "bytes": 6650,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/TechBBQ%20Investor%20Day%20Colour%20White%202.svg",
+    "name": "TechBBQ Investor Day Colour White 2",
+    "tags": [],
+    "bytes": 2235,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/TechBBQ%20Investor%20Day%20White.svg",
+    "name": "TechBBQ Investor Day White",
+    "tags": [],
+    "bytes": 6129,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/TechBBQ%20Investor%20Day%20White%202.svg",
+    "name": "TechBBQ Investor Day White 2",
+    "tags": [],
+    "bytes": 1714,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/TechBBQ%20Orange.svg",
+    "name": "TechBBQ Orange",
+    "tags": [],
+    "bytes": 3165,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/TechBBQ%20White.svg",
+    "name": "TechBBQ White",
+    "tags": [],
+    "bytes": 3165,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/TechBBQueer.png",
+    "name": "TechBBQueer",
+    "tags": [],
+    "bytes": 15698,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/TechBBQueer%20Black.png",
+    "name": "TechBBQueer Black",
+    "tags": [],
+    "bytes": 82234,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/TechBBQueer%20White.png",
+    "name": "TechBBQueer White",
+    "tags": [],
+    "bytes": 73163,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/Techchill.png",
+    "name": "Techchill",
+    "tags": [],
+    "bytes": 3476,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/Techchill.svg",
+    "name": "Techchill",
+    "tags": [],
+    "bytes": 27469,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Techsavvy.svg",
+    "name": "Techsavvy",
+    "tags": [],
+    "bytes": 3420,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Techstation.svg",
+    "name": "Techstation",
+    "tags": [],
+    "bytes": 4181,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/TechWomen%20Cph.png",
+    "name": "TechWomen Cph",
+    "tags": [],
+    "bytes": 11152,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Teknologisk%20Institut.svg",
+    "name": "Teknologisk Institut",
+    "tags": [],
+    "bytes": 5941,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Terkko.png",
+    "name": "Terkko",
+    "tags": [],
+    "bytes": 34546,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/Terkko%20Health%20Hub.svg",
+    "name": "Terkko Health Hub",
+    "tags": [],
+    "bytes": 10571,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Terkko%20Health%20Hub.webp",
+    "name": "Terkko Health Hub",
+    "tags": [],
+    "bytes": 38348,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Tesla.jpg",
+    "name": "Tesla",
+    "tags": [],
+    "bytes": 8432,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/The%20Atlantic.svg",
+    "name": "The Atlantic",
+    "tags": [],
+    "bytes": 6248,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/The%20Economist.svg",
+    "name": "The Economist",
+    "tags": [],
+    "bytes": 4976,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/The%20Guardian.png",
+    "name": "The Guardian",
+    "tags": [],
+    "bytes": 86404,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/The%20Hub.png",
+    "name": "The Hub",
+    "tags": [],
+    "bytes": 12157,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/The%20Hub.svg",
+    "name": "The Hub",
+    "tags": [],
+    "bytes": 2317,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/The%20Independent.png",
+    "name": "The Independent",
+    "tags": [],
+    "bytes": 28250,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/The%20Information.png",
+    "name": "The Information",
+    "tags": [],
+    "bytes": 17151,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/The%20Information.svg",
+    "name": "The Information",
+    "tags": [],
+    "bytes": 4929,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/The%20Kitchen.svg",
+    "name": "The Kitchen",
+    "tags": [],
+    "bytes": 7521,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/The%20Residency%20Vienna.svg",
+    "name": "The Residency Vienna",
+    "tags": [],
+    "bytes": 7019,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/The%20Simplified%20Model.svg",
+    "name": "The Simplified Model",
+    "tags": [],
+    "bytes": 12908,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/The%20Telegraph.png",
+    "name": "The Telegraph",
+    "tags": [],
+    "bytes": 5144,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/The%20Wall%20Street%20Journal.png",
+    "name": "The Wall Street Journal",
+    "tags": [],
+    "bytes": 169911,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/The%20Washington%20Psot.png",
+    "name": "The Washington Psot",
+    "tags": [],
+    "bytes": 52029,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/The%20York%20Times.png",
+    "name": "The York Times",
+    "tags": [],
+    "bytes": 33472,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Theglobe%20and%20Mail.svg",
+    "name": "Theglobe and Mail",
+    "tags": [],
+    "bytes": 43171,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Thelink.svg",
+    "name": "Thelink",
+    "tags": [],
+    "bytes": 6889,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Thenextweb.svg",
+    "name": "Thenextweb",
+    "tags": [],
+    "bytes": 1443,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/TheStorage.svg",
+    "name": "TheStorage",
+    "tags": [],
+    "bytes": 3432,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/TheStorage%20Icon.svg",
+    "name": "TheStorage Icon",
+    "tags": [],
+    "bytes": 6741,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/TheStorage%20Small.svg",
+    "name": "TheStorage Small",
+    "tags": [],
+    "bytes": 5792,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Things.svg",
+    "name": "Things",
+    "tags": [],
+    "bytes": 6252,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Thomson%20Reuters%20Foundation.svg",
+    "name": "Thomson Reuters Foundation",
+    "tags": [],
+    "bytes": 11071,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Tie%20Bangalore.svg",
+    "name": "Tie Bangalore",
+    "tags": [],
+    "bytes": 31811,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/TIGER%20GLOBAL.png",
+    "name": "TIGER GLOBAL",
+    "tags": [],
+    "bytes": 20235,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Time.svg",
+    "name": "Time",
+    "tags": [],
+    "bytes": 1419,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/TNW%20White.png",
+    "name": "TNW White",
+    "tags": [],
+    "bytes": 10660,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Tonik.png",
+    "name": "Tonik",
+    "tags": [],
+    "bytes": 32827,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Trind.svg",
+    "name": "Trind",
+    "tags": [],
+    "bytes": 2275,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/TRNMNL.svg",
+    "name": "TRNMNL",
+    "tags": [],
+    "bytes": 1690,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Tuvsud.svg",
+    "name": "Tuvsud",
+    "tags": [],
+    "bytes": 3648,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Tv2no.svg",
+    "name": "Tv2no",
+    "tags": [],
+    "bytes": 525,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Tvaarhus.svg",
+    "name": "Tvaarhus",
+    "tags": [],
+    "bytes": 12995,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Twilio.svg",
+    "name": "Twilio",
+    "tags": [],
+    "bytes": 4102,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Twitter.png",
+    "name": "Twitter",
+    "tags": [],
+    "bytes": 2831,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/Uber%20Black.png",
+    "name": "Uber Black",
+    "tags": [],
+    "bytes": 104125,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Ubuntubiz.png",
+    "name": "Ubuntubiz",
+    "tags": [],
+    "bytes": 19716,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Ubuntubiz.svg",
+    "name": "Ubuntubiz",
+    "tags": [],
+    "bytes": 3007,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/UCN.svg",
+    "name": "UCN",
+    "tags": [],
+    "bytes": 1059,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/UHUB.svg",
+    "name": "UHUB",
+    "tags": [],
+    "bytes": 1053,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/UiPath.png",
+    "name": "UiPath",
+    "tags": [],
+    "bytes": 20126,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/Uman%20Sense.svg",
+    "name": "Uman Sense",
+    "tags": [],
+    "bytes": 6934,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Unavngivet.png",
+    "name": "Unavngivet",
+    "tags": [],
+    "bytes": 57246,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Unconvetional%20Ventures.svg",
+    "name": "Unconvetional Ventures",
+    "tags": [],
+    "bytes": 29013,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Ungdoms%20Bureauet.png",
+    "name": "Ungdoms Bureauet",
+    "tags": [],
+    "bytes": 27061,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Ungdomsbureauete.svg",
+    "name": "Ungdomsbureauete",
+    "tags": [],
+    "bytes": 16684,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Unicornslithuania.svg",
+    "name": "Unicornslithuania",
+    "tags": [],
+    "bytes": 4247,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Union%20Square%20Ventures.jpeg",
+    "name": "Union Square Ventures",
+    "tags": [],
+    "bytes": 3723,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Uptime%20Punks.svg",
+    "name": "Uptime Punks",
+    "tags": [],
+    "bytes": 6557,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Urban%20Tech%20Pitch%20Competition%20Black.png",
+    "name": "Urban Tech Pitch Competition Black",
+    "tags": [],
+    "bytes": 106106,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Urban%20Tech%20Pitch%20Competition%20Colour.png",
+    "name": "Urban Tech Pitch Competition Colour",
+    "tags": [],
+    "bytes": 116277,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Urban%20Tech%20Pitch%20Competition%20White.png",
+    "name": "Urban Tech Pitch Competition White",
+    "tags": [],
+    "bytes": 98135,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Urban%20Tech%20Shaping%20Future%20Cities%20Colour.png",
+    "name": "Urban Tech Shaping Future Cities Colour",
+    "tags": [],
+    "bytes": 16108,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Urban%20Tech%20Shaping%20Future%20Cities%20White.png",
+    "name": "Urban Tech Shaping Future Cities White",
+    "tags": [],
+    "bytes": 34072,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Ustwo.svg",
+    "name": "Ustwo",
+    "tags": [],
+    "bytes": 5731,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Uvision.svg",
+    "name": "Uvision",
+    "tags": [],
+    "bytes": 2385,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Vaekstfonden.svg",
+    "name": "Vaekstfonden",
+    "tags": [],
+    "bytes": 4248,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Valencia%20Innovation%20Capital.svg",
+    "name": "Valencia Innovation Capital",
+    "tags": [],
+    "bytes": 40523,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/VANTA.svg",
+    "name": "VANTA",
+    "tags": [],
+    "bytes": 3148,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Vartix.svg",
+    "name": "Vartix",
+    "tags": [],
+    "bytes": 2185,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/VC4A.svg",
+    "name": "VC4A",
+    "tags": [],
+    "bytes": 2402,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/VC4A%20Full%20Colour.svg",
+    "name": "VC4A Full Colour",
+    "tags": [],
+    "bytes": 3034,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/Vend.svg",
+    "name": "Vend",
+    "tags": [],
+    "bytes": 1316,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Vendep%20Capital.svg",
+    "name": "Vendep Capital",
+    "tags": [],
+    "bytes": 3925,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Ventril%20Labs.svg",
+    "name": "Ventril Labs",
+    "tags": [],
+    "bytes": 3647,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Venture%20Cafe%20Warsaw%20Horiz.svg",
+    "name": "Venture Cafe Warsaw Horiz",
+    "tags": [],
+    "bytes": 3213,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Venture%20Cup%20Denmark.svg",
+    "name": "Venture Cup Denmark",
+    "tags": [],
+    "bytes": 3630,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Venture%20Cup%20Denmark%20Colour.png",
+    "name": "Venture Cup Denmark Colour",
+    "tags": [],
+    "bytes": 36550,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Venturecafe.svg",
+    "name": "Venturecafe",
+    "tags": [],
+    "bytes": 3728,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Version.svg",
+    "name": "Version",
+    "tags": [],
+    "bytes": 3631,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Ververica.svg",
+    "name": "Ververica",
+    "tags": [],
+    "bytes": 4179,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Vicinity%20by%20Lab08.svg",
+    "name": "Vicinity by Lab08",
+    "tags": [],
+    "bytes": 3846,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Virksomhedsguiden.svg",
+    "name": "Virksomhedsguiden",
+    "tags": [],
+    "bytes": 9696,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Virtual%20Force.svg",
+    "name": "Virtual Force",
+    "tags": [],
+    "bytes": 3391,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Visa.png",
+    "name": "Visa",
+    "tags": [],
+    "bytes": 14378,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Visibuilt.svg",
+    "name": "Visibuilt",
+    "tags": [],
+    "bytes": 4553,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Visma.svg",
+    "name": "Visma",
+    "tags": [],
+    "bytes": 1257,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Vntr.svg",
+    "name": "Vntr",
+    "tags": [],
+    "bytes": 2858,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/VNTRS.svg",
+    "name": "VNTRS",
+    "tags": [],
+    "bytes": 4765,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Voice%20AI%20Space.svg",
+    "name": "Voice AI Space",
+    "tags": [],
+    "bytes": 3520,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Voltagreentech.svg",
+    "name": "Voltagreentech",
+    "tags": [],
+    "bytes": 3732,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Wave%20Ventures.svg",
+    "name": "Wave Ventures",
+    "tags": [],
+    "bytes": 10609,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Wayra.svg",
+    "name": "Wayra",
+    "tags": [],
+    "bytes": 20113,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Wayve.png",
+    "name": "Wayve",
+    "tags": [],
+    "bytes": 21241,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/We%20Build%20Denmark.svg",
+    "name": "We Build Denmark",
+    "tags": [],
+    "bytes": 5175,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Wezeo.svg",
+    "name": "Wezeo",
+    "tags": [],
+    "bytes": 3555,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/White%20CNBC.png",
+    "name": "White CNBC",
+    "tags": [],
+    "bytes": 9524,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/WHOOP.png",
+    "name": "WHOOP",
+    "tags": [],
+    "bytes": 19183,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Wired.png",
+    "name": "Wired",
+    "tags": [],
+    "bytes": 8215,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Womanindata.svg",
+    "name": "Womanindata",
+    "tags": [],
+    "bytes": 2751,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Women%20in%20Tech.svg",
+    "name": "Women in Tech",
+    "tags": [],
+    "bytes": 4306,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Women%20in%20Tech%20Awards.svg",
+    "name": "Women in Tech Awards",
+    "tags": [],
+    "bytes": 1164,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Women%20in%20Tech%20DK.svg",
+    "name": "Women in Tech DK",
+    "tags": [],
+    "bytes": 10827,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Women%20in%20Tech%20DK%20Colour.png",
+    "name": "Women in Tech DK Colour",
+    "tags": [],
+    "bytes": 103921,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Women%20TechEU.svg",
+    "name": "Women TechEU",
+    "tags": [],
+    "bytes": 16962,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Womenindatascience.svg",
+    "name": "Womenindatascience",
+    "tags": [],
+    "bytes": 20395,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Womenintecgdr.svg",
+    "name": "Womenintecgdr",
+    "tags": [],
+    "bytes": 4498,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/WOMENINTECHSW.svg",
+    "name": "WOMENINTECHSW",
+    "tags": [],
+    "bytes": 3850,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Womentechnetwork.svg",
+    "name": "Womentechnetwork",
+    "tags": [],
+    "bytes": 4146,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Wonderful%20Copenhagen.svg",
+    "name": "Wonderful Copenhagen",
+    "tags": [],
+    "bytes": 7429,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/World%20Food%20Programme.svg",
+    "name": "World Food Programme",
+    "tags": [],
+    "bytes": 18631,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Worldfund%20White.svg",
+    "name": "Worldfund White",
+    "tags": [],
+    "bytes": 2742,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/WR.png",
+    "name": "WR",
+    "tags": [],
+    "bytes": 52841,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/WSL%20Horizontal%20Colour.png",
+    "name": "WSL Horizontal Colour",
+    "tags": [],
+    "bytes": 3864,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/Y%20Combinator%20Text.png",
+    "name": "Y Combinator Text",
+    "tags": [],
+    "bytes": 81021,
+    "toneAlgo": 2,
+    "tone": "mixed"
+  },
+  {
+    "src": "/logos/Yahoo%20Japan.svg",
+    "name": "Yahoo Japan",
+    "tags": [],
+    "bytes": 10345,
+    "toneAlgo": 2,
+    "tone": "dark"
+  },
+  {
+    "src": "/logos/YFN.svg",
+    "name": "YFN",
+    "tags": [],
+    "bytes": 1214,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Yngvi%20Bio.svg",
+    "name": "Yngvi Bio",
+    "tags": [],
+    "bytes": 3805,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Young%20AI%20Leaders%20Community%20Linz%20Hub.svg",
+    "name": "Young AI Leaders Community Linz Hub",
+    "tags": [],
+    "bytes": 11283,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Zendesk.svg",
+    "name": "Zendesk",
+    "tags": [],
+    "bytes": 3359,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Zeroconstruct.svg",
+    "name": "Zeroconstruct",
+    "tags": [],
+    "bytes": 1233,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/ZOE.svg",
+    "name": "ZOE",
+    "tags": [],
+    "bytes": 1169,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Zoku.svg",
+    "name": "Zoku",
+    "tags": [],
+    "bytes": 1926,
+    "toneAlgo": 2,
+    "tone": "light"
+  }
+]
