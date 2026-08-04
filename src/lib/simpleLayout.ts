@@ -1037,10 +1037,15 @@ function buildThanksDesign(form: PartnerForm, format: PlatformFormat): SimpleDoc
   let gridTop = 0.12; // top of the logo block when there is no headline
   const headline = form.headline.trim();
   if (headline) {
-    const avail = 1 - 2 * MARGIN;
+    // 0.82, not the 0.88 the margin allows: a headline that only just clears the
+    // margin reads as touching the wall. "THANK YOU TO OUR INVESTOR PARTNERS"
+    // ran edge to edge at 0.88.
+    const avail = 0.82;
     const longest = Math.max(1, ...headline.split("\n").map((l) => l.trim().length));
-    // 0.56 ≈ the average glyph width of uppercase Onest at weight 800.
-    const fFrac = Math.min(0.108, (avail * W) / (longest * 0.56) / S);
+    // 0.62 = the average glyph width of uppercase Onest at weight 800, MEASURED
+    // off a 1500px export (1457px of text at fontSize 112 over 21 characters).
+    // The 0.56 guess before it made every long headline ~10% too wide.
+    const fFrac = Math.min(0.108, (avail * W) / (longest * 0.62) / S);
     const lines = headline.split("\n").length;
     const lineH = 0.98;
     const blockH = lines * fFrac * vs * lineH;

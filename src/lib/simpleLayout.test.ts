@@ -1756,3 +1756,36 @@ describe("investor accents — movable layers", () => {
     expect(accentShapes("nope", 1500, 1500, () => "x")).toEqual([]);
   });
 });
+
+// "The headline should never be so close to touch the walls" — a long one used
+// to run edge to edge, because the glyph-width estimate was 10% too narrow AND
+// it aimed at the full margin. Both are now measured, and this is the guard.
+describe("Thank you wall — the headline keeps off the walls", () => {
+  const MIN_SIDE_MARGIN = 0.08;
+  // The same average glyph width the builder sizes with, measured off a real
+  // 1500px export of uppercase Onest at weight 800.
+  const GLYPH = 0.62;
+
+  it("leaves a real margin either side, in every format, short or long", () => {
+    const NL = "\n";
+    const headlines = [
+      `Thank you to${NL}our investor partners`,
+      `Thank you to${NL}our partners`,
+      "Thank you to all of our wonderful investor partners",
+      "Tak",
+    ];
+    for (const format of ["square", "presentation", "story"] as PlatformFormat[]) {
+      for (const headline of headlines) {
+        const doc = buildPartnerDesign(
+          { ...emptyPartnerForm(), layout: "thanks", headline, logoCount: 17, featuredCount: 4 },
+          format,
+        );
+        const t = doc.design.texts.find((x) => x.simpleRole === "thanks.headline");
+        expect(t).toBeDefined();
+        const longest = Math.max(...headline.split(NL).map((l) => l.trim().length));
+        const extent = (longest * (t as { fontSize: number }).fontSize * GLYPH) / doc.customSize.width;
+        expect(extent).toBeLessThanOrEqual(1 - 2 * MIN_SIDE_MARGIN);
+      }
+    }
+  });
+});

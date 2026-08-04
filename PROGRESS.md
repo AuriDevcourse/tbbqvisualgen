@@ -6,7 +6,42 @@ not required reading.
 
 ---
 
-## SESSION HANDOFF — 2026-08-04 (round 54)
+## SESSION HANDOFF — 2026-08-04 (round 55)
+
+### Round 55 — the headline was touching the walls
+
+Gates: **168/168 vitest, tsc clean, build clean**.
+
+Auri's investor wall exported with "THANK YOU TO OUR INVESTOR PARTNERS" running
+edge to edge. Two compounding causes, both now measured rather than guessed:
+
+1. **The glyph-width estimate was 10% too narrow.** The builder sized the
+   headline with 0.56 as the average glyph width of uppercase Onest at weight
+   800. Measured off Auri's own 1500px export — 1457px of text at fontSize 112
+   over 21 characters — it is **0.62**. Every long headline came out ~10% wider
+   than the fit intended.
+2. **It aimed at the full margin.** 0.88 of the width, so even a correct fit
+   ended flush with the margin. It now targets **0.82**, which leaves ≥9% clear
+   on each side in all three formats.
+
+Short headlines are unaffected: they hit the 0.108 font cap before the width
+limit. A test pins the rule (`the headline keeps off the walls`) across three
+formats and four headline lengths, so the next tweak can't quietly undo it.
+
+**Not a bug, worth knowing:** Auri also asked why NordicNinja was "completely
+randomly placed" in that export. A fresh fill lays the wall out correctly (4
+lead, then 5/5/3 at 1:1 — verified) so that cell had been **moved by hand**, and
+**Revert** restores the grid. The likely cause is worth remembering: the accent
+circles sit BEHIND the logos, so clicking one where a logo overlaps grabs the
+logo on top, and dragging it moves the logo instead of the circle.
+
+The panel builder still sizes its headline with 0.55 at weight 600. It has not
+been reported as touching the walls, and changing it would move the approved
+golden layouts — left alone deliberately.
+
+---
+
+## Previous handoff — 2026-08-04 (round 54)
 
 ### Round 54 — the accents became movable layers, and were re-measured
 
