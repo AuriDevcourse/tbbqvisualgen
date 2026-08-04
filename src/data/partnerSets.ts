@@ -51,6 +51,19 @@ export interface PartnerSetEntry {
   src: string;
 }
 
+/** A ready-made wall: the logos, plus the headline and tier split that go with
+ *  them. One button per set in the Thank you sidebar. */
+export interface PartnerSet {
+  id: string;
+  /** Button text — "Life Science", "Investor". */
+  name: string;
+  /** Applied to the headline field when the set is filled in. */
+  headline: string;
+  /** How many of the leading logos are the bigger tier. 0 = one flat grid. */
+  featuredCount: number;
+  logos: PartnerSetEntry[];
+}
+
 export const LIFE_SCIENCE_PARTNERS: PartnerSetEntry[] = [
   { label: "Life Science Invest", src: "/logos/Life%20Science%20Invest.svg" },
   { label: "BioMedical Design", src: "/logos/BioMedical%20Design.svg" },
@@ -77,4 +90,67 @@ export const LIFE_SCIENCE_PARTNERS: PartnerSetEntry[] = [
   { label: "Medicon Village", src: "/logos/Medicon%20Village.svg" },
   { label: "imec", src: "/logos/Imec%20White.svg" },
   { label: "Norway Health Tech", src: "/logos/Norway%20Health%20Tech.svg" },
+];
+
+/**
+ * The investor partners, from the Our Investor Partners page — which splits
+ * them into MAIN and SUPPORT partners. That split is the whole reason the wall
+ * has a lead tier: the first four render bigger, the rest fill the grid below.
+ * The page's tier CHIPS are not reproduced; the thank-you wall says it with
+ * size, as the 2025 originals do.
+ *
+ * Order: the four main partners, then the support partners in page order.
+ *
+ * Two names took a search to find, so do not re-hunt them:
+ *   `Worldfund White.svg`       → WORLD FUND ("world fund" with a space misses)
+ *   `Forsikring Og Pension.svg` → the F&P monogram, rendered and confirmed
+ *
+ * NOT here, because the library has no usable white artwork (2026-08-04):
+ *   **Novo Nordisk** — the bull mark plus "novo nordisk". The library only has
+ *     Novo Nordisk FOUNDATION variants, which is a different organisation.
+ *   **Mazanti-Andersen** — nothing at all.
+ *   **Ada Ventures** — `Ada Ventures.png` is DARK artwork, invisible on this
+ *     canvas, and a PNG can't be recoloured in-app (the tint is SVG-only).
+ * Marketing has to supply white SVGs for those three; until then the set is 17
+ * of 20 and the fill leaves no gap (the grid sizes itself to what loaded).
+ */
+export const INVESTOR_PARTNERS: PartnerSetEntry[] = [
+  // ── Main partners ──
+  { label: "Innovation District Copenhagen", src: "/logos/Innovation%20District%20Copenhagen%20White.png" },
+  { label: "EIFO", src: "/logos/EIFO.svg" },
+  { label: "wezeo", src: "/logos/Wezeo.svg" },
+  { label: "HSBC Innovation Banking", src: "/logos/HSBC%20Innovation%20Banking.png" },
+  // ── Support partners ──
+  { label: "embankment", src: "/logos/Embankment.svg" },
+  { label: "Heartcore", src: "/logos/Heartcore.svg" },
+  { label: "World Fund", src: "/logos/Worldfund%20White.svg" },
+  { label: "Florent Venture Partners", src: "/logos/Florent%20Venture%20Partners.svg" },
+  { label: "Rockstart", src: "/logos/Rockstart.svg" },
+  { label: "NordicNinja", src: "/logos/NordicNinja.svg" },
+  { label: "dealroom.co", src: "/logos/Dealroom.svg" },
+  { label: "FBV", src: "/logos/FBV.svg" },
+  { label: "PSV", src: "/logos/PSV.svg" },
+  { label: "Mountside Ventures", src: "/logos/Mountside%20Ventures.svg" },
+  { label: "European Investment Fund", src: "/logos/European%20Investment%20Fund%20(EIF).svg" },
+  { label: "Aktive Ejere", src: "/logos/Aktive%20Ejere.svg" },
+  { label: "F&P (Forsikring & Pension)", src: "/logos/Forsikring%20Og%20Pension.svg" },
+];
+
+/** Every ready-made wall, in sidebar order. */
+export const PARTNER_SETS: PartnerSet[] = [
+  {
+    id: "life-science",
+    name: "Life Science",
+    headline: "Thank you to\nour partners",
+    featuredCount: 0,
+    logos: LIFE_SCIENCE_PARTNERS,
+  },
+  {
+    id: "investor",
+    name: "Investor",
+    headline: "Thank you to\nour investor partners",
+    // The four main partners lead; the support partners fill the grid below.
+    featuredCount: 4,
+    logos: INVESTOR_PARTNERS,
+  },
 ];

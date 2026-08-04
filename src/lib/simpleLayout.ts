@@ -56,7 +56,18 @@ export function panelShapeKey(doc: SimpleDoc): string {
   // 3-speaker design revives right over the new card (Auri: "the 4th speaker
   // card doesn't appear"). Keys are recomputed on every hydrate/load, so
   // extending the format strands nothing.
-  return `${doc.format}|${doc.customSize.width}x${doc.customSize.height}|${roles.join(",")}|imgs:${imgRoles.join(",") || "none"}|frames:${placeholderCount(doc)}`;
+  // Placeholder frames carry the slot they stand in for (partner/sales docs;
+  // panel person-frames are untagged), and those tags are part of the shape:
+  // a thank-you wall with a LEAD tier has the same frame COUNT as a flat one of
+  // the same size, so on count alone the two parked under one key and the flat
+  // tuning revived over the tiered rebuild — the tier change silently ignored.
+  const frameRoles = (doc.design.shapes ?? [])
+    .filter(isSlotPlaceholder)
+    .map((s) => s.simpleRole)
+    .filter((r): r is string => Boolean(r))
+    .sort();
+  const slots = frameRoles.length ? `|slots:${frameRoles.join(",")}` : "";
+  return `${doc.format}|${doc.customSize.width}x${doc.customSize.height}|${roles.join(",")}|imgs:${imgRoles.join(",") || "none"}|frames:${placeholderCount(doc)}${slots}`;
 }
 
 /**
@@ -79,6 +90,20 @@ export function retargetTunedDoc(tuned: SimpleDoc, rebuilt: SimpleDoc): SimpleDo
   // Role comparison alone is blind to it, so a 3-speaker tuning would absorb
   // a 4th-blank-speaker rebuild and the new card would never show.
   if (placeholderCount(tuned) !== placeholderCount(rebuilt)) return null;
+
+  // Frames also carry the slot they stand in for, and a frame standing in for a
+  // DIFFERENT slot is a different composition even when the counts match: a
+  // thank-you wall's lead-tier cell is not one of its support cells. Compared
+  // only when both sides are tagged, so a doc tuned before frames carried tags
+  // still retargets instead of being binned.
+  const frameRoles = (d: SimpleDoc) => (d.design.shapes ?? [])
+    .filter(isSlotPlaceholder)
+    .map((s) => s.simpleRole)
+    .filter((r): r is string => Boolean(r))
+    .sort();
+  const tunedFrames = frameRoles(tuned);
+  const rebuiltFrames = frameRoles(rebuilt);
+  if (tunedFrames.length && rebuiltFrames.length && tunedFrames.join(",") !== rebuiltFrames.join(",")) return null;
 
   // Images match by slot role, the same way texts match below. A REPLACED
   // photo/logo (same slot, new file) carries its src into the tuned layer,
@@ -182,7 +207,7 @@ export function partnerLayoutOf(doc: SimpleDoc): PartnerLayout | null {
   const of = (r: string) =>
     r === "logo-single" ? "single" as const
     : r.startsWith("logo-duo-") ? "duo" as const
-    : /^logo-thanks-\d+$/.test(r) ? "thanks" as const
+    : THANKS_ROLE_RE.test(r) ? "thanks" as const
     : /^logo-\d$/.test(r) ? "quad" as const
     : null;
   for (const i of doc.canvasImages) {
@@ -202,15 +227,36 @@ const SLOT_ROLES = {
   quad: ["logo-0", "logo-1", "logo-2", "logo-3"],
 } as const;
 
-/** The thank-you wall's slot roles, read off a doc — its cell COUNT is a form
- *  field, so unlike One/Two/Four the role set can't be a constant. Covers both
- *  filled cells (images) and empty ones (tagged placeholder frames). */
+/**
+ * A thank-you cell's role. The lead tier gets its OWN role name, not just a
+ * bigger box: the tier split drives geometry, so it has to be visible in the
+ * role set — else `retargetPartnerLayout` would carry a tuned design across a
+ * tier change and silently ignore it (the same trap the cell count avoids by
+ * changing the role COUNT).
+ */
+const thanksSlotRole = (index: number, isLead: boolean): string =>
+  isLead ? `logo-thanks-lead-${index}` : `logo-thanks-${index}`;
+
+const THANKS_ROLE_RE = /^logo-thanks-(?:lead-)?(\d+)$/;
+
+/** The thank-you wall's slot roles, read off a doc — its cell count and tier
+ *  split are form fields, so unlike One/Two/Four the role set can't be a
+ *  constant. Covers both filled cells (images) and empty ones (tagged
+ *  placeholder frames), ordered by cell index. */
 function thanksSlotRoles(doc: SimpleDoc): string[] {
-  const idx = (r: string | undefined) => (r && /^logo-thanks-\d+$/.test(r) ? Number(r.slice("logo-thanks-".length)) : null);
-  const found = new Set<number>();
-  for (const i of doc.canvasImages) { const n = idx(i.simpleRole); if (n !== null) found.add(n); }
-  for (const s of doc.design.shapes ?? []) { const n = idx(s.simpleRole); if (n !== null) found.add(n); }
-  return [...found].sort((a, b) => a - b).map((n) => `logo-thanks-${n}`);
+  const found = new Map<number, string>();
+  const take = (r: string | undefined) => {
+    const m = r ? THANKS_ROLE_RE.exec(r) : null;
+    if (m) found.set(Number(m[1]), r as string);
+  };
+  for (const i of doc.canvasImages) take(i.simpleRole);
+  for (const s of doc.design.shapes ?? []) take(s.simpleRole);
+  return [...found.keys()].sort((a, b) => a - b).map((n) => found.get(n) as string);
+}
+
+/** How many of a wall's cells are in the lead (bigger) tier. */
+function thanksLeadCount(doc: SimpleDoc): number {
+  return thanksSlotRoles(doc).filter((r) => r.startsWith("logo-thanks-lead-")).length;
 }
 
 /** An empty partner slot renders as this outline-gradient frame. */
@@ -619,6 +665,10 @@ export interface PartnerForm {
    *  own field rather than derived from `logos.length` so an empty trailing
    *  cell survives (the grid is chosen first, filled second). */
   logoCount: number;
+  /** Thank-you layout only: how many of the FIRST cells form the lead tier,
+   *  rendered bigger than the rest (main partners over support partners).
+   *  0 = one uniform grid. */
+  featuredCount: number;
   /** Thank-you layout only: the big centred headline. Its own field so
    *  switching layouts never overwrites the label chip's wording. */
   headline: string;
@@ -631,6 +681,7 @@ export function emptyPartnerForm(): PartnerForm {
     layout: "single",
     logos: [],
     logoCount: 12,
+    featuredCount: 0,
     headline: "Thank you to\nour partners",
     backgroundId: "orb7",
   };
@@ -904,17 +955,22 @@ export function buildPartnerDesign(form: PartnerForm, format: PlatformFormat): S
  * looks broken next to "4,4,3"), so a column count that leaves exactly one logo
  * on the last row steps down by one.
  */
-export function thanksGridColumns(count: number, aspect: number): number {
+export function thanksGridColumns(count: number, aspect: number, minCols = 1): number {
   const maxCols = aspect >= 1.3 ? 6 : aspect >= 0.9 ? 5 : 3;
   const ideal = Math.round(Math.sqrt(Math.max(1, count) * aspect * 1.15));
+  // `minCols` is a floor the caller needs for a reason the score cannot see —
+  // the support tier of a two-tier wall MUST be wider than the lead tier, or
+  // the support logos come out bigger than the main partners.
+  const hi = Math.max(1, Math.min(count, maxCols));
+  const lo = Math.max(1, Math.min(minCols, hi));
   // Score every allowed column count: distance from the ideal, plus a penalty
   // for leaving a single logo alone on the last row. 1.5 makes the penalty
   // worth a one-column detour but not a two-column one — so "5,5,1" becomes
   // "4,4,3", while a 9:16 story capped at 3 columns keeps its 3 rather than
   // dropping to 2 and growing four rows taller.
-  let best = 1;
+  let best = lo;
   let bestScore = Infinity;
-  for (let cols = 1; cols <= Math.min(count, maxCols); cols++) {
+  for (let cols = lo; cols <= hi; cols++) {
     const score = Math.abs(cols - ideal) + (count % cols === 1 && count > cols ? 1.5 : 0);
     if (score < bestScore) { bestScore = score; best = cols; }
   }
@@ -969,38 +1025,71 @@ function buildThanksDesign(form: PartnerForm, format: PlatformFormat): SimpleDoc
 
   // ── Logo grid, block-centred in what is left below the headline ──
   const count = Math.min(THANKS_MAX_LOGOS, Math.max(THANKS_MIN_LOGOS, Math.round(form.logoCount || THANKS_MIN_LOGOS)));
-  const cols = thanksGridColumns(count, W / H);
-  const rows = Math.ceil(count / cols);
+  // The lead tier: the first `featuredCount` logos, rendered bigger. Main
+  // partners over support partners, the shape the investor wall needs.
+  const lead = Math.min(count, Math.max(0, Math.round(form.featuredCount || 0)));
+  const rest = count - lead;
 
   const gapX = 0.045 * S;
-  const cellW = (W * (1 - 2 * MARGIN) - (cols - 1) * gapX) / cols;
-  const roomH = H * (1 - MARGIN - gridTop);
+  const usableW = W * (1 - 2 * MARGIN);
+  const widthOf = (cols: number) => (usableW - (cols - 1) * gapX) / cols;
+  // Each tier gets its OWN column count, and that alone makes the lead cells
+  // bigger — 4 across instead of 6 is a 1.5× wider cell, so no size multiplier
+  // is needed and the two tiers still share one margin. The lead tier is a
+  // single row whenever it fits across; the rest flows normally.
+  const maxCols = W / H >= 1.3 ? 6 : W / H >= 0.9 ? 5 : 3;
+  let leadCols = lead ? Math.max(1, Math.min(lead, maxCols - 1)) : 0;
+  // The support tier is forced at least one column WIDER than the lead tier.
+  // Without that floor a 9:16 story put 16 support logos in 2 columns against 3
+  // lead columns and rendered the support partners BIGGER than the main ones.
+  const restCols = rest ? thanksGridColumns(rest, W / H, leadCols + 1) : 0;
+  // Too few support logos to be wider? Narrow the LEAD tier instead, so the
+  // hierarchy still reads (4 main partners stacked over 2 support ones).
+  if (lead && rest && restCols <= leadCols) leadCols = Math.max(1, restCols - 1);
+  const leadRows = leadCols ? Math.ceil(lead / leadCols) : 0;
+  const restRows = restCols ? Math.ceil(rest / restCols) : 0;
+
   // Cells are wider than tall — a logo is a wordmark far more often than a
-  // square mark — but never taller than the space allows.
-  const cellH = Math.min((roomH - (rows - 1) * 0.055 * S) / rows, cellW * 0.45);
+  // square mark.
+  const CELL_ASPECT = 0.45;
+  const roomH = H * (1 - MARGIN - gridTop);
+  const gapSlots = Math.max(0, leadRows - 1) + Math.max(0, restRows - 1);
+  let leadCellH = lead ? widthOf(leadCols) * CELL_ASPECT : 0;
+  let restCellH = rest ? widthOf(restCols) * CELL_ASPECT : 0;
+  let gapYMin = 0.055 * S;
+  // A visible step between the tiers, so the size difference reads as two
+  // groups rather than an accident.
+  let tierGap = lead && rest ? 0.085 * S : 0;
+
+  // Too tall for the canvas? Scale cells AND gaps by one factor, so the block
+  // lands exactly on the room and the ratio between the tiers survives
+  // (shrinking the cells alone overflowed the bottom margin, and shrinking one
+  // tier alone would flatten the hierarchy).
+  const natural = leadRows * leadCellH + restRows * restCellH + tierGap + gapSlots * gapYMin;
+  if (natural > roomH) {
+    const shrink = roomH / natural;
+    leadCellH *= shrink;
+    restCellH *= shrink;
+    gapYMin *= shrink;
+    tierGap *= shrink;
+  }
+
   // Leftover height goes into the row gaps rather than leaving the whole block
   // floating in the middle of a tall canvas — capped, so a 3-logo wall on a
   // 9:16 story spreads without the rows drifting apart.
-  const gapY = rows > 1
-    ? Math.min(cellH * 0.85, Math.max(0.055 * S, (roomH - rows * cellH) / (rows - 1)))
+  const fixedH = leadRows * leadCellH + restRows * restCellH + tierGap;
+  const smallestCell = Math.min(...[lead ? leadCellH : Infinity, rest ? restCellH : Infinity]);
+  const gapY = gapSlots
+    ? Math.min(smallestCell * 0.85, Math.max(gapYMin, (roomH - fixedH) / gapSlots))
     : 0;
-  const blockTop = H * gridTop + (roomH - (rows * cellH + (rows - 1) * gapY)) / 2;
+  const blockTop = H * gridTop + (roomH - (fixedH + gapSlots * gapY)) / 2;
 
-  for (let i = 0; i < count; i++) {
-    const row = Math.floor(i / cols);
-    const col = i % cols;
-    // The last row carries the remainder and is centred on its own width, so a
-    // grid that doesn't divide evenly still looks deliberate.
-    const inRow = row === rows - 1 ? count - row * cols : cols;
-    const rowW = inRow * cellW + (inRow - 1) * gapX;
-    const cx = ((W - rowW) / 2 + col * (cellW + gapX) + cellW / 2) / W;
-    const cy = (blockTop + row * (cellH + gapY) + cellH / 2) / H;
+  const emitCell = (i: number, cx: number, cy: number, w: number, h: number, role: string): void => {
     const logo = form.logos[i];
-    const role = `logo-thanks-${i}`;
     if (logo?.src) {
       canvasImages.push({
         id: uid("img"), src: logo.src, x: cx, y: cy,
-        width: cellW / W, height: cellH / H,
+        width: w, height: h,
         cornerRadius: 0, border: false, fit: "contain",
         naturalWidth: logo.naturalWidth, naturalHeight: logo.naturalHeight,
         simpleRole: role,
@@ -1008,13 +1097,32 @@ function buildThanksDesign(form: PartnerForm, format: PlatformFormat): SimpleDoc
     } else {
       shapes.push({
         id: uid("shape"), type: "rectangle", x: cx, y: cy,
-        width: cellW / W, height: cellH / H,
+        width: w, height: h,
         fillType: "outline", strokeWidth: 2 / 1500, colorType: "gradient",
         color1: "#FF6B00", color2: "#FF0028", opacity: 1, blur: 0, rotation: 0,
         borderRadius: 0.08,
         simpleRole: role,
       });
     }
+  };
+
+  // One tier's rows. Every row is centred on its own width, so a last row that
+  // doesn't divide evenly still looks deliberate.
+  const emitTier = (from: number, n: number, cols: number, rows: number, cw: number, ch: number, top: number): void => {
+    for (let k = 0; k < n; k++) {
+      const row = Math.floor(k / cols);
+      const inRow = row === rows - 1 ? n - row * cols : cols;
+      const rowW = inRow * cw + (inRow - 1) * gapX;
+      const cx = ((W - rowW) / 2 + (k % cols) * (cw + gapX) + cw / 2) / W;
+      const cy = (top + row * (ch + gapY) + ch / 2) / H;
+      emitCell(from + k, cx, cy, cw / W, ch / H, thanksSlotRole(from + k, from + k < lead));
+    }
+  };
+
+  if (lead) emitTier(0, lead, leadCols, leadRows, widthOf(leadCols), leadCellH, blockTop);
+  if (rest) {
+    const restTop = blockTop + (leadRows ? leadRows * leadCellH + (leadRows - 1) * gapY + tierGap : 0);
+    emitTier(lead, rest, restCols, restRows, widthOf(restCols), restCellH, restTop);
   }
 
   return {
@@ -1963,8 +2071,10 @@ export function formsFromDoc(kind: string, doc: SimpleDoc, saved?: SimpleFormsSn
         logos: base.logos.some((l) => l?.src) ? base.logos : roleLogos,
         // The grid on the canvas wins over a stale snapshot count: the doc is
         // what the user is looking at, and a mismatch would rebuild the wall
-        // to a different size the moment they touch a field.
+        // to a different size the moment they touch a field. Same for the tier
+        // split, which the roles carry.
         logoCount: thanksRoles.length || base.logoCount,
+        featuredCount: thanksRoles.length ? thanksLeadCount(doc) : base.featuredCount,
         headline: saved?.partner ? base.headline : (textByRole.get("thanks.headline") ?? base.headline),
         backgroundId: doc.design.backgroundId || base.backgroundId,
       },

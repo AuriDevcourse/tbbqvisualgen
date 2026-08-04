@@ -13,7 +13,7 @@ import { BackgroundPicker } from "@/components/BackgroundPicker";
 import { useExport, type ExportFormat } from "@/hooks/useExport";
 import { isAnimatedBackground } from "@/components/CanvasBackground";
 import { LogoLibraryPicker, asUploadedImage } from "@/components/LogoLibraryPicker";
-import { LIFE_SCIENCE_PARTNERS } from "@/data/lifeSciencePartners";
+import { PARTNER_SETS, type PartnerSet } from "@/data/partnerSets";
 import { isSvgDataUrl, tintSvgDataUrl } from "@/lib/svgTint";
 import { ColorPicker } from "@/components/ColorPicker";
 import type { PlatformFormat } from "@/types/template";
@@ -1010,32 +1010,38 @@ export default function SimplePage() {
   /**
    * Drop a ready-made partner set into the wall: fetch each library file as a
    * data URL (the shape an upload produces, so a rename can never break a saved
-   * design) and size the grid to what actually loaded. Replaces the slots
-   * outright — it's a "start from the Life Science set" button, and undo is one
-   * Revert or one re-pick away.
+   * design), then size the grid and the lead tier to what actually loaded.
+   * Replaces the slots outright — it's a "start from this set" button, and undo
+   * is one Revert or one re-pick away. The headline comes with the set, since
+   * an investor wall shouldn't arrive saying "our partners".
    */
-  const [fillingSet, setFillingSet] = useState(false);
-  const fillPartnerSet = async (set: typeof LIFE_SCIENCE_PARTNERS, setName: string) => {
+  const [fillingSet, setFillingSet] = useState<string | null>(null);
+  const fillPartnerSet = async (set: PartnerSet) => {
     if (fillingSet) return;
-    setFillingSet(true);
+    setFillingSet(set.id);
     try {
-      const loaded = await Promise.all(set.map(async (p) => {
+      const loaded = await Promise.all(set.logos.map(async (p) => {
         try { return await asUploadedImage(p.src); } catch { return null; }
       }));
-      const logos = loaded.filter((l): l is PartnerLogo => l !== null);
-      if (!logos.length) { toast.error("Couldn't load those logos"); return; }
+      // A logo that failed to fetch is DROPPED, not left as a hole: an empty
+      // lead cell in a published wall is worse than a tighter grid. The count
+      // that failed goes in the toast so it can't pass unnoticed.
+      const kept = loaded.map((l, i) => ({ logo: l, lead: i < set.featuredCount })).filter((x) => x.logo);
+      if (!kept.length) { toast.error("Couldn't load those logos"); return; }
       setPartner((p) => ({
         ...p,
         layout: "thanks",
-        logos,
-        logoCount: Math.min(THANKS_MAX_LOGOS, logos.length),
+        logos: kept.map((x) => x.logo as PartnerLogo),
+        logoCount: Math.min(THANKS_MAX_LOGOS, kept.length),
+        featuredCount: kept.filter((x) => x.lead).length,
+        headline: set.headline,
       }));
-      const failed = set.length - logos.length;
+      const failed = set.logos.length - kept.length;
       toast.success(failed
-        ? `${logos.length} ${setName} logos added · ${failed} could not be loaded`
-        : `${logos.length} ${setName} logos added`);
+        ? `${kept.length} ${set.name} logos added · ${failed} could not be loaded`
+        : `${kept.length} ${set.name} logos added`);
     } finally {
-      setFillingSet(false);
+      setFillingSet(null);
     }
   };
 
@@ -1045,7 +1051,15 @@ export default function SimplePage() {
    * speaker stepper gives — they just stop rendering.
    */
   const setThanksCount = (n: number) =>
-    setPartner((p) => ({ ...p, logoCount: Math.max(THANKS_MIN_LOGOS, Math.min(THANKS_MAX_LOGOS, n)) }));
+    setPartner((p) => {
+      const logoCount = Math.max(THANKS_MIN_LOGOS, Math.min(THANKS_MAX_LOGOS, n));
+      // The lead tier can never outgrow the grid it sits in.
+      return { ...p, logoCount, featuredCount: Math.min(p.featuredCount, logoCount) };
+    });
+
+  /** Resize the lead (bigger) tier — the first N cells of the wall. */
+  const setFeaturedCount = (n: number) =>
+    setPartner((p) => ({ ...p, featuredCount: Math.max(0, Math.min(p.logoCount, n)) }));
 
   // A library pick needs a destination. First empty slot of the current
   // layout, falling back to the last one when they are all filled — so
@@ -1441,18 +1455,20 @@ export default function SimplePage() {
                   (168px) reserve the tallest so switching layouts doesn't
                   reflow everything below — the jump made the whole sidebar
                   shake. */}
-              {/* Ready-made sets, so a recurring wall isn't 20 searches. */}
-              {partner.layout === "thanks" && (
+              {/* Ready-made sets, so a recurring wall isn't 20 searches. Each
+                  brings its own headline and tier split. */}
+              {partner.layout === "thanks" && PARTNER_SETS.map((set) => (
                 <button
-                  onClick={() => void fillPartnerSet(LIFE_SCIENCE_PARTNERS, "Life Science")}
-                  disabled={fillingSet}
-                  title={`Fills the grid with: ${LIFE_SCIENCE_PARTNERS.map((p) => p.label).join(", ")}`}
+                  key={set.id}
+                  onClick={() => void fillPartnerSet(set)}
+                  disabled={fillingSet !== null}
+                  title={`Fills the grid with: ${set.logos.map((p) => p.label).join(", ")}`}
                   className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-xs font-medium text-white/85 hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {fillingSet ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                  {fillingSet ? "Loading logos…" : `Fill with Life Science partners (${LIFE_SCIENCE_PARTNERS.length})`}
+                  {fillingSet === set.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                  {fillingSet === set.id ? "Loading logos…" : `Fill with ${set.name} partners (${set.logos.length})`}
                 </button>
-              )}
+              ))}
               {/* The wall's size is a choice, not a consequence of how many
                   logos you have dropped in — pick the grid, then fill it. */}
               {partner.layout === "thanks" && (
@@ -1472,6 +1488,35 @@ export default function SimplePage() {
                       onClick={() => setThanksCount(partner.logoCount + 1)}
                       disabled={partner.logoCount >= THANKS_MAX_LOGOS}
                       aria-label="More logos"
+                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/5 border border-white/10 text-white/80 hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+              {/* The lead tier: main partners bigger, support partners below.
+                  0 = one flat grid. */}
+              {partner.layout === "thanks" && (
+                <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                  <span className="text-sm text-white/85">
+                    Bigger first
+                    <span className="ml-1.5 text-[11px] text-white/45">{partner.featuredCount ? "main partners" : "off"}</span>
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => setFeaturedCount(partner.featuredCount - 1)}
+                      disabled={partner.featuredCount <= 0}
+                      aria-label="Fewer big logos"
+                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/5 border border-white/10 text-white/80 hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <Minus className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="w-6 text-center text-sm font-semibold tabular-nums text-white">{partner.featuredCount}</span>
+                    <button
+                      onClick={() => setFeaturedCount(partner.featuredCount + 1)}
+                      disabled={partner.featuredCount >= partner.logoCount}
+                      aria-label="More big logos"
                       className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/5 border border-white/10 text-white/80 hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       <Plus className="w-3.5 h-3.5" />

@@ -4,7 +4,7 @@ import type { PlatformFormat } from "@/types/template";
 
 /** The partner-form fields the thank-you wall introduced. Spread into the
  *  One/Two/Four literals below, which predate them and don't care. */
-const PW = { logoCount: 12, headline: "Thank you to\nour partners" };
+const PW = { logoCount: 12, featuredCount: 0, headline: "Thank you to\nour partners" };
 
 /**
  * Golden-layout guard for the house-standard panel: 3 speakers + 1 moderator.
@@ -1455,6 +1455,86 @@ describe("retargetPartnerLayout — the thank-you wall", () => {
       .find((t) => t.simpleRole === "thanks.headline");
     expect(h?.content).toBe("Tak til vores partnere");
     expect(h?.position).toEqual({ x: 0.3, y: 0.2 });
+  });
+});
+
+// The lead tier — main partners bigger, support partners below. The investor
+// wall needs it; the Life Science one runs with featuredCount 0.
+describe("Thank you wall — the lead tier", () => {
+  const wall = (patch: Partial<PartnerForm> = {}): PartnerForm =>
+    ({ ...emptyPartnerForm(), layout: "thanks", ...patch });
+  const cells = (doc: SimpleDoc) => doc.design.shapes ?? [];
+  const lead = (doc: SimpleDoc) => cells(doc).filter((s) => s.simpleRole?.startsWith("logo-thanks-lead-"));
+  const support = (doc: SimpleDoc) => cells(doc).filter((s) => /^logo-thanks-\d+$/.test(s.simpleRole ?? ""));
+
+  it("tags the first featuredCount cells as the lead tier, in order", () => {
+    const doc = buildPartnerDesign(wall({ logoCount: 8, featuredCount: 3 }), "presentation");
+    expect(lead(doc).map((s) => s.simpleRole)).toEqual(["logo-thanks-lead-0", "logo-thanks-lead-1", "logo-thanks-lead-2"]);
+    expect(support(doc)).toHaveLength(5);
+    expect(partnerLayoutOf(doc)).toBe("thanks");
+  });
+
+  it("renders the lead cells bigger, and above the rest", () => {
+    const doc = buildPartnerDesign(wall({ logoCount: 20, featuredCount: 4 }), "presentation");
+    const big = lead(doc);
+    const small = support(doc);
+    expect(big).toHaveLength(4);
+    // Every lead cell is wider AND taller than every support cell.
+    expect(Math.min(...big.map((s) => s.width))).toBeGreaterThan(Math.max(...small.map((s) => s.width)));
+    expect(Math.min(...big.map((s) => s.height))).toBeGreaterThan(Math.max(...small.map((s) => s.height)));
+    // …and the whole lead tier sits above the whole support tier.
+    expect(Math.max(...big.map((s) => s.y + s.height / 2)))
+      .toBeLessThanOrEqual(Math.min(...small.map((s) => s.y - s.height / 2)));
+  });
+
+  it("keeps four main partners on one row at 16:9 and 1:1", () => {
+    for (const format of ["presentation", "square"] as PlatformFormat[]) {
+      const doc = buildPartnerDesign(wall({ logoCount: 20, featuredCount: 4 }), format);
+      expect(new Set(lead(doc).map((s) => Math.round(s.y * 1000))).size).toBe(1);
+    }
+  });
+
+  it("stays inside the margins with a tier, in every format", () => {
+    for (const format of ["square", "presentation", "story"] as PlatformFormat[]) {
+      const doc = buildPartnerDesign(wall({ logoCount: 20, featuredCount: 4 }), format);
+      expect(cells(doc)).toHaveLength(20);
+      for (const c of cells(doc)) {
+        expect(c.x - c.width / 2).toBeGreaterThanOrEqual(0.059);
+        expect(c.x + c.width / 2).toBeLessThanOrEqual(0.941);
+        expect(c.y - c.height / 2).toBeGreaterThan(0);
+        expect(c.y + c.height / 2).toBeLessThanOrEqual(0.941);
+      }
+      // Nothing may collide with the headline either.
+      const headline = doc.design.texts[0];
+      expect(Math.min(...cells(doc).map((c) => c.y - c.height / 2))).toBeGreaterThan(headline.position.y);
+    }
+  });
+
+  it("is a different composition from the same wall without a tier", () => {
+    const flat = buildPartnerDesign(wall({ logoCount: 20, featuredCount: 0 }), "presentation");
+    const tiered = buildPartnerDesign(wall({ logoCount: 20, featuredCount: 4 }), "presentation");
+    // The role set differs, so a tier change parks and rebuilds instead of
+    // being silently absorbed by a tuned design.
+    expect(panelShapeKey(flat)).not.toBe(panelShapeKey(tiered));
+    expect(retargetPartnerLayout(tiered, flat, "thanks")).toBeNull();
+    // A flat wall has no lead cells at all.
+    expect(lead(flat)).toHaveLength(0);
+  });
+
+  it("a tier covering every cell is just one big grid", () => {
+    const doc = buildPartnerDesign(wall({ logoCount: 4, featuredCount: 4 }), "presentation");
+    expect(lead(doc)).toHaveLength(4);
+    expect(support(doc)).toHaveLength(0);
+  });
+
+  it("round-trips the tier through the library", () => {
+    const form = wall({ logoCount: 17, featuredCount: 4, logos: [{ src: "data:a" }] });
+    const doc = buildPartnerDesign(form, "presentation");
+    const back = formsFromDoc("partner", doc, stripFormsForSave("partner", emptyForm(), form));
+    expect(back.partner?.logoCount).toBe(17);
+    expect(back.partner?.featuredCount).toBe(4);
+    // And from the roles alone, with no snapshot.
+    expect(formsFromDoc("partner", doc).partner?.featuredCount).toBe(4);
   });
 });
 
