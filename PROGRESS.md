@@ -6,7 +6,75 @@ not required reading.
 
 ---
 
-## SESSION HANDOFF — 2026-08-04 (round 52)
+## SESSION HANDOFF — 2026-08-04 (round 53)
+
+### Round 53 — Investor Relations circle accents
+
+Gates: **158/158 vitest, tsc clean, build clean**, changed files eslint-clean.
+
+Auri's 2025 LP Forum visuals put a filled bubble and an empty white ring in
+opposite corners, cropped by the frame, and **the bubble's FILL says which
+investor thing the post is about**. That is now a picker — `ACCENT_REGISTRY` in
+`src/components/CanvasAccents.tsx`:
+
+| id | fill | for |
+|---|---|---|
+| `investor` | brand gold→red gradient | investor relations in general |
+| `lpForum` | `#EE7D4B` orange | LP Forum |
+| `investorDay` | `#FF4258` red | TechBBQ Investor Day |
+
+The two solid colours are sampled from Auri's own `FilledCircle_Orange.png` and
+`FilledCircle_red.png`; the ring stroke (1.1% of its diameter) is measured off
+`Empty Circle.png`; the four circle positions are measured off the 2025
+reference (a smaller pair biting the top-right, a larger pair the bottom-left).
+
+**Drawn as one inline SVG, NOT the source PNGs.** The artwork is two circles and
+a stroke: as SVG it stays crisp at any canvas size, costs no download, exports
+through html-to-image, and the fill can change without another asset. The PNGs
+are 5000-7000px and ~250-310KB each.
+
+**It lives on `design.accentId`, not as shape layers.** That decision is the
+whole design of this feature:
+
+- Shapes would sit in the layer stack, need role tags, and — the real problem —
+  `retargetTunedDoc` copies `tuned.design.shapes` wholesale, so toggling the
+  accent on a hand-tuned design would have been silently ignored. As a design
+  field it is carried explicitly next to `backgroundId`, in both retarget paths.
+- The builders **spread** it in (`...(form.accentId ? {accentId} : {})`) rather
+  than assigning, so a design with no accent is byte-identical to what the
+  builders produced before — the golden layout snapshots did not move.
+- `accentId` is on all three sidebar forms and restored by `formsFromDoc`, so it
+  survives a library round-trip.
+
+Rendered in `DynamicTemplate` right after the background but **outside the
+`data-canvas-bg` wrapper** — the MP4 export hides that wrapper and rasterizes
+everything else once, so accents belong with the content, not the live
+background canvas.
+
+**The picker thumbnail is NOT the real composition scaled down.** First attempt
+was, and every option looked like the same dark square: at swatch size the
+corner circles shrink to specks. It draws its own bubble-plus-ring pair instead,
+where the fill is the point.
+
+Available in Quick Templates AND in the editor's Canvas tab, so fine-tuning a
+design doesn't mean losing the ability to change it.
+
+**The event logos were already in the library** (`LP Forum White`,
+`TechBBQ Investor Day White` + Colour variants) — pick them like any other logo.
+
+**Not verified by me: a still export with an accent.** The SVG uses a
+`url(#gradient)` fill, and html-to-image clones inline SVG with its `defs`, so
+it should be fine, but nobody has eyeballed a saved JPG yet. Worth one Save
+image before this goes on a real post.
+
+Also worth knowing: on a dense wall (the 25-logo Life Science set) the
+bottom-left circles run under the last row of logos. They read fine because the
+logos are white on top, but an investor post with fewer logos is where this
+composition actually belongs.
+
+---
+
+## Previous handoff — 2026-08-04 (round 52)
 
 ### Round 52 — the lead tier, and the Investor partner set
 
