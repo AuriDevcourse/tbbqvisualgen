@@ -1789,3 +1789,41 @@ describe("Thank you wall — the headline keeps off the walls", () => {
     }
   });
 });
+
+// Six across for the support tier is an explicit instruction, and it beats the
+// orphan-avoiding score the flat wall uses. Pinned because the two rules pull in
+// opposite directions and the next tweak could silently flip it back.
+describe("Thank you wall — six smaller logos per row", () => {
+  const wall = (patch: Partial<PartnerForm> = {}): PartnerForm =>
+    ({ ...emptyPartnerForm(), layout: "thanks", ...patch });
+  const rowsOf = (doc: SimpleDoc) => {
+    const rows = new Map<number, number>();
+    for (const c of doc.design.shapes ?? []) {
+      if (!/^logo-thanks-/.test(c.simpleRole ?? "")) continue;
+      const k = Math.round(c.y * 500);
+      rows.set(k, (rows.get(k) ?? 0) + 1);
+    }
+    return [...rows.entries()].sort((a, b) => a[0] - b[0]).map(([, n]) => n);
+  };
+
+  it("puts six support logos across at 1:1 and 16:9, even at the cost of an orphan", () => {
+    for (const format of ["square", "presentation"] as PlatformFormat[]) {
+      // The investor wall: 4 main + 13 support.
+      expect(rowsOf(buildPartnerDesign(wall({ logoCount: 17, featuredCount: 4 }), format)))
+        .toEqual([4, 6, 6, 1]);
+      // 18 support divides evenly.
+      expect(rowsOf(buildPartnerDesign(wall({ logoCount: 22, featuredCount: 4 }), format)))
+        .toEqual([4, 6, 6, 6]);
+    }
+  });
+
+  it("still caps a 9:16 story at three across", () => {
+    const rows = rowsOf(buildPartnerDesign(wall({ logoCount: 17, featuredCount: 4 }), "story"));
+    expect(Math.max(...rows.slice(1))).toBe(3);
+  });
+
+  it("leaves the flat Life Science wall on its balanced 5x5", () => {
+    expect(rowsOf(buildPartnerDesign(wall({ logoCount: 25, featuredCount: 0 }), "square")))
+      .toEqual([5, 5, 5, 5, 5]);
+  });
+});

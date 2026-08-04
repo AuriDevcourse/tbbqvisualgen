@@ -986,8 +986,15 @@ export function buildPartnerDesign(form: PartnerForm, format: PlatformFormat): S
  * looks broken next to "4,4,3"), so a column count that leaves exactly one logo
  * on the last row steps down by one.
  */
+/** Most logos a wall puts across, per canvas shape. Six on anything square or
+ *  wider (Auri: "for smaller logos it should be 6 in one row"); a 9:16 story
+ *  cannot carry more than three. */
+export function thanksMaxColumns(aspect: number): number {
+  return aspect >= 0.9 ? 6 : 3;
+}
+
 export function thanksGridColumns(count: number, aspect: number, minCols = 1): number {
-  const maxCols = aspect >= 1.3 ? 6 : aspect >= 0.9 ? 5 : 3;
+  const maxCols = thanksMaxColumns(aspect);
   const ideal = Math.round(Math.sqrt(Math.max(1, count) * aspect * 1.15));
   // `minCols` is a floor the caller needs for a reason the score cannot see —
   // the support tier of a two-tier wall MUST be wider than the lead tier, or
@@ -1074,12 +1081,22 @@ function buildThanksDesign(form: PartnerForm, format: PlatformFormat): SimpleDoc
   // bigger — 4 across instead of 6 is a 1.5× wider cell, so no size multiplier
   // is needed and the two tiers still share one margin. The lead tier is a
   // single row whenever it fits across; the rest flows normally.
-  const maxCols = W / H >= 1.3 ? 6 : W / H >= 0.9 ? 5 : 3;
+  const maxCols = thanksMaxColumns(W / H);
   let leadCols = lead ? Math.max(1, Math.min(lead, maxCols - 1)) : 0;
-  // The support tier is forced at least one column WIDER than the lead tier.
-  // Without that floor a 9:16 story put 16 support logos in 2 columns against 3
-  // lead columns and rendered the support partners BIGGER than the main ones.
-  const restCols = rest ? thanksGridColumns(rest, W / H, leadCols + 1) : 0;
+  // The support tier FILLS the row — six across on square or wider. That is an
+  // explicit instruction ("for smaller logos it should be 6 in one row") and it
+  // overrides the orphan-avoiding score the flat wall uses: 13 support logos
+  // flow 6, 6, 1 rather than 5, 5, 3.
+  //
+  // The `leadCols + 1` floor stays. Cell size comes from the column count, so
+  // the support tier being WIDER than the lead tier is the whole mechanism
+  // behind "the main partners are bigger".
+  // A wall with no lead tier has no "smaller" logos, so it keeps the balanced
+  // auto rule — the 25-logo Life Science wall stays a clean 5×5 rather than
+  // 6,6,6,6,1.
+  const restCols = rest
+    ? (lead ? Math.min(rest, Math.max(leadCols + 1, maxCols)) : thanksGridColumns(rest, W / H))
+    : 0;
   // Too few support logos to be wider? Narrow the LEAD tier instead, so the
   // hierarchy still reads (4 main partners stacked over 2 support ones).
   if (lead && rest && restCols <= leadCols) leadCols = Math.max(1, restCols - 1);

@@ -32,24 +32,26 @@ export function isAccentShape(s: { simpleRole?: string }): boolean {
 }
 
 /**
- * The composition, MEASURED off the 2025 reference rather than eyeballed: a
- * least-squares circle fit to the orange mask and the white ring mask in each
- * half of the reference screenshot, with the ring's overlap over the bubble
- * excluded from the bubble's boundary (it corrupted the first fit) and pixels
- * near the frame excluded (those arcs are clipped).
+ * The composition, taken from **Auri's own approved wall** — the "Thank You"
+ * library item (`29f38736`), read straight out of its doc rather than eyeballed
+ * off a screenshot. He moved all four circles and shrank the bottom-left pair,
+ * and said "this is the way I like it to look".
  *
- * The first eyeballed pass had both RINGS far too small and too close to their
- * bubble — the fit says each ring is nearly twice its bubble's radius and is
- * mostly cropped, which is why the wall "wasn't placed correctly".
+ * Both earlier passes are worth knowing about, so nobody re-derives them:
+ * eyeballing put the rings far too small; a least-squares fit to the 2025
+ * reference screenshot got the radii right but still had every circle in the
+ * wrong place, because the reference was a different composition. The tuned doc
+ * is the authority.
  *
  * x/y are fractions of width/height; r is a fraction of the SHORTER side, so
- * the circles read the same in 1:1, 16:9 and 9:16.
+ * the circles read the same in 1:1, 16:9 and 9:16. His doc is square, where all
+ * three denominators coincide, so its numbers map across directly.
  */
 const CIRCLES = [
-  { role: "accent.0.ring", x: 0.851, y: 0.020, r: 0.171, ring: true },
-  { role: "accent.0.bubble", x: 0.937, y: 0.125, r: 0.123, ring: false },
-  { role: "accent.1.ring", x: -0.040, y: 0.861, r: 0.217, ring: true },
-  { role: "accent.1.bubble", x: 0.161, y: 1.016, r: 0.183, ring: false },
+  { role: "accent.0.ring", x: 0.937, y: 0.000, r: 0.171, ring: true },
+  { role: "accent.0.bubble", x: 0.993, y: 0.085, r: 0.123, ring: false },
+  { role: "accent.1.ring", x: -0.063, y: 0.995, r: 0.154, ring: true },
+  { role: "accent.1.bubble", x: 0.139, y: 1.000, r: 0.139, ring: false },
 ] as const;
 
 /** Ring stroke as a share of the ring's own diameter, from `Empty Circle.png`. */

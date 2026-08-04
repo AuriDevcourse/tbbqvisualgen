@@ -6,7 +6,47 @@ not required reading.
 
 ---
 
-## SESSION HANDOFF — 2026-08-04 (round 55)
+## SESSION HANDOFF — 2026-08-04 (round 56)
+
+### Round 56 — the defaults now come from Auri's own approved wall
+
+Gates: **171/171 vitest, tsc clean, build clean**.
+
+Auri tuned a wall, saved it as the **"Thank You"** library item
+(`29f38736-e77f-4e6d-8f35-c8aa7b84e041`), and said "this is the way I like it to
+look". Its geometry is now the default. **Read the doc, don't re-measure a
+screenshot** — `fetch('/api/library/<id>')` from the signed-in browser returns
+the whole thing, and a tuned doc is the only authority worth having.
+
+He moved all four circles and shrank the bottom-left pair:
+
+| role | was | now |
+|---|---|---|
+| accent.0.ring | 0.851, 0.020, r 0.171 | **0.937, 0.000, r 0.171** |
+| accent.0.bubble | 0.937, 0.125, r 0.123 | **0.993, 0.085, r 0.123** |
+| accent.1.ring | −0.040, 0.861, r 0.217 | **−0.063, 0.995, r 0.154** |
+| accent.1.bubble | 0.161, 1.016, r 0.183 | **0.139, 1.000, r 0.139** |
+
+That is the third and final pass on this geometry: eyeballing had the rings far
+too small, a least-squares fit to the 2025 reference got the radii right but the
+positions were still off (the reference is a different composition), and the
+tuned doc settles it.
+
+**"For smaller logos it should be 6 in one row."** The support tier now fills the
+row — `thanksMaxColumns()` is 6 on anything square or wider, 3 on a 9:16 story —
+and that **overrides the orphan-avoiding score**, so the investor wall's 13
+support logos flow **6, 6, 1** rather than 5, 5, 3. Consequence to know: a lone
+logo on the last row is now possible, and 12 or 18 support logos divide evenly if
+that ever matters.
+
+**A test caught the obvious over-reach**: forcing 6 columns hit the FLAT wall too
+and turned the 25-logo Life Science set into 6,6,6,6,1. A wall with no lead tier
+has no "smaller" logos, so it keeps the balanced auto rule and stays a clean 5×5.
+Both are pinned now.
+
+---
+
+## Previous handoff — 2026-08-04 (round 55)
 
 ### Round 55 — the headline was touching the walls
 
