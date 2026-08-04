@@ -5,7 +5,7 @@ import type { DesignConfig, PlatformFormat, TextElement, ShapeElement, ShapeBord
 import { FORMAT_DIMENSIONS, reconcileLayerOrder } from "@/types/template";
 import { COLORS, FONTS, GRADIENT_TEXT_CSS, GRADIENT_BORDER_CSS } from "@/lib/constants";
 import { CanvasBackground } from "@/components/CanvasBackground";
-import { CanvasAccents } from "@/components/CanvasAccents";
+import { isAccentShape } from "@/lib/accents";
 import type { CanvasImage } from "@/components/ImagePlacer";
 import { computeSnapTargets, snapBbox } from "@/lib/snap";
 import type { Bbox } from "@/lib/snap";
@@ -299,10 +299,16 @@ export function DynamicTemplate({
   // Compute effective layer stack (bottom→top). Must include shapes — if any
   // id is missing from this array, reconcileLayerOrder strips it from stored
   // order too and zOf returns 0, which sends the element behind everything.
+  // The Investor Relations accent circles are decoration, so they default to the
+  // BOTTOM of the stack — below the photos and logos, not above them like an
+  // ordinary shape. They are still normal layers: drag one forward in the Layers
+  // panel and the stored order wins.
+  const shapeIds = (design.shapes ?? []).map((s) => ({ id: `shape:${s.id}`, accent: isAccentShape(s) }));
   const defaultOrder = [
+    ...shapeIds.filter((s) => s.accent).map((s) => s.id),
     "overlay",
     ...(canvasImages?.map((ci) => `image:${ci.id}`) ?? []),
-    ...((design.shapes ?? []).map((s) => `shape:${s.id}`)),
+    ...shapeIds.filter((s) => !s.accent).map((s) => s.id),
     ...design.texts.map((t) => `text:${t.id}`),
     "tbbqLogo",
   ];
@@ -609,10 +615,6 @@ export function DynamicTemplate({
         <CanvasBackground id={design.backgroundId} width={dims.width} height={dims.height} paused={paused} />
       </div>
 
-      {/* Investor Relations circle accents — behind every content layer, but
-          OUTSIDE the background wrapper: the video export hides that wrapper and
-          rasterizes the rest once, so accents belong with the content. */}
-      <CanvasAccents id={design.accentId} width={dims.width} height={dims.height} />
 
       {/* Color overlay */}
       {showOverlay && (

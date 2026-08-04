@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { accentShapes, isAccentShape, syncAccentShapes, applyAccent } from "./accents";
 import { adoptLegacyPanelRoles, buildPartnerDesign, buildSalesDesign, buildSimpleDesign, bundleCoverage, dedupeSpeakerRoles, docKindOf, emptyForm, parkDoc, emptyPartnerForm, emptyPerson, emptySalesForm, formsFromDoc, isBlankPerson, mergePersonDescription, migrateLegacyPanelDoc, panelShapeKey, partnerLayoutOf, retargetPartnerLayout, retargetSalesLayout, retargetTunedDoc, salesLayoutOf, sampleFourthSpeaker, simpleExportName, stripFormsForSave, syncPanelChrome, syncPartnerChrome, thanksGridColumns, type PartnerForm, type SalesForm, type SimpleDoc, type SimpleForm } from "./simpleLayout";
 import type { PlatformFormat } from "@/types/template";
 
@@ -1645,5 +1646,113 @@ describe("investor accents — carried like the background", () => {
     // With a snapshot, and reconstructed from the doc alone.
     expect(formsFromDoc("panel", panelDoc, stripFormsForSave("panel", panelForm, emptyPartnerForm())).form?.accentId).toBe("investorDay");
     expect(formsFromDoc("panel", panelDoc).form?.accentId).toBe("investorDay");
+  });
+});
+
+// The accents are real SHAPE LAYERS, not a background SVG — the first cut was
+// the latter and Auri's note back was "I should be able to move them in
+// fine-tuning". So: the tuned doc owns their geometry, the form owns the choice.
+describe("investor accents — movable layers", () => {
+  const accentsOf = (doc: SimpleDoc) => (doc.design.shapes ?? []).filter(isAccentShape);
+
+  it("emits two bubbles and two rings, at the BOTTOM of the shape stack", () => {
+    const doc = buildSimpleDesign({ ...emptyForm(), accentId: "lpForum" }, "square");
+    const shapes = doc.design.shapes ?? [];
+    expect(accentsOf(doc).map((s) => s.simpleRole)).toEqual([
+      "accent.0.ring", "accent.0.bubble", "accent.1.ring", "accent.1.bubble",
+    ]);
+    // First four, so the default layer order can drop them behind the content.
+    expect(shapes.slice(0, 4).every(isAccentShape)).toBe(true);
+    expect(shapes.slice(4).some(isAccentShape)).toBe(false);
+    // Rings are white outlines, bubbles are filled.
+    const rings = accentsOf(doc).filter((s) => s.fillType === "outline");
+    expect(rings).toHaveLength(2);
+    expect(rings.every((s) => s.color1 === "#FFFFFF" && s.strokeWidth > 0)).toBe(true);
+    expect(accentsOf(doc).every((s) => s.type === "circle")).toBe(true);
+  });
+
+  it("keeps the circles round in every format", () => {
+    for (const format of ["square", "presentation", "story"] as PlatformFormat[]) {
+      const doc = buildSimpleDesign({ ...emptyForm(), accentId: "investor" }, format);
+      const { width, height } = doc.customSize;
+      for (const s of accentsOf(doc)) {
+        // width/height are per-axis fractions, so a circle's pixel size must match.
+        expect(s.width * width).toBeCloseTo(s.height * height, 6);
+      }
+    }
+  });
+
+  it("the gradient fill is the brand gradient, the others are solid", () => {
+    const grad = accentsOf(buildSimpleDesign({ ...emptyForm(), accentId: "investor" }, "square"))
+      .find((s) => s.fillType === "fill");
+    expect(grad?.colorType).toBe("gradient");
+    expect(grad?.color1).not.toBe(grad?.color2);
+    const solid = accentsOf(buildSimpleDesign({ ...emptyForm(), accentId: "investorDay" }, "square"))
+      .find((s) => s.fillType === "fill");
+    expect(solid?.colorType).toBe("solid");
+    expect(solid?.color1).toBe(solid?.color2);
+  });
+
+  it("a retarget keeps a dragged circle where the user put it, and restains it", () => {
+    const form = { ...emptyForm(), accentId: "lpForum" };
+    const built = buildSimpleDesign(form, "square");
+    // Hand-tune: drag and shrink the first bubble.
+    const tuned: SimpleDoc = {
+      ...built,
+      design: {
+        ...built.design,
+        shapes: (built.design.shapes ?? []).map((s) =>
+          s.simpleRole === "accent.0.bubble" ? { ...s, x: 0.4, y: 0.4, width: 0.1, height: 0.1 } : s),
+      },
+    };
+    const out = retargetTunedDoc(tuned, buildSimpleDesign({ ...form, accentId: "investorDay" }, "square"));
+    const bubble = (out?.design.shapes ?? []).find((s) => s.simpleRole === "accent.0.bubble");
+    expect(bubble?.x).toBe(0.4);
+    expect(bubble?.width).toBe(0.1);
+    expect(bubble?.color1).toBe("#FF4258");
+  });
+
+  it("turning them off removes the layers", () => {
+    const form = { ...emptyForm(), accentId: "lpForum" };
+    const built = buildSimpleDesign(form, "square");
+    const off = retargetTunedDoc(built, buildSimpleDesign({ ...form, accentId: undefined }, "square"));
+    expect(accentsOf(off as SimpleDoc)).toHaveLength(0);
+    expect(off?.design.accentId).toBeUndefined();
+    // Hand-drawn shapes are untouched by the removal.
+    expect((off?.design.shapes ?? []).length).toBe((buildSimpleDesign({ ...form, accentId: undefined }, "square").design.shapes ?? []).length);
+  });
+
+  it("a deleted accent layer stays deleted", () => {
+    const form = { ...emptyForm(), accentId: "lpForum" };
+    const built = buildSimpleDesign(form, "square");
+    const withoutRing: SimpleDoc = {
+      ...built,
+      design: { ...built.design, shapes: (built.design.shapes ?? []).filter((s) => s.simpleRole !== "accent.0.ring") },
+    };
+    const out = retargetTunedDoc(withoutRing, buildSimpleDesign(form, "square"));
+    expect((out?.design.shapes ?? []).some((s) => s.simpleRole === "accent.0.ring")).toBe(false);
+    expect(accentsOf(out as SimpleDoc)).toHaveLength(3);
+  });
+
+  it("syncAccentShapes leaves an accent-free doc alone", () => {
+    const plain = (buildSimpleDesign(emptyForm(), "square").design.shapes ?? []);
+    expect(syncAccentShapes(plain, [])).toBe(plain);
+  });
+
+  it("applyAccent switches them straight on a design (the editor's path)", () => {
+    const design = buildSimpleDesign(emptyForm(), "square").design;
+    const on = applyAccent(design, "investor", 1500, 1500);
+    expect(on.accentId).toBe("investor");
+    expect((on.shapes ?? []).filter(isAccentShape)).toHaveLength(4);
+    // Ids are unique, or the renderer would key two layers the same.
+    const ids = (on.shapes ?? []).map((s) => s.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    const off = applyAccent(on, undefined, 1500, 1500);
+    expect((off.shapes ?? []).filter(isAccentShape)).toHaveLength(0);
+  });
+
+  it("accentShapes is empty for an unknown or missing id", () => {
+    expect(accentShapes(undefined, 1500, 1500, () => "x")).toEqual([]);
+    expect(accentShapes("nope", 1500, 1500, () => "x")).toEqual([]);
   });
 });

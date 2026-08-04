@@ -3,8 +3,9 @@
 import { FormatPicker } from "@/components/FormatPicker";
 import { BackgroundPicker } from "@/components/BackgroundPicker";
 import { OverlayPicker } from "@/components/OverlayPicker";
-import { ACCENT_OPTIONS, AccentThumbnail } from "@/components/CanvasAccents";
-import type { DesignConfig, PlatformFormat } from "@/types/template";
+import { AccentThumbnail } from "@/components/CanvasAccents";
+import { ACCENT_OPTIONS, applyAccent } from "@/lib/accents";
+import { FORMAT_DIMENSIONS, type DesignConfig, type PlatformFormat } from "@/types/template";
 
 // TechBBQ logo color options. Swatches mirror the three logo PNGs.
 const LOGO_STYLES: { id: NonNullable<DesignConfig["logoStyle"]>; label: string; swatch: React.CSSProperties }[] = [
@@ -27,6 +28,9 @@ interface StepCanvasProps {
 export function StepCanvas({
   format, setFormat, customSize, setCustomSize, design, setDesign,
 }: StepCanvasProps) {
+  // The accent circles are sized off the canvas, so switching them needs the
+  // real dimensions — same rule the editor uses for its own `dims`.
+  const accentDims = format === "custom" ? customSize : (FORMAT_DIMENSIONS[format] ?? FORMAT_DIMENSIONS.square);
   return (
     <div className="flex flex-col gap-5">
       <section className="flex flex-col gap-2">
@@ -59,7 +63,7 @@ export function StepCanvas({
             return (
               <button
                 key={opt.id ?? "none"}
-                onClick={() => setDesign({ ...design, accentId: opt.id })}
+                onClick={() => setDesign(applyAccent(design, opt.id, accentDims.width, accentDims.height))}
                 aria-pressed={active}
                 title={opt.id ? `${opt.label} — circle accents in opposite corners` : "No circle accents"}
                 className={`flex-1 flex flex-col items-center gap-1 px-1.5 py-1.5 rounded-lg border text-[10px] leading-tight transition-all ${

@@ -81,7 +81,14 @@ export function LayersPanel({
       const sh = (design.shapes ?? []).find((s) => s.id === shapeId);
       if (sh) {
         const labelTitle = sh.type[0].toUpperCase() + sh.type.slice(1);
-        rows.push({ id: sh.id, type: "shape", name: `${labelTitle} · ${sh.id.slice(-4)}`, hidden: sh.hidden, locked: sh.locked, hasContent: true, layerId });
+        // The investor accents are the one shape set a user goes looking for by
+        // name ("move the bubble"), so they say what they are instead of
+        // "Circle · a3f9".
+        const accent = /^accent\.(\d+)\.(bubble|ring)$/.exec(sh.simpleRole ?? "");
+        const name = accent
+          ? `Accent ${accent[2]} ${Number(accent[1]) + 1}`
+          : `${labelTitle} · ${sh.id.slice(-4)}`;
+        rows.push({ id: sh.id, type: "shape", name, hidden: sh.hidden, locked: sh.locked, hasContent: true, layerId });
       }
     } else if (layerId === "overlay") {
       if (design.overlayColor && (design.overlayOpacity ?? 0) > 0) {

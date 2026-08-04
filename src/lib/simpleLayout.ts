@@ -1,6 +1,7 @@
 // Turns the simple-mode form into a full canvas doc (design + images), reusing
 // the same rendering engine as the pro editor. Pure function — no React.
 import { FORMAT_DIMENSIONS, type DesignConfig, type PlatformFormat, type TextElement, type ShapeElement } from "@/types/template";
+import { accentShapes, syncAccentShapes } from "@/lib/accents";
 import type { CanvasImage } from "@/components/ImagePlacer";
 
 export interface SimplePerson {
@@ -143,7 +144,11 @@ export function retargetTunedDoc(tuned: SimpleDoc, rebuilt: SimpleDoc): SimpleDo
       // CURRENT pick across, else switching backgrounds does nothing while a
       // tuned design is active.
       backgroundId: rebuilt.design.backgroundId,
+      // The accent CHOICE is a form field but its circles are hand-movable
+      // layers, so the tuned doc keeps their geometry and the rebuild supplies
+      // the fill (or removes them).
       accentId: rebuilt.design.accentId,
+      shapes: syncAccentShapes(tuned.design.shapes ?? [], rebuilt.design.shapes ?? []),
       texts: tuned.design.texts.map((t) => carryWords(t, want)),
     },
   };
@@ -399,9 +404,17 @@ function retargetSlotDoc(tuned: SimpleDoc, rebuilt: SimpleDoc, slotRoles: readon
     design: {
       ...tuned.design,
       backgroundId: rebuilt.design.backgroundId,
+      // The accent CHOICE is a form field but its circles are hand-movable
+      // layers, so the tuned doc keeps their geometry and the rebuild supplies
+      // the fill (or removes them).
       accentId: rebuilt.design.accentId,
       texts: tuned.design.texts.map((t) => carryWords(t, want)),
-      shapes: [...(tuned.design.shapes ?? []).filter((s) => !dropShapeIds.has(s.id)), ...addShapes],
+      // Slot reconciliation first (frames swapped for images), then the accents
+      // on whatever survived.
+      shapes: syncAccentShapes(
+        [...(tuned.design.shapes ?? []).filter((s) => !dropShapeIds.has(s.id)), ...addShapes],
+        rebuilt.design.shapes ?? [],
+      ),
       layerOrder: tuned.design.layerOrder?.map((l) => orderSwap.get(l) ?? l),
     },
   };
@@ -849,7 +862,8 @@ export function buildPartnerDesign(form: PartnerForm, format: PlatformFormat): S
   const vs = S / H;
 
   const texts: TextElement[] = [];
-  const shapes: ShapeElement[] = [];
+  // Accent circles first, so they sit at the BOTTOM of the shape stack.
+  const shapes: ShapeElement[] = accentShapes(form.accentId, W, H, () => uid("shape"));
   const canvasImages: CanvasImage[] = [];
 
   // ── Label chip, top-center — same house chip as the panel's session label
@@ -1013,7 +1027,8 @@ function buildThanksDesign(form: PartnerForm, format: PlatformFormat): SimpleDoc
   const vs = S / H;
 
   const texts: TextElement[] = [];
-  const shapes: ShapeElement[] = [];
+  // Accent circles first, so they sit at the BOTTOM of the shape stack.
+  const shapes: ShapeElement[] = accentShapes(form.accentId, W, H, () => uid("shape"));
   const canvasImages: CanvasImage[] = [];
 
   // ── Headline, centred at the top. Sized to fit the longest line the user
@@ -1180,7 +1195,8 @@ export function buildSalesDesign(form: SalesForm, format: PlatformFormat): Simpl
   const vs = S / H; // one line of a font-fraction, expressed in H-fractions
 
   const texts: TextElement[] = [];
-  const shapes: ShapeElement[] = [];
+  // Accent circles first, so they sit at the BOTTOM of the shape stack.
+  const shapes: ShapeElement[] = accentShapes(form.accentId, W, H, () => uid("shape"));
   const canvasImages: CanvasImage[] = [];
 
   const lineCount = (s: string) => (s.trim() ? s.split("\n").length : 0);
@@ -1429,7 +1445,8 @@ export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): Sim
   const vs = S / H;
 
   const texts: TextElement[] = [];
-  const shapes: ShapeElement[] = [];
+  // Accent circles first, so they sit at the BOTTOM of the shape stack.
+  const shapes: ShapeElement[] = accentShapes(form.accentId, W, H, () => uid("shape"));
   const canvasImages: CanvasImage[] = [];
 
   // Left-aligned text helper. `x` is the left edge (align:left anchors there).
