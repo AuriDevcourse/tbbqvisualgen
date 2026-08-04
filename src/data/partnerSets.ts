@@ -141,14 +141,16 @@ export const PARTNER_SETS: PartnerSet[] = [
   {
     id: "life-science",
     name: "Life Science",
-    headline: "Thank you to\nour partners",
+    // One line, no Enter: the builder wraps it to the width its cap allows, so
+    // a long headline lands at the same size as a short one. A typed break wins.
+    headline: "Thank you to our partners",
     featuredCount: 0,
     logos: LIFE_SCIENCE_PARTNERS,
   },
   {
     id: "investor",
     name: "Investor",
-    headline: "Thank you to\nour investor partners",
+    headline: "Thank you to our investor partners",
     // The four main partners lead; the support partners fill the grid below.
     featuredCount: 4,
     logos: INVESTOR_PARTNERS,

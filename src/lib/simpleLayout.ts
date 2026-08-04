@@ -199,7 +199,10 @@ function resizeLabelChip(doc: SimpleDoc, oldContent: string | undefined, role = 
 function carryWords(t: TextElement, want: Map<string, string>): TextElement {
   if (!t.simpleRole || !want.has(t.simpleRole)) return t;
   const next = want.get(t.simpleRole) as string;
-  const caption = /\.(name|title|company|secondary)$/.test(t.simpleRole);
+  // `thanks.headline` joins the captions: the builder WRAPS it, so its newlines
+  // are layout rather than the user's Enter presses, and a hand re-break in the
+  // editor must survive a form edit that didn't change the words.
+  const caption = /\.(name|title|company|secondary)$/.test(t.simpleRole) || t.simpleRole === "thanks.headline";
   const flat = (s: string) => s.split("\n").join(" ");
   if (caption && flat(t.content) === flat(next)) return t;
   return t.content === next ? t : { ...t, content: next };
@@ -701,7 +704,7 @@ export function emptyPartnerForm(): PartnerForm {
     logos: [],
     logoCount: 12,
     featuredCount: 0,
-    headline: "Thank you to\nour partners",
+    headline: "Thank you to our partners",
     backgroundId: "orb7",
   };
 }
@@ -986,6 +989,33 @@ export function buildPartnerDesign(form: PartnerForm, format: PlatformFormat): S
  * looks broken next to "4,4,3"), so a column count that leaves exactly one logo
  * on the last row steps down by one.
  */
+/**
+ * Average glyph width of the thank-you headline's font (Onest, weight 800,
+ * sentence case), MEASURED with canvas `measureText` rather than guessed:
+ * 0.486–0.532 per character across the real strings. Uppercase would be
+ * 0.635–0.658 — worth knowing if the headline ever goes back to caps.
+ */
+export const THANKS_HEADLINE_GLYPH = 0.54;
+
+/** The headline never grows past this fraction of the shorter side, so a
+ *  two-word headline can't fill the canvas. Every wall whose lines fit inside
+ *  the cap's width therefore renders at exactly the same size. */
+export const THANKS_HEADLINE_CAP = 0.108;
+
+/** Greedy word wrap to a character budget. Words longer than the budget get
+ *  their own line rather than being broken mid-word. */
+function wrapWords(text: string, maxChars: number): string[] {
+  const out: string[] = [];
+  let line = "";
+  for (const word of text.split(/\s+/).filter(Boolean)) {
+    const trial = line ? `${line} ${word}` : word;
+    if (trial.length > maxChars && line) { out.push(line); line = word; }
+    else line = trial;
+  }
+  if (line) out.push(line);
+  return out.length ? out : [text];
+}
+
 /** Most logos a wall puts across, per canvas shape. Six on anything square or
  *  wider (Auri: "for smaller logos it should be 6 in one row"); a 9:16 story
  *  cannot carry more than three. */
@@ -1038,29 +1068,36 @@ function buildThanksDesign(form: PartnerForm, format: PlatformFormat): SimpleDoc
   const shapes: ShapeElement[] = accentShapes(form.accentId, W, H, () => uid("shape"));
   const canvasImages: CanvasImage[] = [];
 
-  // ── Headline, centred at the top. Sized to fit the longest line the user
-  // typed (their own Enter presses are honoured), capped so a short headline
-  // can't grow absurdly large. ──
+  // ── Headline, centred at the top. ──
   let gridTop = 0.12; // top of the logo block when there is no headline
   const headline = form.headline.trim();
   if (headline) {
     // 0.82, not the 0.88 the margin allows: a headline that only just clears the
-    // margin reads as touching the wall. "THANK YOU TO OUR INVESTOR PARTNERS"
-    // ran edge to edge at 0.88.
+    // margin reads as touching the wall.
     const avail = 0.82;
-    const longest = Math.max(1, ...headline.split("\n").map((l) => l.trim().length));
-    // 0.62 = the average glyph width of uppercase Onest at weight 800, MEASURED
-    // off a 1500px export (1457px of text at fontSize 112 over 21 characters).
-    // The 0.56 guess before it made every long headline ~10% too wide.
-    const fFrac = Math.min(0.108, (avail * W) / (longest * 0.62) / S);
-    const lines = headline.split("\n").length;
+    // MEASURED with the real font (Onest, weight 800, canvas measureText):
+    // sentence case averages 0.486–0.532 per character, uppercase 0.635–0.658.
+    // The headline renders as typed now, so 0.54 is the sizing constant.
+    const glyph = THANKS_HEADLINE_GLYPH;
+    // A LONG headline used to come out much smaller than a short one — "our
+    // investor partners" at 108px against "our partners" at the 162px cap —
+    // because both were fitted to their longest line and only the short one
+    // reached the cap. Wrapping to the width the CAP allows fixes that: the
+    // long headline becomes three lines at full size instead of two small ones,
+    // so every wall's headline is the same size. The user's own Enter presses
+    // still win; this only decides where an unbroken headline breaks.
+    const maxChars = Math.max(6, Math.floor((avail * W) / (THANKS_HEADLINE_CAP * S * glyph)));
+    const lines = headline.includes("\n") ? headline.split("\n") : wrapWords(headline, maxChars);
+    const content = lines.join("\n");
+    const longest = Math.max(1, ...lines.map((l) => l.trim().length));
+    const fFrac = Math.min(THANKS_HEADLINE_CAP, (avail * W) / (longest * glyph) / S);
     const lineH = 0.98;
-    const blockH = lines * fFrac * vs * lineH;
+    const blockH = lines.length * fFrac * vs * lineH;
     texts.push({
-      id: uid("text"), content: headline,
+      id: uid("text"), content,
       position: { x: 0.5, y: 0.11 + blockH / 2 },
       fontSize: Math.round(fFrac * S), align: "center",
-      weight: 800, uppercase: true, font: "onest",
+      weight: 800, font: "onest",
       color: "#FFFFFF", lineHeight: lineH,
       simpleRole: "thanks.headline",
     });
@@ -2141,7 +2178,13 @@ export function formsFromDoc(kind: string, doc: SimpleDoc, saved?: SimpleFormsSn
         // split, which the roles carry.
         logoCount: thanksRoles.length || base.logoCount,
         featuredCount: thanksRoles.length ? thanksLeadCount(doc) : base.featuredCount,
-        headline: saved?.partner ? base.headline : (textByRole.get("thanks.headline") ?? base.headline),
+        // Newlines the BUILDER inserted (it wraps an unbroken headline to fill
+        // the width) flatten back to spaces, the same contract the panel
+        // captions use — else every load would re-freeze the wrap as if the user
+        // had typed it. A snapshot, when there is one, carries the exact text.
+        headline: saved?.partner
+          ? base.headline
+          : (textByRole.get("thanks.headline")?.split("\n").join(" ") ?? base.headline),
         backgroundId: doc.design.backgroundId || base.backgroundId,
         accentId: doc.design.accentId ?? base.accentId,
       },

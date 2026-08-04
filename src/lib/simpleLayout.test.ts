@@ -1454,7 +1454,8 @@ describe("retargetPartnerLayout — the thank-you wall", () => {
     const rebuilt = buildPartnerDesign({ ...wall(2), headline: "Tak til vores partnere" }, "square");
     const h = retargetPartnerLayout(tuned, rebuilt, "thanks")?.design.texts
       .find((t) => t.simpleRole === "thanks.headline");
-    expect(h?.content).toBe("Tak til vores partnere");
+    // The builder wraps the headline, so compare the WORDS.
+    expect(h?.content.split(/\s+/).join(" ")).toBe("Tak til vores partnere");
     expect(h?.position).toEqual({ x: 0.3, y: 0.2 });
   });
 });
@@ -1762,9 +1763,9 @@ describe("investor accents — movable layers", () => {
 // it aimed at the full margin. Both are now measured, and this is the guard.
 describe("Thank you wall — the headline keeps off the walls", () => {
   const MIN_SIDE_MARGIN = 0.08;
-  // The same average glyph width the builder sizes with, measured off a real
-  // 1500px export of uppercase Onest at weight 800.
-  const GLYPH = 0.62;
+  // The same average glyph width the builder sizes with — Onest 800 in sentence
+  // case, measured with canvas measureText.
+  const GLYPH = 0.54;
 
   it("leaves a real margin either side, in every format, short or long", () => {
     const NL = "\n";
@@ -1782,8 +1783,11 @@ describe("Thank you wall — the headline keeps off the walls", () => {
         );
         const t = doc.design.texts.find((x) => x.simpleRole === "thanks.headline");
         expect(t).toBeDefined();
-        const longest = Math.max(...headline.split(NL).map((l) => l.trim().length));
-        const extent = (longest * (t as { fontSize: number }).fontSize * GLYPH) / doc.customSize.width;
+        // The layer's OWN content, not the input: the builder wraps an unbroken
+        // headline, so the rendered lines are what has to clear the margin.
+        const layer = t as { fontSize: number; content: string };
+        const longest = Math.max(...layer.content.split(NL).map((l) => l.trim().length));
+        const extent = (longest * layer.fontSize * GLYPH) / doc.customSize.width;
         expect(extent).toBeLessThanOrEqual(1 - 2 * MIN_SIDE_MARGIN);
       }
     }

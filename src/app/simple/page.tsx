@@ -1433,7 +1433,7 @@ export default function SimplePage() {
                 The thank-you wall leads with its own headline instead. */}
             <section className="flex flex-col gap-3">
               {partner.layout === "thanks" ? (
-                <Field label="Headline" hint="Enter = new line" multiline value={partner.headline} onChange={(v) => setPartner((p) => ({ ...p, headline: v }))} placeholder={"Thank you to\nour partners"} />
+                <Field label="Headline" hint="Enter = new line" multiline value={partner.headline} onChange={(v) => setPartner((p) => ({ ...p, headline: v }))} placeholder="Thank you to our partners" />
               ) : (
                 <Field label="Label" value={partner.label} onChange={(v) => setPartner((p) => ({ ...p, label: v }))} placeholder="Partner Announcement" />
               )}

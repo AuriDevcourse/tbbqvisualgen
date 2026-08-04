@@ -6,7 +6,51 @@ not required reading.
 
 ---
 
-## SESSION HANDOFF — 2026-08-04 (round 56)
+## SESSION HANDOFF — 2026-08-04 (round 57)
+
+### Round 57 — one headline size for every wall, and no more caps
+
+Gates: **171/171 vitest, tsc clean, build clean**.
+
+**"Why is the investor headline much smaller than the Life Science one?"** Because
+both were fitted to their longest line and only the short one reached the size
+cap: "our investor partners" (21 chars) came out at 108px against "our partners"
+at the 162px cap. A longer headline was simply a smaller headline.
+
+**Fix: wrap to the width the CAP allows, instead of shrinking to fit the line.**
+The builder now word-wraps an unbroken headline at ~14 characters, so
+"Thank you to our investor partners" becomes three lines at full size rather than
+two small ones. Every wall's headline is now the same size. The set headlines
+are single-line strings for exactly this reason — **a typed Enter still wins**,
+and that is the escape hatch if three lines is too heavy: type the break and get
+two lines at a slightly smaller size.
+
+**The headline renders as typed, not uppercased** (`uppercase: true` is gone).
+
+**Glyph widths are now MEASURED, not guessed** — `canvas.measureText` with the
+real font in the real page:
+
+| | per character |
+|---|---|
+| Onest 800, sentence case | 0.486–0.532 → **0.54** used |
+| Onest 800, uppercase | 0.635–0.658 (so the old 0.62 was still low) |
+
+Two knock-on contracts, both of which a test caught:
+
+- **`thanks.headline` counts as a CAPTION in `carryWords`.** Its newlines are now
+  layout, not the user's Enter presses, so when the words are unchanged the tuned
+  layer keeps its own breaks — otherwise a hand re-break in the editor was
+  overwritten by the builder's wrap on the next form edit.
+- **`formsFromDoc` flattens the headline's newlines back to spaces** when
+  reconstructing from layers, the same contract the panel captions use. Without
+  it, every load re-froze the builder's wrap as if the user had typed it.
+
+Note for anyone confused by an old design: **an existing custom wall keeps its
+2-line headline** until Revert, because the caption rule protects its breaks.
+
+---
+
+## Previous handoff — 2026-08-04 (round 56)
 
 ### Round 56 — the defaults now come from Auri's own approved wall
 
