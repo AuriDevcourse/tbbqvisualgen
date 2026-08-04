@@ -6,7 +6,57 @@ not required reading.
 
 ---
 
-## SESSION HANDOFF — 2026-08-04 (round 53)
+## SESSION HANDOFF — 2026-08-04 (round 54)
+
+### Round 54 — the accents became movable layers, and were re-measured
+
+Gates: **167/167 vitest, tsc clean, build clean**, changed files eslint-clean.
+
+Two things came straight back from Auri on round 53's accents: **"I should be
+able to move them in fine-tuning"** and **"it's clearly not placed correctly."**
+Both are fixed, and the first one reverses a design decision from one round
+earlier — worth reading before touching this again.
+
+**They are real SHAPE LAYERS now, not a background SVG.** `src/lib/accents.ts`
+(pure, no React) emits four `circle` shapes tagged `accent.0.ring`,
+`accent.0.bubble`, `accent.1.ring`, `accent.1.bubble`. In the editor they are
+ordinary layers: drag, resize, recolour, change fill mode, hide, delete,
+reorder. Round 53 put them in the background layer specifically to dodge the
+retarget problem; the cost was that they could not be touched, which was the
+wrong trade. The retarget problem is instead solved head-on:
+
+- **`syncAccentShapes(tuned, rebuilt)`** — the tuned doc owns the GEOMETRY (the
+  whole point of dragging one), the rebuild owns the CHOICE (which accent, or
+  none). Called in BOTH retarget paths.
+- **A deleted accent layer stays deleted.** Circles are only added when the doc
+  had none, which is the switched-on case. A test pinned this: the first version
+  re-added any missing role, so a deleted circle came back on the next keystroke.
+- **`applyAccent(design, id, w, h)`** is the editor's path, where there is no
+  form to rebuild from. Ids derive from the role, so repeated switching cannot
+  produce duplicates.
+- Shapes default to the BOTTOM of the layer stack (`defaultOrder` in
+  `DynamicTemplate` splits accent shapes out and puts them before the images) —
+  an ordinary shape sits ABOVE photos, which would have put a bubble over the
+  logos. Drag one forward and the stored order wins.
+- The Layers panel names them **"Accent bubble 1" / "Accent ring 1"** instead of
+  "Circle · a3f9" — this is the one shape set a user goes looking for by name.
+
+**The geometry was re-measured, not re-eyeballed.** A least-squares circle fit
+to the orange mask and the white-ring mask in each half of Auri's reference
+screenshot, with two corrections that mattered: the ring's overlap over the
+bubble had to be excluded from the bubble's boundary (it dragged the first fit
+50px off) and pixels near the frame excluded (those arcs are clipped). Result:
+the bubbles were roughly right all along, and **both RINGS were far too small
+and too close to their bubble** — each ring is nearly twice its bubble's radius
+and mostly cropped. That was the "not placed correctly".
+
+Side benefit: the export worry from round 53 is gone. A shape circle is a div
+with a CSS gradient, which html-to-image handles natively — no `url(#gradient)`
+reference to survive the clone.
+
+---
+
+## Previous handoff — 2026-08-04 (round 53)
 
 ### Round 53 — Investor Relations circle accents
 
