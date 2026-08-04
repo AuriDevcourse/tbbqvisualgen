@@ -67,6 +67,12 @@ design doesn't mean losing the ability to change it.
 it should be fine, but nobody has eyeballed a saved JPG yet. Worth one Save
 image before this goes on a real post.
 
+**Two Investor Relations backgrounds** to go with them, in their own picker
+group: `ir1` and `ir2`, near-black with one warm ember glow (low on the first,
+high on the second). From `Desktop/TBBQ/2026 Season/2x/`, re-encoded with sharp
+from ~255KB to 12KB each. `ir1` plus the gradient accents is the 2025 LP Forum
+look almost exactly.
+
 Also worth knowing: on a dense wall (the 25-logo Life Science set) the
 bottom-left circles run under the last row of logos. They read fine because the
 logos are white on top, but an investor post with fewer logos is where this

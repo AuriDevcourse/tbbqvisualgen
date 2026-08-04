@@ -57,6 +57,10 @@ export const IMAGE_BG_REGISTRY: Record<string, { label: string; src: string }> =
   ls1: { label: "Life Science 1", src: "/backgrounds/ls-1.jpg" },
   ls2: { label: "Life Science 2", src: "/backgrounds/ls-2.jpg" },
   ls16x9: { label: "Life Science Wide", src: "/backgrounds/ls-16x9.jpg" },
+  // Investor Relations — near-black with one warm ember glow, low on `ir1` and
+  // high on `ir2`. The pair the circle accents were drawn against.
+  ir1: { label: "Investor Relations 1", src: "/backgrounds/ir-1.jpg" },
+  ir2: { label: "Investor Relations 2", src: "/backgrounds/ir-2.jpg" },
   // Per-stage backgrounds — pick the one matching where the session happens.
   // Three variants per stage.
   stageTech: { label: "Tech Stage 1", src: "/backgrounds/stage-tech.jpg" },

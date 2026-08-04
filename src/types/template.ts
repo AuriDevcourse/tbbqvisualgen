@@ -26,6 +26,9 @@ export const BACKGROUND_OPTIONS: { id: string; label: string; group: string }[] 
   { id: "ls1", label: "Life Science 1", group: "Life Science" },
   { id: "ls2", label: "Life Science 2", group: "Life Science" },
   { id: "ls16x9", label: "Life Science Wide", group: "Life Science" },
+  // Investor Relations — the pair the circle accents were drawn against.
+  { id: "ir1", label: "Investor Relations 1", group: "Investor Relations" },
+  { id: "ir2", label: "Investor Relations 2", group: "Investor Relations" },
   { id: "stageTech", label: "Tech Stage 1", group: "Tech Stage" },
   { id: "stageTech2", label: "Tech Stage 2", group: "Tech Stage" },
   { id: "stageTech3", label: "Tech Stage 3", group: "Tech Stage" },
