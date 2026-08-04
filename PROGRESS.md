@@ -6,7 +6,47 @@ not required reading.
 
 ---
 
-## SESSION HANDOFF — 2026-08-04 (round 58)
+## SESSION HANDOFF — 2026-08-04 (round 59)
+
+### Round 59 — a 30-second video option, and the truncation bug it exposed
+
+Gates: tsc clean, build clean, 175/175 vitest. **The 30s capture itself is NOT
+verified end to end** — see below.
+
+`exportMp4(filename, onBeforeCapture, seconds = 3)` takes a duration, and both
+Quick Templates and the editor offer **MP4 · 3s** and **MP4 · 30s**
+(`VIDEO_SECONDS` maps the save-format id to seconds). 30s is 900 frames, roughly
+22MB at the existing 6Mbps, which the in-memory muxer handles fine. Clamped to
+1-60s.
+
+**Attempting to test it found a real bug: a background tab silently truncated the
+video.** The capture loop ran on wall-clock (`while (now - start < captureMs)`),
+but Chrome suspends `requestAnimationFrame` in a hidden tab while
+`performance.now()` keeps running — so switching tabs mid-recording produced a
+short clip with a cheerful success toast. Barely noticeable at 3s; guaranteed to
+bite at 30s.
+
+The loop now counts **FRAMES**, not seconds:
+
+- `while (frameIndex < totalFrames)` — the output is always exactly the length
+  requested, however long the capture takes in real time.
+- `waitVisible()` parks the loop while the tab is hidden and rebases the pacing
+  clock afterwards, so a tab switch pauses the recording instead of corrupting
+  it. Animation sampling still runs on visible wall-clock, which is what keeps
+  the motion speed right.
+- After 90s hidden it **throws** rather than finishing short. A 30s recording
+  that returns 4s with a success toast is worse than an error.
+
+**Why it is unverified:** a capture needs the tab in FRONT, and the automated
+browser tab reports `document.hidden === true` whenever the Chrome window is not
+the focused window — which it never is during an agent session. The 3s path has
+the same requirement and was verified by Auri using it. **Someone has to run one
+30s export by hand**; the success toast reports frames, duration and MB, so it
+is self-checking.
+
+---
+
+## Previous handoff — 2026-08-04 (round 58)
 
 ### Round 58 — no logo left stranded on its own row
 

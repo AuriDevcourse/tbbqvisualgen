@@ -134,7 +134,19 @@ export function useExport() {
     }
   }, []);
 
-  const exportMp4 = useCallback(async (filename: string, onBeforeCapture?: () => void) => {
+  /**
+   * Record the animated background as an MP4.
+   *
+   * `seconds` is how long to capture. 3s is the default social clip; 30s exists
+   * because a screen or a loop behind a stage needs more than three seconds
+   * before the cut becomes obvious. Cost scales linearly and nothing else
+   * changes: 30s is 900 frames and lands around 22MB at this bitrate, which the
+   * in-memory muxer holds without complaint. It IS 30 seconds of real time
+   * though — the canvas has to keep animating on screen throughout, so the tab
+   * cannot be backgrounded (Chrome throttles requestAnimationFrame) and the
+   * progress bar is the only thing to watch.
+   */
+  const exportMp4 = useCallback(async (filename: string, onBeforeCapture?: () => void, seconds = 3) => {
     if (!exportRef.current) return;
 
     // Check browser support
@@ -171,7 +183,9 @@ export function useExport() {
         return;
       }
 
-      const captureMs = 3000; // record 3 seconds of real animation
+      // Clamped: under a second isn't a video, and past a minute the in-memory
+      // buffer and the wait stop being reasonable.
+      const captureSeconds = Math.min(60, Math.max(1, Math.round(seconds)));
       const FPS = 30;
       const frameMs = 1000 / FPS;
 
@@ -210,7 +224,9 @@ export function useExport() {
         }
       }
 
-      toast.info(overlay ? "Recording 3s at 30fps…" : "Recording 3s of animation…");
+      toast.info(overlay
+        ? `Recording ${captureSeconds}s at 30fps — keep this tab in front…`
+        : `Recording ${captureSeconds}s of animation…`);
 
       // Set up MP4 muxer
       const target = new ArrayBufferTarget();
@@ -251,14 +267,41 @@ export function useExport() {
         latencyMode: "quality",
       });
 
-      // Timestamps are wall-clock, so playback runs at the speed you saw.
-      const startTime = performance.now();
+      // The loop counts FRAMES, not wall-clock seconds. Wall-clock silently
+      // truncated the video whenever the tab lost focus: Chrome suspends
+      // requestAnimationFrame in a background tab while performance.now() keeps
+      // running, so a 30s recording came back as a 4s clip with no error. Now a
+      // hidden tab just pauses the capture (see waitVisible) and the output is
+      // always exactly the length that was asked for.
+      const totalFrames = captureSeconds * FPS;
       let frameIndex = 0;
+      // Accumulated VISIBLE time, used to pace sampling of the animation. Reset
+      // across a hidden stretch so the pause doesn't eat the schedule.
+      let scheduleStart = performance.now();
+      const elapsedVisible = () => performance.now() - scheduleStart;
+
+      /** Park until the tab is in front again, then rebase the pacing clock.
+       *  Throws after 90s rather than quietly finishing short: a 30s recording
+       *  that came back 4s long with a success toast is worse than an error. */
+      const waitVisible = async (): Promise<boolean> => {
+        if (!document.hidden) return true;
+        const deadline = performance.now() + 90_000;
+        while (document.hidden) {
+          if (performance.now() > deadline) {
+            throw new Error("recording paused too long in a background tab — keep this tab in front while it records");
+          }
+          await new Promise((r) => setTimeout(r, 250));
+        }
+        // Skip the gap: the next frame is due immediately, not "however long you
+        // were away" ago.
+        scheduleStart = performance.now() - frameIndex * frameMs;
+        return true;
+      };
 
       // close() in `finally` throughout: a throwing encode() used to leak the
       // frame ("A VideoFrame was garbage collected without being closed").
       const frameDurationUs = Math.round(1_000_000 / FPS);
-      const encodeFrame = (source: CanvasImageSource, elapsedMs: number) => {
+      const encodeFrame = (source: CanvasImageSource) => {
         const frame = new VideoFrame(source, {
           // Uniform, not wall-clock: constant spacing is what makes playback
           // read as smooth (see the note above encodeFrame's callers).
@@ -271,7 +314,7 @@ export function useExport() {
           frame.close();
         }
         frameIndex++;
-        setVideoProgress(Math.round((elapsedMs / captureMs) * 50));
+        setVideoProgress(Math.round((frameIndex / totalFrames) * 50));
       };
 
       if (overlay && bg) {
@@ -282,36 +325,36 @@ export function useExport() {
         comp.height = outH;
         const cctx = comp.getContext("2d", { alpha: false });
         if (!cctx) throw new Error("no 2d context for compositing");
-        while (performance.now() - startTime < captureMs) {
+        while (frameIndex < totalFrames) {
           if (encoderError || encoder.state !== "configured") break;
+          if (!(await waitVisible())) break;
           await nextFrame();
-          const elapsed = performance.now() - startTime;
           // ABSOLUTE schedule: frame n is due at n/FPS from the start. The
           // obvious "due = now + interval" accumulates drift, so with 60Hz
           // animation frames a 33ms target kept landing on the 50ms tick and
           // ~8% of slots were skipped — the motion was then sampled unevenly
           // and played back evenly, which still read as judder. Measured:
           // this fills 90/90 slots where the drifting version filled 83.
-          if (elapsed + 1 < frameIndex * frameMs) continue;
+          if (elapsedVisible() + 1 < frameIndex * frameMs) continue;
           // Keep the encoder from queueing a backlog we'd only wait on later.
           // Cap 8 measured as the point where waits drop to zero at 30fps.
           while (encoder.encodeQueueSize > 8 && !encoderError) await nextFrame();
           cctx.drawImage(bg.src, 0, 0, outW, outH);
           cctx.drawImage(overlay, 0, 0, outW, outH);
-          encodeFrame(comp, elapsed);
+          encodeFrame(comp);
         }
       } else {
         // Fallback: no readable background layer (an unreadable WebGL context,
         // or a doc without the tagged wrapper) — rasterize per frame. Slow, so
         // the result is choppy, but it still produces a correct video.
-        while (performance.now() - startTime < captureMs) {
+        while (frameIndex < totalFrames) {
           if (encoderError || encoder.state !== "configured") break;
-          const frameStartMs = performance.now() - startTime;
+          if (!(await waitVisible())) break;
           const canvas = await toCanvas(el, {
             width, height, pixelRatio: 1, cacheBust: true,
             canvasWidth: outW, canvasHeight: outH,
           });
-          encodeFrame(canvas, frameStartMs);
+          encodeFrame(canvas);
         }
       }
       if (encoderError) throw encoderError;

@@ -25,8 +25,17 @@ type TemplateKind = "panel" | "partner" | "sales";
 
 /** What the Save button produces: a still image, or a 3-second MP4 of the
  *  animated background. */
-type SaveFormat = ExportFormat | "mp4";
-const SAVE_LABELS: Record<SaveFormat, string> = { png: "PNG", jpeg: "JPG", mp4: "MP4 · 3s video" };
+type SaveFormat = ExportFormat | "mp4" | "mp4-30";
+const SAVE_LABELS: Record<SaveFormat, string> = {
+  png: "PNG",
+  jpeg: "JPG",
+  mp4: "MP4 · 3s video",
+  "mp4-30": "MP4 · 30s video",
+};
+/** Capture length per video format. Both record in real time, so the 30s option
+ *  takes 30 seconds of watching plus the encode. */
+const VIDEO_SECONDS: Partial<Record<SaveFormat, number>> = { mp4: 3, "mp4-30": 30 };
+const isVideoFormat = (f: SaveFormat): boolean => f in VIDEO_SECONDS;
 
 const TEMPLATES: { id: TemplateKind; label: string; icon: typeof Users }[] = [
   { id: "panel", label: "Panel", icon: Users },
@@ -1178,24 +1187,27 @@ export default function SimplePage() {
   // Only an animated background has anything to record; a static season/stage
   // JPG would give a 3-second video of a still frame.
   const canAnimate = isAnimatedBackground(doc.design.backgroundId);
-  const saveFormats: SaveFormat[] = canAnimate ? ["png", "jpeg", "mp4"] : ["png", "jpeg"];
-  // A background switch can strand the choice on MP4 — fall back to JPG.
-  const effectiveFormat: SaveFormat = exportFormat === "mp4" && !canAnimate ? "jpeg" : exportFormat;
+  const saveFormats: SaveFormat[] = canAnimate ? ["png", "jpeg", "mp4", "mp4-30"] : ["png", "jpeg"];
+  // A background switch can strand the choice on a video format — fall back to JPG.
+  const effectiveFormat: SaveFormat = isVideoFormat(exportFormat) && !canAnimate ? "jpeg" : exportFormat;
 
   const handleExport = () => {
     const salesLabel = [sales.value, sales.caption].map((t) => t.trim()).filter(Boolean).join(" ");
     const base = simpleExportName(template, format, form.headline, salesLabel, partner.layout);
-    if (effectiveFormat === "mp4") {
+    const videoSeconds = VIDEO_SECONDS[effectiveFormat];
+    if (videoSeconds) {
       // The animation has to be RUNNING for the capture, so resume instead of
       // pausing (the shader is paused while a still export is in flight).
       setPaused(false);
-      void exportMp4(`${base}.mp4`, () => setPaused(false));
+      void exportMp4(`${base}.mp4`, () => setPaused(false), videoSeconds);
       return;
     }
     setPaused(true);
+    // Narrowed by the video branch above returning, but TypeScript can't see
+    // that through the lookup table.
+    const still: ExportFormat = effectiveFormat === "jpeg" ? "jpeg" : "png";
     setTimeout(() => {
-      const ext = effectiveFormat === "jpeg" ? "jpg" : "png";
-      exportImage(`${base}.${ext}`, effectiveFormat).finally(() => setPaused(false));
+      exportImage(`${base}.${still === "jpeg" ? "jpg" : "png"}`, still).finally(() => setPaused(false));
     }, 100);
   };
 
@@ -1289,12 +1301,12 @@ export default function SimplePage() {
               <button
                 onClick={handleExport}
                 disabled={isExporting || isExportingVideo || isEmpty}
-                aria-label={effectiveFormat === "mp4" ? "Save video" : "Save image"}
+                aria-label={isVideoFormat(effectiveFormat) ? "Save video" : "Save image"}
                 title={isEmpty ? (template === "partner" ? "Add a label or a partner logo first" : template === "sales" ? "Add the figure or a photo first" : "Add a headline or a speaker first") : `Save as ${SAVE_LABELS[effectiveFormat]}`}
                 className="flex items-center gap-1.5 pl-5 pr-3.5 py-2 text-xs font-semibold tracking-wide hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isExporting || isExportingVideo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : effectiveFormat === "mp4" ? <Film className="w-3.5 h-3.5" strokeWidth={1.5} /> : <Download className="w-3.5 h-3.5" strokeWidth={1.5} />}
-                {isExportingVideo ? `Recording… ${videoProgress}%` : isExporting ? "Exporting…" : effectiveFormat === "mp4" ? "Save video" : "Save image"}
+                {isExporting || isExportingVideo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : isVideoFormat(effectiveFormat) ? <Film className="w-3.5 h-3.5" strokeWidth={1.5} /> : <Download className="w-3.5 h-3.5" strokeWidth={1.5} />}
+                {isExportingVideo ? `Recording… ${videoProgress}%` : isExporting ? "Exporting…" : isVideoFormat(effectiveFormat) ? "Save video" : "Save image"}
               </button>
               <Popover.Root>
                 <Popover.Trigger asChild>

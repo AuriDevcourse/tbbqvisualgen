@@ -46,8 +46,10 @@ const HANDOFF_FLAG_KEY = "tbbqvisualgen.simple.handoff";
 
 /** What Save produces: a still image, or a 3-second MP4 of the animated
  *  background (only offered when the background actually moves). */
-type SaveFormat = ExportFormat | "mp4";
-const SAVE_LABELS: Record<SaveFormat, string> = { png: "PNG", jpeg: "JPG", mp4: "MP4" };
+type SaveFormat = ExportFormat | "mp4" | "mp4-30";
+const SAVE_LABELS: Record<SaveFormat, string> = { png: "PNG", jpeg: "JPG", mp4: "MP4", "mp4-30": "MP4 30s" };
+/** Capture length per video format — both record in real time. */
+const VIDEO_SECONDS: Partial<Record<SaveFormat, number>> = { mp4: 3, "mp4-30": 30 };
 
 // Single icon-button used inside the align popover.
 function AlignBtn({ icon: Icon, label, onClick }: { icon: typeof AlignStartVertical; label: string; onClick: () => void }) {
@@ -739,22 +741,24 @@ export default function Home() {
   // A still image of a moving background is fine; a VIDEO of a static one is
   // just a heavy PNG, so MP4 is gated on the background actually animating.
   const canAnimate = isAnimatedBackground(design.backgroundId);
-  const effectiveFormat: SaveFormat = exportFormat === "mp4" && !canAnimate ? "jpeg" : exportFormat;
+  const effectiveFormat: SaveFormat = VIDEO_SECONDS[exportFormat] && !canAnimate ? "jpeg" : exportFormat;
 
   const handleExport = useCallback((formatOverride?: SaveFormat) => {
-    const fmt = formatOverride ?? (exportFormat === "mp4" && !isAnimatedBackground(design.backgroundId) ? "jpeg" : exportFormat);
+    const fmt = formatOverride ?? (VIDEO_SECONDS[exportFormat] && !isAnimatedBackground(design.backgroundId) ? "jpeg" : exportFormat);
     const date = new Date();
     const stamp = `${date.toISOString().slice(0, 10)}-${String(date.getHours()).padStart(2, "0")}${String(date.getMinutes()).padStart(2, "0")}`;
     const base = `techbbq-visual-${format}-${dims.width}x${dims.height}-${stamp}`;
-    if (fmt === "mp4") {
+    const videoSeconds = VIDEO_SECONDS[fmt];
+    if (videoSeconds) {
       // Resume the animation — there is nothing to record while it is paused.
       setBgPaused(false);
-      void exportMp4(`${base}.mp4`, () => setBgPaused(false));
+      void exportMp4(`${base}.mp4`, () => setBgPaused(false), videoSeconds);
       return;
     }
+    const still: ExportFormat = fmt === "jpeg" ? "jpeg" : "png";
     setBgPaused(true);
     setTimeout(() => {
-      exportImage(`${base}.${fmt === "jpeg" ? "jpg" : "png"}`, fmt).finally(() => setBgPaused(false));
+      exportImage(`${base}.${still === "jpeg" ? "jpg" : "png"}`, still).finally(() => setBgPaused(false));
     }, 100);
   }, [format, dims.width, dims.height, exportFormat, exportImage, exportMp4, design.backgroundId]);
 
@@ -1398,13 +1402,13 @@ export default function Home() {
               aria-label="Export format"
               className="flex items-center gap-1 rounded-full bg-card-2 p-1"
             >
-              {(canAnimate ? (["png", "jpeg", "mp4"] as const) : (["png", "jpeg"] as const)).map((fmt) => (
+              {(canAnimate ? (["png", "jpeg", "mp4", "mp4-30"] as const) : (["png", "jpeg"] as const)).map((fmt) => (
                 <button
                   key={fmt}
                   role="radio"
                   aria-checked={effectiveFormat === fmt}
                   onClick={() => setExportFormat(fmt)}
-                  title={fmt === "mp4" ? "Record 3 seconds of the animated background as an MP4" : `Save a still ${SAVE_LABELS[fmt]}`}
+                  title={VIDEO_SECONDS[fmt] ? `Record ${VIDEO_SECONDS[fmt]} seconds of the animated background as an MP4` : `Save a still ${SAVE_LABELS[fmt]}`}
                   className={`px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider transition-colors ${
                     effectiveFormat === fmt ? "bg-surface text-ink" : "text-muted hover:text-foreground"
                   }`}
