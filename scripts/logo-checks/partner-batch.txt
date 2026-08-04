@@ -52,7 +52,7 @@ ERYK.svg|eryk.com
 Techsavvy.svg|techsavvy.media
 SKYtek.svg|skytek.dk
 SkyTek ApS.png|skytek.dk
-Impactfund.svg|impactfund.dk
+Impact Fund Denmark White.svg|impactfund.dk
 Impact Fund Denmark.svg|impactfund.dk
 Worldfund White.svg|worldfund.vc
 BSI Group.svg|bsigroup.com
@@ -114,7 +114,7 @@ Imec.svg|imec.be
 Teknologisk Institut.svg|teknologisk.ai
 Techstation.svg|techstation.nu
 Creative Girls Club.svg|creativegirlsclub.org
-Odense Rob.svg|odenserobotics.dk
+Odense Robotics White.svg|odenserobotics.dk
 Nova Talent.svg|novatalent.com
 Nordic Women's Health Hub.svg|nordicwomenshealthhub.com
 Danish Startup Group.svg|danishstartupgroup.com

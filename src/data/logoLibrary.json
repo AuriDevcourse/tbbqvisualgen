@@ -200,6 +200,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/Alliance%20for%20Biosolutions.svg",
+    "name": "Alliance for Biosolutions",
+    "tags": [],
+    "bytes": 18211,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Alliance%20VC.png",
     "name": "Alliance VC",
     "tags": [],
@@ -228,6 +236,14 @@
     "name": "Alter Echo",
     "tags": [],
     "bytes": 1464,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Amazing%20Hall.svg",
+    "name": "Amazing Hall",
+    "tags": [],
+    "bytes": 3613,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -382,6 +398,14 @@
     "bytes": 4299,
     "toneAlgo": 2,
     "tone": "dark"
+  },
+  {
+    "src": "/logos/AstraZeneca%20White.svg",
+    "name": "AstraZeneca White",
+    "tags": [],
+    "bytes": 4314,
+    "toneAlgo": 2,
+    "tone": "light"
   },
   {
     "src": "/logos/Atlas.svg",
@@ -560,6 +584,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/BioInnovation%20Institute.svg",
+    "name": "BioInnovation Institute",
+    "tags": [],
+    "bytes": 3239,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/BioMedical%20Design.svg",
     "name": "BioMedical Design",
     "tags": [],
@@ -646,6 +678,14 @@
     "bytes": 10638,
     "toneAlgo": 2,
     "tone": "dark"
+  },
+  {
+    "src": "/logos/Blue2%20White.svg",
+    "name": "Blue2 White",
+    "tags": [],
+    "bytes": 1069,
+    "toneAlgo": 2,
+    "tone": "light"
   },
   {
     "src": "/logos/Boardway.svg",
@@ -812,6 +852,14 @@
     "name": "CBS CSE",
     "tags": [],
     "bytes": 57244,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/CBS%20CSE%20White.svg",
+    "name": "CBS CSE White",
+    "tags": [],
+    "bytes": 22331,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -1056,6 +1104,14 @@
     "tone": "dark"
   },
   {
+    "src": "/logos/CPH%20Fintech%20White.svg",
+    "name": "CPH Fintech White",
+    "tags": [],
+    "bytes": 16774,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/CPH%20Kommune%20Besk.svg",
     "name": "CPH Kommune Besk",
     "tags": [],
@@ -1083,7 +1139,7 @@
     "src": "/logos/CPHLABS.svg",
     "name": "CPHLABS",
     "tags": [],
-    "bytes": 3913,
+    "bytes": 3453,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -1160,6 +1216,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/Cytely%20White.svg",
+    "name": "Cytely White",
+    "tags": [],
+    "bytes": 4398,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/CZech%20Founders.svg",
     "name": "CZech Founders",
     "tags": [],
@@ -1230,6 +1294,14 @@
     "bytes": 18820,
     "toneAlgo": 2,
     "tone": "dark"
+  },
+  {
+    "src": "/logos/Danish%20Life%20Science%20Cluster%20White.svg",
+    "name": "Danish Life Science Cluster White",
+    "tags": [],
+    "bytes": 18822,
+    "toneAlgo": 2,
+    "tone": "light"
   },
   {
     "src": "/logos/Danish%20Startup%20Group.svg",
@@ -1512,6 +1584,14 @@
     "tone": "dark"
   },
   {
+    "src": "/logos/E%20Conomic%20White.svg",
+    "name": "E Conomic White",
+    "tags": [],
+    "bytes": 6269,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Earlybird.svg",
     "name": "Earlybird",
     "tags": [],
@@ -1608,6 +1688,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/EIT%20Urban%20Mobility%20White.svg",
+    "name": "EIT Urban Mobility White",
+    "tags": [],
+    "bytes": 30270,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Embankment.svg",
     "name": "Embankment",
     "tags": [],
@@ -1660,6 +1748,14 @@
     "name": "Erhvervsfremmebestyrelsen",
     "tags": [],
     "bytes": 14378,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Erhvervshus%20Sj%C3%A6lland%20White.svg",
+    "name": "Erhvervshus Sjælland White",
+    "tags": [],
+    "bytes": 7542,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -2256,6 +2352,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/GreenCow%20Biosolutions%20White.svg",
+    "name": "GreenCow Biosolutions White",
+    "tags": [],
+    "bytes": 11536,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Greencubator.svg",
     "name": "Greencubator",
     "tags": [],
@@ -2316,6 +2420,14 @@
     "name": "Health Tech Hub Copenhagen",
     "tags": [],
     "bytes": 7451,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Health%20Tech%20Hub%20Copenhagen%20White.svg",
+    "name": "Health Tech Hub Copenhagen White",
+    "tags": [],
+    "bytes": 8458,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -2520,10 +2632,26 @@
     "tone": "light"
   },
   {
+    "src": "/logos/Humble%20AI%20White.svg",
+    "name": "Humble AI White",
+    "tags": [],
+    "bytes": 1722,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Hydram.svg",
     "name": "Hydram",
     "tags": [],
     "bytes": 4657,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Hydratico%20Water%20Doctors%20White.svg",
+    "name": "Hydratico Water Doctors White",
+    "tags": [],
+    "bytes": 7565,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -2608,12 +2736,36 @@
     "tone": "dark"
   },
   {
+    "src": "/logos/Imec%20White.svg",
+    "name": "Imec White",
+    "tags": [],
+    "bytes": 2012,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Immunordic%20White.svg",
+    "name": "Immunordic White",
+    "tags": [],
+    "bytes": 4935,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Impact%20Fund%20Denmark.svg",
     "name": "Impact Fund Denmark",
     "tags": [],
     "bytes": 6529,
     "toneAlgo": 2,
     "tone": "dark"
+  },
+  {
+    "src": "/logos/Impact%20Fund%20Denmark%20White.svg",
+    "name": "Impact Fund Denmark White",
+    "tags": [],
+    "bytes": 4138,
+    "toneAlgo": 2,
+    "tone": "light"
   },
   {
     "src": "/logos/Impact%20Hub%20Vienna.svg",
@@ -2630,14 +2782,6 @@
     "bytes": 33138,
     "toneAlgo": 2,
     "tone": "dark"
-  },
-  {
-    "src": "/logos/Impactfund.svg",
-    "name": "Impactfund",
-    "tags": [],
-    "bytes": 4138,
-    "toneAlgo": 2,
-    "tone": "light"
   },
   {
     "src": "/logos/Impulsemedia.svg",
@@ -2692,6 +2836,14 @@
     "name": "Innherji",
     "tags": [],
     "bytes": 1661,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Innovation%20District%20Copenhagen%20White.png",
+    "name": "Innovation District Copenhagen White",
+    "tags": [],
+    "bytes": 37324,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -3216,6 +3368,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/Life%20Science%20Invest.svg",
+    "name": "Life Science Invest",
+    "tags": [],
+    "bytes": 4024,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Life%20Science%20Pitch%20Competition%20Black.png",
     "name": "Life Science Pitch Competition Black",
     "tags": [],
@@ -3376,6 +3536,22 @@
     "tone": "light"
   },
   {
+    "src": "/logos/MagCath%20White.svg",
+    "name": "MagCath White",
+    "tags": [],
+    "bytes": 4012,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Magnolia%20Quantum%20Sensing%20White.svg",
+    "name": "Magnolia Quantum Sensing White",
+    "tags": [],
+    "bytes": 19812,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Magnotherm.png",
     "name": "Magnotherm",
     "tags": [],
@@ -3462,6 +3638,14 @@
     "bytes": 7696,
     "toneAlgo": 2,
     "tone": "dark"
+  },
+  {
+    "src": "/logos/Mesh%20Matrikel1%20White.svg",
+    "name": "Mesh Matrikel1 White",
+    "tags": [],
+    "bytes": 10258,
+    "toneAlgo": 2,
+    "tone": "light"
   },
   {
     "src": "/logos/Meta.png",
@@ -3660,14 +3844,6 @@
     "name": "NL Netherlands",
     "tags": [],
     "bytes": 3439,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/NN%20Foundation%20White.svg",
-    "name": "NN Foundation White",
-    "tags": [],
-    "bytes": 7546,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -3952,6 +4128,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/Novo%20Nordisk%20Foundation%20Horizontal.svg",
+    "name": "Novo Nordisk Foundation Horizontal",
+    "tags": [],
+    "bytes": 7546,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/NTNU.svg",
     "name": "NTNU",
     "tags": [],
@@ -4000,8 +4184,8 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Odense%20Rob.svg",
-    "name": "Odense Rob",
+    "src": "/logos/Odense%20Robotics%20White.svg",
+    "name": "Odense Robotics White",
     "tags": [],
     "bytes": 9547,
     "toneAlgo": 2,
@@ -4096,10 +4280,26 @@
     "tone": "light"
   },
   {
+    "src": "/logos/Ownwell%20White.svg",
+    "name": "Ownwell White",
+    "tags": [],
+    "bytes": 4018,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Pact.svg",
     "name": "Pact",
     "tags": [],
     "bytes": 9626,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Paindrainer%20White.svg",
+    "name": "Paindrainer White",
+    "tags": [],
+    "bytes": 4256,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -4236,6 +4436,14 @@
     "name": "PreSeed Ventures",
     "tags": [],
     "bytes": 12343,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Previto%20White.svg",
+    "name": "Previto White",
+    "tags": [],
+    "bytes": 2128,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -4456,6 +4664,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/Rilemo%20White.svg",
+    "name": "Rilemo White",
+    "tags": [],
+    "bytes": 4058,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Ringo.svg",
     "name": "Ringo",
     "tags": [],
@@ -4534,6 +4750,14 @@
     "bytes": 3635,
     "toneAlgo": 2,
     "tone": "dark"
+  },
+  {
+    "src": "/logos/Ruff%20%26%20Co%20Business%20Innovation.png",
+    "name": "Ruff & Co Business Innovation",
+    "tags": [],
+    "bytes": 9411,
+    "toneAlgo": 2,
+    "tone": "light"
   },
   {
     "src": "/logos/S%20Allume%20Black.png",
@@ -4872,6 +5096,14 @@
     "tone": "mixed"
   },
   {
+    "src": "/logos/Skiftr%20White.svg",
+    "name": "Skiftr White",
+    "tags": [],
+    "bytes": 3191,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Skynews.svg",
     "name": "Skynews",
     "tags": [],
@@ -4900,6 +5132,14 @@
     "name": "Slize",
     "tags": [],
     "bytes": 3551,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/SmartSens%20White.svg",
+    "name": "SmartSens White",
+    "tags": [],
+    "bytes": 4577,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -4960,6 +5200,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/Sorbus%20Biomedical%20White.svg",
+    "name": "Sorbus Biomedical White",
+    "tags": [],
+    "bytes": 5002,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/SourceAngel.svg",
     "name": "SourceAngel",
     "tags": [],
@@ -5004,6 +5252,14 @@
     "name": "Space Ventures",
     "tags": [],
     "bytes": 8338,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Spaces%20Regus%20White.svg",
+    "name": "Spaces Regus White",
+    "tags": [],
+    "bytes": 2177,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -5062,6 +5318,14 @@
     "bytes": 13216,
     "toneAlgo": 2,
     "tone": "dark"
+  },
+  {
+    "src": "/logos/START%20Paris%20White.svg",
+    "name": "START Paris White",
+    "tags": [],
+    "bytes": 3991,
+    "toneAlgo": 2,
+    "tone": "light"
   },
   {
     "src": "/logos/Startup%20Aarhus.svg",
@@ -5403,7 +5667,7 @@
     "src": "/logos/Symbion.svg",
     "name": "Symbion",
     "tags": [],
-    "bytes": 3737,
+    "bytes": 2784,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -5912,6 +6176,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/Third%20Law%20White.svg",
+    "name": "Third Law White",
+    "tags": [],
+    "bytes": 1460,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Thomson%20Reuters%20Foundation.svg",
     "name": "Thomson Reuters Foundation",
     "tags": [],
@@ -5958,6 +6230,14 @@
     "bytes": 32827,
     "toneAlgo": 2,
     "tone": "dark"
+  },
+  {
+    "src": "/logos/Tonik%20White.svg",
+    "name": "Tonik White",
+    "tags": [],
+    "bytes": 3032,
+    "toneAlgo": 2,
+    "tone": "light"
   },
   {
     "src": "/logos/Trind.svg",
@@ -6120,6 +6400,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/University%20of%20Copenhagen.svg",
+    "name": "University of Copenhagen",
+    "tags": [],
+    "bytes": 128298,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Uptime%20Punks.svg",
     "name": "Uptime Punks",
     "tags": [],
@@ -6256,12 +6544,28 @@
     "tone": "light"
   },
   {
+    "src": "/logos/Venture%20Cafe%20London%20White.svg",
+    "name": "Venture Cafe London White",
+    "tags": [],
+    "bytes": 3758,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Venture%20Cafe%20Warsaw%20Horiz.svg",
     "name": "Venture Cafe Warsaw Horiz",
     "tags": [],
     "bytes": 3213,
     "toneAlgo": 2,
     "tone": "dark"
+  },
+  {
+    "src": "/logos/Venture%20Cafe%20Warsaw%20Horiz%20White.svg",
+    "name": "Venture Cafe Warsaw Horiz White",
+    "tags": [],
+    "bytes": 3228,
+    "toneAlgo": 2,
+    "tone": "light"
   },
   {
     "src": "/logos/Venture%20Cup%20Denmark.svg",
@@ -6280,14 +6584,6 @@
     "tone": "dark"
   },
   {
-    "src": "/logos/Venturecafe.svg",
-    "name": "Venturecafe",
-    "tags": [],
-    "bytes": 3758,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Version.svg",
     "name": "Version",
     "tags": [],
@@ -6300,6 +6596,14 @@
     "name": "Ververica",
     "tags": [],
     "bytes": 4200,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Vetbac%20White.svg",
+    "name": "Vetbac White",
+    "tags": [],
+    "bytes": 7039,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -6380,6 +6684,14 @@
     "name": "Voltagreentech",
     "tags": [],
     "bytes": 3759,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Walther%20Therapeutics%20White.svg",
+    "name": "Walther Therapeutics White",
+    "tags": [],
+    "bytes": 11242,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -6596,6 +6908,14 @@
     "name": "Yngvi Bio",
     "tags": [],
     "bytes": 3833,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Yoke%20Bio%20White.svg",
+    "name": "Yoke Bio White",
+    "tags": [],
+    "bytes": 3807,
     "toneAlgo": 2,
     "tone": "light"
   },

@@ -6,7 +6,82 @@ not required reading.
 
 ---
 
-## SESSION HANDOFF — 2026-07-30 (end of a long session, rounds 34-49)
+## SESSION HANDOFF — 2026-08-03 (round 50)
+
+### Round 50 — white logos pulled from Airtable
+
+Branch `logos/airtable-white-2026`. **Library 830 → 864.** Gates: 123/123, tsc
+clean, `logos:dupes` at 11 visual groups against a pre-existing 10; the one new
+group is the legitimate Venture Café London / Warsaw pair described below.
+
+Two Airtable sources, both in base `appgXNjXJqpk9Ebxd`:
+
+- **Marketing Project Overview** → view `Partner Deliverables 2026`
+  (`tblTecOBecLQCNIeD` / `viw7FVbsTb9IRaWF0`). The team's white version is the
+  attachment in the `Logo` cell whose filename starts **`white-`**; the rest of
+  that name is the library file it was made from. 110 such attachments, **18
+  added**.
+- **Life Science Project** → view `Startup Library 2026` (`tblvukXfmR7KTFymG` /
+  `viwC65YEXxl8iDPzN`). For the 25 `Confirmation = Selected` startups the white
+  artwork is the **SVG** in `High quality company logo`. **16 added.**
+
+**Most of that partner batch was our own library coming back.** 77 of the 110
+`white-` attachments are **byte-identical** to a file we already ship — someone
+exported `public/logos` into Airtable and prefixed the names. Hash the download
+against the library before believing a `white-` file is new artwork.
+
+**8 more were white logos we already had under a name nobody would search for**,
+caught by `logos:dupes` (it compares silhouettes, so a white variant of a colour
+logo pairs with it legitimately — these pairs were white-on-white instead). Five
+were exact siblings (`Ignite Powered by SISP`, `IVN Powered by Shine`, `IWG
+International Workplace Group`, `Talent Garden Copenhagen`, `Young AI Leaders
+Community Linz Hub`) and were dropped. `Embassy of India` was dropped as the same
+emblem as `Government of India.svg`. Three existing files were **renamed** so the
+white artwork is findable by the partner's real name, which folded search could
+not do before ("odense robotics" matched nothing):
+
+- `Odense Rob.svg` → **`Odense Robotics White.svg`**
+- `Impactfund.svg` → **`Impact Fund Denmark White.svg`** (pairs with the colour
+  `Impact Fund Denmark.svg`)
+- `Venturecafe.svg` → **`Venture Cafe London White.svg`**
+
+Renames are safe: a picked logo is embedded in a design as a data URL, so a saved
+design survives its source file being renamed. `scripts/logo-checks/partner-batch.txt`
+carried two of the old names and was updated.
+
+**`logos:dupes` gave one false positive, and only the contact sheet caught it.**
+`Venturecafe.svg` grouped with the Airtable white Venture Café upload at a tiny
+silhouette distance, so the upload was first dropped as redundant — but rendering
+them side by side showed one says **LONDON** and the other **WARSAW**. Same
+wordmark, same chevron, one different city word under it, which barely moves the
+mask. The library file is the London chapter (now named as such) and the Warsaw
+white version was a genuinely missing logo, added as
+`Venture Cafe Warsaw Horiz White.svg` next to the dark
+`Venture Cafe Warsaw Horiz.svg`. **Never retire a logo on a `logos:dupes` score
+alone — render the pair.** This is also the one new visual group in the report.
+
+**Naming convention: `<colour sibling's name> White.<ext>`**, so the pair sorts
+together and one search finds both. Three derived names were overridden because
+they read as contradictions: `AstraZeneca Colour White` → **`AstraZeneca White`**,
+`E Conomic Primary Pos White` → **`E Conomic White`**, and `TalentGardenW` →
+`Talent Garden Copenhagen White` (which then turned out to be a duplicate).
+
+All 34 measured `tone: "light"`, so the picker gives them a dark plate. Verified
+by rendering the batch onto one dark contact sheet before copying anything in —
+worth repeating, it is how the black `logotipo_nero.svg` and the non-white
+Creative Business Network PNG got caught.
+
+**9 Selected Life Science startups still have no SVG** (raster only, so no white
+version): EasyPCR, Epidetect Labs, Insellar GmbH, IROC, Navari Surgical,
+SÉRÉNITÉ-Forceville, Re Fresh Global, Drylabz, plus one blank record with no
+company name and no logo at all. Marketing has to chase these.
+
+Not touched: the **23 `Plan B`** Life Science startups, and the `Partner logo`
+field on the marketing table (empty in the 2026 view).
+
+---
+
+## Previous handoff — 2026-07-30 (end of a long session, rounds 34-49)
 
 ### Round 47 — site-export import, done after the handoff was first written
 
