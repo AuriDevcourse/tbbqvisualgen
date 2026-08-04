@@ -6,7 +6,76 @@ not required reading.
 
 ---
 
-## SESSION HANDOFF — 2026-08-04 (round 60)
+## SESSION HANDOFF — 2026-08-04
+
+### State: everything is committed and LIVE
+
+`master` at **`0bb5089`**, pushed, working tree clean, prod auto-deployed to
+tbbqvisualgen.vercel.app. Gates at handoff: **175/175 vitest, tsc clean,
+`npm run build` clean**, changed files eslint-clean (the one error in
+`CanvasBackground.tsx:287` is pre-existing and unrelated).
+
+This supersedes the 2026-07-30 "Where the code is" section further down, which
+still says everything is uncommitted on a `sales-announcement` branch. It is not.
+
+### What this session shipped
+
+1. **"Thank you" partner wall** — a fourth partner LAYOUT (not a template kind),
+   so it inherits parking, retargeting, the editor round-trip and the library
+   snapshot. Headline over an auto-flowed logo grid, 1–30 cells.
+2. **A lead tier** (`featuredCount`, "Bigger first" in the sidebar): the first N
+   logos render bigger. Main partners over support partners.
+3. **Two ready-made sets** in `src/data/partnerSets.ts` — Life Science (25) and
+   Investor (17), each carrying its own headline and tier split, one button each.
+4. **Investor Relations circle accents** — a filled bubble + white ring in
+   opposite corners, fill by topic (gradient / LP Forum orange / Investor Day
+   red). Real shape layers, so they are draggable in the editor.
+5. **Backgrounds**: 3 Life Science gradients + 2 Investor Relations gradients.
+6. **Logo library 830 → 870**, four padded SVGs tightened, three logos refreshed.
+7. **Video export: any length 1–60s**, plus a fix for a background tab
+   truncating or hanging a recording.
+
+### Numbered next steps
+
+1. **Run one video export by hand and check the toast.** No recording has ever
+   been verified from an agent session — `requestAnimationFrame` fires zero times
+   in a hidden tab and the automated tab is always hidden. The toast reports
+   frames, duration and MB, so it is self-checking.
+2. **Save an official "Thank You" library item per format.** One exists for 1:1
+   (`29f38736-e77f-4e6d-8f35-c8aa7b84e041`, the source of the accent defaults);
+   16:9 and 9:16 have none. If it should become a flavour button next to
+   "Official Partner", add its id to `DEFAULT_ITEM_IDS` in `src/app/simple/page.tsx`.
+3. **Chase the 3 investor logos marketing owes us**: Novo Nordisk (the company,
+   not the foundation), Mazanti-Andersen, and a WHITE Ada Ventures (ours is dark
+   PNG, and a PNG can't be recoloured in-app).
+4. **Decide on `Symbio.svg`** — a redundant duplicate of the refreshed
+   `Symbion.svg`. Left in place because retiring library files is Auri's call.
+5. Older open decisions (duplicate logos, the 4 Investor Day font-dependent
+   copies, remaining stale logos) are still listed under "Decisions waiting on
+   Auri" below. Decision 7 there (commit + merge to master) is DONE.
+
+### Invariants added this session — read before touching the wall
+
+- **A form field that drives GEOMETRY must be visible in the role set**, or a
+  retarget silently ignores it. The wall's cell count changes the role count; the
+  lead tier gets its own role name (`logo-thanks-lead-N`). Both learned the hard
+  way.
+- **`panelShapeKey` includes tagged placeholder-frame roles.** Without them a
+  tiered and a flat wall with no logos uploaded shared one key, and the flat
+  tuning revived over the tiered rebuild.
+- **The support tier must be at least one column WIDER than the lead tier** —
+  cell size comes from the column count, so that IS the size difference.
+- **Sizing constants are measured, never guessed.** Onest 800 averages 0.54 per
+  character in sentence case, 0.64–0.66 uppercase (`canvas.measureText`).
+- **A tuned doc beats any screenshot** as a source of geometry: read it with
+  `fetch('/api/library/<id>')` from the signed-in browser.
+- **Hand-supplied SVGs are often mostly padding** (BioInnovation Institute was
+  17% artwork). A contain-fit cell can't tell padding from logo — tighten the
+  viewBox to the artwork bounds.
+
+---
+
+## Round-by-round detail — 2026-08-04 (newest first)
 
 ### Round 60 — pick any video length, 1-60s
 
@@ -71,7 +140,6 @@ is self-checking.
 
 ---
 
-## Previous handoff — 2026-08-04 (round 58)
 
 ### Round 58 — no logo left stranded on its own row
 
@@ -100,7 +168,6 @@ Mechanics worth knowing, because they were the design question:
 
 ---
 
-## Previous handoff — 2026-08-04 (round 57)
 
 ### Round 57 — one headline size for every wall, and no more caps
 
@@ -144,7 +211,6 @@ Note for anyone confused by an old design: **an existing custom wall keeps its
 
 ---
 
-## Previous handoff — 2026-08-04 (round 56)
 
 ### Round 56 — the defaults now come from Auri's own approved wall
 
@@ -184,7 +250,6 @@ Both are pinned now.
 
 ---
 
-## Previous handoff — 2026-08-04 (round 55)
 
 ### Round 55 — the headline was touching the walls
 
@@ -219,7 +284,6 @@ golden layouts — left alone deliberately.
 
 ---
 
-## Previous handoff — 2026-08-04 (round 54)
 
 ### Round 54 — the accents became movable layers, and were re-measured
 
@@ -269,7 +333,6 @@ reference to survive the clone.
 
 ---
 
-## Previous handoff — 2026-08-04 (round 53)
 
 ### Round 53 — Investor Relations circle accents
 
@@ -343,7 +406,6 @@ composition actually belongs.
 
 ---
 
-## Previous handoff — 2026-08-04 (round 52)
 
 ### Round 52 — the lead tier, and the Investor partner set
 
@@ -413,7 +475,6 @@ switching back to Life Science resets both.
 
 ---
 
-## Previous handoff — 2026-08-04 (round 51)
 
 ### Round 51 — the "Thank you" partner layout + Life Science backgrounds
 
@@ -785,7 +846,9 @@ The biggest remaining chunk is ~35 TechBBQ event brands (TalkBBQ, TechBBQueer,
 Life Science, LP Forum, Nordic iPO, Startup Showcase, Urban Tech, Tech Talent) —
 no site to scrape, so the vector should come out of TechBBQ's own design files.
 
-### Where the code is
+### Where the code is — SUPERSEDED, see the handoff at the top
+
+> Historic as of 2026-08-04: all of this is committed and pushed to `master`.
 
 Branch **`sales-announcement`**, branched off `master` at `b97fb15`.
 **Everything is UNCOMMITTED** — nothing has been pushed, prod is untouched.
