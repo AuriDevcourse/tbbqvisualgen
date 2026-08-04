@@ -7,6 +7,17 @@ import { toast } from "sonner";
 export type ExportFormat = "png" | "jpeg";
 
 /**
+ * Video length bounds, shared with the pickers so the UI can't offer something
+ * the recorder then clamps away. Under a second isn't a video; past a minute the
+ * in-memory muxer buffer and the real-time wait stop being reasonable (a 60s
+ * capture is 1800 frames and takes a full minute of watching).
+ */
+export const VIDEO_MIN_SECONDS = 1;
+export const VIDEO_MAX_SECONDS = 60;
+/** The lengths worth one click. Anything else goes in the number field. */
+export const VIDEO_PRESETS = [3, 10, 15, 30, 60] as const;
+
+/**
  * H.264 limits the picture size per LEVEL, and the level is baked into the
  * codec string. The original hardcoded `avc1.640028` is High/level 4.0, which
  * caps at 2,097,152 coded pixels — so a 1500×1500 square export ALWAYS died
@@ -137,14 +148,14 @@ export function useExport() {
   /**
    * Record the animated background as an MP4.
    *
-   * `seconds` is how long to capture. 3s is the default social clip; 30s exists
-   * because a screen or a loop behind a stage needs more than three seconds
-   * before the cut becomes obvious. Cost scales linearly and nothing else
-   * changes: 30s is 900 frames and lands around 22MB at this bitrate, which the
-   * in-memory muxer holds without complaint. It IS 30 seconds of real time
-   * though — the canvas has to keep animating on screen throughout, so the tab
-   * cannot be backgrounded (Chrome throttles requestAnimationFrame) and the
-   * progress bar is the only thing to watch.
+   * `seconds` is how long to capture, clamped to VIDEO_MIN/MAX_SECONDS. Cost
+   * scales linearly and nothing else changes: 30s is 900 frames and lands around
+   * 22MB at this bitrate, which the in-memory muxer holds without complaint.
+   *
+   * It IS real time, though — the canvas has to keep animating on screen
+   * throughout, so the tab cannot be backgrounded (Chrome suspends
+   * requestAnimationFrame there). A hidden tab pauses the capture rather than
+   * corrupting it; see `waitVisible`.
    */
   const exportMp4 = useCallback(async (filename: string, onBeforeCapture?: () => void, seconds = 3) => {
     if (!exportRef.current) return;
@@ -183,9 +194,7 @@ export function useExport() {
         return;
       }
 
-      // Clamped: under a second isn't a video, and past a minute the in-memory
-      // buffer and the wait stop being reasonable.
-      const captureSeconds = Math.min(60, Math.max(1, Math.round(seconds)));
+      const captureSeconds = Math.min(VIDEO_MAX_SECONDS, Math.max(VIDEO_MIN_SECONDS, Math.round(seconds)));
       const FPS = 30;
       const frameMs = 1000 / FPS;
 

@@ -6,7 +6,32 @@ not required reading.
 
 ---
 
-## SESSION HANDOFF — 2026-08-04 (round 59)
+## SESSION HANDOFF — 2026-08-04 (round 60)
+
+### Round 60 — pick any video length, 1-60s
+
+`videoSeconds` is a real control now, not two presets. Quick Templates puts a
+**Video length** section in the save-format popover: one-click chips (3, 10, 15,
+30, 60) plus a number field for anything in between, and picking a length also
+switches the format to MP4 — one click from "JPG" to "15s video". The editor gets
+a compact seconds field that only appears once MP4 is the chosen format. The row
+label carries the number ("MP4 · 15s video") because committing 30 seconds of
+real time deserves to be visible before you click. Bounds live in `useExport`
+(`VIDEO_MIN_SECONDS` / `VIDEO_MAX_SECONDS` / `VIDEO_PRESETS`) so the pickers
+cannot offer something the recorder then clamps away.
+
+**Measured, and it explains round 59's bug exactly: `requestAnimationFrame` fires
+ZERO times in a hidden tab.** Probed in the page — 0 frames in 3 seconds. So the
+old wall-clock loop did one of two things when the tab wasn't in front: hung
+forever at its first `await nextFrame()` (hidden from the start), or, if the tab
+was hidden mid-capture, resumed to find the wall clock already past the deadline
+and exited with whatever frames it had — a truncated video with a success toast.
+The frame-counting loop plus `waitVisible()` covers both.
+
+It also means **no capture can be verified from an agent session**: the automated
+tab reports `document.hidden === true` whenever the Chrome window isn't
+frontmost, which it never is. Every video change here is verified by reading and
+by the UI, never by a real recording. **Run one by hand after touching this.**
 
 ### Round 59 — a 30-second video option, and the truncation bug it exposed
 

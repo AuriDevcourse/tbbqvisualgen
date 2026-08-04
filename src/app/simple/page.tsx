@@ -10,7 +10,7 @@ import { AuthChip } from "@/components/AuthChip";
 import { AnimatedGradient } from "@/components/AnimatedGradient";
 import { DynamicTemplate } from "@/components/templates/DynamicTemplate";
 import { BackgroundPicker } from "@/components/BackgroundPicker";
-import { useExport, type ExportFormat } from "@/hooks/useExport";
+import { useExport, VIDEO_MAX_SECONDS, VIDEO_MIN_SECONDS, VIDEO_PRESETS, type ExportFormat } from "@/hooks/useExport";
 import { isAnimatedBackground } from "@/components/CanvasBackground";
 import { AccentThumbnail } from "@/components/CanvasAccents";
 import { ACCENT_OPTIONS } from "@/lib/accents";
@@ -25,17 +25,12 @@ type TemplateKind = "panel" | "partner" | "sales";
 
 /** What the Save button produces: a still image, or a 3-second MP4 of the
  *  animated background. */
-type SaveFormat = ExportFormat | "mp4" | "mp4-30";
-const SAVE_LABELS: Record<SaveFormat, string> = {
-  png: "PNG",
-  jpeg: "JPG",
-  mp4: "MP4 · 3s video",
-  "mp4-30": "MP4 · 30s video",
-};
-/** Capture length per video format. Both record in real time, so the 30s option
- *  takes 30 seconds of watching plus the encode. */
-const VIDEO_SECONDS: Partial<Record<SaveFormat, number>> = { mp4: 3, "mp4-30": 30 };
-const isVideoFormat = (f: SaveFormat): boolean => f in VIDEO_SECONDS;
+type SaveFormat = ExportFormat | "mp4";
+const isVideoFormat = (f: SaveFormat): f is "mp4" => f === "mp4";
+/** The video row's label carries the chosen length, since that is the thing
+ *  worth seeing before you commit 30 seconds to a recording. */
+const saveLabel = (f: SaveFormat, seconds: number): string =>
+  f === "mp4" ? `MP4 · ${seconds}s video` : f === "jpeg" ? "JPG" : "PNG";
 
 const TEMPLATES: { id: TemplateKind; label: string; icon: typeof Users }[] = [
   { id: "panel", label: "Panel", icon: Users },
@@ -478,6 +473,10 @@ export default function SimplePage() {
   // "mp4" is a save format alongside the two image ones — offered only when
   // the background actually animates (see canAnimate below).
   const [exportFormat, setExportFormat] = useState<SaveFormat>("jpeg");
+  // How long an MP4 records for. Real time, so this is also how long the user
+  // has to sit and watch it — hence a visible number rather than a hidden
+  // constant.
+  const [videoSeconds, setVideoSeconds] = useState(3);
   const [paused, setPaused] = useState(false);
   // When the user fine-tunes in the advanced editor, we adopt their edited doc
   // here and render THAT instead of the form-generated layout — so coming back
@@ -1187,15 +1186,14 @@ export default function SimplePage() {
   // Only an animated background has anything to record; a static season/stage
   // JPG would give a 3-second video of a still frame.
   const canAnimate = isAnimatedBackground(doc.design.backgroundId);
-  const saveFormats: SaveFormat[] = canAnimate ? ["png", "jpeg", "mp4", "mp4-30"] : ["png", "jpeg"];
+  const saveFormats: SaveFormat[] = canAnimate ? ["png", "jpeg", "mp4"] : ["png", "jpeg"];
   // A background switch can strand the choice on a video format — fall back to JPG.
   const effectiveFormat: SaveFormat = isVideoFormat(exportFormat) && !canAnimate ? "jpeg" : exportFormat;
 
   const handleExport = () => {
     const salesLabel = [sales.value, sales.caption].map((t) => t.trim()).filter(Boolean).join(" ");
     const base = simpleExportName(template, format, form.headline, salesLabel, partner.layout);
-    const videoSeconds = VIDEO_SECONDS[effectiveFormat];
-    if (videoSeconds) {
+    if (isVideoFormat(effectiveFormat)) {
       // The animation has to be RUNNING for the capture, so resume instead of
       // pausing (the shader is paused while a still export is in flight).
       setPaused(false);
@@ -1302,7 +1300,7 @@ export default function SimplePage() {
                 onClick={handleExport}
                 disabled={isExporting || isExportingVideo || isEmpty}
                 aria-label={isVideoFormat(effectiveFormat) ? "Save video" : "Save image"}
-                title={isEmpty ? (template === "partner" ? "Add a label or a partner logo first" : template === "sales" ? "Add the figure or a photo first" : "Add a headline or a speaker first") : `Save as ${SAVE_LABELS[effectiveFormat]}`}
+                title={isEmpty ? (template === "partner" ? "Add a label or a partner logo first" : template === "sales" ? "Add the figure or a photo first" : "Add a headline or a speaker first") : `Save as ${saveLabel(effectiveFormat, videoSeconds)}`}
                 className="flex items-center gap-1.5 pl-5 pr-3.5 py-2 text-xs font-semibold tracking-wide hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isExporting || isExportingVideo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : isVideoFormat(effectiveFormat) ? <Film className="w-3.5 h-3.5" strokeWidth={1.5} /> : <Download className="w-3.5 h-3.5" strokeWidth={1.5} />}
@@ -1312,7 +1310,7 @@ export default function SimplePage() {
                 <Popover.Trigger asChild>
                   <button
                     aria-label="Choose save format"
-                    title={`Format: ${SAVE_LABELS[effectiveFormat]}`}
+                    title={`Format: ${saveLabel(effectiveFormat, videoSeconds)}`}
                     className="flex items-center pl-2 pr-3 py-2 border-l border-black/15 hover:bg-white transition-colors"
                   >
                     <ChevronDown className="w-3.5 h-3.5" strokeWidth={2} />
@@ -1328,11 +1326,56 @@ export default function SimplePage() {
                           onClick={() => setExportFormat(fmt)}
                           className="w-full flex items-center justify-between gap-6 px-3 py-2 rounded-lg text-xs text-white/85 hover:bg-white/10 transition-colors"
                         >
-                          <span className="font-medium">{SAVE_LABELS[fmt]}</span>
+                          <span className="font-medium">{saveLabel(fmt, videoSeconds)}</span>
                           {effectiveFormat === fmt && <Check className="w-3.5 h-3.5 text-[#FF6B00]" strokeWidth={2.5} />}
                         </button>
                       </Popover.Close>
                     ))}
+                    {/* Video length. Not wrapped in Popover.Close: picking a
+                        length is an adjustment, so the menu stays open until you
+                        are happy with it. Choosing one also switches the format
+                        to MP4, so it's one click from "JPG" to "15s video". */}
+                    {canAnimate && (
+                      <div className="mt-1 border-t border-white/10 pt-2 px-3 pb-1.5">
+                        <span className="text-[10px] font-medium text-white/50 uppercase tracking-[0.16em]">Video length</span>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                          {VIDEO_PRESETS.map((s) => (
+                            <button
+                              key={s}
+                              onClick={() => { setVideoSeconds(s); setExportFormat("mp4"); }}
+                              aria-pressed={exportFormat === "mp4" && videoSeconds === s}
+                              className={`px-2 py-1 rounded-md text-[11px] font-medium tabular-nums transition-colors ${
+                                exportFormat === "mp4" && videoSeconds === s
+                                  ? "bg-[#FF0028] text-white"
+                                  : "bg-white/5 text-white/70 hover:bg-white/10"
+                              }`}
+                            >
+                              {s}s
+                            </button>
+                          ))}
+                          <label className="ml-auto flex items-center gap-1 text-[11px] text-white/60">
+                            <input
+                              type="number"
+                              min={VIDEO_MIN_SECONDS}
+                              max={VIDEO_MAX_SECONDS}
+                              value={videoSeconds}
+                              aria-label="Video length in seconds"
+                              onChange={(e) => {
+                                const n = Number(e.target.value);
+                                if (!Number.isFinite(n)) return;
+                                setVideoSeconds(Math.min(VIDEO_MAX_SECONDS, Math.max(VIDEO_MIN_SECONDS, Math.round(n))));
+                                setExportFormat("mp4");
+                              }}
+                              className="w-12 px-1.5 py-1 rounded-md bg-white/5 border border-white/10 text-[11px] tabular-nums text-white text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70"
+                            />
+                            s
+                          </label>
+                        </div>
+                        <p className="mt-1.5 text-[10px] leading-snug text-white/40">
+                          Records in real time · keep this tab in front for {videoSeconds}s.
+                        </p>
+                      </div>
+                    )}
                     {/* Says WHY there is no video option, instead of just hiding it. */}
                     {!canAnimate && (
                       <p className="px-3 py-2 text-[11px] leading-snug text-white/45">

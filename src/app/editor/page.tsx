@@ -14,7 +14,7 @@ import { ShapeDragOverlay } from "@/components/ShapeDragOverlay";
 import { LogoDragOverlay } from "@/components/LogoDragOverlay";
 import type { Bbox } from "@/lib/snap";
 import { DynamicTemplate } from "@/components/templates/DynamicTemplate";
-import { useExport, type ExportFormat } from "@/hooks/useExport";
+import { useExport, VIDEO_MAX_SECONDS, VIDEO_MIN_SECONDS, type ExportFormat } from "@/hooks/useExport";
 import { isAnimatedBackground } from "@/components/CanvasBackground";
 import { useUndoableDoc } from "@/hooks/useUndoableDoc";
 import { FORMAT_DIMENSIONS, DEFAULT_DESIGN, reconcileLayerOrder } from "@/types/template";
@@ -46,10 +46,8 @@ const HANDOFF_FLAG_KEY = "tbbqvisualgen.simple.handoff";
 
 /** What Save produces: a still image, or a 3-second MP4 of the animated
  *  background (only offered when the background actually moves). */
-type SaveFormat = ExportFormat | "mp4" | "mp4-30";
-const SAVE_LABELS: Record<SaveFormat, string> = { png: "PNG", jpeg: "JPG", mp4: "MP4", "mp4-30": "MP4 30s" };
-/** Capture length per video format — both record in real time. */
-const VIDEO_SECONDS: Partial<Record<SaveFormat, number>> = { mp4: 3, "mp4-30": 30 };
+type SaveFormat = ExportFormat | "mp4";
+const SAVE_LABELS: Record<SaveFormat, string> = { png: "PNG", jpeg: "JPG", mp4: "MP4" };
 
 // Single icon-button used inside the align popover.
 function AlignBtn({ icon: Icon, label, onClick }: { icon: typeof AlignStartVertical; label: string; onClick: () => void }) {
@@ -150,6 +148,9 @@ export default function Home() {
   const [galleryDismissed, setGalleryDismissed] = useState(false);
   // "mp4" joins PNG/JPG as a save format, offered only when the background moves.
   const [exportFormat, setExportFormat] = useState<SaveFormat>("jpeg");
+  // MP4 length in seconds. Recording is real time, so this is also how long the
+  // canvas has to stay on screen.
+  const [videoSeconds, setVideoSeconds] = useState(3);
 
   const { exportRef, isExporting, isExportingVideo, videoProgress, exportImage, exportMp4 } = useExport();
   const previewContainerRef = useRef<HTMLDivElement>(null);
@@ -741,15 +742,14 @@ export default function Home() {
   // A still image of a moving background is fine; a VIDEO of a static one is
   // just a heavy PNG, so MP4 is gated on the background actually animating.
   const canAnimate = isAnimatedBackground(design.backgroundId);
-  const effectiveFormat: SaveFormat = VIDEO_SECONDS[exportFormat] && !canAnimate ? "jpeg" : exportFormat;
+  const effectiveFormat: SaveFormat = exportFormat === "mp4" && !canAnimate ? "jpeg" : exportFormat;
 
   const handleExport = useCallback((formatOverride?: SaveFormat) => {
-    const fmt = formatOverride ?? (VIDEO_SECONDS[exportFormat] && !isAnimatedBackground(design.backgroundId) ? "jpeg" : exportFormat);
+    const fmt = formatOverride ?? (exportFormat === "mp4" && !isAnimatedBackground(design.backgroundId) ? "jpeg" : exportFormat);
     const date = new Date();
     const stamp = `${date.toISOString().slice(0, 10)}-${String(date.getHours()).padStart(2, "0")}${String(date.getMinutes()).padStart(2, "0")}`;
     const base = `techbbq-visual-${format}-${dims.width}x${dims.height}-${stamp}`;
-    const videoSeconds = VIDEO_SECONDS[fmt];
-    if (videoSeconds) {
+    if (fmt === "mp4") {
       // Resume the animation — there is nothing to record while it is paused.
       setBgPaused(false);
       void exportMp4(`${base}.mp4`, () => setBgPaused(false), videoSeconds);
@@ -1402,13 +1402,13 @@ export default function Home() {
               aria-label="Export format"
               className="flex items-center gap-1 rounded-full bg-card-2 p-1"
             >
-              {(canAnimate ? (["png", "jpeg", "mp4", "mp4-30"] as const) : (["png", "jpeg"] as const)).map((fmt) => (
+              {(canAnimate ? (["png", "jpeg", "mp4"] as const) : (["png", "jpeg"] as const)).map((fmt) => (
                 <button
                   key={fmt}
                   role="radio"
                   aria-checked={effectiveFormat === fmt}
                   onClick={() => setExportFormat(fmt)}
-                  title={VIDEO_SECONDS[fmt] ? `Record ${VIDEO_SECONDS[fmt]} seconds of the animated background as an MP4` : `Save a still ${SAVE_LABELS[fmt]}`}
+                  title={fmt === "mp4" ? `Record ${videoSeconds} seconds of the animated background as an MP4` : `Save a still ${SAVE_LABELS[fmt]}`}
                   className={`px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider transition-colors ${
                     effectiveFormat === fmt ? "bg-surface text-ink" : "text-muted hover:text-foreground"
                   }`}
@@ -1416,12 +1416,33 @@ export default function Home() {
                   {SAVE_LABELS[fmt]}
                 </button>
               ))}
+              {/* Length, only once MP4 is the choice — a seconds field sitting
+                  next to PNG would read as nonsense. */}
+              {effectiveFormat === "mp4" && (
+                <label className="flex items-center gap-0.5 pl-1 pr-1.5 text-[10px] font-semibold text-muted">
+                  <input
+                    type="number"
+                    min={VIDEO_MIN_SECONDS}
+                    max={VIDEO_MAX_SECONDS}
+                    value={videoSeconds}
+                    aria-label="Video length in seconds"
+                    title={`Record ${videoSeconds} seconds — real time, so keep this tab in front`}
+                    onChange={(e) => {
+                      const n = Number(e.target.value);
+                      if (!Number.isFinite(n)) return;
+                      setVideoSeconds(Math.min(VIDEO_MAX_SECONDS, Math.max(VIDEO_MIN_SECONDS, Math.round(n))));
+                    }}
+                    className="w-10 px-1 py-0.5 rounded-md bg-surface/10 border border-white/10 text-[10px] tabular-nums text-foreground text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70"
+                  />
+                  S
+                </label>
+              )}
             </div>
             <button
               onClick={() => handleExport()}
               disabled={isExporting || isExportingVideo || canvasIsEmpty}
               aria-label={effectiveFormat === "mp4" ? "Save video" : "Save image"}
-              title={canvasIsEmpty ? "Add something to the canvas first" : effectiveFormat === "mp4" ? "Record 3 seconds of animation as an MP4 (⌘E)" : "Save image (⌘E)"}
+              title={canvasIsEmpty ? "Add something to the canvas first" : effectiveFormat === "mp4" ? `Record ${videoSeconds} seconds of animation as an MP4 (⌘E)` : "Save image (⌘E)"}
               className="flex items-center gap-1.5 px-5 py-2 rounded-full bg-surface text-ink text-xs font-semibold tracking-wide hover:bg-white active:bg-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isExporting || isExportingVideo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : effectiveFormat === "mp4" ? <Film className="w-3.5 h-3.5" strokeWidth={1.5} /> : <Download className="w-3.5 h-3.5" strokeWidth={1.5} />}
