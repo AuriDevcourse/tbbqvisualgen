@@ -21,6 +21,11 @@ export const BACKGROUND_OPTIONS: { id: string; label: string; group: string }[] 
   // orbs (#FA7000 -> #CE0F2E) drifting on dark or deep-red bases.
   // Per-stage backgrounds — each stage is its own picker group so the stage
   // name reads as the section heading. Two variants per stage.
+  // Life Science track gradients — its own group so the green palette doesn't
+  // read as a variant of the orange season backgrounds.
+  { id: "ls1", label: "Life Science 1", group: "Life Science" },
+  { id: "ls2", label: "Life Science 2", group: "Life Science" },
+  { id: "ls16x9", label: "Life Science Wide", group: "Life Science" },
   { id: "stageTech", label: "Tech Stage 1", group: "Tech Stage" },
   { id: "stageTech2", label: "Tech Stage 2", group: "Tech Stage" },
   { id: "stageTech3", label: "Tech Stage 3", group: "Tech Stage" },

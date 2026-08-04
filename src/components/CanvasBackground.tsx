@@ -51,6 +51,12 @@ export const IMAGE_BG_REGISTRY: Record<string, { label: string; src: string }> =
   seasonGreen2: { label: "Lime Shadow", src: "/backgrounds/season-green-2.jpg" },
   seasonPurple1: { label: "Violet Haze", src: "/backgrounds/season-purple-1.jpg" },
   seasonPurple2: { label: "Violet Shadow", src: "/backgrounds/season-purple-2.jpg" },
+  // Life Science season gradients — the green/teal/blue palette the Life
+  // Science track uses instead of the orange season colours. `ls16x9` is the
+  // wide export; the two square ones cover 1:1 and 9:16.
+  ls1: { label: "Life Science 1", src: "/backgrounds/ls-1.jpg" },
+  ls2: { label: "Life Science 2", src: "/backgrounds/ls-2.jpg" },
+  ls16x9: { label: "Life Science Wide", src: "/backgrounds/ls-16x9.jpg" },
   // Per-stage backgrounds — pick the one matching where the session happens.
   // Three variants per stage.
   stageTech: { label: "Tech Stage 1", src: "/backgrounds/stage-tech.jpg" },
