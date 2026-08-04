@@ -1596,3 +1596,54 @@ describe("thank-you wall round-trip through the library", () => {
     expect(back.partner?.headline).toBe(emptyPartnerForm().headline);
   });
 });
+
+// The Investor Relations circle accents live on the DESIGN, not as shape
+// layers — so they have to be carried the way `backgroundId` is: across a
+// retarget, and back out of a doc into the sidebar.
+describe("investor accents — carried like the background", () => {
+  it("only appears on the doc once chosen, so an accent-less design is unchanged", () => {
+    const plain = buildPartnerDesign({ ...PW, label: "X", layout: "single", logos: [], backgroundId: "orb5" }, "square");
+    expect("accentId" in plain.design).toBe(false);
+    const accented = buildPartnerDesign({ ...PW, label: "X", layout: "single", logos: [], backgroundId: "orb5", accentId: "lpForum" }, "square");
+    expect(accented.design.accentId).toBe("lpForum");
+  });
+
+  it("every builder emits it", () => {
+    expect(buildSimpleDesign({ ...emptyForm(), accentId: "investor" }, "square").design.accentId).toBe("investor");
+    expect(buildSalesDesign({ ...emptySalesForm(), accentId: "investorDay" }, "square").design.accentId).toBe("investorDay");
+  });
+
+  it("a retarget carries the CURRENT choice into a tuned design, including off", () => {
+    const form = { ...emptyForm(), accentId: "lpForum" };
+    const built = buildSimpleDesign(form, "square");
+    // Hand-tune: drag the headline somewhere.
+    const tuned: SimpleDoc = {
+      ...built,
+      design: {
+        ...built.design,
+        texts: built.design.texts.map((t) => (t.simpleRole === "headline" ? { ...t, position: { x: 0.3, y: 0.2 } } : t)),
+      },
+    };
+    const swapped = retargetTunedDoc(tuned, buildSimpleDesign({ ...form, accentId: "investorDay" }, "square"));
+    expect(swapped?.design.accentId).toBe("investorDay");
+    expect(swapped?.design.texts.find((t) => t.simpleRole === "headline")?.position).toEqual({ x: 0.3, y: 0.2 });
+    // Turning them off must land too — a stale accent would keep rendering.
+    const off = retargetTunedDoc(tuned, buildSimpleDesign({ ...form, accentId: undefined }, "square"));
+    expect(off?.design.accentId).toBeUndefined();
+  });
+
+  it("comes back out of a doc into every sidebar form", () => {
+    const partnerForm: PartnerForm = { ...PW, label: "X", layout: "thanks", logos: [], backgroundId: "orb5", accentId: "investor" };
+    const partnerDoc = buildPartnerDesign(partnerForm, "square");
+    expect(formsFromDoc("partner", partnerDoc).partner?.accentId).toBe("investor");
+
+    const salesForm: SalesForm = { ...emptySalesForm(), accentId: "lpForum" };
+    expect(formsFromDoc("sales", buildSalesDesign(salesForm, "square")).sales?.accentId).toBe("lpForum");
+
+    const panelForm = { ...emptyForm(), accentId: "investorDay" };
+    const panelDoc = buildSimpleDesign(panelForm, "square");
+    // With a snapshot, and reconstructed from the doc alone.
+    expect(formsFromDoc("panel", panelDoc, stripFormsForSave("panel", panelForm, emptyPartnerForm())).form?.accentId).toBe("investorDay");
+    expect(formsFromDoc("panel", panelDoc).form?.accentId).toBe("investorDay");
+  });
+});

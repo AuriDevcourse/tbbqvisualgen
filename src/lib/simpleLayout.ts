@@ -143,6 +143,7 @@ export function retargetTunedDoc(tuned: SimpleDoc, rebuilt: SimpleDoc): SimpleDo
       // CURRENT pick across, else switching backgrounds does nothing while a
       // tuned design is active.
       backgroundId: rebuilt.design.backgroundId,
+      accentId: rebuilt.design.accentId,
       texts: tuned.design.texts.map((t) => carryWords(t, want)),
     },
   };
@@ -398,6 +399,7 @@ function retargetSlotDoc(tuned: SimpleDoc, rebuilt: SimpleDoc, slotRoles: readon
     design: {
       ...tuned.design,
       backgroundId: rebuilt.design.backgroundId,
+      accentId: rebuilt.design.accentId,
       texts: tuned.design.texts.map((t) => carryWords(t, want)),
       shapes: [...(tuned.design.shapes ?? []).filter((s) => !dropShapeIds.has(s.id)), ...addShapes],
       layerOrder: tuned.design.layerOrder?.map((l) => orderSwap.get(l) ?? l),
@@ -672,6 +674,10 @@ export interface PartnerForm {
   /** Thank-you layout only: the big centred headline. Its own field so
    *  switching layouts never overwrites the label chip's wording. */
   headline: string;
+  /** Investor Relations circle accents (see ACCENT_REGISTRY), or undefined
+   *  for none. Sits next to the background because it is the same kind of
+   *  choice: a whole-canvas look, not a layer. */
+  accentId?: string;
   backgroundId: string;
 }
 
@@ -716,6 +722,10 @@ export interface SalesForm {
   /** The one photo this layout frames. Same {src, natural*} shape as a
    *  partner logo, so the upload slot component is shared. */
   photo: PartnerLogo | null;
+  /** Investor Relations circle accents (see ACCENT_REGISTRY), or undefined
+   *  for none. Sits next to the background because it is the same kind of
+   *  choice: a whole-canvas look, not a layer. */
+  accentId?: string;
   backgroundId: string;
 }
 
@@ -782,6 +792,10 @@ export interface SimpleForm {
   includeModerator: boolean;
   moderator: SimplePerson;
   speakers: SimplePerson[];
+  /** Investor Relations circle accents (see ACCENT_REGISTRY), or undefined
+   *  for none. Sits next to the background because it is the same kind of
+   *  choice: a whole-canvas look, not a layer. */
+  accentId?: string;
   backgroundId: string;
 }
 
@@ -930,6 +944,9 @@ export function buildPartnerDesign(form: PartnerForm, format: PlatformFormat): S
 
   const design: DesignConfig = {
     backgroundId: form.backgroundId || "orb7",
+      // Spread rather than assigned, so a design with no accent is exactly
+      // the doc the builders produced before accents existed.
+      ...(form.accentId ? { accentId: form.accentId } : {}),
     texts,
     shapes,
     showLogo: true,
@@ -1130,6 +1147,9 @@ function buildThanksDesign(form: PartnerForm, format: PlatformFormat): SimpleDoc
     customSize: { width: W, height: H },
     design: {
       backgroundId: form.backgroundId || "orb7",
+      // Spread rather than assigned, so a design with no accent is exactly
+      // the doc the builders produced before accents existed.
+      ...(form.accentId ? { accentId: form.accentId } : {}),
       texts,
       shapes,
       showLogo: false,
@@ -1362,6 +1382,9 @@ export function buildSalesDesign(form: SalesForm, format: PlatformFormat): Simpl
 
   const design: DesignConfig = {
     backgroundId: form.backgroundId || "orb7",
+      // Spread rather than assigned, so a design with no accent is exactly
+      // the doc the builders produced before accents existed.
+      ...(form.accentId ? { accentId: form.accentId } : {}),
     texts,
     shapes,
     // The ribbon already brands the corner — a second logo in it would collide,
@@ -1767,6 +1790,9 @@ export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): Sim
 
   const design: DesignConfig = {
     backgroundId: form.backgroundId || "orb7",
+      // Spread rather than assigned, so a design with no accent is exactly
+      // the doc the builders produced before accents existed.
+      ...(form.accentId ? { accentId: form.accentId } : {}),
     texts,
     shapes,
     showLogo: true,
@@ -2034,6 +2060,7 @@ export function formsFromDoc(kind: string, doc: SimpleDoc, saved?: SimpleFormsSn
         ribbon: saved?.sales ? base.ribbon : (textByRole.get("sales.ribbon") ?? base.ribbon),
         photo: base.photo?.src ? base.photo : (photoImg ? { src: photoImg.src, naturalWidth: photoImg.naturalWidth, naturalHeight: photoImg.naturalHeight } : null),
         backgroundId: doc.design.backgroundId || base.backgroundId,
+        accentId: doc.design.accentId ?? base.accentId,
       },
     };
   }
@@ -2077,6 +2104,7 @@ export function formsFromDoc(kind: string, doc: SimpleDoc, saved?: SimpleFormsSn
         featuredCount: thanksRoles.length ? thanksLeadCount(doc) : base.featuredCount,
         headline: saved?.partner ? base.headline : (textByRole.get("thanks.headline") ?? base.headline),
         backgroundId: doc.design.backgroundId || base.backgroundId,
+        accentId: doc.design.accentId ?? base.accentId,
       },
     };
   }
@@ -2100,6 +2128,7 @@ export function formsFromDoc(kind: string, doc: SimpleDoc, saved?: SimpleFormsSn
         moderator: mergePersonDescription(withPhoto(saved.form.moderator, "moderator")),
         speakers: saved.form.speakers.map((p, i) => mergePersonDescription(withPhoto(p, `speaker-${i}`))),
         backgroundId: doc.design.backgroundId || saved.form.backgroundId,
+        accentId: doc.design.accentId ?? saved.form.accentId,
       },
     };
   }
@@ -2138,6 +2167,7 @@ export function formsFromDoc(kind: string, doc: SimpleDoc, saved?: SimpleFormsSn
         ? Array.from({ length: speakerCount }, (_, i) => person(`speaker-${i}`))
         : [emptyPerson()],
       backgroundId: doc.design.backgroundId || "orb7",
+      accentId: doc.design.accentId,
     },
   };
 }

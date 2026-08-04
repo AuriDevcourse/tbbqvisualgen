@@ -3,6 +3,7 @@
 import { FormatPicker } from "@/components/FormatPicker";
 import { BackgroundPicker } from "@/components/BackgroundPicker";
 import { OverlayPicker } from "@/components/OverlayPicker";
+import { ACCENT_OPTIONS, AccentThumbnail } from "@/components/CanvasAccents";
 import type { DesignConfig, PlatformFormat } from "@/types/template";
 
 // TechBBQ logo color options. Swatches mirror the three logo PNGs.
@@ -46,6 +47,34 @@ export function StepCanvas({
           onChange={(id) => setDesign({ ...design, backgroundId: id })}
         />
         <p className="text-[10px] text-white/60">Pause/resume the animation above the canvas.</p>
+      </section>
+
+      {/* Investor accents — same choice as in Quick Templates, so fine-tuning
+          a design doesn't mean losing the ability to change it. */}
+      <section className="flex flex-col gap-2">
+        <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.18em]">Investor accents</span>
+        <div className="flex gap-1.5">
+          {[{ id: undefined, label: "None" }, ...ACCENT_OPTIONS].map((opt) => {
+            const active = (design.accentId ?? undefined) === opt.id;
+            return (
+              <button
+                key={opt.id ?? "none"}
+                onClick={() => setDesign({ ...design, accentId: opt.id })}
+                aria-pressed={active}
+                title={opt.id ? `${opt.label} — circle accents in opposite corners` : "No circle accents"}
+                className={`flex-1 flex flex-col items-center gap-1 px-1.5 py-1.5 rounded-lg border text-[10px] leading-tight transition-all ${
+                  active ? "border-[#FF6B00] bg-[#FF6B00]/10 text-white" : "border-white/10 bg-white/5 text-white/70 hover:border-white/25"
+                }`}
+              >
+                <span className="w-full aspect-square max-w-9 rounded overflow-hidden border border-white/10">
+                  {opt.id ? <AccentThumbnail id={opt.id} /> : <span className="block w-full h-full bg-[#15110E]" />}
+                </span>
+                <span className="font-medium text-center">{opt.label}</span>
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-[10px] text-white/60">Renders behind every layer, in opposite corners.</p>
       </section>
 
       <section className="flex flex-col gap-2 pt-3 border-t border-white/5">

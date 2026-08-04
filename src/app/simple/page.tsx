@@ -12,6 +12,7 @@ import { DynamicTemplate } from "@/components/templates/DynamicTemplate";
 import { BackgroundPicker } from "@/components/BackgroundPicker";
 import { useExport, type ExportFormat } from "@/hooks/useExport";
 import { isAnimatedBackground } from "@/components/CanvasBackground";
+import { ACCENT_OPTIONS, AccentThumbnail } from "@/components/CanvasAccents";
 import { LogoLibraryPicker, asUploadedImage } from "@/components/LogoLibraryPicker";
 import { PARTNER_SETS, type PartnerSet } from "@/data/partnerSets";
 import { isSvgDataUrl, tintSvgDataUrl } from "@/lib/svgTint";
@@ -1057,6 +1058,17 @@ export default function SimplePage() {
       return { ...p, logoCount, featuredCount: Math.min(p.featuredCount, logoCount) };
     });
 
+  // The accent choice belongs to whichever template is on screen, like the
+  // background — a panel about LP Forum wants it just as much as a partner wall.
+  const accentId = template === "partner" ? partner.accentId
+    : template === "sales" ? sales.accentId
+    : form.accentId;
+  const setAccent = (id: string | undefined) => {
+    if (template === "partner") setPartner((p) => ({ ...p, accentId: id }));
+    else if (template === "sales") setSales((p) => ({ ...p, accentId: id }));
+    else setForm((f) => ({ ...f, accentId: id }));
+  };
+
   /** Resize the lead (bigger) tier — the first N cells of the wall. */
   const setFeaturedCount = (n: number) =>
     setPartner((p) => ({ ...p, featuredCount: Math.max(0, Math.min(p.logoCount, n)) }));
@@ -1727,6 +1739,33 @@ export default function SimplePage() {
               )}
             </section>
             </>)}
+
+            {/* Investor accents — the circle pair in opposite corners. The FILL
+                says which investor thing the post is about, so this is a
+                content choice, not decoration: gradient for investor relations
+                in general, orange for LP Forum, red for Investor Day. */}
+            <section className="flex flex-col gap-2">
+              <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Investor accents</span>
+              <div className="flex gap-1.5">
+                {[{ id: undefined, label: "None" }, ...ACCENT_OPTIONS].map((opt) => {
+                  const active = (accentId ?? undefined) === opt.id;
+                  return (
+                    <button
+                      key={opt.id ?? "none"}
+                      onClick={() => setAccent(opt.id)}
+                      aria-pressed={active}
+                      title={opt.id ? `${opt.label} — circle accents in opposite corners` : "No circle accents"}
+                      className={`flex-1 flex flex-col items-center gap-1 px-1.5 py-1.5 rounded-lg text-[10px] leading-tight transition-all ${active ? "bg-[#FF0028] text-white" : "bg-white/5 border border-white/10 text-white/70 hover:bg-white/10"}`}
+                    >
+                      <span className="w-full aspect-square max-w-8 rounded overflow-hidden border border-white/10">
+                        {opt.id ? <AccentThumbnail id={opt.id} /> : <span className="block w-full h-full bg-[#15110E]" />}
+                      </span>
+                      <span className="font-medium text-center">{opt.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
 
             {/* Background */}
             <section className="flex flex-col gap-2">

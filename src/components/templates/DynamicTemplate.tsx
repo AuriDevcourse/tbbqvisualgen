@@ -5,6 +5,7 @@ import type { DesignConfig, PlatformFormat, TextElement, ShapeElement, ShapeBord
 import { FORMAT_DIMENSIONS, reconcileLayerOrder } from "@/types/template";
 import { COLORS, FONTS, GRADIENT_TEXT_CSS, GRADIENT_BORDER_CSS } from "@/lib/constants";
 import { CanvasBackground } from "@/components/CanvasBackground";
+import { CanvasAccents } from "@/components/CanvasAccents";
 import type { CanvasImage } from "@/components/ImagePlacer";
 import { computeSnapTargets, snapBbox } from "@/lib/snap";
 import type { Bbox } from "@/lib/snap";
@@ -607,6 +608,11 @@ export function DynamicTemplate({
       <div data-canvas-bg="1" style={{ position: "absolute", inset: 0 }}>
         <CanvasBackground id={design.backgroundId} width={dims.width} height={dims.height} paused={paused} />
       </div>
+
+      {/* Investor Relations circle accents — behind every content layer, but
+          OUTSIDE the background wrapper: the video export hides that wrapper and
+          rasterizes the rest once, so accents belong with the content. */}
+      <CanvasAccents id={design.accentId} width={dims.width} height={dims.height} />
 
       {/* Color overlay */}
       {showOverlay && (

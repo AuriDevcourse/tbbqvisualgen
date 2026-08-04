@@ -246,6 +246,13 @@ export function newShapeElement(type: ShapeType): ShapeElement {
 export interface DesignConfig {
   backgroundId: string;
 
+  /** Investor Relations circle accents — a filled bubble plus a white ring in
+   *  opposite corners, keyed by which investor thing the post is about
+   *  (`investor` | `lpForum` | `investorDay`, see ACCENT_REGISTRY). Undefined =
+   *  none. Lives on the design rather than as shape layers so it survives a
+   *  retarget the way `backgroundId` does, and stays out of the layer stack. */
+  accentId?: string;
+
   /** Multiple text layers — each independently positioned, sized and styled. */
   texts: TextElement[];
 
