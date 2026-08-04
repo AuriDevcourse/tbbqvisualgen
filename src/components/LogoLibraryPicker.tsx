@@ -104,7 +104,7 @@ function search(list: LibraryLogo[], query: string): LibraryLogo[] {
  * staying put: a data URL keeps a saved design intact if the file is later
  * renamed or removed, and matches what `retargetPartnerLayout` expects.
  */
-async function asUploadedImage(src: string): Promise<{ src: string; naturalWidth?: number; naturalHeight?: number }> {
+export async function asUploadedImage(src: string): Promise<{ src: string; naturalWidth?: number; naturalHeight?: number }> {
   const res = await fetch(src);
   if (!res.ok) throw new Error(`${res.status}`);
   const blob = await res.blob();

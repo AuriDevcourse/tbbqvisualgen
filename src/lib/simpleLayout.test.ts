@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { adoptLegacyPanelRoles, buildPartnerDesign, buildSalesDesign, buildSimpleDesign, bundleCoverage, dedupeSpeakerRoles, docKindOf, emptyForm, parkDoc, emptyPartnerForm, emptyPerson, emptySalesForm, formsFromDoc, isBlankPerson, mergePersonDescription, migrateLegacyPanelDoc, panelShapeKey, partnerLayoutOf, retargetPartnerLayout, retargetSalesLayout, retargetTunedDoc, salesLayoutOf, sampleFourthSpeaker, simpleExportName, stripFormsForSave, syncPanelChrome, syncPartnerChrome, type PartnerForm, type SalesForm, type SimpleDoc, type SimpleForm } from "./simpleLayout";
+import { adoptLegacyPanelRoles, buildPartnerDesign, buildSalesDesign, buildSimpleDesign, bundleCoverage, dedupeSpeakerRoles, docKindOf, emptyForm, parkDoc, emptyPartnerForm, emptyPerson, emptySalesForm, formsFromDoc, isBlankPerson, mergePersonDescription, migrateLegacyPanelDoc, panelShapeKey, partnerLayoutOf, retargetPartnerLayout, retargetSalesLayout, retargetTunedDoc, salesLayoutOf, sampleFourthSpeaker, simpleExportName, stripFormsForSave, syncPanelChrome, syncPartnerChrome, thanksGridColumns, type PartnerForm, type SalesForm, type SimpleDoc, type SimpleForm } from "./simpleLayout";
 import type { PlatformFormat } from "@/types/template";
+
+/** The partner-form fields the thank-you wall introduced. Spread into the
+ *  One/Two/Four literals below, which predate them and don't care. */
+const PW = { logoCount: 12, headline: "Thank you to\nour partners" };
 
 /**
  * Golden-layout guard for the house-standard panel: 3 speakers + 1 moderator.
@@ -302,6 +306,7 @@ describe("retargetTunedDoc — keeping a hand-tuned panel through a text edit", 
 // tuned slot; only a slot appearing/disappearing forces a rebuild.
 describe("retargetTunedDoc — image swaps keep the tuned layout", () => {
   const partnerWith = (src: string): PartnerForm => ({
+    ...PW,
     label: "Official Partner",
     layout: "single",
     logos: [{ src, naturalWidth: 800, naturalHeight: 400 }],
@@ -351,14 +356,14 @@ describe("retargetTunedDoc — image swaps keep the tuned layout", () => {
 
   it("duo layout uses duo-specific roles — never shape-matches a half-filled quad", () => {
     const logos = [{ src: "data:a" }, { src: "data:b" }];
-    const duo = buildPartnerDesign({ label: "X", layout: "duo", logos, backgroundId: "orb5" }, "square");
-    const halfQuad = buildPartnerDesign({ label: "X", layout: "quad", logos, backgroundId: "orb5" }, "square");
+    const duo = buildPartnerDesign({ ...PW, label: "X", layout: "duo", logos, backgroundId: "orb5" }, "square");
+    const halfQuad = buildPartnerDesign({ ...PW, label: "X", layout: "quad", logos, backgroundId: "orb5" }, "square");
 
     expect(duo.canvasImages.map((i) => i.simpleRole)).toEqual(["logo-duo-0", "logo-duo-1"]);
     expect(panelShapeKey(duo)).not.toBe(panelShapeKey(halfQuad));
     expect(retargetTunedDoc(duo, halfQuad)).toBeNull();
     // A replaced logo within duo still retargets.
-    const swapped = buildPartnerDesign({ label: "X", layout: "duo", logos: [{ src: "data:c" }, { src: "data:b" }], backgroundId: "orb5" }, "square");
+    const swapped = buildPartnerDesign({ ...PW, label: "X", layout: "duo", logos: [{ src: "data:c" }, { src: "data:b" }], backgroundId: "orb5" }, "square");
     expect(retargetTunedDoc(duo, swapped)?.canvasImages.find((i) => i.simpleRole === "logo-duo-0")?.src).toBe("data:c");
   });
 });
@@ -369,7 +374,7 @@ describe("retargetTunedDoc — image swaps keep the tuned layout", () => {
 // exact-matched a rebuild with two).
 describe("retargetPartnerLayout — same layout, different slot fill", () => {
   const duoWith = (logos: ({ src: string } | null)[]): PartnerForm =>
-    ({ label: "Official Partner", layout: "duo", logos, backgroundId: "orb5" });
+    ({ ...PW, label: "Official Partner", layout: "duo", logos, backgroundId: "orb5" });
 
   it("fills a tuned placeholder slot with the new logo at the frame's position", () => {
     const built = buildPartnerDesign(duoWith([{ src: "data:a" }, null]), "square");
@@ -404,7 +409,7 @@ describe("retargetPartnerLayout — same layout, different slot fill", () => {
 
   it("refuses a different layout, format or a hand-deleted frame", () => {
     const duo = buildPartnerDesign(duoWith([{ src: "data:a" }, null]), "square");
-    const quad = buildPartnerDesign({ label: "Official Partner", layout: "quad", logos: [{ src: "data:a" }], backgroundId: "orb5" }, "square");
+    const quad = buildPartnerDesign({ ...PW, label: "Official Partner", layout: "quad", logos: [{ src: "data:a" }], backgroundId: "orb5" }, "square");
     expect(retargetPartnerLayout(duo, quad, "quad")).toBeNull();
     const wide = buildPartnerDesign(duoWith([{ src: "data:a" }, { src: "data:b" }]), "presentation");
     expect(retargetPartnerLayout(duo, wide, "duo")).toBeNull();
@@ -420,7 +425,7 @@ describe("retargetPartnerLayout — same layout, different slot fill", () => {
   // tags on the frames pin each one to its slot.
   it("keeps quad logos in their own cells through clear-then-fill cycles", () => {
     const quadWith = (logos: ({ src: string } | null)[]): PartnerForm =>
-      ({ label: "Official Partner", layout: "quad", logos, backgroundId: "orb5" });
+      ({ ...PW, label: "Official Partner", layout: "quad", logos, backgroundId: "orb5" });
     const cellOf = (doc: ReturnType<typeof buildPartnerDesign>, role: string) => {
       const i = doc.canvasImages.find((x) => x.simpleRole === role)!;
       return [i.x, i.y];
@@ -443,7 +448,7 @@ describe("retargetPartnerLayout — same layout, different slot fill", () => {
   });
 
   it("pluralizes a label ending in 'partner' on multi-logo layouts", () => {
-    const base = { label: "Official Partner", logos: [{ src: "data:a" }], backgroundId: "orb5" };
+    const base = { ...PW, label: "Official Partner", logos: [{ src: "data:a" }], backgroundId: "orb5" };
     const labelOf = (doc: ReturnType<typeof buildPartnerDesign>) =>
       doc.design.texts.find((t) => t.simpleRole === "label")?.content;
     expect(labelOf(buildPartnerDesign({ ...base, layout: "single" }, "square"))).toBe("OFFICIAL PARTNER");
@@ -471,7 +476,7 @@ describe("parkDoc — touch recency protects the tuned design from eviction", ()
     // Distinct shape keys need distinct (layout × format) combos — the key
     // reads roles, not content, so same-shape docs share one slot.
     const doc = (layout: PartnerForm["layout"], format: PlatformFormat) =>
-      buildPartnerDesign({ label: "X", layout, logos: [{ src: "data:l" }], backgroundId: "orb5" }, format);
+      buildPartnerDesign({ ...PW, label: "X", layout, logos: [{ src: "data:l" }], backgroundId: "orb5" }, format);
     const tuned = doc("single", "square");
     let shelf: Record<string, ReturnType<typeof buildPartnerDesign>> = {};
     shelf = parkDoc(shelf, tuned); // first in — the eviction candidate
@@ -496,7 +501,7 @@ describe("parkDoc — touch recency protects the tuned design from eviction", ()
 // layout switches (Auri's "should stay in the same place").
 describe("syncPartnerChrome — shared chrome across layouts of one format", () => {
   const pf = (layout: PartnerForm["layout"], logos: ({ src: string } | null)[]): PartnerForm =>
-    ({ label: "Official Partner", layout, logos, backgroundId: "orb5" });
+    ({ ...PW, label: "Official Partner", layout, logos, backgroundId: "orb5" });
   const line = { id: "line-1", type: "line" as const, x: 0.5, y: 0.69, width: 0.4, height: 0.006, fillType: "fill" as const, strokeWidth: 0, colorType: "solid" as const, color1: "#FFF", color2: "#FFF", opacity: 1, blur: 0, rotation: 0 };
 
   it("carries label position/style, decorations and logo settings; keeps target slots and content", () => {
@@ -534,7 +539,7 @@ describe("syncPartnerChrome — shared chrome across layouts of one format", () 
     // with `from` still being the panel doc, floating MODERATOR/SPEAKER words
     // over the partner design.
     const panel = buildSimpleDesign(emptyForm(), "story");
-    const partner = buildPartnerDesign({ label: "Official Community Partner", layout: "single", logos: [], backgroundId: "orb7" }, "story");
+    const partner = buildPartnerDesign({ ...PW, label: "Official Community Partner", layout: "single", logos: [], backgroundId: "orb7" }, "story");
     expect(syncPartnerChrome(panel, partner)).toBe(partner);
     expect(syncPartnerChrome(partner, panel)).toBe(panel); // reverse direction guarded too
 
@@ -558,7 +563,7 @@ describe("syncPartnerChrome — shared chrome across layouts of one format", () 
 
 describe("bundleCoverage — what a template consists of", () => {
   it("reads the layout from placeholder frames when no logo is uploaded", () => {
-    const empty = buildPartnerDesign({ label: "X", layout: "duo", logos: [], backgroundId: "orb5" }, "square");
+    const empty = buildPartnerDesign({ ...PW, label: "X", layout: "duo", logos: [], backgroundId: "orb5" }, "square");
     expect(empty.canvasImages).toHaveLength(0);
     expect(partnerLayoutOf(empty)).toBe("duo");
     expect(bundleCoverage([empty])).toEqual([{ format: "square", layout: "duo" }]);
@@ -566,9 +571,9 @@ describe("bundleCoverage — what a template consists of", () => {
 
   it("lists distinct format × layout combos, panel docs as format-only", () => {
     const logos = [{ src: "data:a" }];
-    const single = buildPartnerDesign({ label: "X", layout: "single", logos, backgroundId: "orb5" }, "square");
-    const duo = buildPartnerDesign({ label: "X", layout: "duo", logos, backgroundId: "orb5" }, "square");
-    const duoAgain = buildPartnerDesign({ label: "X", layout: "duo", logos: [{ src: "data:b" }], backgroundId: "orb5" }, "square");
+    const single = buildPartnerDesign({ ...PW, label: "X", layout: "single", logos, backgroundId: "orb5" }, "square");
+    const duo = buildPartnerDesign({ ...PW, label: "X", layout: "duo", logos, backgroundId: "orb5" }, "square");
+    const duoAgain = buildPartnerDesign({ ...PW, label: "X", layout: "duo", logos: [{ src: "data:b" }], backgroundId: "orb5" }, "square");
     const panel = buildSimpleDesign(panelOf3PlusModerator(), "presentation");
     expect(bundleCoverage([single, duo, duoAgain, panel])).toEqual([
       { format: "square", layout: "single" },
@@ -583,7 +588,7 @@ describe("bundleCoverage — what a template consists of", () => {
 // Panel form" was the bug).
 describe("formsFromDoc — restoring the sidebar for a loaded doc", () => {
   it("reconstructs a legacy partner form from role-tagged layers", () => {
-    const pf: PartnerForm = { label: "Official Partner", layout: "single", logos: [{ src: "data:logo", naturalWidth: 640, naturalHeight: 320 }], backgroundId: "orb3" };
+    const pf: PartnerForm = { ...PW, label: "Official Partner", layout: "single", logos: [{ src: "data:logo", naturalWidth: 640, naturalHeight: 320 }], backgroundId: "orb3" };
     const doc = buildPartnerDesign(pf, "square");
 
     const restored = formsFromDoc("partner", doc);
@@ -596,7 +601,7 @@ describe("formsFromDoc — restoring the sidebar for a loaded doc", () => {
   });
 
   it("reconstructs a duo partner form from duo roles", () => {
-    const pf: PartnerForm = { label: "Partners", layout: "duo", logos: [{ src: "data:l" }, { src: "data:r" }], backgroundId: "orb5" };
+    const pf: PartnerForm = { ...PW, label: "Partners", layout: "duo", logos: [{ src: "data:l" }, { src: "data:r" }], backgroundId: "orb5" };
     const restored = formsFromDoc("partner", buildPartnerDesign(pf, "square"));
     expect(restored.partner!.layout).toBe("duo");
     expect(restored.partner!.logos.map((l) => l?.src)).toEqual(["data:l", "data:r"]);
@@ -604,7 +609,7 @@ describe("formsFromDoc — restoring the sidebar for a loaded doc", () => {
 
   it("keeps ALL partner logo slots through a save/load round-trip — not just the active layout's", () => {
     // Single layout active, but slots 0–1 filled (the user also set up Two).
-    const pf: PartnerForm = { label: "Official Partner", layout: "single", logos: [{ src: "data:one" }, { src: "data:two" }], backgroundId: "orb5" };
+    const pf: PartnerForm = { ...PW, label: "Official Partner", layout: "single", logos: [{ src: "data:one" }, { src: "data:two" }], backgroundId: "orb5" };
     const doc = buildPartnerDesign(pf, "square"); // carries only logo-single
     const snap = stripFormsForSave("partner", emptyForm(), pf);
     expect(snap.partner!.logos.map((l) => l?.src)).toEqual(["data:one", "data:two"]); // logos survive saving
@@ -683,7 +688,7 @@ describe("adoptLegacyPanelRoles — pre-role library docs get their photo roles 
   });
 
   it("leaves partner docs untouched — even legacy ones with role-less logos", () => {
-    const pf: PartnerForm = { label: "Official Partner", layout: "single", logos: [{ src: "data:logo" }], backgroundId: "orb3" };
+    const pf: PartnerForm = { ...PW, label: "Official Partner", layout: "single", logos: [{ src: "data:logo" }], backgroundId: "orb3" };
     const doc = buildPartnerDesign(pf, "square");
     const legacy = { ...doc, canvasImages: doc.canvasImages.map((img) => ({ ...img, simpleRole: undefined })) };
     // No person text roles -> nothing to map onto; must stay untouched.
@@ -804,7 +809,7 @@ describe("dedupeSpeakerRoles — editor-cloned layers get fresh speaker indices"
   it("clean docs and partner docs pass through by reference", () => {
     const clean = buildSimpleDesign(panelOf3PlusModerator(), "square");
     expect(dedupeSpeakerRoles(clean)).toBe(clean);
-    const pf: PartnerForm = { label: "X", layout: "duo", logos: [{ src: "data:l" }, { src: "data:r" }], backgroundId: "orb5" };
+    const pf: PartnerForm = { ...PW, label: "X", layout: "duo", logos: [{ src: "data:l" }, { src: "data:r" }], backgroundId: "orb5" };
     const partner = buildPartnerDesign(pf, "square");
     expect(dedupeSpeakerRoles(partner)).toBe(partner);
   });
@@ -825,6 +830,7 @@ describe("simpleExportName — saved-image naming convention", () => {
     expect(simpleExportName("panel", "presentation", "AI in 2026")).toBe("16x9 - Panel - AI in 2026");
     expect(simpleExportName("panel", "story", "")).toBe("9x16 - Panel");
     expect(simpleExportName("partner", "presentation", "ignored")).toBe("16x9 - Partner Announcement");
+    expect(simpleExportName("partner", "presentation", "ignored", undefined, "thanks")).toBe("16x9 - Thank You Partners");
   });
 
   it("strips characters that break file names", () => {
@@ -976,7 +982,7 @@ describe("syncPanelChrome — header + moderator follow the user across speaker 
     const wide = buildSimpleDesign(form2, "presentation");
     expect(syncPanelChrome(from, wide)).toBe(wide);
 
-    const pf: PartnerForm = { label: "Official Partner", layout: "single", logos: [{ src: "data:logo" }], backgroundId: "orb3" };
+    const pf: PartnerForm = { ...PW, label: "Official Partner", layout: "single", logos: [{ src: "data:logo" }], backgroundId: "orb3" };
     const partner = buildPartnerDesign(pf, "square");
     expect(syncPanelChrome(partner, buildSimpleDesign(form2, "square"))).not.toBe(partner);
     const toPartner = buildPartnerDesign(pf, "square");
@@ -1311,5 +1317,202 @@ describe("sales form round-trip through the library", () => {
     expect(simpleExportName("sales", "story", "", "")).toBe("9x16 - Sale");
     // The panel and partner names are unchanged.
     expect(simpleExportName("partner", "square", "ignored")).toBe("1x1 - Partner Announcement");
+  });
+});
+
+// ── The thank-you wall ──────────────────────────────────────────────────────
+// A fourth partner layout: one headline over an auto-flowed grid of N logos.
+// Unlike One/Two/Four its slot COUNT is a form field, so both the grid geometry
+// and the park/retarget machinery have to follow it.
+describe("Thank you wall — grid geometry", () => {
+  const wall = (patch: Partial<PartnerForm> = {}): PartnerForm =>
+    ({ ...emptyPartnerForm(), layout: "thanks", ...patch });
+
+  it("reads as a partner doc with thanks slot roles, a headline and no TechBBQ logo", () => {
+    const doc = buildPartnerDesign(wall({ logoCount: 3 }), "presentation");
+    expect(docKindOf(doc)).toBe("partner");
+    expect(partnerLayoutOf(doc)).toBe("thanks");
+    expect(doc.design.texts.map((t) => t.simpleRole)).toEqual(["thanks.headline"]);
+    // Nothing uploaded yet, so three tagged placeholder frames in grid order.
+    expect(doc.design.shapes?.map((s) => s.simpleRole)).toEqual(["logo-thanks-0", "logo-thanks-1", "logo-thanks-2"]);
+    expect(doc.canvasImages).toHaveLength(0);
+    expect(doc.design.showLogo).toBe(false);
+  });
+
+  it("renders exactly logoCount cells, filled ones as contain-fit images", () => {
+    const logos = Array.from({ length: 4 }, (_, i) => ({ src: `data:l${i}` }));
+    const doc = buildPartnerDesign(wall({ logoCount: 6, logos }), "square");
+    expect(doc.canvasImages.map((i) => i.simpleRole)).toEqual(["logo-thanks-0", "logo-thanks-1", "logo-thanks-2", "logo-thanks-3"]);
+    expect(doc.canvasImages.every((i) => i.fit === "contain")).toBe(true);
+    expect(doc.design.shapes?.map((s) => s.simpleRole)).toEqual(["logo-thanks-4", "logo-thanks-5"]);
+  });
+
+  it("keeps logos beyond the count out of the doc — lowering the count parks them", () => {
+    const logos = Array.from({ length: 8 }, (_, i) => ({ src: `data:l${i}` }));
+    const doc = buildPartnerDesign(wall({ logoCount: 4, logos }), "square");
+    expect(doc.canvasImages.map((i) => i.src)).toEqual(["data:l0", "data:l1", "data:l2", "data:l3"]);
+  });
+
+  it("clamps the count instead of emitting an empty or endless grid", () => {
+    const none = buildPartnerDesign(wall({ logoCount: 0 }), "square");
+    expect(none.design.shapes).toHaveLength(1);
+    // A wall at the floor is still witnessable as one.
+    expect(partnerLayoutOf(none)).toBe("thanks");
+    expect(buildPartnerDesign(wall({ logoCount: 99 }), "presentation").design.shapes).toHaveLength(30);
+  });
+
+  it("never leaves one orphan on the last row, and caps columns per format", () => {
+    // 11 at 16:9 would flow 5,5,1 — it steps down to 4,4,3 instead.
+    expect(thanksGridColumns(11, 16 / 9)).toBe(4);
+    expect(thanksGridColumns(12, 16 / 9)).toBe(5);
+    expect(thanksGridColumns(12, 1)).toBe(4);
+    // A 9:16 story cannot carry more than three across.
+    expect(thanksGridColumns(25, 9 / 16)).toBe(3);
+    expect(thanksGridColumns(30, 16 / 9)).toBe(6);
+    // Fewer logos than a full row: one column each.
+    expect(thanksGridColumns(2, 16 / 9)).toBe(2);
+    expect(thanksGridColumns(1, 1)).toBe(1);
+  });
+
+  it("keeps every cell inside the margins and centres each row", () => {
+    for (const format of ["square", "presentation", "story"] as PlatformFormat[]) {
+      const doc = buildPartnerDesign(wall({ logoCount: 12 }), format);
+      const cells = doc.design.shapes ?? [];
+      expect(cells).toHaveLength(12);
+      for (const c of cells) {
+        expect(c.x - c.width / 2).toBeGreaterThanOrEqual(0.059);
+        expect(c.x + c.width / 2).toBeLessThanOrEqual(0.941);
+        expect(c.y - c.height / 2).toBeGreaterThan(0);
+        expect(c.y + c.height / 2).toBeLessThanOrEqual(0.941);
+      }
+      // Every row sits below the headline…
+      const headline = doc.design.texts[0];
+      expect(Math.min(...cells.map((c) => c.y - c.height / 2))).toBeGreaterThan(headline.position.y);
+      // …and is centred on the canvas (mirrored x's average to 0.5).
+      const rows = new Map<number, typeof cells>();
+      for (const c of cells) {
+        const key = Math.round(c.y * 1000);
+        rows.set(key, [...(rows.get(key) ?? []), c]);
+      }
+      for (const row of rows.values()) {
+        expect(row.reduce((s, c) => s + c.x, 0) / row.length).toBeCloseTo(0.5, 5);
+      }
+    }
+  });
+
+  it("is a distinct composition per count, and never matches One/Two/Four", () => {
+    expect(panelShapeKey(buildPartnerDesign(wall({ logoCount: 10 }), "square")))
+      .not.toBe(panelShapeKey(buildPartnerDesign(wall({ logoCount: 11 }), "square")));
+    const quad = buildPartnerDesign({ ...emptyPartnerForm(), layout: "quad" }, "square");
+    expect(panelShapeKey(buildPartnerDesign(wall({ logoCount: 4 }), "square"))).not.toBe(panelShapeKey(quad));
+  });
+});
+
+describe("retargetPartnerLayout — the thank-you wall", () => {
+  const wall = (logoCount: number, logos: ({ src: string } | null)[] = []): PartnerForm =>
+    ({ ...emptyPartnerForm(), layout: "thanks", logoCount, logos });
+
+  it("fills a tuned cell in place when its slot gains a logo", () => {
+    const built = buildPartnerDesign(wall(3, [{ src: "data:a" }, null, null]), "square");
+    // Hand-tune: drag the second cell's frame somewhere of your own choosing.
+    const tuned: SimpleDoc = {
+      ...built,
+      design: {
+        ...built.design,
+        shapes: (built.design.shapes ?? []).map((s) =>
+          s.simpleRole === "logo-thanks-1" ? { ...s, x: 0.2, y: 0.8 } : s),
+      },
+    };
+    const rebuilt = buildPartnerDesign(wall(3, [{ src: "data:a" }, { src: "data:b" }, null]), "square");
+    const filled = retargetPartnerLayout(tuned, rebuilt, "thanks")?.canvasImages
+      .find((i) => i.simpleRole === "logo-thanks-1");
+    expect(filled?.src).toBe("data:b");
+    expect(filled?.x).toBe(0.2);
+    expect(filled?.y).toBe(0.8);
+  });
+
+  it("refuses a count change — a different grid is a different design", () => {
+    expect(retargetPartnerLayout(
+      buildPartnerDesign(wall(3), "square"),
+      buildPartnerDesign(wall(4), "square"),
+      "thanks",
+    )).toBeNull();
+  });
+
+  it("refuses a doc of another layout", () => {
+    const duo = buildPartnerDesign({ ...emptyPartnerForm(), layout: "duo" }, "square");
+    expect(retargetPartnerLayout(duo, buildPartnerDesign(wall(2), "square"), "thanks")).toBeNull();
+  });
+
+  it("carries the headline's words into the tuned layer", () => {
+    const built = buildPartnerDesign(wall(2), "square");
+    const tuned: SimpleDoc = {
+      ...built,
+      design: { ...built.design, texts: built.design.texts.map((t) => ({ ...t, position: { x: 0.3, y: 0.2 } })) },
+    };
+    const rebuilt = buildPartnerDesign({ ...wall(2), headline: "Tak til vores partnere" }, "square");
+    const h = retargetPartnerLayout(tuned, rebuilt, "thanks")?.design.texts
+      .find((t) => t.simpleRole === "thanks.headline");
+    expect(h?.content).toBe("Tak til vores partnere");
+    expect(h?.position).toEqual({ x: 0.3, y: 0.2 });
+  });
+});
+
+describe("syncPartnerChrome — the wall keeps its own chrome", () => {
+  it("carries nothing between the wall and One/Two/Four, in either direction", () => {
+    const announcement = buildPartnerDesign({ ...emptyPartnerForm(), layout: "single", logos: [{ src: "data:a" }] }, "square");
+    const wall = buildPartnerDesign({ ...emptyPartnerForm(), layout: "thanks", logoCount: 6 }, "square");
+    // So the announcement's bottom-centre TechBBQ logo never lands on the
+    // grid's last row, and the wall never strips it off an announcement.
+    expect(syncPartnerChrome(announcement, wall)).toBe(wall);
+    expect(syncPartnerChrome(wall, announcement)).toBe(announcement);
+  });
+});
+
+describe("thank-you wall round-trip through the library", () => {
+  it("restores the layout, count, headline and logos from the snapshot", () => {
+    const form: PartnerForm = {
+      ...emptyPartnerForm(),
+      layout: "thanks",
+      logoCount: 5,
+      logos: [{ src: "data:a" }, null, { src: "data:c" }],
+      backgroundId: "ls16x9",
+    };
+    const doc = buildPartnerDesign(form, "presentation");
+    const back = formsFromDoc("partner", doc, stripFormsForSave("partner", emptyForm(), form));
+    expect(back.partner?.layout).toBe("thanks");
+    expect(back.partner?.logoCount).toBe(5);
+    expect(back.partner?.headline).toBe(emptyPartnerForm().headline);
+    expect(back.partner?.logos.map((l) => l?.src ?? null)).toEqual(["data:a", null, "data:c"]);
+    expect(back.partner?.backgroundId).toBe("ls16x9");
+  });
+
+  it("reconstructs a snapshot-less doc from its roles", () => {
+    const doc = buildPartnerDesign({
+      ...emptyPartnerForm(),
+      layout: "thanks",
+      logoCount: 4,
+      headline: "Tak til vores partnere",
+      logos: [{ src: "data:a" }, { src: "data:b" }],
+    }, "square");
+    const back = formsFromDoc("partner", doc);
+    expect(back.partner?.layout).toBe("thanks");
+    expect(back.partner?.logoCount).toBe(4);
+    // Uppercasing is a render flag, so the layer's content is still the
+    // sentence-case text the user typed.
+    expect(back.partner?.headline).toBe("Tak til vores partnere");
+    expect(back.partner?.logos.map((l) => l?.src ?? null)).toEqual(["data:a", "data:b", null, null]);
+  });
+
+  it("loads a pre-wall snapshot with the wall's defaults filled in", () => {
+    const legacy = {
+      template: "partner" as const,
+      partner: { label: "Official Partner", layout: "single", logos: [{ src: "data:a" }], backgroundId: "orb5" } as PartnerForm,
+    };
+    const doc = buildPartnerDesign({ ...emptyPartnerForm(), logos: [{ src: "data:a" }] }, "square");
+    const back = formsFromDoc("partner", doc, legacy);
+    expect(back.partner?.layout).toBe("single");
+    expect(back.partner?.logoCount).toBe(emptyPartnerForm().logoCount);
+    expect(back.partner?.headline).toBe(emptyPartnerForm().headline);
   });
 });

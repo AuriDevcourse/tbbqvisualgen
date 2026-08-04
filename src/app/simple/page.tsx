@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Check, ChevronDown, Download, Film, GripVertical, Loader2, Plus, Minus, Trash2, ImagePlus, X, Square, Presentation, Smartphone, PencilRuler, Users, Handshake, Columns2, LayoutGrid, ChevronLeft, ChevronRight, Library, Save, Ticket, Timer, BadgePercent } from "lucide-react";
+import { Check, ChevronDown, Download, Film, GripVertical, Loader2, Plus, Minus, Trash2, ImagePlus, X, Square, Presentation, Smartphone, PencilRuler, Users, Handshake, HeartHandshake, Columns2, LayoutGrid, ChevronLeft, ChevronRight, Library, Save, Sparkles, Ticket, Timer, BadgePercent } from "lucide-react";
 import { Popover } from "radix-ui";
 import { TeamLibrary, type LibraryLoadedItem } from "@/components/TeamLibrary";
 import { AuthChip } from "@/components/AuthChip";
@@ -12,11 +12,12 @@ import { DynamicTemplate } from "@/components/templates/DynamicTemplate";
 import { BackgroundPicker } from "@/components/BackgroundPicker";
 import { useExport, type ExportFormat } from "@/hooks/useExport";
 import { isAnimatedBackground } from "@/components/CanvasBackground";
-import { LogoLibraryPicker } from "@/components/LogoLibraryPicker";
+import { LogoLibraryPicker, asUploadedImage } from "@/components/LogoLibraryPicker";
+import { LIFE_SCIENCE_PARTNERS } from "@/data/lifeSciencePartners";
 import { isSvgDataUrl, tintSvgDataUrl } from "@/lib/svgTint";
 import { ColorPicker } from "@/components/ColorPicker";
 import type { PlatformFormat } from "@/types/template";
-import { buildSimpleDesign, buildPartnerDesign, buildSalesDesign, bundleCoverage, docKindOf, emptyForm, emptyPartnerForm, emptyPerson, emptySalesForm, formsFromDoc, isBlankPerson, isPartnerDoc, mergePersonDescription, migrateLegacyPanelDoc, panelShapeKey, parkDoc, partnerLayoutOf, retargetPartnerLayout, retargetSalesLayout, retargetTunedDoc, salesLayoutOf, sampleFourthSpeaker, simpleExportName, stripFormsForSave, syncPanelChrome, syncPartnerChrome, type SimpleForm, type PartnerForm, type PartnerLogo, type SalesForm, type SimplePerson, type SimpleDoc, type TemplateCoverage } from "@/lib/simpleLayout";
+import { buildSimpleDesign, buildPartnerDesign, buildSalesDesign, bundleCoverage, docKindOf, emptyForm, emptyPartnerForm, emptyPerson, emptySalesForm, formsFromDoc, isBlankPerson, isPartnerDoc, mergePersonDescription, migrateLegacyPanelDoc, panelShapeKey, parkDoc, partnerLayoutOf, retargetPartnerLayout, retargetSalesLayout, retargetTunedDoc, salesLayoutOf, sampleFourthSpeaker, simpleExportName, stripFormsForSave, syncPanelChrome, syncPartnerChrome, THANKS_MAX_LOGOS, THANKS_MIN_LOGOS, type SimpleForm, type PartnerForm, type PartnerLogo, type SalesForm, type SimplePerson, type SimpleDoc, type TemplateCoverage } from "@/lib/simpleLayout";
 
 type TemplateKind = "panel" | "partner" | "sales";
 
@@ -569,8 +570,11 @@ export default function SimplePage() {
           if (saved.partner) {
             // Migrate the short-lived single-`logo` shape (2026-07-21 morning)
             // to the slot-array shape.
+            // Forms saved before the thank-you wall existed have no headline or
+            // logoCount — the defaults fill those in.
             const p = saved.partner as PartnerForm & { logo?: string; naturalWidth?: number; naturalHeight?: number };
-            setPartner(Array.isArray(p.logos) ? p : {
+            setPartner(Array.isArray(p.logos) ? { ...emptyPartnerForm(), ...p } : {
+              ...emptyPartnerForm(),
               label: p.label,
               layout: "single",
               logos: p.logo ? [{ src: p.logo, naturalWidth: p.naturalWidth, naturalHeight: p.naturalHeight }] : [],
@@ -1003,10 +1007,53 @@ export default function SimplePage() {
       return { ...p, logos };
     });
 
+  /**
+   * Drop a ready-made partner set into the wall: fetch each library file as a
+   * data URL (the shape an upload produces, so a rename can never break a saved
+   * design) and size the grid to what actually loaded. Replaces the slots
+   * outright — it's a "start from the Life Science set" button, and undo is one
+   * Revert or one re-pick away.
+   */
+  const [fillingSet, setFillingSet] = useState(false);
+  const fillPartnerSet = async (set: typeof LIFE_SCIENCE_PARTNERS, setName: string) => {
+    if (fillingSet) return;
+    setFillingSet(true);
+    try {
+      const loaded = await Promise.all(set.map(async (p) => {
+        try { return await asUploadedImage(p.src); } catch { return null; }
+      }));
+      const logos = loaded.filter((l): l is PartnerLogo => l !== null);
+      if (!logos.length) { toast.error("Couldn't load those logos"); return; }
+      setPartner((p) => ({
+        ...p,
+        layout: "thanks",
+        logos,
+        logoCount: Math.min(THANKS_MAX_LOGOS, logos.length),
+      }));
+      const failed = set.length - logos.length;
+      toast.success(failed
+        ? `${logos.length} ${setName} logos added · ${failed} could not be loaded`
+        : `${logos.length} ${setName} logos added`);
+    } finally {
+      setFillingSet(false);
+    }
+  };
+
+  /**
+   * Resize the thank-you wall. Logos beyond the new count are KEPT in the slot
+   * array (stepping 12 → 8 → 12 gets them back), the same forgiveness the
+   * speaker stepper gives — they just stop rendering.
+   */
+  const setThanksCount = (n: number) =>
+    setPartner((p) => ({ ...p, logoCount: Math.max(THANKS_MIN_LOGOS, Math.min(THANKS_MAX_LOGOS, n)) }));
+
   // A library pick needs a destination. First empty slot of the current
   // layout, falling back to the last one when they are all filled — so
   // clicking is predictable and the hint can say where it goes.
-  const partnerSlotCount = partner.layout === "quad" ? 4 : partner.layout === "duo" ? 2 : 1;
+  const partnerSlotCount = partner.layout === "thanks" ? partner.logoCount
+    : partner.layout === "quad" ? 4
+    : partner.layout === "duo" ? 2
+    : 1;
   const nextLogoSlot = (() => {
     for (let i = 0; i < partnerSlotCount; i++) if (!partner.logos[i]?.src) return i;
     return partnerSlotCount - 1;
@@ -1080,7 +1127,7 @@ export default function SimplePage() {
   // kind — on the other template the buttons are plain.
   const activeCoverage = loadedItem && template === loadedItem.kind ? coverage : null;
   const coveredFormats = useMemo(() => new Set((activeCoverage ?? []).map((c) => c.format)), [activeCoverage]);
-  const LAYOUT_NAMES = { single: "One", duo: "Two", quad: "Four", countdown: "Countdown", discount: "Discount" } as const;
+  const LAYOUT_NAMES = { single: "One", duo: "Two", quad: "Four", thanks: "Thank you", countdown: "Countdown", discount: "Discount" } as const;
   // The layout a covered combo must match for THIS template — partner logo
   // layout, sales composition, or nothing at all for a panel.
   const activeLayout = template === "partner" ? partner.layout : template === "sales" ? sales.layout : null;
@@ -1096,7 +1143,7 @@ export default function SimplePage() {
     .join(" · ");
 
   const isEmpty = template === "partner"
-    ? !custom && !partner.label.trim() && !partner.logos.some((l) => l?.src)
+    ? !custom && !(partner.layout === "thanks" ? partner.headline : partner.label).trim() && !partner.logos.some((l) => l?.src)
     : template === "sales"
       ? !custom && !sales.value.trim() && !sales.caption.trim() && !sales.headline.trim() && !sales.photo?.src
       : !custom && !form.headline.trim() && !form.label.trim() && form.speakers.every((s) => !s.name.trim()) && !form.moderator.name.trim();
@@ -1110,7 +1157,7 @@ export default function SimplePage() {
 
   const handleExport = () => {
     const salesLabel = [sales.value, sales.caption].map((t) => t.trim()).filter(Boolean).join(" ");
-    const base = simpleExportName(template, format, form.headline, salesLabel);
+    const base = simpleExportName(template, format, form.headline, salesLabel, partner.layout);
     if (effectiveFormat === "mp4") {
       // The animation has to be RUNNING for the capture, so resume instead of
       // pausing (the shader is paused while a still export is in flight).
@@ -1341,7 +1388,11 @@ export default function SimplePage() {
                   <div className="rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-xs leading-snug text-amber-100/90">
                     <span className="font-semibold">
                       &ldquo;{loadedItem!.name}&rdquo; isn&apos;t set up for {FORMATS.find((f) => f.id === format)?.label}
-                      {template === "partner" ? ` · ${LAYOUT_NAMES[partner.layout]} logo${partner.layout === "single" ? "" : "s"}` : ""}
+                      {template === "partner"
+                        ? partner.layout === "thanks"
+                          ? " · Thank you"
+                          : ` · ${LAYOUT_NAMES[partner.layout]} logo${partner.layout === "single" ? "" : "s"}`
+                        : ""}
                       {template === "sales" ? ` · ${LAYOUT_NAMES[sales.layout]}` : ""} yet.
                     </span>{" "}
                     This is the automatic layout. Fine-tune it and press Update to add it to the template.
@@ -1351,9 +1402,14 @@ export default function SimplePage() {
             </section>
 
             {template === "partner" && (<>
-            {/* Partner announcement: the label up top + the partner's logo */}
+            {/* Partner announcement: the label up top + the partner's logo.
+                The thank-you wall leads with its own headline instead. */}
             <section className="flex flex-col gap-3">
-              <Field label="Label" value={partner.label} onChange={(v) => setPartner((p) => ({ ...p, label: v }))} placeholder="Partner Announcement" />
+              {partner.layout === "thanks" ? (
+                <Field label="Headline" hint="Enter = new line" multiline value={partner.headline} onChange={(v) => setPartner((p) => ({ ...p, headline: v }))} placeholder={"Thank you to\nour partners"} />
+              ) : (
+                <Field label="Label" value={partner.label} onChange={(v) => setPartner((p) => ({ ...p, label: v }))} placeholder="Partner Announcement" />
+              )}
             </section>
             <section className="flex flex-col gap-2">
               <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Partner logos</span>
@@ -1362,6 +1418,7 @@ export default function SimplePage() {
                   { id: "single" as const, label: "One", icon: Square },
                   { id: "duo" as const, label: "Two", icon: Columns2 },
                   { id: "quad" as const, label: "Four", icon: LayoutGrid },
+                  { id: "thanks" as const, label: "Thank you", icon: HeartHandshake },
                 ]).map((opt) => {
                   const active = partner.layout === opt.id;
                   const isSet = (activeCoverage ?? []).some((c) => c.format === format && c.layout === opt.id);
@@ -1384,8 +1441,65 @@ export default function SimplePage() {
                   (168px) reserve the tallest so switching layouts doesn't
                   reflow everything below — the jump made the whole sidebar
                   shake. */}
+              {/* Ready-made sets, so a recurring wall isn't 20 searches. */}
+              {partner.layout === "thanks" && (
+                <button
+                  onClick={() => void fillPartnerSet(LIFE_SCIENCE_PARTNERS, "Life Science")}
+                  disabled={fillingSet}
+                  title={`Fills the grid with: ${LIFE_SCIENCE_PARTNERS.map((p) => p.label).join(", ")}`}
+                  className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-xs font-medium text-white/85 hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {fillingSet ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                  {fillingSet ? "Loading logos…" : `Fill with Life Science partners (${LIFE_SCIENCE_PARTNERS.length})`}
+                </button>
+              )}
+              {/* The wall's size is a choice, not a consequence of how many
+                  logos you have dropped in — pick the grid, then fill it. */}
+              {partner.layout === "thanks" && (
+                <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                  <span className="text-sm text-white/85">Logos</span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => setThanksCount(partner.logoCount - 1)}
+                      disabled={partner.logoCount <= THANKS_MIN_LOGOS}
+                      aria-label="Fewer logos"
+                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/5 border border-white/10 text-white/80 hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <Minus className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="w-6 text-center text-sm font-semibold tabular-nums text-white">{partner.logoCount}</span>
+                    <button
+                      onClick={() => setThanksCount(partner.logoCount + 1)}
+                      disabled={partner.logoCount >= THANKS_MAX_LOGOS}
+                      aria-label="More logos"
+                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/5 border border-white/10 text-white/80 hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
               <div className="min-h-[168px]">
-                {partner.layout === "quad" ? (
+                {partner.layout === "thanks" ? (
+                  // Every cell of the wall as a small slot, in grid order, so
+                  // the sidebar reads like the canvas. Capped in height because
+                  // 30 slots would push the background picker off the screen.
+                  <div className="grid grid-cols-3 gap-2 max-h-[320px] overflow-y-auto pr-1">
+                    {Array.from({ length: partner.logoCount }, (_, i) => (
+                      <LogoSlot
+                        key={i}
+                        small
+                        index={i}
+                        onReorder={swapLogos}
+                        logo={partner.logos[i] ?? null}
+                        onChange={(l) => setPartnerLogo(i, l)}
+                        onTint={(c) => setPartnerLogoTint(i, c)}
+                        onSwapPrev={i > 0 ? () => swapLogos(i, i - 1) : undefined}
+                        onSwapNext={i < partner.logoCount - 1 ? () => swapLogos(i, i + 1) : undefined}
+                      />
+                    ))}
+                  </div>
+                ) : partner.layout === "quad" ? (
                   <div className="grid grid-cols-2 gap-2">
                     {[0, 1, 2, 3].map((i) => (
                       <LogoSlot

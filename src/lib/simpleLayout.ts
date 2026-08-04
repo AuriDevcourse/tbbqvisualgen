@@ -178,10 +178,11 @@ function carryWords(t: TextElement, want: Map<string, string>): TextElement {
  *  from the placeholder frames' role tags when no logo is uploaded yet (a
  *  zero-logo partner doc still has a layout; only untagged legacy docs with
  *  no images stay null). */
-export function partnerLayoutOf(doc: SimpleDoc): "single" | "duo" | "quad" | null {
+export function partnerLayoutOf(doc: SimpleDoc): PartnerLayout | null {
   const of = (r: string) =>
     r === "logo-single" ? "single" as const
     : r.startsWith("logo-duo-") ? "duo" as const
+    : /^logo-thanks-\d+$/.test(r) ? "thanks" as const
     : /^logo-\d$/.test(r) ? "quad" as const
     : null;
   for (const i of doc.canvasImages) {
@@ -201,6 +202,17 @@ const SLOT_ROLES = {
   quad: ["logo-0", "logo-1", "logo-2", "logo-3"],
 } as const;
 
+/** The thank-you wall's slot roles, read off a doc — its cell COUNT is a form
+ *  field, so unlike One/Two/Four the role set can't be a constant. Covers both
+ *  filled cells (images) and empty ones (tagged placeholder frames). */
+function thanksSlotRoles(doc: SimpleDoc): string[] {
+  const idx = (r: string | undefined) => (r && /^logo-thanks-\d+$/.test(r) ? Number(r.slice("logo-thanks-".length)) : null);
+  const found = new Set<number>();
+  for (const i of doc.canvasImages) { const n = idx(i.simpleRole); if (n !== null) found.add(n); }
+  for (const s of doc.design.shapes ?? []) { const n = idx(s.simpleRole); if (n !== null) found.add(n); }
+  return [...found].sort((a, b) => a - b).map((n) => `logo-thanks-${n}`);
+}
+
 /** An empty partner slot renders as this outline-gradient frame. */
 /**
  * Like `retargetTunedDoc`, but for partner docs of the SAME logo layout with a
@@ -215,8 +227,17 @@ const SLOT_ROLES = {
  * `layout` comes from the form — the rebuilt doc can't always witness it
  * (a doc with zero logos has no image roles).
  */
-export function retargetPartnerLayout(tuned: SimpleDoc, rebuilt: SimpleDoc, layout: "single" | "duo" | "quad"): SimpleDoc | null {
+export function retargetPartnerLayout(tuned: SimpleDoc, rebuilt: SimpleDoc, layout: PartnerLayout): SimpleDoc | null {
   if (partnerLayoutOf(tuned) !== layout) return null;
+  if (layout === "thanks") {
+    // The wall's cell count is part of its composition: a different count is a
+    // different grid, so only an identical role set can carry the tuning (the
+    // count change then parks + rebuilds, like a speaker-count change).
+    const have = thanksSlotRoles(tuned);
+    const want = thanksSlotRoles(rebuilt);
+    if (have.length !== want.length || have.some((r, i) => r !== want[i])) return null;
+    return retargetSlotDoc(tuned, rebuilt, have);
+  }
   return retargetSlotDoc(tuned, rebuilt, SLOT_ROLES[layout]);
 }
 
@@ -363,6 +384,11 @@ export function syncPartnerChrome(from: SimpleDoc, to: SimpleDoc): SimpleDoc {
   // role-less texts would float MODERATOR/SPEAKER words over the partner
   // design (live bug: Auri's 9:16 partner announcement wearing panel words).
   if (!isPartnerDoc(from) || !isPartnerDoc(to)) return to;
+  // The thank-you wall shares no chrome with One/Two/Four: it leads with a big
+  // headline instead of the label chip, and it deliberately hides the TechBBQ
+  // lockup the others place bottom-centre. Carrying either way would drop a
+  // logo onto the grid's last row (or strip it off an announcement).
+  if ((partnerLayoutOf(from) === "thanks") !== (partnerLayoutOf(to) === "thanks")) return to;
 
   const fromLabel = from.design.texts.find((t) => t.simpleRole === "label");
   const texts = [
@@ -537,7 +563,7 @@ export function parkDoc(shelf: Record<string, SimpleDoc>, doc: SimpleDoc): Recor
  *  is per-format only. */
 export interface TemplateCoverage {
   format: PlatformFormat;
-  layout: "single" | "duo" | "quad" | "countdown" | "discount" | null;
+  layout: PartnerLayout | "countdown" | "discount" | null;
 }
 
 /** What a template bundle consists of: the distinct (format × layout) combos
@@ -569,19 +595,45 @@ export interface PartnerLogo {
   tint?: string;
 }
 
+/** The partner template's compositions. The first three announce one to four
+ *  partners; `thanks` is the end-of-event "thank you to our partners" wall — a
+ *  big headline over an auto-flowed grid of as many logos as needed. */
+export type PartnerLayout = "single" | "duo" | "quad" | "thanks";
+
+/** How many logo cells the thank-you wall can hold. The floor is 1 so the
+ *  stepper can't produce an empty grid (which would leave the doc with no
+ *  partner role at all, i.e. no longer a partner doc); the ceiling is what
+ *  still reads at 16:9 — 30 logos is a 6×5 grid. */
+export const THANKS_MIN_LOGOS = 1;
+export const THANKS_MAX_LOGOS = 30;
+
 export interface PartnerForm {
-  /** Announcement label rendered across the top — e.g. "Partner Announcement". */
+  /** Announcement label rendered across the top — e.g. "Partner Announcement".
+   *  Unused by the `thanks` layout, which leads with `headline` instead. */
   label: string;
-  /** "single" = one big logo; "duo" = two side by side; "quad" = 2×2 grid. */
-  layout: "single" | "duo" | "quad";
-  /** Slot 0 for single, 0–1 for duo, 0–3 for quad. A missing/empty slot
-   *  renders as an outlined placeholder frame. */
+  layout: PartnerLayout;
+  /** Slot 0 for single, 0–1 for duo, 0–3 for quad, 0–(logoCount-1) for thanks.
+   *  A missing/empty slot renders as an outlined placeholder frame. */
   logos: (PartnerLogo | null)[];
+  /** Thank-you layout only: how many cells the logo grid renders. Kept as its
+   *  own field rather than derived from `logos.length` so an empty trailing
+   *  cell survives (the grid is chosen first, filled second). */
+  logoCount: number;
+  /** Thank-you layout only: the big centred headline. Its own field so
+   *  switching layouts never overwrites the label chip's wording. */
+  headline: string;
   backgroundId: string;
 }
 
 export function emptyPartnerForm(): PartnerForm {
-  return { label: "Partner Announcement", layout: "single", logos: [], backgroundId: "orb7" };
+  return {
+    label: "Partner Announcement",
+    layout: "single",
+    logos: [],
+    logoCount: 12,
+    headline: "Thank you to\nour partners",
+    backgroundId: "orb7",
+  };
 }
 
 /**
@@ -723,6 +775,7 @@ const MARGIN = 0.06;
  * editor round-trip, parking and retargeting machinery apply unchanged.
  */
 export function buildPartnerDesign(form: PartnerForm, format: PlatformFormat): SimpleDoc {
+  if (form.layout === "thanks") return buildThanksDesign(form, format);
   seq = 0;
   const dims = FORMAT_DIMENSIONS[format] ?? FORMAT_DIMENSIONS.square;
   const W = dims.width;
@@ -837,6 +890,144 @@ export function buildPartnerDesign(form: PartnerForm, format: PlatformFormat): S
     format,
     customSize: { width: W, height: H },
     design,
+    canvasImages,
+  };
+}
+
+/**
+ * How many columns the thank-you wall flows `count` logos into, for a canvas of
+ * the given aspect ratio (width / height).
+ *
+ * A square-ish grid reads best, so the starting point is √(count) stretched by
+ * the canvas aspect — then capped, because a 9:16 story can't carry six logos
+ * across. One trailing orphan is worse than a slightly wider grid ("5,5,1"
+ * looks broken next to "4,4,3"), so a column count that leaves exactly one logo
+ * on the last row steps down by one.
+ */
+export function thanksGridColumns(count: number, aspect: number): number {
+  const maxCols = aspect >= 1.3 ? 6 : aspect >= 0.9 ? 5 : 3;
+  const ideal = Math.round(Math.sqrt(Math.max(1, count) * aspect * 1.15));
+  // Score every allowed column count: distance from the ideal, plus a penalty
+  // for leaving a single logo alone on the last row. 1.5 makes the penalty
+  // worth a one-column detour but not a two-column one — so "5,5,1" becomes
+  // "4,4,3", while a 9:16 story capped at 3 columns keeps its 3 rather than
+  // dropping to 2 and growing four rows taller.
+  let best = 1;
+  let bestScore = Infinity;
+  for (let cols = 1; cols <= Math.min(count, maxCols); cols++) {
+    const score = Math.abs(cols - ideal) + (count % cols === 1 && count > cols ? 1.5 : 0);
+    if (score < bestScore) { bestScore = score; best = cols; }
+  }
+  return best;
+}
+
+/**
+ * Build the "Thank you to our partners" wall: one big centred headline over an
+ * auto-flowed grid of contain-fit logos, last row centred. Same doc shape as
+ * every other partner layout — slot roles are `logo-thanks-N`, so parking,
+ * retargeting and the editor round-trip work unchanged.
+ *
+ * The TechBBQ logo is OFF here: the grid uses the full canvas below the
+ * headline, and the 2025 originals this follows carry no lockup. Turn it back
+ * on in the editor if a particular post needs one.
+ */
+function buildThanksDesign(form: PartnerForm, format: PlatformFormat): SimpleDoc {
+  seq = 0;
+  const dims = FORMAT_DIMENSIONS[format] ?? FORMAT_DIMENSIONS.square;
+  const W = dims.width;
+  const H = dims.height;
+  const S = Math.min(W, H);
+  const vs = S / H;
+
+  const texts: TextElement[] = [];
+  const shapes: ShapeElement[] = [];
+  const canvasImages: CanvasImage[] = [];
+
+  // ── Headline, centred at the top. Sized to fit the longest line the user
+  // typed (their own Enter presses are honoured), capped so a short headline
+  // can't grow absurdly large. ──
+  let gridTop = 0.12; // top of the logo block when there is no headline
+  const headline = form.headline.trim();
+  if (headline) {
+    const avail = 1 - 2 * MARGIN;
+    const longest = Math.max(1, ...headline.split("\n").map((l) => l.trim().length));
+    // 0.56 ≈ the average glyph width of uppercase Onest at weight 800.
+    const fFrac = Math.min(0.108, (avail * W) / (longest * 0.56) / S);
+    const lines = headline.split("\n").length;
+    const lineH = 0.98;
+    const blockH = lines * fFrac * vs * lineH;
+    texts.push({
+      id: uid("text"), content: headline,
+      position: { x: 0.5, y: 0.11 + blockH / 2 },
+      fontSize: Math.round(fFrac * S), align: "center",
+      weight: 800, uppercase: true, font: "onest",
+      color: "#FFFFFF", lineHeight: lineH,
+      simpleRole: "thanks.headline",
+    });
+    gridTop = 0.11 + blockH + 0.07;
+  }
+
+  // ── Logo grid, block-centred in what is left below the headline ──
+  const count = Math.min(THANKS_MAX_LOGOS, Math.max(THANKS_MIN_LOGOS, Math.round(form.logoCount || THANKS_MIN_LOGOS)));
+  const cols = thanksGridColumns(count, W / H);
+  const rows = Math.ceil(count / cols);
+
+  const gapX = 0.045 * S;
+  const cellW = (W * (1 - 2 * MARGIN) - (cols - 1) * gapX) / cols;
+  const roomH = H * (1 - MARGIN - gridTop);
+  // Cells are wider than tall — a logo is a wordmark far more often than a
+  // square mark — but never taller than the space allows.
+  const cellH = Math.min((roomH - (rows - 1) * 0.055 * S) / rows, cellW * 0.45);
+  // Leftover height goes into the row gaps rather than leaving the whole block
+  // floating in the middle of a tall canvas — capped, so a 3-logo wall on a
+  // 9:16 story spreads without the rows drifting apart.
+  const gapY = rows > 1
+    ? Math.min(cellH * 0.85, Math.max(0.055 * S, (roomH - rows * cellH) / (rows - 1)))
+    : 0;
+  const blockTop = H * gridTop + (roomH - (rows * cellH + (rows - 1) * gapY)) / 2;
+
+  for (let i = 0; i < count; i++) {
+    const row = Math.floor(i / cols);
+    const col = i % cols;
+    // The last row carries the remainder and is centred on its own width, so a
+    // grid that doesn't divide evenly still looks deliberate.
+    const inRow = row === rows - 1 ? count - row * cols : cols;
+    const rowW = inRow * cellW + (inRow - 1) * gapX;
+    const cx = ((W - rowW) / 2 + col * (cellW + gapX) + cellW / 2) / W;
+    const cy = (blockTop + row * (cellH + gapY) + cellH / 2) / H;
+    const logo = form.logos[i];
+    const role = `logo-thanks-${i}`;
+    if (logo?.src) {
+      canvasImages.push({
+        id: uid("img"), src: logo.src, x: cx, y: cy,
+        width: cellW / W, height: cellH / H,
+        cornerRadius: 0, border: false, fit: "contain",
+        naturalWidth: logo.naturalWidth, naturalHeight: logo.naturalHeight,
+        simpleRole: role,
+      });
+    } else {
+      shapes.push({
+        id: uid("shape"), type: "rectangle", x: cx, y: cy,
+        width: cellW / W, height: cellH / H,
+        fillType: "outline", strokeWidth: 2 / 1500, colorType: "gradient",
+        color1: "#FF6B00", color2: "#FF0028", opacity: 1, blur: 0, rotation: 0,
+        borderRadius: 0.08,
+        simpleRole: role,
+      });
+    }
+  }
+
+  return {
+    format,
+    customSize: { width: W, height: H },
+    design: {
+      backgroundId: form.backgroundId || "orb7",
+      texts,
+      shapes,
+      showLogo: false,
+      logoStyle: "white",
+      logoPosition: "bottom-center",
+    },
     canvasImages,
   };
 }
@@ -1674,14 +1865,16 @@ export function sampleFourthSpeaker(): SimplePerson {
  * Partner announcements are just "16x9 - Partner Announcement" (their label is
  * generic). Colons are illegal in Windows file names, so 16:9 → 16x9.
  */
-export function simpleExportName(template: "panel" | "partner" | "sales", format: PlatformFormat, headline: string, salesLabel?: string): string {
+export function simpleExportName(template: "panel" | "partner" | "sales", format: PlatformFormat, headline: string, salesLabel?: string, partnerLayout?: PartnerLayout): string {
   const fmt = format === "presentation" ? "16x9" : format === "story" ? "9x16" : "1x1";
   const clean = (s: string) => s
     .split("\n").join(" ")
     .replace(/[\\/:*?"<>|]/g, "")
     .replace(/\s+/g, " ")
     .trim();
-  if (template === "partner") return `${fmt} - Partner Announcement`;
+  if (template === "partner") {
+    return partnerLayout === "thanks" ? `${fmt} - Thank You Partners` : `${fmt} - Partner Announcement`;
+  }
   // Sales: the figure and its caption say what the post is — "48 days left".
   if (template === "sales") {
     const label = clean(salesLabel ?? "");
@@ -1738,15 +1931,25 @@ export function formsFromDoc(kind: string, doc: SimpleDoc, saved?: SimpleFormsSn
   }
 
   if (template === "partner") {
-    const base = saved?.partner ?? emptyPartnerForm();
+    // Snapshots saved before the thank-you wall existed have no headline or
+    // logoCount — merging over the defaults keeps those fields defined.
+    const base: PartnerForm = { ...emptyPartnerForm(), ...saved?.partner };
     const quad = [0, 1, 2, 3].some((i) => imgByRole.has(`logo-${i}`));
     const duo = [0, 1].some((i) => imgByRole.has(`logo-duo-${i}`));
+    // The thank-you wall is witnessed by the doc itself (its slot roles cover
+    // empty cells too, so a wall with no logos uploaded still reads as one).
+    const thanksRoles = thanksSlotRoles(doc);
     // A doc with no uploaded logos has no image roles to infer from — the
     // saved layout (when present) is the only witness.
-    const layout = duo ? "duo" as const : quad ? "quad" as const : (imgByRole.has("logo-single") || !saved?.partner) ? "single" as const : base.layout;
-    // Snapshots carry the FULL slot array (One/Two/Four share it); the doc's
+    const layout: PartnerLayout = thanksRoles.length ? "thanks"
+      : duo ? "duo"
+      : quad ? "quad"
+      : (imgByRole.has("logo-single") || !saved?.partner) ? "single"
+      : base.layout;
+    // Snapshots carry the FULL slot array (the layouts share it); the doc's
     // roles only cover the active layout, so they're the legacy fallback.
-    const roleLogos = layout === "quad" ? [0, 1, 2, 3].map((i) => asLogo(`logo-${i}`))
+    const roleLogos = layout === "thanks" ? thanksRoles.map(asLogo)
+      : layout === "quad" ? [0, 1, 2, 3].map((i) => asLogo(`logo-${i}`))
       : layout === "duo" ? [0, 1].map((i) => asLogo(`logo-duo-${i}`))
       : [asLogo("logo-single")];
     return {
@@ -1758,6 +1961,11 @@ export function formsFromDoc(kind: string, doc: SimpleDoc, saved?: SimpleFormsSn
         label: saved?.partner ? base.label : (textByRole.get("label") ?? base.label),
         layout,
         logos: base.logos.some((l) => l?.src) ? base.logos : roleLogos,
+        // The grid on the canvas wins over a stale snapshot count: the doc is
+        // what the user is looking at, and a mismatch would rebuild the wall
+        // to a different size the moment they touch a field.
+        logoCount: thanksRoles.length || base.logoCount,
+        headline: saved?.partner ? base.headline : (textByRole.get("thanks.headline") ?? base.headline),
         backgroundId: doc.design.backgroundId || base.backgroundId,
       },
     };
