@@ -6,7 +6,77 @@ not required reading.
 
 ---
 
-## SESSION HANDOFF — 2026-08-04 (round 51)
+## SESSION HANDOFF — 2026-08-04 (round 52)
+
+### Round 52 — the lead tier, and the Investor partner set
+
+Same branch. Gates: **154/154 vitest, tsc clean, build clean**, changed files
+eslint-clean. Round 51 (below) is pushed and live; this sits on top.
+
+**The wall has a LEAD TIER.** `featuredCount` on `PartnerForm`: the first N cells
+render bigger, the rest fill the grid underneath. That is the shape the Investor
+Partners page has (MAIN over SUPPORT), and the sidebar exposes it as a **"Bigger
+first"** stepper. 0 = one flat grid, which is what the Life Science set uses.
+
+Three things this cost, all of them non-obvious:
+
+1. **The lead tier needs its own ROLE, not just a bigger box.**
+   `logo-thanks-lead-N` vs `logo-thanks-N`. The tier drives geometry, so it has
+   to be visible in the role set — otherwise `retargetPartnerLayout` carries a
+   tuned design across a tier change and silently ignores it, the same trap the
+   cell count avoids by changing the role count.
+2. **`panelShapeKey` had to learn about tagged frames.** It counted placeholder
+   frames but never read their tags, so on a wall with no logos uploaded a
+   tiered doc and a flat doc of the same size shared one key: the flat tuning
+   revived straight over the tiered rebuild. The key now appends the sorted
+   tagged frame roles (`|slots:…`), and `retargetTunedDoc` refuses a pair whose
+   tagged frames stand in for different slots. Panel person-frames are untagged,
+   so panel keys are unchanged.
+3. **The support tier MUST be at least one column wider than the lead tier.**
+   Cell size comes from the column count, so this is a hard constraint, not a
+   preference. Without it a 9:16 story put 16 support logos in 2 columns against
+   3 lead columns and rendered the SUPPORT partners bigger than the main ones.
+   `thanksGridColumns` now takes a `minCols` floor; when there are too few
+   support logos to be wider, the LEAD tier narrows instead.
+
+**The overflow-scaling bug worth remembering:** when a tiered wall is too tall,
+scaling only the CELLS by `roomH / natural` does not fit — the gaps are still
+full size, so the block overshoots (a test caught a cell at 0.9625 against a
+0.941 margin). Cells AND gaps have to scale by the same factor, which lands the
+block exactly on the room.
+
+**Two ready-made sets now, `src/data/partnerSets.ts`** (renamed from
+`lifeSciencePartners.ts`): each set carries its logos, its headline and its tier
+split, and the sidebar renders one fill button per set. So the Investor wall
+arrives with "Thank you to our investor partners" and 4 main partners already
+bigger, instead of saying "our partners" with a flat grid.
+
+**Investor set: 17 of the 20 on the page.** Two names took a search, so they are
+recorded in the file: `Worldfund White.svg` is WORLD FUND ("world fund" with a
+space misses it) and `Forsikring Og Pension.svg` is the F&P monogram (rendered
+and confirmed). **Three cannot go on a wall yet:**
+
+- **Novo Nordisk** — the bull mark plus "novo nordisk". The library only holds
+  Novo Nordisk FOUNDATION variants, a different organisation.
+- **Mazanti-Andersen** — nothing in the library at all.
+- **Ada Ventures** — `Ada Ventures.png` is DARK artwork, invisible on this
+  canvas, and a PNG cannot be recoloured in-app (the tint is SVG-only).
+
+Marketing has to supply white SVGs. A logo that fails to load is dropped rather
+than left as a hole, with the count in the toast, so the wall is never published
+with an empty cell.
+
+**Four more padded logos tightened** the same way as round 51: Heartcore (60%
+artwork), Rockstart (14%), Dealroom (17%), FBV (45%). Rockstart and Dealroom
+were rendering at a seventh of their cell.
+
+Verified in the browser at 16:9 and 1:1: the investor fill produces 4 bigger
+main partners over 5/5/3 support, the headline and tier arrive with the set, and
+switching back to Life Science resets both.
+
+---
+
+## Previous handoff — 2026-08-04 (round 51)
 
 ### Round 51 — the "Thank you" partner layout + Life Science backgrounds
 
