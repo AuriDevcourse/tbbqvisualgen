@@ -6,7 +6,147 @@ not required reading.
 
 ---
 
-## SESSION HANDOFF — 2026-08-03 (round 50)
+## SESSION HANDOFF — 2026-08-04 (round 51)
+
+### Round 51 — the "Thank you" partner layout + Life Science backgrounds
+
+Branch `partner/thank-you-template`, off `logos/airtable-white-2026`. Gates:
+**141/141 vitest, tsc clean, `npm run build` clean**, changed files eslint-clean
+(the one error in `CanvasBackground.tsx:287` is pre-existing).
+
+**"Thank you" is a fourth PARTNER LAYOUT, not a fourth template kind.** It sits
+next to One / Two / Four, so it inherits the whole partner pipeline for free:
+parking, retargeting, the editor round-trip, the library snapshot, the flavour
+pickers. `PartnerLayout` is now the shared union type
+(`single | duo | quad | thanks`).
+
+- Composition: one big centred uppercase headline (`thanks.headline`, autofit,
+  weight 800) over an auto-flowed grid of contain-fit logos, last row centred.
+  Slot roles are `logo-thanks-N`, empty cells are the usual gradient frames.
+- **Its cell COUNT is a form field** (`logoCount`, 1-30, stepper in the
+  sidebar) — the one thing no other layout has. So `SLOT_ROLES` couldn't be a
+  constant: `thanksSlotRoles(doc)` reads the roles off the doc, and
+  `retargetPartnerLayout` only carries tuning when the two role sets are
+  IDENTICAL. A count change is a different composition: it parks and rebuilds,
+  exactly like a speaker-count change.
+- Logos beyond the count stay in `form.logos` — stepping 12 → 8 → 12 gets them
+  back.
+- `thanksGridColumns(count, aspect)` picks the columns: √(count × aspect),
+  capped per format (6 at 16:9, 5 at 1:1, **3 at 9:16**), with a penalty that
+  avoids a single orphan on the last row — 11 logos flow 4,4,3 rather than
+  5,5,1. 12 at 16:9 gives 5,5,2, which is what the 2025 original did.
+- Leftover height goes into the ROW GAPS (capped at 0.85 × cell height) instead
+  of leaving the block floating in the middle of a tall canvas.
+- **The TechBBQ lockup is off** on this layout (`showLogo: false`) — the grid
+  uses the full canvas and the 2025 originals carry no lockup. Re-enable per
+  post in the editor.
+- **`syncPartnerChrome` bails when only one side is a wall.** The wall shares no
+  chrome with the announcements (headline vs label chip, no lockup vs
+  bottom-centre lockup); carrying it either way dropped a TechBBQ logo onto the
+  grid's last row.
+- `headline` is its own form field, so switching layouts never overwrites the
+  label chip's wording (and the reverse). Pre-wall saved forms and library
+  snapshots merge over `emptyPartnerForm()`, so `logoCount`/`headline` are never
+  undefined.
+- Export name: `16x9 - Thank You Partners` (One/Two/Four keep
+  `- Partner Announcement`).
+
+**One-click Life Science partner set.** `src/data/lifeSciencePartners.ts` holds
+the 25 library files that cover the official Life Science **Partners page**, in
+its order; the wall's **"Fill with Life Science partners (25)"** button fetches them
+through the picker's own `asUploadedImage` (now exported), so they land as data
+URLs exactly like an upload and a later rename can't break a saved wall. The
+grid resizes to what actually loaded, and a logo that fails to fetch is skipped
+with a count in the toast rather than silently dropped.
+
+**The Partners page is the source of truth for WHO is on the set, and Auri
+confirmed that.** The first pass built the list from the 2025 thank-you post and
+came out at 27 — two too many. **Amazing Hall** and **biotope by VIB** are on the
+2025 wall but not on the 2026 page, so they were dropped (both files stay in the
+library for a manual pick). Diff the set against the page whenever the partner
+list changes; do not grow it from an old post. 25 is also the nicer number: it
+flows as a clean **5×5** grid at 16:9, where 27 gave 6/6/6/6/3.
+
+One deliberate lockup difference from the page: it shows **Medicon Valley
+Alliance** as a plain thin wordmark, the set uses the bars-plus-stacked-text
+lockup (what the 2025 wall used). It is the only one in the library and the only
+one that still reads at grid size.
+
+**All 25 were rendered on a dark contact sheet and checked against the partner
+sheet before being listed** — the round-50 rule. Three carry a file name nobody
+would search for, which is why the set stores a `label` separately:
+`Beta Heath.svg` is **BETA.HEALTH** (the file name is a typo), `Tuvsud.svg` is
+**TÜV SÜD**, `The Kitchen.svg` is **KITCHEN, Aarhus University**. `Biotope.svg`
+is the whole biotope-by-VIB lockup, which the 2025 wall rendered as two items.
+`src/data/lifeSciencePartners.test.ts` asserts every `src` is still in
+`logoLibrary.json`, so the next rename fails a test instead of the button.
+
+### Library 864 → 870, and three logos refreshed
+
+The 6 partners the library had no artwork for came straight from Auri the same
+day: **Life Science Invest, BioInnovation Institute, University of Copenhagen,
+Ruff & Co Business Innovation** (PNG, no vector exists), **Alliance for
+Biosolutions, Amazing Hall**. The set is now complete.
+
+**Four of the six shipped with the mark floating in a much larger canvas** — a
+square `0 0 100 100` viewBox around a wide wordmark, only **17% artwork** for
+BioInnovation Institute and 29% for University of Copenhagen. A contain-fit cell
+cannot tell padding from logo, so they rendered a third the size of their
+neighbours. Their root viewBoxes were tightened to the artwork bounds (measured
+by rasterising + trimming, then mapping the crop back into viewBox units, 1%
+margin); all four now fill 94-96% of their box. **Check this on every hand-supplied
+SVG** — the drawing coordinates are untouched, so it is a safe edit.
+
+Auri also supplied newer artwork for three logos already in the library:
+
+- **`CPHLABS.svg` replaced in place** — the old flat wordmark for the current
+  CPH.LABS-with-a-flask brand. Closes the stale-logo item in decision 3 below.
+- **`Symbion.svg` replaced in place** — same wordmark, the current heavier cut.
+- **Novo Nordisk Foundation** is a genuinely different lockup (circle mark +
+  horizontal wordmark, which is what the 2026 sheet uses), so it was NOT a
+  replacement. **The library already held it as `NN Foundation White.svg`** — a
+  name no search for "novo" can return, the round-49 acronym trap again. Caught
+  by `logos:dupes`, so the existing file was **renamed** to
+  `Novo Nordisk Foundation Horizontal.svg` instead of adding a second copy.
+
+Originals of the two in-place replacements are parked in
+`C:/Users/User/AppData/Local/Temp/logos-removed/replaced-2026-08-04/` with
+`WHY.tsv` — **that is a Temp dir, rescue them if wanted.** Note a design saved
+before the swap keeps the OLD artwork: logos are embedded as data URLs, so an
+existing wall has to be re-filled to pick up a refreshed logo.
+
+**`logos:dupes`: 11 → 12 visual groups.** The one new group is
+`Symbio.svg` / `Symbion.svg` — `Symbio.svg` turns out to be the same current
+Symbion artwork under a truncated name, so the refresh made it redundant.
+**Proposed deletion, left in place** because retiring library files is Auri's
+call (see decision 1). `Symbio.png` is a different rendering (grey plate) and is
+not affected.
+
+**Life Science backgrounds.** The three 2026-season LS gradients from
+`Desktop/TBBQ/2026 Season/2x/`, re-encoded with sharp to match the existing
+files' weight (1MB → ~30KB each): `ls1`, `ls2` (1500×1500) and `ls16x9`
+(1920×1047), in their own **"Life Science"** picker group. The partner template
+already excludes the stage groups, so the group shows for every template.
+
+Verified in the browser at 16:9 / 1:1 / 9:16: grid geometry, the count stepper,
+a logo-library pick landing in the next empty cell, the editor round-trip
+(12 layers, lockup hidden), the layout switch both ways with no chrome leak, and
+the fill button producing all 25 logos as a 5×5 wall on `ls16x9`, checked
+logo-by-logo against a screenshot of the Partners page.
+
+Worth knowing for the next browser test: the fill button needs the page to be
+HYDRATED. A click fired within a second of load is simply lost (no handler yet),
+which read as "the button does nothing" twice before a deliberate
+minus-then-fill test proved a single click is enough on a settled page.
+
+**Not done:** no official library item for it yet. Tune a wall (probably 16:9 +
+1:1 on `ls16x9`/`ls1`) and save it as e.g. "Official Thank You Partners", then
+put its id next to the other `DEFAULT_ITEM_IDS` entries in
+`src/app/simple/page.tsx` if it should be a flavour button.
+
+---
+
+## Previous handoff — 2026-08-03 (round 50)
 
 ### Round 50 — white logos pulled from Airtable
 
