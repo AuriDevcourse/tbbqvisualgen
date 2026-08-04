@@ -1002,6 +1002,28 @@ export const THANKS_HEADLINE_GLYPH = 0.54;
  *  the cap's width therefore renders at exactly the same size. */
 export const THANKS_HEADLINE_CAP = 0.108;
 
+/**
+ * How many logos each row of a tier carries.
+ *
+ * `cols` per row, except that **a single logo stranded on the last row is
+ * squeezed into the row above** (Auri: "if there is only one logo left on the
+ * different line, we should try to squeeze it in the one previous line") — 13
+ * logos six across flow 6, 7 rather than 6, 6, 1. The squeezed row's cells are
+ * narrowed to fit the same margins; every other row keeps the tier's cell width.
+ *
+ * A lone logo is only ever moved UP, never down: a row of `cols + 1` is a small
+ * compromise, a row of one reads as a mistake.
+ */
+export function thanksRowCounts(count: number, cols: number): number[] {
+  const rows: number[] = [];
+  for (let k = 0; k < count; k += cols) rows.push(Math.min(cols, count - k));
+  if (rows.length > 1 && rows[rows.length - 1] === 1) {
+    rows.pop();
+    rows[rows.length - 1] += 1;
+  }
+  return rows;
+}
+
 /** Greedy word wrap to a character budget. Words longer than the budget get
  *  their own line rather than being broken mid-word. */
 function wrapWords(text: string, maxChars: number): string[] {
@@ -1137,8 +1159,12 @@ function buildThanksDesign(form: PartnerForm, format: PlatformFormat): SimpleDoc
   // Too few support logos to be wider? Narrow the LEAD tier instead, so the
   // hierarchy still reads (4 main partners stacked over 2 support ones).
   if (lead && rest && restCols <= leadCols) leadCols = Math.max(1, restCols - 1);
-  const leadRows = leadCols ? Math.ceil(lead / leadCols) : 0;
-  const restRows = restCols ? Math.ceil(rest / restCols) : 0;
+  // How many cells each row carries — NOT simply `cols` per row, because a
+  // single logo stranded on the last row gets squeezed into the row above it.
+  const leadCounts = leadCols ? thanksRowCounts(lead, leadCols) : [];
+  const restCounts = restCols ? thanksRowCounts(rest, restCols) : [];
+  const leadRows = leadCounts.length;
+  const restRows = restCounts.length;
 
   // Cells are wider than tall — a logo is a wordmark far more often than a
   // square mark.
@@ -1197,23 +1223,28 @@ function buildThanksDesign(form: PartnerForm, format: PlatformFormat): SimpleDoc
     }
   };
 
-  // One tier's rows. Every row is centred on its own width, so a last row that
-  // doesn't divide evenly still looks deliberate.
-  const emitTier = (from: number, n: number, cols: number, rows: number, cw: number, ch: number, top: number): void => {
-    for (let k = 0; k < n; k++) {
-      const row = Math.floor(k / cols);
-      const inRow = row === rows - 1 ? n - row * cols : cols;
-      const rowW = inRow * cw + (inRow - 1) * gapX;
-      const cx = ((W - rowW) / 2 + (k % cols) * (cw + gapX) + cw / 2) / W;
+  // One tier, row by row from `counts`. Every row is centred on its own width,
+  // so a last row that doesn't divide evenly still looks deliberate. A row that
+  // carries MORE than the tier's column count — the squeezed-in orphan — has its
+  // cells narrowed to stay inside the margins; the row height never changes, so
+  // the size difference is limited to width.
+  const emitTier = (from: number, counts: number[], cw: number, ch: number, top: number): void => {
+    let i = from;
+    counts.forEach((inRow, row) => {
+      const rowCw = Math.min(cw, (usableW - (inRow - 1) * gapX) / inRow);
+      const rowW = inRow * rowCw + (inRow - 1) * gapX;
       const cy = (top + row * (ch + gapY) + ch / 2) / H;
-      emitCell(from + k, cx, cy, cw / W, ch / H, thanksSlotRole(from + k, from + k < lead));
-    }
+      for (let col = 0; col < inRow; col++, i++) {
+        const cx = ((W - rowW) / 2 + col * (rowCw + gapX) + rowCw / 2) / W;
+        emitCell(i, cx, cy, rowCw / W, ch / H, thanksSlotRole(i, i < lead));
+      }
+    });
   };
 
-  if (lead) emitTier(0, lead, leadCols, leadRows, widthOf(leadCols), leadCellH, blockTop);
+  if (lead) emitTier(0, leadCounts, widthOf(leadCols), leadCellH, blockTop);
   if (rest) {
     const restTop = blockTop + (leadRows ? leadRows * leadCellH + (leadRows - 1) * gapY + tierGap : 0);
-    emitTier(lead, rest, restCols, restRows, widthOf(restCols), restCellH, restTop);
+    emitTier(lead, restCounts, widthOf(restCols), restCellH, restTop);
   }
 
   return {

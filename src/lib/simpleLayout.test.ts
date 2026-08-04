@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { accentShapes, isAccentShape, syncAccentShapes, applyAccent } from "./accents";
+import { thanksRowCounts } from "./simpleLayout";
 import { adoptLegacyPanelRoles, buildPartnerDesign, buildSalesDesign, buildSimpleDesign, bundleCoverage, dedupeSpeakerRoles, docKindOf, emptyForm, parkDoc, emptyPartnerForm, emptyPerson, emptySalesForm, formsFromDoc, isBlankPerson, mergePersonDescription, migrateLegacyPanelDoc, panelShapeKey, partnerLayoutOf, retargetPartnerLayout, retargetSalesLayout, retargetTunedDoc, salesLayoutOf, sampleFourthSpeaker, simpleExportName, stripFormsForSave, syncPanelChrome, syncPartnerChrome, thanksGridColumns, type PartnerForm, type SalesForm, type SimpleDoc, type SimpleForm } from "./simpleLayout";
 import type { PlatformFormat } from "@/types/template";
 
@@ -1800,34 +1801,88 @@ describe("Thank you wall — the headline keeps off the walls", () => {
 describe("Thank you wall — six smaller logos per row", () => {
   const wall = (patch: Partial<PartnerForm> = {}): PartnerForm =>
     ({ ...emptyPartnerForm(), layout: "thanks", ...patch });
-  const rowsOf = (doc: SimpleDoc) => {
+  // Row sizes top to bottom. `only` narrows to one tier: the support cells carry
+  // a plain `logo-thanks-N` role, the lead cells `logo-thanks-lead-N`.
+  const rowsOf = (doc: SimpleDoc, only?: RegExp) => {
     const rows = new Map<number, number>();
     for (const c of doc.design.shapes ?? []) {
-      if (!/^logo-thanks-/.test(c.simpleRole ?? "")) continue;
+      const role = c.simpleRole ?? "";
+      if (!/^logo-thanks-/.test(role)) continue;
+      if (only && !only.test(role)) continue;
       const k = Math.round(c.y * 500);
       rows.set(k, (rows.get(k) ?? 0) + 1);
     }
     return [...rows.entries()].sort((a, b) => a[0] - b[0]).map(([, n]) => n);
   };
+  const SUPPORT = /^logo-thanks-\d+$/;
 
-  it("puts six support logos across at 1:1 and 16:9, even at the cost of an orphan", () => {
+  it("puts six support logos across at 1:1 and 16:9", () => {
     for (const format of ["square", "presentation"] as PlatformFormat[]) {
-      // The investor wall: 4 main + 13 support.
+      // The investor wall: 4 main + 13 support. 6,6,1 would strand a logo, so
+      // the last one is squeezed into the row above.
       expect(rowsOf(buildPartnerDesign(wall({ logoCount: 17, featuredCount: 4 }), format)))
-        .toEqual([4, 6, 6, 1]);
-      // 18 support divides evenly.
+        .toEqual([4, 6, 7]);
+      // 18 support divides evenly, nothing to squeeze.
       expect(rowsOf(buildPartnerDesign(wall({ logoCount: 22, featuredCount: 4 }), format)))
         .toEqual([4, 6, 6, 6]);
     }
   });
 
-  it("still caps a 9:16 story at three across", () => {
-    const rows = rowsOf(buildPartnerDesign(wall({ logoCount: 17, featuredCount: 4 }), "story"));
-    expect(Math.max(...rows.slice(1))).toBe(3);
+  it("caps a 9:16 story at three across, give or take a squeezed orphan", () => {
+    const rows = rowsOf(buildPartnerDesign(wall({ logoCount: 17, featuredCount: 4 }), "story"), SUPPORT);
+    // 13 support in threes would end 3,3,3,3,1 — the orphan moves up, so one row
+    // carries four and no row carries more than that.
+    expect(rows).toEqual([3, 3, 3, 4]);
   });
 
   it("leaves the flat Life Science wall on its balanced 5x5", () => {
     expect(rowsOf(buildPartnerDesign(wall({ logoCount: 25, featuredCount: 0 }), "square")))
       .toEqual([5, 5, 5, 5, 5]);
+  });
+});
+
+// "If there is only one logo left on the different line, we should try to squeeze
+// it in the one previous line." A row of cols+1 is a small compromise; a row of
+// one reads as a mistake.
+describe("thanksRowCounts — no logo stranded alone", () => {
+  it("moves a lone last logo up into the row above", () => {
+    expect(thanksRowCounts(13, 6)).toEqual([6, 7]);
+    expect(thanksRowCounts(7, 6)).toEqual([7]);
+    expect(thanksRowCounts(13, 3)).toEqual([3, 3, 3, 4]);
+    expect(thanksRowCounts(11, 5)).toEqual([5, 6]);
+  });
+
+  it("leaves every other remainder alone", () => {
+    expect(thanksRowCounts(12, 6)).toEqual([6, 6]);
+    expect(thanksRowCounts(14, 6)).toEqual([6, 6, 2]);
+    expect(thanksRowCounts(17, 6)).toEqual([6, 6, 5]);
+    expect(thanksRowCounts(25, 5)).toEqual([5, 5, 5, 5, 5]);
+  });
+
+  it("never leaves a single row of one alone-able — one logo is just one row", () => {
+    expect(thanksRowCounts(1, 6)).toEqual([1]);
+    expect(thanksRowCounts(1, 1)).toEqual([1]);
+  });
+
+  it("the squeezed row is narrower, never taller, and stays inside the margins", () => {
+    const doc = buildPartnerDesign(
+      { ...emptyPartnerForm(), layout: "thanks", logoCount: 17, featuredCount: 4 },
+      "square",
+    );
+    const support = (doc.design.shapes ?? []).filter((s) => /^logo-thanks-\d+$/.test(s.simpleRole ?? ""));
+    const byRow = new Map<number, typeof support>();
+    for (const c of support) {
+      const k = Math.round(c.y * 500);
+      byRow.set(k, [...(byRow.get(k) ?? []), c]);
+    }
+    const rows = [...byRow.entries()].sort((a, b) => a[0] - b[0]).map(([, r]) => r);
+    expect(rows.map((r) => r.length)).toEqual([6, 7]);
+    // Same height in both rows; the seven-cell row is narrower.
+    expect(rows[1][0].height).toBeCloseTo(rows[0][0].height, 6);
+    expect(rows[1][0].width).toBeLessThan(rows[0][0].width);
+    for (const c of support) {
+      expect(c.x - c.width / 2).toBeGreaterThanOrEqual(0.059);
+      expect(c.x + c.width / 2).toBeLessThanOrEqual(0.941);
+    }
   });
 });

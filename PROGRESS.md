@@ -6,7 +6,36 @@ not required reading.
 
 ---
 
-## SESSION HANDOFF — 2026-08-04 (round 57)
+## SESSION HANDOFF — 2026-08-04 (round 58)
+
+### Round 58 — no logo left stranded on its own row
+
+Gates: **175/175 vitest, tsc clean, build clean**.
+
+Auri: *"if there is only one logo left on the different line, we should try to
+squeeze it in the one previous line."* Six-across left the investor wall's 13th
+support logo (F&P) alone on the last row. **`thanksRowCounts(count, cols)`** is
+now the single source of row sizes, and it moves a lone last logo UP into the row
+above: 13 six-across flows **6, 7** instead of 6, 6, 1.
+
+Mechanics worth knowing, because they were the design question:
+
+- **The squeezed row narrows its CELLS, it does not overflow the margin.** Seven
+  cells in the space of six, so those logos are ~20% narrower.
+- **Row HEIGHT never changes**, so the size difference is width-only and a
+  wordmark shrinks while a square mark barely does. Shrinking the whole tier to
+  7 columns was the alternative and it made every support logo smaller for the
+  sake of one.
+- **Only ever moved UP.** A row of `cols + 1` is a small compromise; a row of one
+  reads as a mistake.
+- It applies to **both tiers and to the flat wall**, since `emitTier` now lays out
+  from a row-count array rather than dividing by columns.
+- The 9:16 story cap bends for it too: 13 support logos three-across flow
+  3, 3, 3, **4**.
+
+---
+
+## Previous handoff — 2026-08-04 (round 57)
 
 ### Round 57 — one headline size for every wall, and no more caps
 
