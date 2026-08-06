@@ -477,6 +477,8 @@ export default function SimplePage() {
   // has to sit and watch it — hence a visible number rather than a hidden
   // constant.
   const [videoSeconds, setVideoSeconds] = useState(3);
+  // What the length field shows while it is being typed into — see the input.
+  const [videoSecondsDraft, setVideoSecondsDraft] = useState("3");
   const [paused, setPaused] = useState(false);
   // When the user fine-tunes in the advanced editor, we adopt their edited doc
   // here and render THAT instead of the form-generated layout — so coming back
@@ -1344,7 +1346,7 @@ export default function SimplePage() {
                           {VIDEO_PRESETS.map((s) => (
                             <button
                               key={s}
-                              onClick={() => { setVideoSeconds(s); setExportFormat("mp4"); }}
+                              onClick={() => { setVideoSeconds(s); setVideoSecondsDraft(String(s)); setExportFormat("mp4"); }}
                               aria-pressed={exportFormat === "mp4" && videoSeconds === s}
                               className={`px-2 py-1 rounded-md text-[11px] font-medium tabular-nums transition-colors ${
                                 exportFormat === "mp4" && videoSeconds === s
@@ -1356,17 +1358,31 @@ export default function SimplePage() {
                             </button>
                           ))}
                           <label className="ml-auto flex items-center gap-1 text-[11px] text-white/60">
+                            {/* Draft string, not the number — clamping every
+                                keystroke made backspacing "3" to type "60"
+                                snap back to the 1s minimum. Clamp on blur. */}
                             <input
                               type="number"
                               min={VIDEO_MIN_SECONDS}
                               max={VIDEO_MAX_SECONDS}
-                              value={videoSeconds}
-                              aria-label="Video length in seconds"
+                              value={videoSecondsDraft}
+                              aria-label={`Video length in seconds (${VIDEO_MIN_SECONDS}–${VIDEO_MAX_SECONDS})`}
                               onChange={(e) => {
-                                const n = Number(e.target.value);
-                                if (!Number.isFinite(n)) return;
-                                setVideoSeconds(Math.min(VIDEO_MAX_SECONDS, Math.max(VIDEO_MIN_SECONDS, Math.round(n))));
+                                setVideoSecondsDraft(e.target.value);
                                 setExportFormat("mp4");
+                                const n = Number(e.target.value);
+                                if (e.target.value !== "" && Number.isFinite(n)
+                                  && n >= VIDEO_MIN_SECONDS && n <= VIDEO_MAX_SECONDS) {
+                                  setVideoSeconds(Math.round(n));
+                                }
+                              }}
+                              onBlur={() => {
+                                const n = Number(videoSecondsDraft);
+                                const next = videoSecondsDraft === "" || !Number.isFinite(n)
+                                  ? videoSeconds
+                                  : Math.min(VIDEO_MAX_SECONDS, Math.max(VIDEO_MIN_SECONDS, Math.round(n)));
+                                setVideoSeconds(next);
+                                setVideoSecondsDraft(String(next));
                               }}
                               className="w-12 px-1.5 py-1 rounded-md bg-white/5 border border-white/10 text-[11px] tabular-nums text-white text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70"
                             />

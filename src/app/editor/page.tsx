@@ -151,6 +151,9 @@ export default function Home() {
   // MP4 length in seconds. Recording is real time, so this is also how long the
   // canvas has to stay on screen.
   const [videoSeconds, setVideoSeconds] = useState(3);
+  // What the length field currently shows. Mid-typing it can be "" or "6" on
+  // the way to "60", neither of which is a length we'd record — see the input.
+  const [videoSecondsDraft, setVideoSecondsDraft] = useState("3");
 
   const { exportRef, isExporting, isExportingVideo, videoProgress, exportImage, exportMp4 } = useExport();
   const previewContainerRef = useRef<HTMLDivElement>(null);
@@ -760,7 +763,10 @@ export default function Home() {
     setTimeout(() => {
       exportImage(`${base}.${still === "jpeg" ? "jpg" : "png"}`, still).finally(() => setBgPaused(false));
     }, 100);
-  }, [format, dims.width, dims.height, exportFormat, exportImage, exportMp4, design.backgroundId]);
+    // videoSeconds MUST stay in here. Without it the callback was frozen at
+    // the initial 3, so the length picker did nothing and every MP4 came out
+    // 3 seconds long however many seconds you asked for.
+  }, [format, dims.width, dims.height, exportFormat, exportImage, exportMp4, design.backgroundId, videoSeconds]);
 
   // Quick Templates hands off through sessionStorage and re-adopts whatever is
   // stored when you come back — but the only way back used to be a bare
@@ -1420,19 +1426,36 @@ export default function Home() {
                   next to PNG would read as nonsense. */}
               {effectiveFormat === "mp4" && (
                 <label className="flex items-center gap-0.5 pl-1 pr-1.5 text-[10px] font-semibold text-muted">
+                  {/* Draft string, not the number: a controlled number input
+                      clamped every keystroke, so backspacing "3" to type "60"
+                      snapped straight back to the 1s minimum and the field
+                      fought you. Clamp on blur instead. */}
                   <input
                     type="number"
                     min={VIDEO_MIN_SECONDS}
                     max={VIDEO_MAX_SECONDS}
-                    value={videoSeconds}
-                    aria-label="Video length in seconds"
-                    title={`Record ${videoSeconds} seconds — real time, so keep this tab in front`}
+                    value={videoSecondsDraft}
+                    aria-label={`Video length in seconds (${VIDEO_MIN_SECONDS}–${VIDEO_MAX_SECONDS})`}
+                    title={`Record ${videoSeconds} seconds, up to ${VIDEO_MAX_SECONDS} — real time, so keep this tab in front`}
                     onChange={(e) => {
+                      setVideoSecondsDraft(e.target.value);
                       const n = Number(e.target.value);
-                      if (!Number.isFinite(n)) return;
-                      setVideoSeconds(Math.min(VIDEO_MAX_SECONDS, Math.max(VIDEO_MIN_SECONDS, Math.round(n))));
+                      // Commit only a value that is already in range, so the
+                      // Save button never records a half-typed number.
+                      if (e.target.value !== "" && Number.isFinite(n)
+                        && n >= VIDEO_MIN_SECONDS && n <= VIDEO_MAX_SECONDS) {
+                        setVideoSeconds(Math.round(n));
+                      }
                     }}
-                    className="w-10 px-1 py-0.5 rounded-md bg-surface/10 border border-white/10 text-[10px] tabular-nums text-foreground text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70"
+                    onBlur={() => {
+                      const n = Number(videoSecondsDraft);
+                      const next = videoSecondsDraft === "" || !Number.isFinite(n)
+                        ? videoSeconds
+                        : Math.min(VIDEO_MAX_SECONDS, Math.max(VIDEO_MIN_SECONDS, Math.round(n)));
+                      setVideoSeconds(next);
+                      setVideoSecondsDraft(String(next));
+                    }}
+                    className="w-11 px-1 py-0.5 rounded-md bg-surface/10 border border-white/10 text-[10px] tabular-nums text-foreground text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70"
                   />
                   S
                 </label>
