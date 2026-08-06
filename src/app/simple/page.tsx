@@ -1298,9 +1298,11 @@ export default function SimplePage() {
             <div className="flex items-stretch rounded-full bg-surface text-ink overflow-hidden">
               <button
                 onClick={handleExport}
-                disabled={isExporting || isExportingVideo || isEmpty}
+                disabled={isExporting || isExportingVideo}
                 aria-label={isVideoFormat(effectiveFormat) ? "Save video" : "Save image"}
-                title={isEmpty ? (template === "partner" ? "Add a label or a partner logo first" : template === "sales" ? "Add the figure or a photo first" : "Add a headline or a speaker first") : `Save as ${saveLabel(effectiveFormat, videoSeconds)}`}
+                title={isEmpty
+                  ? `Nothing filled in — this saves the background (plus the TechBBQ mark) as ${saveLabel(effectiveFormat, videoSeconds)}. For a completely bare background use Edit & fine-tune and untick the logo.`
+                  : `Save as ${saveLabel(effectiveFormat, videoSeconds)}`}
                 className="flex items-center gap-1.5 pl-5 pr-3.5 py-2 text-xs font-semibold tracking-wide hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isExporting || isExportingVideo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : isVideoFormat(effectiveFormat) ? <Film className="w-3.5 h-3.5" strokeWidth={1.5} /> : <Download className="w-3.5 h-3.5" strokeWidth={1.5} />}
@@ -1846,6 +1848,7 @@ export default function SimplePage() {
                 <div className="text-center rounded-2xl bg-black/60 backdrop-blur-sm px-7 py-6">
                   <p className="text-base text-white/90">Fill in the form to build your visual</p>
                   <p className="text-xs mt-1 text-white/60">{template === "partner" ? "Add a label and the partner's logo on the left" : template === "sales" ? "Add the figure and its caption on the left" : "Add a headline and your speakers on the left"}</p>
+                  <p className="text-[11px] mt-1 text-white/45">Or hit Save now to export just the background — this hint never lands in the file</p>
                 </div>
               </div>
             )}

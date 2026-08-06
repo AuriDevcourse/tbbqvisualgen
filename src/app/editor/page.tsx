@@ -1440,9 +1440,13 @@ export default function Home() {
             </div>
             <button
               onClick={() => handleExport()}
-              disabled={isExporting || isExportingVideo || canvasIsEmpty}
+              disabled={isExporting || isExportingVideo}
               aria-label={effectiveFormat === "mp4" ? "Save video" : "Save image"}
-              title={canvasIsEmpty ? "Add something to the canvas first" : effectiveFormat === "mp4" ? `Record ${videoSeconds} seconds of animation as an MP4 (⌘E)` : "Save image (⌘E)"}
+              title={canvasIsEmpty
+                ? (effectiveFormat === "mp4"
+                    ? `Record ${videoSeconds} seconds of the bare background as an MP4 (⌘E)`
+                    : "Save the bare background — no logo, no text (⌘E)")
+                : effectiveFormat === "mp4" ? `Record ${videoSeconds} seconds of animation as an MP4 (⌘E)` : "Save image (⌘E)"}
               className="flex items-center gap-1.5 px-5 py-2 rounded-full bg-surface text-ink text-xs font-semibold tracking-wide hover:bg-white active:bg-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isExporting || isExportingVideo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : effectiveFormat === "mp4" ? <Film className="w-3.5 h-3.5" strokeWidth={1.5} /> : <Download className="w-3.5 h-3.5" strokeWidth={1.5} />}
@@ -1465,7 +1469,13 @@ export default function Home() {
                   customSize={customSize}
                   setCustomSize={setCustomSize}
                   design={design}
-                  setDesign={setDesign}
+                  // Picking a background is a deliberate design act — get the
+                  // start gallery off the preview so the choice is visible
+                  // (and exportable) without hunting for "Start blank".
+                  setDesign={(next) => {
+                    if (next.backgroundId !== design.backgroundId) setGalleryDismissed(true);
+                    setDesign(next);
+                  }}
                 />
               )}
               {currentStep === 2 && (
@@ -1676,6 +1686,7 @@ export default function Home() {
                 <div className="text-center rounded-2xl bg-black/60 backdrop-blur-sm px-7 py-6 shadow-xl">
                   <p className="text-base text-white/90">Your visual will appear here</p>
                   <p className="text-xs mt-1 text-white/60">Pick a tool on the left to start</p>
+                  <p className="text-[11px] mt-1 text-white/45">Or just pick a background and hit Save — this hint never gets exported</p>
                   <button
                     onClick={() => setGalleryDismissed(false)}
                     className="pointer-events-auto mt-3 text-[11px] font-medium text-orange hover:underline"
