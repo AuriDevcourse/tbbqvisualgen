@@ -55,3 +55,6 @@ duplicate-logos-report.json
 
 # Local Claude Code state (incl. agent worktrees and their build output)
 .claude/
+
+# Finished thank-you walls handed to marketing — deliverables, not source.
+exports-ls-dt/

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { accentShapes, isAccentShape, syncAccentShapes, applyAccent } from "./accents";
 import { thanksRowCounts } from "./simpleLayout";
-import { adoptLegacyPanelRoles, buildPartnerDesign, buildSalesDesign, buildSimpleDesign, bundleCoverage, dedupeSpeakerRoles, docKindOf, emptyForm, parkDoc, emptyPartnerForm, emptyPerson, emptySalesForm, formsFromDoc, isBlankPerson, mergePersonDescription, migrateLegacyPanelDoc, panelShapeKey, partnerLayoutOf, retargetPartnerLayout, retargetSalesLayout, retargetTunedDoc, salesLayoutOf, sampleFourthSpeaker, shuffleWallLogos, simpleExportName, stripFormsForSave, syncPanelChrome, syncPartnerChrome, thanksFlatMaxColumns, thanksGridColumns, THANKS_SCRIM_MAX, type PartnerForm, type PartnerLogo, type SalesForm, type SimpleDoc, type SimpleForm } from "./simpleLayout";
+import { adoptLegacyPanelRoles, buildPartnerDesign, buildSalesDesign, buildSimpleDesign, bundleCoverage, dedupeSpeakerRoles, docKindOf, emptyForm, parkDoc, emptyPartnerForm, emptyPerson, emptySalesForm, formsFromDoc, isBlankPerson, mergePersonDescription, migrateLegacyPanelDoc, panelShapeKey, partnerLayoutOf, retargetPartnerLayout, retargetSalesLayout, retargetTunedDoc, salesLayoutOf, sampleFourthSpeaker, shuffleWallLogos, simpleExportName, stripFormsForSave, syncPanelChrome, syncPartnerChrome, thanksFlatMaxColumns, thanksGridColumns, THANKS_MAX_LOGOS, THANKS_SCRIM_MAX, type PartnerForm, type PartnerLogo, type SalesForm, type SimpleDoc, type SimpleForm } from "./simpleLayout";
 import type { PlatformFormat } from "@/types/template";
 
 /** The partner-form fields the thank-you wall introduced. Spread into the
@@ -1360,7 +1360,10 @@ describe("Thank you wall — grid geometry", () => {
     expect(none.design.shapes).toHaveLength(1);
     // A wall at the floor is still witnessable as one.
     expect(partnerLayoutOf(none)).toBe("thanks");
-    expect(buildPartnerDesign(wall({ logoCount: 99 }), "presentation").design.shapes).toHaveLength(30);
+    // Reads the constant rather than a literal, so raising the cap (30 → 48 for
+    // the Life Science x Deep Tech walls) does not silently stop testing the
+    // clamp it is here to prove.
+    expect(buildPartnerDesign(wall({ logoCount: 99 }), "presentation").design.shapes).toHaveLength(THANKS_MAX_LOGOS);
   });
 
   it("never leaves one orphan on the last row, and caps columns per format", () => {
@@ -1400,6 +1403,22 @@ describe("Thank you wall — grid geometry", () => {
     expect(thanksFlatMaxColumns(16 / 9)).toBe(5);
     // A 9:16 story is still capped at 3 — the flat rule only lowers a cap.
     expect(thanksFlatMaxColumns(9 / 16)).toBe(3);
+
+    // Above 30 the wall grows SIDEWAYS instead of adding rows. Left at 5
+    // columns, the 43-logo Life Science x Deep Tech participating wall would be
+    // nine rows deep on a 1080-tall canvas; 8 columns makes it six.
+    expect(thanksFlatMaxColumns(16 / 9, 43)).toBe(8);
+    expect(thanksFlatMaxColumns(9 / 16, 43)).toBe(4);
+    // The width follows the count, so a wall lands in about six rows either
+    // way: a fixed 8 would leave the 31-logo exhibiting wall four rows deep
+    // with an empty bottom third.
+    expect(thanksFlatMaxColumns(16 / 9, 31)).toBe(6);
+    expect(thanksFlatMaxColumns(16 / 9, 48)).toBe(8);
+    // The boundary: a 30-logo wall is untouched, so every wall already in use
+    // renders exactly as it did before.
+    expect(thanksFlatMaxColumns(16 / 9, 30)).toBe(5);
+    expect(cellsPerRow({ logoCount: 43 }, "presentation")).toEqual([8, 8, 8, 8, 8, 3]);
+    expect(cellsPerRow({ logoCount: 31 }, "presentation")).toEqual([6, 6, 6, 6, 7]);
 
     // Two tiers: 4 main + 13 support. The support tier stays 6 across (the last
     // row carries the squeezed-in orphan, hence 7) — what matters is that it is

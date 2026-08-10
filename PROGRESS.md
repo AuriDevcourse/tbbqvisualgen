@@ -6,6 +6,124 @@ not required reading.
 
 ---
 
+## SESSION HANDOFF — 2026-08-10 (7): Life Science x Deep Tech thank-you walls
+
+### State: on branch `ls-dt-thankyou-walls`, NOT merged, NOT pushed
+
+Gates: **216/216 vitest** (201 before, 15 new), **tsc clean**, **production
+build clean**. Nothing has gone to prod — master still auto-deploys, so this
+stays on its branch until Auri has looked at the three images.
+
+The three finished 1920×1080 PNGs are in **`exports-ls-dt/`** (gitignored — they
+are deliverables, not source), each with a `@2x` 3840×2160 master beside it:
+
+1. `LS-DT 2026 - Thank you for exhibiting.png` — 31 logos, 6 across
+2. `LS-DT 2026 - Thank you for participating.png` — 43 logos, 8 across
+3. `LS-DT 2026 - Thank you to our partners.png` — the existing 25-logo set
+
+`src/auth.ts` is STILL the deliberately held-back local dev bypass, unchanged by
+this round. Do not `git add -A` without excluding it. The Google OAuth client
+secret is still stale, so prod sign-in is still on borrowed time.
+
+### Where the roster came from, because the obvious filter is wrong
+
+The exhibitor list is the **Life Science Project** table in Airtable
+(`appgXNjXJqpk9Ebxd` / `tblvukXfmR7KTFymG`), filtered
+`status = "Confirmed startup"` AND `Stakeholder type = "Exhibiting Startup"`,
+read **across the whole table**. That returns exactly the 46 Auri was given.
+
+Three traps, all hit on the way there:
+
+- The **"Startup Library 2026" view** (`viwC65YEXxl8iDPzN`) — the link Auri sent
+  — contains only **17** of the 46. The view is a working list, not the roster.
+- The **`Confirmation` field is not attendance.** It reads "Selected" for 49
+  companies, including ones still marked "To be contacted" and two that
+  declined. It is a shortlisting flag.
+- `techbbq.dk/life-science/` renders its startup list client-side AND the
+  hosting WAF returns `455 Security Incident Detected` to a plain `curl`. It
+  also says 45, not 46. Do not scrape it; use Airtable.
+
+### What changed
+
+1. **The 16 pitch finalists are filed**, in two new folders under
+   `public/logos` — `Life Science Pitch Finalists 2026/` (8) and
+   `Deep Tech Pitch Finalists 2026/` (8). A folder name is a search tag, so
+   typing "finalists" in the picker returns exactly these 16. All 16 pass
+   `npm run logos:tighten -- --check` at 100% artwork, so none will render a
+   fraction of its neighbours' size.
+2. **`THANKS_MAX_LOGOS` 30 → 48.** Splitting the roster across slides was
+   explicitly rejected: everyone gets thanked on one image.
+3. **A wall over 30 now grows SIDEWAYS, not downward** (`thanksFlatMaxColumns`).
+   The flat 5-column rule would have made 43 logos nine rows deep. Columns are
+   now chosen to land a big wall in about six rows, clamped to 5–8. This was
+   tuned against real exports, not theory: a first attempt used a fixed 8
+   columns and the 31-logo wall came back four rows deep with an empty bottom
+   third. **Walls of 30 or fewer are byte-for-byte unchanged.**
+4. **Three sets in `partnerSets.ts`**: `LS_DT_EXHIBITORS` (31),
+   `LS_DT_PITCH_FINALISTS` (16), and `LS_DT_PARTICIPANTS`, which is the first
+   two de-duplicated **by `src`** — four companies both exhibit and pitch, and
+   two of them are spelled differently between the lists (`GreenCow
+   Biosolutions` vs `greenCow BioSolutions`), so the file path is the only
+   reliable identity. 31 + 16 − 4 = 43.
+5. **`Drylabz.svg`** was found loose in `Downloads/SVG` and filed. Library is
+   now 922 files.
+
+### The gap you need to close
+
+**12 of the 43 confirmed exhibitors have no SVG in the library**, so the
+exhibiting wall is 31, not 43. Auri's call was to ship with what exists:
+
+> AlterEcho · ArcanaBio · BÆTA Carbon Solutions · Fepod · H+H LABS · Mirno ·
+> Nordstar Medical · OvartiX · Seaqure labs · Tergy Sagava · VentriLabs ·
+> Volta Greentech
+
+Drop a white SVG into `public/logos`, run `npm run logos`, add a line to
+`LS_DT_EXHIBITORS`, re-export. Nothing else needs to move.
+
+### Numbered next steps
+
+1. **Auri reviews the three PNGs**, then merge `ls-dt-thankyou-walls` to master.
+2. **Chase the 12 missing logos** and rebuild both startup walls.
+3. **Hydram Research renders very faint** on the exhibiting wall — its mark is
+   hairline strokes that nearly vanish at cell size. Worth asking for a heavier
+   cut, or accept it.
+4. Decide whether the finalists deserve their own standalone wall. The set
+   exists (`LS_DT_PITCH_FINALISTS`) but has no sidebar button, because the ask
+   was one combined participating slide.
+
+### Gotchas
+
+- **Three of the 46 are `LS Type: Intersection`**, not one of the three tracks
+  (BIOADVIO, Molecular Quantum Solutions, Peak Emulsions). Auri dropped them, so
+  the roster here is 43. Anyone regenerating from Airtable will get 46 back
+  unless they re-apply that filter.
+- **`COMMUNITY_PER_WALL` is no longer tied to `THANKS_MAX_LOGOS`.** The test
+  asserted they were equal; that only held while the cap was 30. Community pages
+  stay at 30 **by choice** — the three posts are already published at that split
+  and widening them would re-cut which partner appears on which post. The test
+  now asserts the page merely fits.
+- **Walther Therapeutics' white cut carries one pale lavender** (`#b9b7dc`). It
+  is named in an explicit allowlist in `partnerSets.test.ts` rather than the
+  check being loosened, so the guard still fails on the next real offender.
+- **The app exports at `pixelRatio: 2`**, so a 16:9 save is 3840×2160, and the
+  format defaults to **JPG**. Both `@2x` masters and 1920×1080 PNGs are in
+  `exports-ls-dt/`. If you re-export by hand, switch the format to PNG in the
+  chevron menu beside Save image — these walls are thin white strokes on a dark
+  gradient, which is exactly what JPEG ringing shows up on.
+- Scripting the export: `getByText("PNG")` matches the file-type **badge** on
+  every PNG tile in the logo picker. Scope to the open `[role="menu"]`.
+
+### File pointers
+
+- `src/lib/simpleLayout.ts` — `THANKS_MAX_LOGOS`, `thanksFlatMaxColumns`
+- `src/data/partnerSets.ts` — the three new exported rosters, with the Airtable
+  filter written out in the doc comment
+- `src/data/partnerSets.test.ts` — cross-roster guards + the white-cut check
+- `public/logos/{Life Science,Deep Tech} Pitch Finalists 2026/` — the 16
+- `exports-ls-dt/` — the finished images (gitignored)
+
+---
+
 ## SESSION HANDOFF — 2026-08-10 (6): HighBridge out, padded logos fixed
 
 ### State: PUSHED to master as `fd8b739`

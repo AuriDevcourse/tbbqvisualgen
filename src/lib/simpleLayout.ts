@@ -680,12 +680,25 @@ export interface PartnerLogo {
  *  big headline over an auto-flowed grid of as many logos as needed. */
 export type PartnerLayout = "single" | "duo" | "quad" | "thanks";
 
-/** How many logo cells the thank-you wall can hold. The floor is 1 so the
- *  stepper can't produce an empty grid (which would leave the doc with no
- *  partner role at all, i.e. no longer a partner doc); the ceiling is what
- *  still reads at 16:9 — 30 logos is a 6×5 grid. */
+/**
+ * How many logo cells the thank-you wall can hold. The floor is 1 so the
+ * stepper can't produce an empty grid (which would leave the doc with no
+ * partner role at all, i.e. no longer a partner doc).
+ *
+ * The ceiling was 30 — a 6×5 grid, the most that reads at 16:9 while the wall
+ * stays capped at 5 columns. Raised to 48 on 2026-08-10 for the Life Science x
+ * Deep Tech thank-you posts, where the roster is the whole exhibiting cohort
+ * (43 on the participating wall) and splitting it across slides was rejected:
+ * everyone gets thanked on one image. A wall over 30 widens past 5 columns
+ * instead of growing rows — see `thanksFlatMaxColumns` — so the cells shrink far
+ * less than the count suggests. 48 is 8×6, the point where a wordmark at
+ * 1920×1080 is still legible.
+ *
+ * Walls of 30 or fewer are untouched by this: same column count, same cell
+ * size, same output as before.
+ */
 export const THANKS_MIN_LOGOS = 1;
-export const THANKS_MAX_LOGOS = 30;
+export const THANKS_MAX_LOGOS = 48;
 
 /**
  * How the logo block sits in the room below the headline: the share of the
@@ -1139,8 +1152,41 @@ export function thanksMaxColumns(aspect: number): number {
  * Narrowing it to 5 would flatten that hierarchy.
  *
  * The Life Science wall is unaffected — 25 logos already scored 5 columns.
+ *
+ * ABOVE 30 the 5-column rule inverts and starts hurting: 43 logos at 5 across
+ * is NINE rows, and on a 16:9 canvas nine rows of cells forces each one down to
+ * roughly half the height a 30-wall gets. A big wall has to grow sideways
+ * instead — cell height follows cell WIDTH (`CELL_ASPECT`), so a wider grid
+ * loses far less size than the extra rows would have cost.
+ *
+ * But a FIXED wide cap overshoots in the other direction. At 8 columns a
+ * 31-logo wall is only four rows, the block stops two thirds of the way down a
+ * 1080-tall canvas, and the logos come out smaller than a 30-wall's despite
+ * there being fewer of them — measured, not guessed: the first export of the
+ * exhibiting wall left an empty bottom third.
+ *
+ * So aim for a ROW COUNT instead and let the columns follow. Six rows is what
+ * fills a 16:9 canvas below the headline at this cell aspect, so the width is
+ * whatever it takes to land the wall in six rows, clamped to the 5-column floor
+ * the flat rule sets and an 8-column ceiling past which a wordmark stops
+ * reading at 1920 wide:
+ *
+ *   31 logos → 6 across → 6,6,6,6,7   (five rows, the tallest cells available)
+ *   43 logos → 8 across → 8,8,8,8,8,3 (six rows)
+ *   48 logos → 8 across → six full rows, the cap
+ *
+ * Story stays narrow — 4 across on 9:16 — since a phone-shaped canvas has the
+ * vertical room and not the horizontal.
+ *
+ * `count` is optional so the existing callers and their tests keep the old
+ * behaviour; only a wall that declares its size can opt into the wide grid.
  */
-export function thanksFlatMaxColumns(aspect: number): number {
+const THANKS_BIG_WALL_ROWS = 6;
+export function thanksFlatMaxColumns(aspect: number, count = 0): number {
+  if (count > 30) {
+    if (aspect < 0.9) return 4;
+    return Math.min(8, Math.max(5, Math.ceil(count / THANKS_BIG_WALL_ROWS)));
+  }
   return Math.min(5, thanksMaxColumns(aspect));
 }
 
@@ -1257,7 +1303,7 @@ function buildThanksDesign(form: PartnerForm, format: PlatformFormat): SimpleDoc
     ? (lead
         ? Math.min(rest, Math.max(leadCols + 1, maxCols))
         // Flat wall: capped at 5 so each logo gets a wider cell.
-        : thanksGridColumns(rest, W / H, 1, thanksFlatMaxColumns(W / H)))
+        : thanksGridColumns(rest, W / H, 1, thanksFlatMaxColumns(W / H, rest)))
     : 0;
   // Too few support logos to be wider? Narrow the LEAD tier instead, so the
   // hierarchy still reads (4 main partners stacked over 2 support ones).
