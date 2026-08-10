@@ -8,11 +8,21 @@ not required reading.
 
 ## SESSION HANDOFF — 2026-08-10 (7): Life Science x Deep Tech thank-you walls
 
-### State: on branch `ls-dt-thankyou-walls`, NOT merged, NOT pushed
+### State: PUSHED to master as `7ef9759` — LIVE
 
-Gates: **216/216 vitest** (201 before, 15 new), **tsc clean**, **production
-build clean**. Nothing has gone to prod — master still auto-deploys, so this
-stays on its branch until Auri has looked at the three images.
+Built on `ls-dt-thankyou-walls` (`58d74b6`, also pushed), merged no-ff, and
+pushed on Auri's instruction. Prod auto-deploys from master, so the new sidebar
+buttons and the wide-wall rule are live.
+
+Gates were re-run **on master after the merge**, not only on the branch:
+**216/216 vitest** (201 before, 15 new), **tsc clean**, **production build
+compiled**.
+
+Auri asked for the push before reviewing the three images. That is a smaller
+risk than it sounds — the images themselves are gitignored, so what shipped is
+the app change, and every wall of 30 logos or fewer renders exactly as it did
+before. Only a wall ABOVE 30 takes a different path through the layout, and the
+only sets that big are the two added here.
 
 The three finished 1920×1080 PNGs are in **`exports-ls-dt/`** (gitignored — they
 are deliverables, not source), each with a `@2x` 3840×2160 master beside it:
@@ -21,9 +31,15 @@ are deliverables, not source), each with a `@2x` 3840×2160 master beside it:
 2. `LS-DT 2026 - Thank you for participating.png` — 43 logos, 8 across
 3. `LS-DT 2026 - Thank you to our partners.png` — the existing 25-logo set
 
-`src/auth.ts` is STILL the deliberately held-back local dev bypass, unchanged by
-this round. Do not `git add -A` without excluding it. The Google OAuth client
-secret is still stale, so prod sign-in is still on borrowed time.
+`src/auth.ts` is STILL the deliberately held-back local dev bypass, and was
+excluded from this push too even though the instruction was "push everything" —
+that read as this session's work, not as reversing a standing decision recorded
+in two handoffs. Do not `git add -A` without excluding it. The Google OAuth
+client secret is still stale, so prod sign-in is still on borrowed time.
+
+**The 19 startup logos left untracked by an earlier session went in with this
+commit**, and had to: `logoLibrary.json` already indexed them, so committing the
+manifest without the files would have pointed the picker at 404s in prod.
 
 ### Where the roster came from, because the obvious filter is wrong
 
@@ -82,7 +98,9 @@ Drop a white SVG into `public/logos`, run `npm run logos`, add a line to
 
 ### Numbered next steps
 
-1. **Auri reviews the three PNGs**, then merge `ls-dt-thankyou-walls` to master.
+1. **Auri reviews the three PNGs** in `exports-ls-dt/` before they are posted.
+   This is now a review of the images only; the code behind them already
+   shipped.
 2. **Chase the 12 missing logos** and rebuild both startup walls.
 3. **Hydram Research renders very faint** on the exhibiting wall — its mark is
    hairline strokes that nearly vanish at cell size. Worth asking for a heavier
@@ -112,6 +130,12 @@ Drop a white SVG into `public/logos`, run `npm run logos`, add a line to
   gradient, which is exactly what JPEG ringing shows up on.
 - Scripting the export: `getByText("PNG")` matches the file-type **badge** on
   every PNG tile in the logo picker. Scope to the open `[role="menu"]`.
+- **`logoLibrary.json` comes back dirty after a build on Windows, with nothing
+  really changed.** The repo has no `.gitattributes`, so git checks SVGs out as
+  CRLF while it commits them as LF; `prebuild` then re-measures every file a few
+  bytes larger and rewrites the `bytes` field. It is noise — `git restore` it.
+  Vercel builds on LF and matches what is committed. Committing the CRLF numbers
+  would just flip the churn the other way for the next person.
 
 ### File pointers
 
