@@ -62,6 +62,27 @@ time.
   `npm run logos:tighten --check` on any newly imported batch.
 - **`tone: light` says nothing about SIZE.** A padded logo passes every existing
   check and still renders three times too small.
+- **Building while `next dev` runs corrupts the shared `.next`.** Stop the dev
+  server (and kill its orphaned node children) before `npm run build`.
+
+### File pointers — everything touched today
+
+- `src/data/partnerSets.ts` — `COMMUNITY_PARTNERS` (85), `COMMUNITY_PAGES`, and
+  a header comment recording every drop, rename and white-cut decision.
+- `src/data/partnerSets.test.ts` — the `community roster` block: page coverage,
+  cross-page duplicates, light-only, and the saturated-fill white check.
+- `src/lib/simpleLayout.ts` — `THANKS_HEADLINE_CAP` (0.08 = 120px at 1:1),
+  `THANKS_GRID_BIAS`, `THANKS_SCRIM_MAX`, `thanksFlatMaxColumns()`,
+  `shuffleWallLogos()`, `canvasChoices()` (the scrim fix), and
+  `PartnerForm.scrim`.
+- `src/lib/simpleLayout.test.ts` — flat-wall columns, scrim (including the
+  tuned-design regression), and the shuffle invariants.
+- `src/app/simple/page.tsx` — the "Shuffle order" button and "Dim background"
+  stepper, around the existing Logos / Bigger first steppers.
+- `scripts/tighten-logo-viewbox.mjs` — `npm run logos:tighten [--check]`.
+- `public/logos/` — 16 new files, 11 tightened. Originals of the tightened ones
+  in `.logos-trash/viewbox-2026-08-10/`.
+- `src/auth.ts` — the ONLY file not committed. Dev bypass, local-only.
 
 ---
 
