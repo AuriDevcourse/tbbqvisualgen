@@ -8,9 +8,17 @@ not required reading.
 
 ## SESSION HANDOFF — 2026-08-10 (6): HighBridge out, padded logos fixed
 
-### State: green, uncommitted
+### State: PUSHED to master as `fd8b739`
 
-Gates: **201/201 vitest**, **tsc clean**.
+Gates at push: **201/201 vitest**, **tsc clean**, **production build clean**.
+Rounds (2) through (6) below all shipped in that one commit, and prod
+auto-deploys from master — so the community wall is live.
+
+**`src/auth.ts` was deliberately held back** and remains an uncommitted local
+change, keeping the dev login bypass out of the prod codebase. Do not
+`git add -A` without excluding it again. The rest of handoff (1) still stands:
+the Google OAuth client secret is still stale and prod sign-in is on borrowed
+time.
 
 ### What changed
 
