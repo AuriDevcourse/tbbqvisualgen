@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { accentShapes, isAccentShape, syncAccentShapes, applyAccent } from "./accents";
 import { thanksRowCounts } from "./simpleLayout";
-import { adoptLegacyPanelRoles, buildPartnerDesign, buildSalesDesign, buildSimpleDesign, bundleCoverage, dedupeSpeakerRoles, docKindOf, emptyForm, parkDoc, emptyPartnerForm, emptyPerson, emptySalesForm, formsFromDoc, isBlankPerson, mergePersonDescription, migrateLegacyPanelDoc, panelShapeKey, partnerLayoutOf, retargetPartnerLayout, retargetSalesLayout, retargetTunedDoc, salesLayoutOf, sampleFourthSpeaker, simpleExportName, stripFormsForSave, syncPanelChrome, syncPartnerChrome, thanksGridColumns, type PartnerForm, type SalesForm, type SimpleDoc, type SimpleForm } from "./simpleLayout";
+import { adoptLegacyPanelRoles, buildPartnerDesign, buildSalesDesign, buildSimpleDesign, bundleCoverage, dedupeSpeakerRoles, docKindOf, emptyForm, parkDoc, emptyPartnerForm, emptyPerson, emptySalesForm, formsFromDoc, isBlankPerson, mergePersonDescription, migrateLegacyPanelDoc, panelShapeKey, partnerLayoutOf, retargetPartnerLayout, retargetSalesLayout, retargetTunedDoc, salesLayoutOf, sampleFourthSpeaker, shuffleWallLogos, simpleExportName, stripFormsForSave, syncPanelChrome, syncPartnerChrome, thanksFlatMaxColumns, thanksGridColumns, THANKS_SCRIM_MAX, type PartnerForm, type PartnerLogo, type SalesForm, type SimpleDoc, type SimpleForm } from "./simpleLayout";
 import type { PlatformFormat } from "@/types/template";
 
 /** The partner-form fields the thank-you wall introduced. Spread into the
@@ -1374,6 +1374,130 @@ describe("Thank you wall — grid geometry", () => {
     // Fewer logos than a full row: one column each.
     expect(thanksGridColumns(2, 16 / 9)).toBe(2);
     expect(thanksGridColumns(1, 1)).toBe(1);
+  });
+
+  /**
+   * A flat wall runs 5 across, not 6, so each logo gets a wider cell
+   * (2026-08-10). The two-tier investor wall is explicitly exempt — its support
+   * tier must stay wider than the lead tier or the hierarchy inverts.
+   */
+  it("flows a flat wall 5 across and leaves the two-tier wall alone", () => {
+    const cellsPerRow = (form: Partial<PartnerForm>, format: PlatformFormat): number[] => {
+      const doc = buildPartnerDesign(wall(form), format);
+      const rows = new Map<string, number>();
+      for (const c of [...(doc.canvasImages ?? []), ...(doc.design.shapes ?? [])]) {
+        const role = String((c as { simpleRole?: string }).simpleRole ?? "");
+        if (!role.startsWith("logo-thanks")) continue;
+        const key = (c as { y: number }).y.toFixed(4);
+        rows.set(key, (rows.get(key) ?? 0) + 1);
+      }
+      return [...rows.values()];
+    };
+
+    // 30 flat logos: six rows of five, not five rows of six.
+    expect(cellsPerRow({ logoCount: 30 }, "square")).toEqual([5, 5, 5, 5, 5, 5]);
+    expect(thanksFlatMaxColumns(1)).toBe(5);
+    expect(thanksFlatMaxColumns(16 / 9)).toBe(5);
+    // A 9:16 story is still capped at 3 — the flat rule only lowers a cap.
+    expect(thanksFlatMaxColumns(9 / 16)).toBe(3);
+
+    // Two tiers: 4 main + 13 support. The support tier stays 6 across (the last
+    // row carries the squeezed-in orphan, hence 7) — what matters is that it is
+    // still WIDER than the lead tier, which is what makes main partners bigger.
+    const tiered = cellsPerRow({ logoCount: 17, featuredCount: 4 }, "square");
+    expect(tiered[0]).toBe(4);
+    expect(Math.min(...tiered.slice(1))).toBeGreaterThan(tiered[0]);
+    expect(Math.min(...tiered.slice(1))).toBe(6);
+  });
+
+  describe("shuffle", () => {
+    const logo = (n: number) => ({ src: `logo-${n}` });
+    // Deterministic stand-in for Math.random: always picks the first index, so
+    // Fisher-Yates rotates rather than randomises. Enough to assert WHICH cells
+    // are allowed to move.
+    const fixedRand = () => 0;
+
+    it("keeps the lead tier in the front cells", () => {
+      const form = wall({ logoCount: 8, featuredCount: 3, logos: [0, 1, 2, 3, 4, 5, 6, 7].map(logo) });
+      const out = shuffleWallLogos(form, fixedRand);
+      const srcOf = (l: PartnerLogo | null) => l?.src ?? "";
+      // The three main partners are still the first three, in some order.
+      expect(out.slice(0, 3).map(srcOf).sort()).toEqual(["logo-0", "logo-1", "logo-2"]);
+      expect(out.slice(3).map(srcOf).sort()).toEqual(["logo-3", "logo-4", "logo-5", "logo-6", "logo-7"]);
+    });
+
+    it("never pulls a hidden logo into view", () => {
+      // 10 uploaded, wall shrunk to 4: the last six are parked out of sight.
+      const form = wall({ logoCount: 4, featuredCount: 0, logos: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(logo) });
+      const out = shuffleWallLogos(form, fixedRand);
+      expect(out.slice(0, 4).map((l) => l?.src).sort()).toEqual(["logo-0", "logo-1", "logo-2", "logo-3"]);
+      // The hidden tail is untouched, in its original order.
+      expect(out.slice(4).map((l) => l?.src)).toEqual(["logo-4", "logo-5", "logo-6", "logo-7", "logo-8", "logo-9"]);
+    });
+
+    it("loses no logo and actually reorders", () => {
+      const form = wall({ logoCount: 6, featuredCount: 0, logos: [0, 1, 2, 3, 4, 5].map(logo) });
+      const out = shuffleWallLogos(form, fixedRand);
+      expect(out).toHaveLength(6);
+      expect(out.map((l) => l?.src).sort()).toEqual(["logo-0", "logo-1", "logo-2", "logo-3", "logo-4", "logo-5"]);
+      expect(out.map((l) => l?.src)).not.toEqual(form.logos.map((l) => l?.src));
+    });
+  });
+
+  /**
+   * The background scrim: a black overlay under the logos that buys back
+   * contrast on a pale background, without changing the background itself.
+   */
+  describe("background scrim", () => {
+    it("writes no overlay at all when it is off", () => {
+      const doc = buildPartnerDesign(wall({ logoCount: 6, scrim: 0 }), "square");
+      expect(doc.design.overlayColor).toBeUndefined();
+      expect(doc.design.overlayOpacity).toBeUndefined();
+    });
+
+    it("writes a black multiply overlay when it is on", () => {
+      const doc = buildPartnerDesign(wall({ logoCount: 6, scrim: 0.3 }), "square");
+      expect(doc.design.overlayColor).toBe("#000000");
+      expect(doc.design.overlayOpacity).toBe(0.3);
+      expect(doc.design.overlayBlend).toBe("multiply");
+    });
+
+    it("clamps past the ceiling, so the background never goes fully black", () => {
+      const doc = buildPartnerDesign(wall({ logoCount: 6, scrim: 5 }), "square");
+      expect(doc.design.overlayOpacity).toBe(THANKS_SCRIM_MAX);
+    });
+
+    /**
+     * The bug Auri hit: with a tuned design on screen the scrim did nothing,
+     * because `retargetTunedDoc` carried the background across but not the
+     * overlay. Only a wall whose shape had never been tuned rebuilt from
+     * scratch and picked the scrim up.
+     */
+    it("reaches a TUNED design — the control is not dead while custom is active", () => {
+      const tuned = buildPartnerDesign(wall({ logoCount: 6, scrim: 0 }), "square");
+      // Stand in for hand-tuning: move a cell. Shape is unchanged, so the
+      // retarget path (not a rebuild) is what runs.
+      const moved: SimpleDoc = { ...tuned, canvasImages: tuned.canvasImages.map((i, n) => n === 0 ? { ...i, y: i.y + 0.05 } : i) };
+      const rebuilt = buildPartnerDesign(wall({ logoCount: 6, scrim: 0.3 }), "square");
+      const out = retargetTunedDoc(moved, rebuilt);
+      expect(out).not.toBeNull();
+      expect(out!.design.overlayOpacity).toBe(0.3);
+      expect(out!.design.overlayColor).toBe("#000000");
+      // ...and dragging it back to 0 clears it, rather than leaving a stale scrim.
+      const off = retargetTunedDoc(out!, buildPartnerDesign(wall({ logoCount: 6, scrim: 0 }), "square"));
+      expect(off!.design.overlayOpacity).toBeUndefined();
+      expect(off!.design.overlayColor).toBeUndefined();
+    });
+
+    it("survives the doc round-trip, with and without a snapshot", () => {
+      const form = wall({ logoCount: 6, scrim: 0.4 });
+      const doc = buildPartnerDesign(form, "square");
+      // No snapshot: the overlay on the canvas is the only witness.
+      expect(formsFromDoc("partner", doc).partner?.scrim).toBe(0.4);
+      // With a snapshot the canvas still wins, so an edit in the editor sticks.
+      const snap = stripFormsForSave("partner", emptyForm(), { ...form, scrim: 0.1 });
+      expect(formsFromDoc("partner", doc, snap).partner?.scrim).toBe(0.4);
+    });
   });
 
   it("keeps every cell inside the margins and centres each row", () => {

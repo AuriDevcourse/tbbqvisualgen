@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Check, ChevronDown, Download, Film, GripVertical, Loader2, Plus, Minus, Trash2, ImagePlus, X, Square, Presentation, Smartphone, PencilRuler, Users, Handshake, HeartHandshake, Columns2, LayoutGrid, ChevronLeft, ChevronRight, Library, Save, Sparkles, Ticket, Timer, BadgePercent } from "lucide-react";
+import { Check, ChevronDown, Download, Film, GripVertical, Loader2, Plus, Minus, Trash2, ImagePlus, X, Square, Presentation, Smartphone, PencilRuler, Users, Handshake, HeartHandshake, Columns2, LayoutGrid, ChevronLeft, ChevronRight, Library, Save, Shuffle, Sparkles, Ticket, Timer, BadgePercent } from "lucide-react";
 import { Popover } from "radix-ui";
 import { TeamLibrary, type LibraryLoadedItem } from "@/components/TeamLibrary";
 import { AuthChip } from "@/components/AuthChip";
@@ -19,7 +19,7 @@ import { PARTNER_SETS, type PartnerSet } from "@/data/partnerSets";
 import { isSvgDataUrl, tintSvgDataUrl } from "@/lib/svgTint";
 import { ColorPicker } from "@/components/ColorPicker";
 import type { PlatformFormat } from "@/types/template";
-import { buildSimpleDesign, buildPartnerDesign, buildSalesDesign, bundleCoverage, docKindOf, emptyForm, emptyPartnerForm, emptyPerson, emptySalesForm, formsFromDoc, isBlankPerson, isPartnerDoc, mergePersonDescription, migrateLegacyPanelDoc, panelShapeKey, parkDoc, partnerLayoutOf, retargetPartnerLayout, retargetSalesLayout, retargetTunedDoc, salesLayoutOf, sampleFourthSpeaker, simpleExportName, stripFormsForSave, syncPanelChrome, syncPartnerChrome, THANKS_MAX_LOGOS, THANKS_MIN_LOGOS, type SimpleForm, type PartnerForm, type PartnerLogo, type SalesForm, type SimplePerson, type SimpleDoc, type TemplateCoverage } from "@/lib/simpleLayout";
+import { buildSimpleDesign, buildPartnerDesign, buildSalesDesign, bundleCoverage, docKindOf, emptyForm, emptyPartnerForm, emptyPerson, emptySalesForm, formsFromDoc, isBlankPerson, isPartnerDoc, mergePersonDescription, migrateLegacyPanelDoc, panelShapeKey, parkDoc, partnerLayoutOf, retargetPartnerLayout, retargetSalesLayout, retargetTunedDoc, salesLayoutOf, sampleFourthSpeaker, shuffleWallLogos, simpleExportName, stripFormsForSave, syncPanelChrome, syncPartnerChrome, THANKS_MAX_LOGOS, THANKS_MIN_LOGOS, THANKS_SCRIM_MAX, type SimpleForm, type PartnerForm, type PartnerLogo, type SalesForm, type SimplePerson, type SimpleDoc, type TemplateCoverage } from "@/lib/simpleLayout";
 
 type TemplateKind = "panel" | "partner" | "sales";
 
@@ -1084,6 +1084,20 @@ export default function SimplePage() {
   const setFeaturedCount = (n: number) =>
     setPartner((p) => ({ ...p, featuredCount: Math.max(0, Math.min(p.logoCount, n)) }));
 
+  /**
+   * Darken the background behind the wall. Stepped in 10s rather than given a
+   * free slider so it matches the two steppers above it, and because the useful
+   * range is small — 20–30% is usually enough to lift a white logo off a pale
+   * patch. Rounded on the way in: floats accumulate drift across steps and the
+   * label would start reading "30.000000000000004%".
+   */
+  const SCRIM_STEP = 0.1;
+  const setScrim = (n: number) =>
+    setPartner((p) => ({ ...p, scrim: Math.round(Math.max(0, Math.min(THANKS_SCRIM_MAX, n)) * 100) / 100 }));
+
+  /** Randomise the wall. Rules and reasoning live with the function. */
+  const shuffleWall = () => setPartner((p) => ({ ...p, logos: shuffleWallLogos(p) }));
+
   // A library pick needs a destination. First empty slot of the current
   // layout, falling back to the last one when they are all filled — so
   // clicking is predictable and the hint can say where it goes.
@@ -1603,6 +1617,54 @@ export default function SimplePage() {
                       onClick={() => setFeaturedCount(partner.featuredCount + 1)}
                       disabled={partner.featuredCount >= partner.logoCount}
                       aria-label="More big logos"
+                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/5 border border-white/10 text-white/80 hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+              {/* Alphabetical order reads like a ranking. One click makes the
+                  wall look like a wall of peers. */}
+              {partner.layout === "thanks" && (
+                <button
+                  onClick={shuffleWall}
+                  disabled={!partner.logos.slice(0, partner.logoCount).some(Boolean)}
+                  title={partner.featuredCount
+                    ? "Shuffle the logos. The bigger first row shuffles within itself, so main partners stay in front."
+                    : "Shuffle the logos into a random order."}
+                  className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-xs font-medium text-white/85 hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Shuffle className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  Shuffle order
+                </button>
+              )}
+              {/* Some backgrounds have pale patches that swallow a white logo.
+                  Dimming is the fix that keeps the background you picked. */}
+              {partner.layout === "thanks" && (
+                <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                  <span className="text-sm text-white/85">
+                    Dim background
+                    <span className="ml-1.5 text-[11px] text-white/45">
+                      {(partner.scrim ?? 0) > 0 ? "helps pale backgrounds" : "off"}
+                    </span>
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => setScrim((partner.scrim ?? 0) - SCRIM_STEP)}
+                      disabled={(partner.scrim ?? 0) <= 0}
+                      aria-label="Less dimming"
+                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/5 border border-white/10 text-white/80 hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <Minus className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="w-9 text-center text-sm font-semibold tabular-nums text-white">
+                      {Math.round((partner.scrim ?? 0) * 100)}%
+                    </span>
+                    <button
+                      onClick={() => setScrim((partner.scrim ?? 0) + SCRIM_STEP)}
+                      disabled={(partner.scrim ?? 0) >= THANKS_SCRIM_MAX}
+                      aria-label="More dimming"
                       className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/5 border border-white/10 text-white/80 hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       <Plus className="w-3.5 h-3.5" />

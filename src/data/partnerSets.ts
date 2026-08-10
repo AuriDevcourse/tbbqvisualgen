@@ -136,6 +136,167 @@ export const INVESTOR_PARTNERS: PartnerSetEntry[] = [
   { label: "F&P (Forsikring & Pension)", src: "/logos/Forsikring%20Og%20Pension.svg" },
 ];
 
+/**
+ * The 2026 COMMUNITY partners — every record in the Airtable "Partner
+ * Deliverables 2026" view (`tblTecOBecLQCNIeD` / `viw7FVbsTb9IRaWF0`) whose
+ * Partnership Tier reads **Community**, pulled 2026-08-10.
+ *
+ * 89 records came back; this is 85. Four were dropped, none by oversight:
+ *   **HighBridge Law Firm** is filed at Community tier in Airtable but is NOT a
+ *     community partner — it has an exception (Auri, 2026-08-10). Removed by
+ *     hand, so a regenerate from Airtable would bring it back: check this line
+ *     before trusting a rebuilt list.
+ *   **Business Helsinki** is the same partner twice — it and "AISTART Incubator
+ *     - Business Helsinki" carry the identical white-AIStart file, so listing
+ *     both would put one logo on the wall twice.
+ *   **Fututo Perfecto Innovation** is a misspelled duplicate of Futuro Perfecto
+ *     (here as Horizon Deep Tech Summit, the event it runs). No white asset, and
+ *     its `Put on web` box is unticked.
+ *   **Product Therapy** has no logo attachment at all.
+ * ESA BIC Denmark IS included despite an unticked `Put on web` — that flag
+ * governs the website grid, not a thank-you post. Drop it here if marketing
+ * disagrees.
+ *
+ * 71 of the 85 were already in the library; the other 14 came from the Airtable
+ * attachments on 2026-08-10 and are committed under `public/logos`. All 85
+ * measure LIGHT in the manifest — a dark logo is invisible on this canvas. Where
+ * the library holds both cuts this set points at the white one on purpose (imec,
+ * Mesh, NORNORM, PropTech Denmark, Sustainary, Terkko, CSE, IDA, Odense
+ * Robotics, Humble AI, EIT Urban Mobility, Health Tech Hub, START Paris,
+ * Spaces/Regus, Venture Café Warsaw). Terkko is the trap: three files share that
+ * name and only `Terkko Health Hub.svg` is light.
+ *
+ * **Always the white cut.** Every entry was checked against its Airtable white
+ * asset on 2026-08-10 by reading the SVG source, not by trusting `tone: light`
+ * — a mostly-white logo with a coloured mark still measures light, which is how
+ * AIESEC shipped as its blue-and-white PNG on the first wall. Two were repointed:
+ *   AIESEC        `Aiesec.png` (blue)          → `Aiesec White.svg`
+ *   Talent Garden `Talent Garden.svg` (#f17b68) → `Talent Garden White.svg`
+ * The remaining 83 already pointed at the same file marketing uploaded. Six use
+ * a near-white grey rather than pure #FFF (Gothenburg Tech Week, Medicon Valley
+ * Alliance, PWN Copenhagen, SKYtek, TechSavvy, Teknologisk Institut) — that IS
+ * the official artwork, so they stay. The "points at white artwork" test allows
+ * greys and fails a saturated colour.
+ *
+ * One entry is still PNG, not SVG: `Clarmacapital.png`. It is white artwork so
+ * it renders fine; it just can't be recoloured in-app if the canvas goes light.
+ * Three partners have no white asset anywhere (Copenhagen Institute for Futures
+ * Studies, EU:CO, Sustainary) and use near-white library files.
+ *
+ * `label` is what the ARTWORK says, not the legal name on the record — the wall
+ * shows logos, and "INNOVX BUSINESS ACCELERATOR S.R.L." helps nobody find the
+ * InnovX mark. The renames worth knowing:
+ *   "DI"                       → Dansk Industri
+ *   "Clean"                    → CLEAN, the file is `Clean Cluster.svg`
+ *   "MADE"                     → the file is `Futuremanufacturers.svg`
+ *   "Shine"                    → IVN Powered by Shine
+ *   "Medicon Valleyh Alliance" → Medicon Valley Alliance (typo in Airtable)
+ *
+ * Alphabetical, because a community tier has no hierarchy — every page below
+ * runs `featuredCount: 0`.
+ */
+export const COMMUNITY_PARTNERS: PartnerSetEntry[] = [
+  { label: "AceON Accelerator", src: "/logos/Aceon.svg" },
+  { label: "advores", src: "/logos/Advores.svg" },
+  { label: "AIESEC in Denmark", src: "/logos/Aiesec%20White.svg" },
+  { label: "AIStart Incubator, Business Helsinki", src: "/logos/AIStart%20Incubator.svg" },
+  { label: "Amela", src: "/logos/Amela.svg" },
+  { label: "ArcticStartup", src: "/logos/ArcticStartup%20Mark.svg" },
+  { label: "AUXXO Female Catalyst Fund", src: "/logos/AUXXO%20Female%20Catalyst%20Fund.svg" },
+  { label: "BETA.HEALTH", src: "/logos/Beta%20Heath.svg" },
+  { label: "BioMedical Design", src: "/logos/BioMedical%20Design.svg" },
+  { label: "Brighteye Ventures", src: "/logos/Brighteye%20Ventures.svg" },
+  { label: "BPoC", src: "/logos/BPOC.svg" },
+  { label: "Business Turku", src: "/logos/Businessturku.svg" },
+  { label: "Clarma Capital", src: "/logos/Clarmacapital.png" },
+  { label: "CLEAN", src: "/logos/Clean%20Cluster.svg" },
+  { label: "Copenhagen Climate Week", src: "/logos/Copenhagen%20Climate%20Week.svg" },
+  { label: "Copenhagen Fintech", src: "/logos/Copenhagen%20Fintech.svg" },
+  { label: "Copenhagen Institute for Futures Studies", src: "/logos/Copenhagen%20Institute%20for%20Futures%20Studies.svg" },
+  { label: "Copenhagen School of Entrepreneurship", src: "/logos/CBS%20CSE%20White.svg" },
+  { label: "Creative Girls Club", src: "/logos/Creative%20Girls%20Club.svg" },
+  { label: "Crescita Partners", src: "/logos/Crescita%20Partners.svg" },
+  { label: "Danish Startup Group", src: "/logos/Danish%20Startup%20Group.svg" },
+  { label: "Daya Ventures", src: "/logos/Daya%20Ventures.svg" },
+  { label: "dealroom.co", src: "/logos/Dealroom.svg" },
+  { label: "Dansk Industri", src: "/logos/Dansk%20Industri.svg" },
+  { label: "DTU Science Park", src: "/logos/DTU%20Science%20Park.svg" },
+  { label: "EIT Urban Mobility", src: "/logos/EIT%20Urban%20Mobility%20White.svg" },
+  { label: "Embassy of India", src: "/logos/Embassy%20of%20India.svg" },
+  { label: "EU:CO", src: "/logos/EUCO.svg" },
+  { label: "European Investment Fund", src: "/logos/European%20Investment%20Fund%20(EIF).svg" },
+  { label: "ESA BIC Denmark", src: "/logos/ESA%20Business%20Incubation%20Centre%20Denmark.svg" },
+  { label: "Femtech Studios", src: "/logos/Femtechstudios.svg" },
+  { label: "Horizon Deep Tech Summit", src: "/logos/Horizon%20Deep%20Tech%20Summit.svg" },
+  { label: "Gothenburg Tech Week", src: "/logos/Gothenburg%20Tech%20Week.svg" },
+  { label: "Health Tech Hub Copenhagen", src: "/logos/Health%20Tech%20Hub%20Copenhagen%20White.svg" },
+  { label: "Humble AI", src: "/logos/Humble%20AI%20White.svg" },
+  { label: "IDA", src: "/logos/IDA%20White.svg" },
+  { label: "Ignite Sweden", src: "/logos/Ignite%20Powered%20by%20SISP.svg" },
+  { label: "imec", src: "/logos/Imec%20White.svg" },
+  { label: "INCUBA", src: "/logos/INCUBA.svg" },
+  { label: "Indian Danish Chamber of Commerce", src: "/logos/Indian%20Danish%20Chamber%20of%20Commerce.svg" },
+  { label: "IVCA", src: "/logos/IVCA.svg" },
+  { label: "InnovX", src: "/logos/Innovx.svg" },
+  { label: "IWG", src: "/logos/IWG%20International%20Workplace%20Group.svg" },
+  { label: "KLAK Icelandic Startups", src: "/logos/KLAK%20Icelandic%20Startups.svg" },
+  { label: "Kveikja", src: "/logos/Kveikja.svg" },
+  { label: "LithuaniaBIO", src: "/logos/Lithuania%20Bio.svg" },
+  { label: "MADE", src: "/logos/Futuremanufacturers.svg" },
+  { label: "Medicon Valley Alliance", src: "/logos/Medicon%20Valley%20Alliance.svg" },
+  { label: "Medicon Village", src: "/logos/Medicon%20Village.svg" },
+  { label: "Mesh", src: "/logos/Mesh%20Matrikel1%20White.svg" },
+  { label: "Nordic Music Tech", src: "/logos/Nordic%20Music%20Tech.svg" },
+  { label: "Nordic Women's Health Hub", src: "/logos/Nordic%20Women's%20Health%20Hub.svg" },
+  { label: "NORNORM", src: "/logos/Nornorm%20White.svg" },
+  { label: "Norway Health Tech", src: "/logos/Norway%20Health%20Tech.svg" },
+  { label: "Nova Talent", src: "/logos/Nova%20Talent.svg" },
+  { label: "NTNU Discovery", src: "/logos/NTNU.svg" },
+  { label: "Odense Robotics", src: "/logos/Odense%20Robotics%20White.svg" },
+  { label: "PropTech Denmark", src: "/logos/PropTech%20Denmark%20White.svg" },
+  { label: "PWN Copenhagen", src: "/logos/PWN%20Copenhagen.svg" },
+  { label: "Royal Danish Academy", src: "/logos/Royal%20Danish%20Academy.svg" },
+  { label: "SDU Startup Station", src: "/logos/SDU%20Startup%20Station.svg" },
+  { label: "Shine", src: "/logos/IVN%20Powered%20by%20Shine.svg" },
+  { label: "SISP", src: "/logos/Swedish%20Incubators%20and%20Science%20Parks.svg" },
+  { label: "SKYtek", src: "/logos/SKYtek.svg" },
+  { label: "Space Denmark", src: "/logos/Space%20Denmark.svg" },
+  { label: "Spaces / Regus", src: "/logos/Spaces%20Regus%20White.svg" },
+  { label: "Sri Sathya Sai Institute of Higher Learning", src: "/logos/Sri%20Sathya.svg" },
+  { label: "START Paris", src: "/logos/START%20Paris%20White.svg" },
+  { label: "Sustainary", src: "/logos/Sustainary%20White.svg" },
+  { label: "Talent Garden", src: "/logos/Talent%20Garden%20White.svg" },
+  { label: "Tech Arena", src: "/logos/Tech%20Arena%20Sweden.svg" },
+  { label: "TechSavvy", src: "/logos/Techsavvy.svg" },
+  { label: "TechStation", src: "/logos/Techstation.svg" },
+  { label: "Teknologisk Institut", src: "/logos/Teknologisk%20Institut.svg" },
+  { label: "Terkko Health Hub", src: "/logos/Terkko%20Health%20Hub.svg" },
+  { label: "KITCHEN, Aarhus University", src: "/logos/The%20Kitchen.svg" },
+  { label: "The Residency Vienna", src: "/logos/The%20Residency%20Vienna.svg" },
+  { label: "THINGS", src: "/logos/Things.svg" },
+  { label: "TiE Bangalore", src: "/logos/Tie%20Bangalore.svg" },
+  { label: "TÜV SÜD", src: "/logos/Tuvsud.svg" },
+  { label: "Venture Café Warsaw", src: "/logos/Venture%20Cafe%20Warsaw%20Horiz%20White.svg" },
+  { label: "Voice AI Space", src: "/logos/Voice%20AI%20Space.svg" },
+  { label: "Women in Data Science, AI and ML", src: "/logos/Womenindatascience.svg" },
+  { label: "Young AI Leaders Linz", src: "/logos/Young%20AI%20Leaders%20Community%20Linz%20Hub.svg" },
+  { label: "ZOKU Copenhagen", src: "/logos/Zoku.svg" },
+];
+
+/**
+ * The wall holds 30 cells (`THANKS_MAX_LOGOS`), so 85 community partners is
+ * three posts: 30 / 30 / 25, sliced in the alphabetical order above. The number
+ * is duplicated rather than imported because this file is data-only — the test
+ * asserts the two stay in step.
+ */
+export const COMMUNITY_PER_WALL = 30;
+
+/** The community roster split into wall-sized pages. */
+export const COMMUNITY_PAGES: PartnerSetEntry[][] = Array.from(
+  { length: Math.ceil(COMMUNITY_PARTNERS.length / COMMUNITY_PER_WALL) },
+  (_, i) => COMMUNITY_PARTNERS.slice(i * COMMUNITY_PER_WALL, (i + 1) * COMMUNITY_PER_WALL),
+);
+
 /** Every ready-made wall, in sidebar order. */
 export const PARTNER_SETS: PartnerSet[] = [
   {
@@ -155,4 +316,16 @@ export const PARTNER_SETS: PartnerSet[] = [
     featuredCount: 4,
     logos: INVESTOR_PARTNERS,
   },
+  // One button per page of 30. Community is the biggest tier by far and cannot
+  // fit one wall, so the pages are explicit rather than a hidden truncation.
+  ...COMMUNITY_PAGES.map((logos, i) => ({
+    id: `community-${i + 1}`,
+    // "1 / 3" rather than a range — the buttons sit in a narrow sidebar column
+    // and "Community 31-60" wraps.
+    name: `Community ${i + 1} / ${COMMUNITY_PAGES.length}`,
+    headline: "Thank you to our community partners",
+    // A community tier has no lead partners: one flat grid.
+    featuredCount: 0,
+    logos,
+  })),
 ];

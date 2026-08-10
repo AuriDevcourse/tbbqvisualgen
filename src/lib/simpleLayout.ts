@@ -80,6 +80,30 @@ export function panelShapeKey(doc: SimpleDoc): string {
  * and there is no honest place to put a layer the tuned design never had. The
  * caller rebuilds from scratch in that case.
  */
+/**
+ * The whole-canvas choices a tuned doc must NOT keep. Each is a form field
+ * rather than a hand-placed layer, so the rebuild always wins — otherwise the
+ * control appears dead for as long as a tuned design is on screen.
+ *
+ * Assigned unconditionally, including when the rebuild leaves one undefined:
+ * spreading `tuned.design` first would keep a stale value, and dragging the
+ * scrim back to 0 (or clearing an accent) would do nothing. That is exactly how
+ * the scrim shipped broken on 2026-08-10 — it only responded on a 26-logo wall,
+ * the one shape with no tuned doc to absorb the change.
+ */
+function canvasChoices(rebuilt: SimpleDoc): Pick<SimpleDoc["design"], "backgroundId" | "overlayColor" | "overlayOpacity" | "overlayBlend" | "accentId"> {
+  return {
+    backgroundId: rebuilt.design.backgroundId,
+    overlayColor: rebuilt.design.overlayColor,
+    overlayOpacity: rebuilt.design.overlayOpacity,
+    overlayBlend: rebuilt.design.overlayBlend,
+    // The accent CHOICE is a form field but its circles are hand-movable
+    // layers, so the tuned doc keeps their geometry (via syncAccentShapes) and
+    // the rebuild supplies only the fill, or removes them.
+    accentId: rebuilt.design.accentId,
+  };
+}
+
 export function retargetTunedDoc(tuned: SimpleDoc, rebuilt: SimpleDoc): SimpleDoc | null {
   // A tuned doc carries its own canvas — reusing it across formats would keep
   // the old dimensions and silently ignore the format switch.
@@ -143,11 +167,7 @@ export function retargetTunedDoc(tuned: SimpleDoc, rebuilt: SimpleDoc): SimpleDo
       // The background is a form choice, not a hand-placed layer — carry the
       // CURRENT pick across, else switching backgrounds does nothing while a
       // tuned design is active.
-      backgroundId: rebuilt.design.backgroundId,
-      // The accent CHOICE is a form field but its circles are hand-movable
-      // layers, so the tuned doc keeps their geometry and the rebuild supplies
-      // the fill (or removes them).
-      accentId: rebuilt.design.accentId,
+      ...canvasChoices(rebuilt),
       shapes: syncAccentShapes(tuned.design.shapes ?? [], rebuilt.design.shapes ?? []),
       texts: tuned.design.texts.map((t) => carryWords(t, want)),
     },
@@ -406,11 +426,7 @@ function retargetSlotDoc(tuned: SimpleDoc, rebuilt: SimpleDoc, slotRoles: readon
     canvasImages: [...nextImages.filter((i) => !dropImageIds.has(i.id)), ...addImages],
     design: {
       ...tuned.design,
-      backgroundId: rebuilt.design.backgroundId,
-      // The accent CHOICE is a form field but its circles are hand-movable
-      // layers, so the tuned doc keeps their geometry and the rebuild supplies
-      // the fill (or removes them).
-      accentId: rebuilt.design.accentId,
+      ...canvasChoices(rebuilt),
       texts: tuned.design.texts.map((t) => carryWords(t, want)),
       // Slot reconciliation first (frames swapped for images), then the accents
       // on whatever survived.
@@ -671,6 +687,22 @@ export type PartnerLayout = "single" | "duo" | "quad" | "thanks";
 export const THANKS_MIN_LOGOS = 1;
 export const THANKS_MAX_LOGOS = 30;
 
+/**
+ * How the logo block sits in the room below the headline: the share of the
+ * leftover height placed ABOVE the block. 0.5 = dead centre, 0 = flush under
+ * the headline, so LOWER means the logos ride higher.
+ *
+ * 0.42 on a full 30-logo square leaves 0.080 of the canvas under the headline
+ * against 0.110 above the bottom margin. Tune this one number if the wall wants
+ * to sit higher or lower; nothing else needs to move.
+ *
+ * The wall was dead-centred until 2026-08-10. Two things changed together that
+ * day — the headline dropped from 162px to 120px, which frees roughly 0.06 of
+ * height on its own, and this bias went in on top. Going much below 0.4 stacks
+ * the two and strands the grid high with a wide empty band along the bottom.
+ */
+export const THANKS_GRID_BIAS = 0.42;
+
 export interface PartnerForm {
   /** Announcement label rendered across the top — e.g. "Partner Announcement".
    *  Unused by the `thanks` layout, which leads with `headline` instead. */
@@ -690,11 +722,56 @@ export interface PartnerForm {
   /** Thank-you layout only: the big centred headline. Its own field so
    *  switching layouts never overwrites the label chip's wording. */
   headline: string;
+  /** Thank-you layout only: how far to dim the background behind the logos,
+   *  0 (off) to 1. Some backgrounds have pale patches that swallow a white
+   *  logo — the light-green orb is the worst — and a scrim buys back the
+   *  contrast without forcing a different background. Renders as a black
+   *  overlay BELOW the logos and headline, so only the background darkens. */
+  scrim?: number;
   /** Investor Relations circle accents (see ACCENT_REGISTRY), or undefined
    *  for none. Sits next to the background because it is the same kind of
    *  choice: a whole-canvas look, not a layer. */
   accentId?: string;
   backgroundId: string;
+}
+
+/** The scrim slider's ceiling. Past this the background stops reading as a
+ *  background and the post is a black card with a coloured edge. */
+export const THANKS_SCRIM_MAX = 0.6;
+
+/**
+ * Shuffle the wall's logos. Alphabetical order puts every A-name on row one,
+ * which reads like a ranking nobody intended; one click makes the grid look
+ * like a wall of peers.
+ *
+ * Two rules the shuffle must not break:
+ *   The LEAD TIER shuffles within itself. Main partners have to stay in the
+ *     first cells or the tier stops meaning anything, so a two-tier wall gets
+ *     two independent shuffles rather than one across the boundary.
+ *   Logos parked BEYOND `logoCount` never move. They are the ones the stepper
+ *     hid, and pulling a hidden logo into view is not what "shuffle" means.
+ *
+ * `rand` is injectable so the tests can assert the arrangement instead of just
+ * its length.
+ */
+export function shuffleWallLogos(form: PartnerForm, rand: () => number = Math.random): (PartnerLogo | null)[] {
+  const shuffled = (arr: (PartnerLogo | null)[]): (PartnerLogo | null)[] => {
+    const out = [...arr];
+    // Fisher-Yates: every ordering equally likely. A `sort(() => rand() - 0.5)`
+    // is biased and, worse, not a valid comparator.
+    for (let i = out.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [out[i], out[j]] = [out[j], out[i]];
+    }
+    return out;
+  };
+  const lead = Math.max(0, Math.min(form.featuredCount, form.logoCount));
+  const visible = form.logos.slice(0, form.logoCount);
+  return [
+    ...shuffled(visible.slice(0, lead)),
+    ...shuffled(visible.slice(lead)),
+    ...form.logos.slice(form.logoCount),
+  ];
 }
 
 export function emptyPartnerForm(): PartnerForm {
@@ -705,6 +782,7 @@ export function emptyPartnerForm(): PartnerForm {
     logoCount: 12,
     featuredCount: 0,
     headline: "Thank you to our partners",
+    scrim: 0,
     backgroundId: "orb7",
   };
 }
@@ -999,8 +1077,13 @@ export const THANKS_HEADLINE_GLYPH = 0.54;
 
 /** The headline never grows past this fraction of the shorter side, so a
  *  two-word headline can't fill the canvas. Every wall whose lines fit inside
- *  the cap's width therefore renders at exactly the same size. */
-export const THANKS_HEADLINE_CAP = 0.108;
+ *  the cap's width therefore renders at exactly the same size.
+ *
+ *  0.08 of the shorter side = **120px at 1:1** (1500×1500), which is the size
+ *  Auri asked for on 2026-08-10, down from 0.108 / 162px. Kept as a FRACTION so
+ *  16:9 and 9:16 scale with the canvas instead of rendering a 120px headline on
+ *  a 1080px-tall story, where it would read twice as large. */
+export const THANKS_HEADLINE_CAP = 0.08;
 
 /**
  * How many logos each row of a tier carries.
@@ -1045,8 +1128,23 @@ export function thanksMaxColumns(aspect: number): number {
   return aspect >= 0.9 ? 6 : 3;
 }
 
-export function thanksGridColumns(count: number, aspect: number, minCols = 1): number {
-  const maxCols = thanksMaxColumns(aspect);
+/**
+ * The cap for a FLAT wall — one with no lead tier. 5 across rather than 6, so
+ * each logo gets a 20% wider cell (2026-08-10: "make only five in one row
+ * because we have a little bit more space"). A 30-logo wall becomes 5×6.
+ *
+ * Deliberately NOT applied to the two-tier investor wall: its support tier runs
+ * 6 across on an explicit earlier instruction, and the tier being wider than
+ * the lead tier is the entire mechanism that makes main partners look bigger.
+ * Narrowing it to 5 would flatten that hierarchy.
+ *
+ * The Life Science wall is unaffected — 25 logos already scored 5 columns.
+ */
+export function thanksFlatMaxColumns(aspect: number): number {
+  return Math.min(5, thanksMaxColumns(aspect));
+}
+
+export function thanksGridColumns(count: number, aspect: number, minCols = 1, maxCols = thanksMaxColumns(aspect)): number {
   const ideal = Math.round(Math.sqrt(Math.max(1, count) * aspect * 1.15));
   // `minCols` is a floor the caller needs for a reason the score cannot see —
   // the support tier of a two-tier wall MUST be wider than the lead tier, or
@@ -1089,6 +1187,7 @@ function buildThanksDesign(form: PartnerForm, format: PlatformFormat): SimpleDoc
   // Accent circles first, so they sit at the BOTTOM of the shape stack.
   const shapes: ShapeElement[] = accentShapes(form.accentId, W, H, () => uid("shape"));
   const canvasImages: CanvasImage[] = [];
+  const scrim = Math.min(THANKS_SCRIM_MAX, Math.max(0, form.scrim ?? 0));
 
   // ── Headline, centred at the top. ──
   let gridTop = 0.12; // top of the logo block when there is no headline
@@ -1119,7 +1218,8 @@ function buildThanksDesign(form: PartnerForm, format: PlatformFormat): SimpleDoc
       id: uid("text"), content,
       position: { x: 0.5, y: 0.11 + blockH / 2 },
       fontSize: Math.round(fFrac * S), align: "center",
-      weight: 800, font: "onest",
+      // Semi-bold, not the 800 the wall used to carry (2026-08-10).
+      weight: 600, font: "onest",
       color: "#FFFFFF", lineHeight: lineH,
       simpleRole: "thanks.headline",
     });
@@ -1154,7 +1254,10 @@ function buildThanksDesign(form: PartnerForm, format: PlatformFormat): SimpleDoc
   // auto rule — the 25-logo Life Science wall stays a clean 5×5 rather than
   // 6,6,6,6,1.
   const restCols = rest
-    ? (lead ? Math.min(rest, Math.max(leadCols + 1, maxCols)) : thanksGridColumns(rest, W / H))
+    ? (lead
+        ? Math.min(rest, Math.max(leadCols + 1, maxCols))
+        // Flat wall: capped at 5 so each logo gets a wider cell.
+        : thanksGridColumns(rest, W / H, 1, thanksFlatMaxColumns(W / H)))
     : 0;
   // Too few support logos to be wider? Narrow the LEAD tier instead, so the
   // hierarchy still reads (4 main partners stacked over 2 support ones).
@@ -1199,7 +1302,13 @@ function buildThanksDesign(form: PartnerForm, format: PlatformFormat): SimpleDoc
   const gapY = gapSlots
     ? Math.min(smallestCell * 0.85, Math.max(gapYMin, (roomH - fixedH) / gapSlots))
     : 0;
-  const blockTop = H * gridTop + (roomH - (fixedH + gapSlots * gapY)) / 2;
+  // Where the block sits in the room left over below the headline. 0.5 centres
+  // it, which is what the wall did until 2026-08-10 — and on a full 30-logo
+  // square that left a visible dead band under the headline while the bottom
+  // margin stayed tight. 0.34 pushes the grid up into that band without letting
+  // a SHORT wall (3 or 4 logos) ride up against the headline, which anchoring
+  // to the top outright would do.
+  const blockTop = H * gridTop + (roomH - (fixedH + gapSlots * gapY)) * THANKS_GRID_BIAS;
 
   const emitCell = (i: number, cx: number, cy: number, w: number, h: number, role: string): void => {
     const logo = form.logos[i];
@@ -1255,6 +1364,11 @@ function buildThanksDesign(form: PartnerForm, format: PlatformFormat): SimpleDoc
       // Spread rather than assigned, so a design with no accent is exactly
       // the doc the builders produced before accents existed.
       ...(form.accentId ? { accentId: form.accentId } : {}),
+      // Same reasoning for the scrim: at 0 the doc carries no overlay keys at
+      // all, so an untouched wall is byte-identical to one built before the
+      // slider existed. `multiply` with black is a straight darkening — it is
+      // the blend the overlay layer already defaults to.
+      ...(scrim > 0 ? { overlayColor: "#000000", overlayOpacity: scrim, overlayBlend: "multiply" } : {}),
       texts,
       shapes,
       showLogo: false,
@@ -2216,6 +2330,10 @@ export function formsFromDoc(kind: string, doc: SimpleDoc, saved?: SimpleFormsSn
         headline: saved?.partner
           ? base.headline
           : (textByRole.get("thanks.headline")?.split("\n").join(" ") ?? base.headline),
+        // The canvas wins over the snapshot, same as logoCount: the overlay the
+        // user is looking at IS the scrim, however it got there (slider, or the
+        // editor's own overlay control on a round-trip).
+        scrim: doc.design.overlayColor ? (doc.design.overlayOpacity ?? 0) : (base.scrim ?? 0),
         backgroundId: doc.design.backgroundId || base.backgroundId,
         accentId: doc.design.accentId ?? base.accentId,
       },

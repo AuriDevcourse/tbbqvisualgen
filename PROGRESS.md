@@ -6,6 +6,341 @@ not required reading.
 
 ---
 
+## SESSION HANDOFF — 2026-08-10 (6): HighBridge out, padded logos fixed
+
+### State: green, uncommitted
+
+Gates: **201/201 vitest**, **tsc clean**.
+
+### What changed
+
+1. **HighBridge removed** from the community set — it sits at Community tier in
+   Airtable but has an exception (Auri). 86 → **85**, so the pages are now
+   **30 / 30 / 25** and **Royal Danish Academy moved from page 3 to page 2**,
+   because the pages are computed slices. Noted in the file header: a regenerate
+   from Airtable WILL bring HighBridge back unless someone reads that line.
+2. **Fixed 11 logos that rendered a fraction of their neighbours' size.** Not an
+   Airtable problem — the files were right, their viewBoxes were not. Every one
+   was a wide wordmark inside a square 100×100 box, and a contain-fit cell
+   cannot tell padding from artwork. Women in Data Science filled **17%** of its
+   box height; ESA BIC filled 14%.
+   - The four Auri asked about: Odense Robotics, Terkko Health Hub, Women in
+     Data Science, SKYtek.
+   - Seven more found by scanning the whole set: Copenhagen Fintech, Copenhagen
+     Institute for Futures Studies, ESA BIC Denmark, Gothenburg Tech Week, IDA
+     White, Royal Danish Academy, The Kitchen.
+   - All 84 community SVGs now report tight. Originals in
+     `.logos-trash/viewbox-2026-08-10/`.
+3. **New `scripts/tighten-logo-viewbox.mjs`** (`npm run logos:tighten`). Renders
+   with sharp, finds the alpha bounding box, rewrites the viewBox to it. Only
+   the window changes — no path data is touched. `--check` reports without
+   writing; re-running is a no-op ("already tight").
+
+### Numbered next steps
+
+1. **Re-export a wall and compare.** The tightened logos should now match their
+   neighbours in size. Verified by numbers only, as with every round today.
+2. **`The Kitchen.svg` is also in the LIFE SCIENCE set** — that wall's rendering
+   changes too (for the better: the mark was filling 76×46% of its box). Worth a
+   look before re-posting Life Science.
+3. Consider freezing the community pages as explicit lists. Two boundary shifts
+   have already happened in one day (the HighBridge removal moved a partner
+   between posts), and that undermines "who did we already thank".
+
+### Gotchas
+
+- **A square `viewBox` on a wide wordmark is the single most common logo defect
+  here** — every `white-*.svg` exported from the same tool has it. Run
+  `npm run logos:tighten --check` on any newly imported batch.
+- **`tone: light` says nothing about SIZE.** A padded logo passes every existing
+  check and still renders three times too small.
+
+---
+
+## SESSION HANDOFF — 2026-08-10 (5): scrim bug fix + shuffle
+
+### State: green, uncommitted
+
+Gates: **201/201 vitest**, **tsc clean**, eslint clean on changed files.
+
+### What changed
+
+1. **Fixed the scrim being dead on a tuned design.** `retargetTunedDoc` and
+   `retargetPartnerLayout` carried `backgroundId` and `accentId` from the
+   rebuild but not the overlay, so the slider only worked on a wall whose shape
+   had never been tuned (Auri saw it work on Community 3/3 — 26 logos — and
+   nowhere else). Both now share a `canvasChoices(rebuilt)` helper covering
+   background, accent AND overlay. Assigned unconditionally, so dragging back to
+   0 clears rather than leaving a stale scrim. **The test was verified to fail
+   without the fix** (`expected undefined to be 0.3`), not just to pass with it.
+2. **"Shuffle order" button** on the Thank you sidebar. `shuffleWallLogos()` in
+   `simpleLayout.ts` — Fisher-Yates, `rand` injectable so the tests assert the
+   arrangement. Two invariants under test: the lead tier shuffles WITHIN itself
+   so main partners stay in the front cells, and logos parked beyond `logoCount`
+   never move into view.
+
+### Numbered next steps
+
+1. Still unrendered by me. Check the scrim now responds on Community 1/3 and
+   2/3, and that Shuffle reorders the grid.
+2. **Any wall tuned before today still carries its old geometry.** Press Revert
+   to rebuild at 5-across, then Update to re-save the library item.
+3. Handoffs (2), (3), (4) all still open.
+
+### Gotchas
+
+- **A form field that is a WHOLE-CANVAS property must be added to
+  `canvasChoices`**, or its control silently dies whenever a tuned design is on
+  screen. This has now bitten twice: background first, scrim second.
+- **`sed`/regex mutation of `simpleLayout.ts` from Git Bash silently no-ops** —
+  the file is CRLF, so a pattern written with `\n` matches nothing. It looks
+  like the mutation ran and the test "passed". Delete by line number instead.
+
+---
+
+## SESSION HANDOFF — 2026-08-10 (4): 5-across grid + background scrim
+
+### State: green, uncommitted
+
+Gates: **197/197 vitest**, **tsc clean**, eslint clean on every changed file.
+
+### What changed
+
+1. **A flat wall now flows 5 across, not 6.** New `thanksFlatMaxColumns()` in
+   `simpleLayout.ts`; `thanksGridColumns` took an optional 4th `maxCols` arg.
+   A 30-logo square goes 5×6 and each cell grows from 164×74px to **210×87px**
+   (+28% wide, +18% tall). The two-tier investor wall is exempt on purpose — its
+   support tier stays 6 across, because being wider than the lead tier is the
+   only thing making main partners look bigger. Life Science is unaffected: 25
+   logos already scored 5.
+2. **A "Dim background" stepper** on the Thank you sidebar, 0–60% in steps of
+   10. Writes `overlayColor: #000000` / `overlayOpacity` / `overlayBlend:
+   multiply` onto the design, which the renderer already supported and layers
+   BELOW the logos and headline. New `PartnerForm.scrim` field, read back in
+   `formsFromDoc` from the doc's own overlay so it survives an editor
+   round-trip. At 0 the doc carries no overlay keys at all, so an untouched
+   wall is byte-identical to one built before the slider existed.
+
+### Numbered next steps
+
+1. **Export a 1:1 with the scrim at 20–30% and confirm it reads.** Still no
+   browser this session; all four rounds of changes are verified by numbers
+   only.
+2. Then check 16:9. It also flows 5×6 now (cell 299×79px) — that is six rows on
+   a 1080px-tall canvas, the most cramped case in the set.
+3. Everything from handoffs (2) and (3) is still open.
+
+### Gotchas
+
+- **At 30 logos the wall now fills the full height** (first row y 0.369, last
+  0.907) because six rows of taller cells consume all the slack —
+  `THANKS_GRID_BIAS` has nothing left to distribute and only bites on smaller
+  walls. If the wall ever needs to sit higher again at 30, the lever is
+  `CELL_ASPECT` or the row gap, not the bias.
+- **The 30-logo grid is shrink-limited**: natural height 979px against 904px of
+  room, so cells scale by 0.92 to fit. Adding a seventh row would shrink them
+  further rather than overflow.
+- **The two-tier support row shows 7 cells, not 6**, when 13 support logos flow
+  6/7 — that is the deliberate orphan-squeeze rule, not a bug. Assert the
+  support row is WIDER than the lead row rather than asserting an exact 6.
+
+---
+
+## SESSION HANDOFF — 2026-08-10 (3): wall typography + white-logo rule
+
+### State: green, uncommitted. First real render reviewed by Auri.
+
+Gates: **192/192 vitest**, **tsc clean**. Auri exported a 1:1 community wall and
+gave three notes; all three are in.
+
+### What changed
+
+1. **Headline is 120px semi-bold**, was 162px at weight 800.
+   `THANKS_HEADLINE_CAP` 0.108 → **0.08**, `weight` 800 → **600**. The cap stays
+   a FRACTION of the shorter side, so 16:9 and 9:16 render 86px rather than a
+   120px headline on a 1080px canvas. Measured, not assumed: a probe run through
+   the real builder returns `fontSize=120 weight=600` on square.
+2. **The logo block sits higher.** New `THANKS_GRID_BIAS = 0.42` in
+   `simpleLayout.ts` — the share of leftover height placed ABOVE the block, where
+   0.5 is the old dead-centre. On a full 30-logo square the first row moves from
+   y 0.549 to **0.441**. Tune that one constant to move the wall; lower = higher.
+   16:9 and 9:16 are unaffected, their block already fills the room.
+3. **Always the white cut.** AIESEC shipped as its blue-and-white PNG because
+   `tone: light` cannot catch a mostly-white logo with a coloured mark. Every one
+   of the 86 was re-checked by READING THE SVG SOURCE for saturated fills. Two
+   were wrong and are repointed: AIESEC → `Aiesec White.svg` (imported), Talent
+   Garden → `Talent Garden White.svg` (imported, the old file carried #f17b68).
+   Library 884 → 886. A new test, "points at white artwork", now fails any
+   saturated fill while allowing the near-white greys six official files use.
+
+### Numbered next steps
+
+1. **Re-export the 1:1 wall and check the new spacing.** The numbers are
+   verified, the pixels are not — no browser was available this session.
+2. Then walk pages 2 and 3, and the 16:9 / 9:16 cuts.
+3. Everything in handoff (2) still open: confirm the three dropped records and
+   ESA BIC with marketing, decide alphabetical vs curated paging.
+
+### Gotchas
+
+- **`tone: light` is not "is white".** It measures average brightness, so a white
+  logo with a blue mark passes. Read the SVG fills instead — that is what the new
+  test does.
+- **Six community logos are legitimately near-white grey**, not #FFF (#E2E2E2,
+  #f1f2f8, #f3f3f3). That is the official artwork; do not "fix" them.
+- **`console.log` inside a vitest run is swallowed here.** To probe layout
+  geometry, write to a file with `node:fs` and read it after the run.
+
+---
+
+## SESSION HANDOFF — 2026-08-10 (2): Community partner wall
+
+### State: community set built and green, uncommitted
+
+Gates: **191/191 vitest** (was 175), **tsc clean**. All 86 logo URLs fetch 200
+from the dev server. Not visually confirmed in a browser — Playwright's profile
+was locked by another session and the Chrome extension was offline, so the wall
+itself has not been eyeballed. **Open `/simple`, pick Partner > Thank you, and
+click Community 1 / 3 before this goes anywhere near a real post.**
+
+### What this session added
+
+The **Community** tier, sourced from Airtable rather than the website (the
+website has no community-partner page — `/community-partners/` and
+`/event-partners/` both 404).
+
+- Source: base `appgXNjXJqpk9Ebxd`, table `tblTecOBecLQCNIeD`, view
+  `viw7FVbsTb9IRaWF0` ("Partner Deliverables 2026"), field **Partnership Tier
+  (from Tier)** = `Community`. 89 records, 86 usable partners.
+- **14 logos imported** from the Airtable attachments into `public/logos`, all
+  measured LIGHT by the manifest. Library 870 → 884: Amela, Brighteye Ventures,
+  Copenhagen Climate Week, Crescita Partners, Daya Ventures, Embassy of India,
+  EUCO, Horizon Deep Tech Summit, Indian Danish Chamber of Commerce, Nornorm
+  White, PropTech Denmark White, Swedish Incubators and Science Parks,
+  Sustainary White, Tech Arena Sweden.
+- The other 72 were already in the library under names the Airtable record does
+  not match — that is why a plain name lookup is not enough here. Worst offenders:
+  `Clean` → `Clean Cluster`, `MADE` → `Futuremanufacturers`, `DI` →
+  `Dansk Industri`, `Shine` → `IVN Powered by Shine`, `CSE` → `CBS CSE White`.
+- `COMMUNITY_PARTNERS` (86, alphabetical) + `COMMUNITY_PAGES` in
+  `src/data/partnerSets.ts`, paged 30 / 30 / 26, exposed as three sidebar
+  buttons: **Community 1 / 3**, **2 / 3**, **3 / 3**. `featuredCount: 0` on all
+  three — a community tier has no lead partners.
+- Four new tests in `partnerSets.test.ts`: pages cover the roster in order,
+  `COMMUNITY_PER_WALL` stays equal to `THANKS_MAX_LOGOS`, no partner appears
+  twice ACROSS pages (the per-set checks only see one page), and every entry
+  resolves to LIGHT artwork.
+
+### Numbered next steps
+
+1. **Eyeball all three walls** at 1:1, 16:9 and 9:16. 30 cells is the ceiling
+   the layout was designed against, but no community wall has been rendered yet.
+2. **Confirm the three dropped records with marketing.** Business Helsinki
+   (identical logo to AISTART Incubator), Fututo Perfecto Innovation (misspelled
+   duplicate, no white asset, `Put on web` off), Product Therapy (no logo at
+   all). Also confirm **ESA BIC Denmark**, which IS included despite `Put on web`
+   being unticked.
+3. **Decide whether the pages should be alphabetical or curated.** Alphabetical
+   means page 1 is A–E and page 3 is R–Z, so the three posts are visibly uneven
+   in brand recognition. A curated split would mix them.
+4. Everything from handoff (1) below still applies — above all, **do not commit
+   `src/auth.ts`**, and regenerate the Google OAuth secret.
+
+### Gotchas
+
+- **The Airtable tier field is `Partnership Tier (from Tier)`**, a lookup, NOT
+  the similarly named `Partnership Tier (from Partnership Tier)` (empty) or the
+  `Partnership Type 2026` single-select (partially filled). Filtering on the
+  wrong one silently returns zero community records.
+- **Three library files are named `Terkko Health Hub`** and only the `.svg` is
+  light; the `.webp` is dark and the `.png` is mixed. A name lookup grabs the
+  wrong one. Same trap for imec, Mesh, Nornorm, PropTech, Sustainary.
+- **Two entries are PNG** (`Aiesec.png`, `Clarmacapital.png`). Already white, so
+  they render, but the in-app tint is SVG-only.
+- **Do not build a `partnerSets.ts` block through `node -e` in bash.** Backticks
+  in the heredoc get eaten by the shell and the file lands half-written; the
+  first attempt had to be reverted with `git checkout`.
+
+### File pointers
+
+- `src/data/partnerSets.ts` — `COMMUNITY_PARTNERS`, `COMMUNITY_PAGES`, the
+  header comment recording every drop and rename decision.
+- `src/data/partnerSets.test.ts` — the `community roster` describe block.
+- `src/lib/simpleLayout.ts:672` — `THANKS_MAX_LOGOS = 30`, the reason for paging.
+- `src/app/simple/page.tsx:1546` — where the sidebar renders one button per set.
+
+---
+
+## SESSION HANDOFF — 2026-08-10 (1): local auth bypass
+
+### State: local-only auth bypass in the working tree, NOT committed
+
+`master`, prod untouched. One uncommitted file: `src/auth.ts`. Everything from
+the 2026-08-04 handoff below still stands; this session shipped no product
+change, only a way to keep working while Google SSO is broken.
+
+### What happened
+
+Google sign-in fails locally AND will fail in prod once sessions expire. The
+token exchange returns `invalid_client` · "The provided client secret is
+invalid." **`AUTH_GOOGLE_SECRET` is stale** — the secret was rotated or deleted
+in Google Cloud Console. The redirect URI is fine; Google redirects back
+correctly and only the server-to-server token call fails. Auth.js surfaces this
+as a generic `/api/auth/error?error=Configuration` page, which says nothing; the
+real cause is only in the dev server log.
+
+To keep working, `src/auth.ts` gained a **dev-only bypass**:
+
+- Reads `DEV_FAKE_USER` once at module load. Active only when
+  `NODE_ENV === "development"` **and** the address ends in `@techbbq.org`.
+  Fails closed, so a production build ignores the variable even if it ever
+  leaks into the deploy environment.
+- `handlers.GET` answers `/api/auth/session` with the fake session, so the
+  header chip and the library panel render as signed in. Every other Auth.js
+  route keeps real behaviour.
+- `.env.local` sets `DEV_FAKE_USER=abs@techbbq.org` (matched to the `updated_by`
+  on existing library items so local saves attribute correctly). Gitignored.
+  `.env.example` documents the flag, commented out.
+
+Verified: `/api/auth/session` returns `abs@techbbq.org`, `/api/library` returns
+200 with the real items, `tsc --noEmit` clean.
+
+### Numbered next steps
+
+1. **Regenerate the Google OAuth client secret.** Cloud Console > APIs &
+   Services > Credentials > the OAuth client (`910521428210-…`) > Add secret.
+   Update it in **both** Vercel env and `.env.local`. Until then prod sign-in is
+   living on borrowed time.
+2. **Do not commit `src/auth.ts`** unless you deliberately want the bypass in
+   the repo. `master` is prod and auto-deploys. To drop it: `git checkout
+   src/auth.ts` and remove the `DEV_FAKE_USER` line from `.env.local`.
+3. The 2026-08-04 next steps (video export by hand, official "Thank You" items
+   for 16:9 + 9:16, the 3 missing investor logos, `Symbio.svg`) are all still
+   open.
+
+### Gotchas
+
+- **Auth.js hides the real error.** `error=Configuration` in the browser is
+  useless. Read the `next dev` output for the `[auth][details]` block.
+- **Sign-in only gates the team library** (`/api/library`). `/editor` and
+  `/simple` work fine signed out, so a broken SSO is not a full block.
+- **Orphaned dev servers.** Seven stale `node` processes from this project were
+  holding `.next\dev\lock`, so a second `next dev` died with "Unable to acquire
+  lock". Kill them by command-line match before restarting. Port 3000 is
+  usually taken by the unrelated `GITHUB/airtable` project, so this one lands
+  on **3001**.
+
+### File pointers
+
+- `src/auth.ts` — the bypass, the `devUser` guard and `devSession()`.
+- `src/app/api/auth/[...nextauth]/route.ts` — re-exports `handlers`, unchanged.
+- `src/app/api/library/route.ts`, `src/app/api/library/[id]/route.ts` — the only
+  `await auth()` call sites.
+- `src/components/AuthChip.tsx` — reads `/api/auth/session` directly, which is
+  why the bypass has to intercept that route to look signed in.
+
+---
+
 ## SESSION HANDOFF — 2026-08-04
 
 ### State: everything is committed and LIVE
