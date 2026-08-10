@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { PARTNER_SETS, COMMUNITY_PARTNERS, COMMUNITY_PAGES, COMMUNITY_PER_WALL } from "./partnerSets";
+import { PARTNER_SETS, COMMUNITY_PARTNERS, COMMUNITY_PAGES, COMMUNITY_PER_WALL, LS_DT_EXHIBITORS, LS_DT_PITCH_FINALISTS, LS_DT_PARTICIPANTS } from "./partnerSets";
 import { THANKS_MAX_LOGOS } from "../lib/simpleLayout";
 import logoLibrary from "./logoLibrary.json";
 import { readFileSync } from "node:fs";
@@ -30,7 +30,10 @@ describe("partner sets", () => {
       });
 
       it("fits the wall's cell limit, so one click can never be truncated", () => {
-        expect(set.logos.length).toBeLessThanOrEqual(30);
+        // Was a literal 30. Reading the real constant is the point of the test:
+        // the cap moved to 48 for the Life Science x Deep Tech walls, and a
+        // literal would have had to be edited in step with it every time.
+        expect(set.logos.length).toBeLessThanOrEqual(THANKS_MAX_LOGOS);
       });
 
       it("has a headline and a lead tier that fits the set", () => {
@@ -52,8 +55,21 @@ describe("partner sets", () => {
       expect(COMMUNITY_PAGES.flat()).toEqual(COMMUNITY_PARTNERS);
     });
 
-    it("keeps the page size in step with the wall's real cell limit", () => {
-      expect(COMMUNITY_PER_WALL).toBe(THANKS_MAX_LOGOS);
+    /**
+     * This used to assert equality with `THANKS_MAX_LOGOS`, back when the cap
+     * WAS 30 and "one page = a full wall" was the same statement as "a page
+     * cannot overflow". Raising the cap to 48 split those two ideas apart.
+     *
+     * The community pages stay at 30 by choice, not by the cap: 30 is a 5×6
+     * grid at a size these logos read at, and the three posts are already out
+     * in the world at that split. Widening them to 48 would re-cut which
+     * partner appears on which post — the boundary has moved once already
+     * (HighBridge, 2026-08-10) and it undermines "who did we already thank".
+     * So the invariant worth keeping is only that a page still FITS.
+     */
+    it("keeps the page size within the wall's real cell limit", () => {
+      expect(COMMUNITY_PER_WALL).toBeLessThanOrEqual(THANKS_MAX_LOGOS);
+      expect(COMMUNITY_PER_WALL).toBe(30);
     });
 
     it("lists no partner twice ACROSS pages", () => {
@@ -94,5 +110,65 @@ describe("partner sets", () => {
       }
       expect(offenders).toEqual([]);
     });
+  });
+
+  /**
+   * The Life Science x Deep Tech walls are built from an Airtable roster rather
+   * than a page anyone can eyeball, so the checks that matter are the ones a
+   * human would not catch by looking: that the two rosters agree with each
+   * other, and that every file is genuinely white knockout artwork.
+   */
+  describe("Life Science x Deep Tech rosters", () => {
+    const byTone = new Map((logoLibrary as { src: string; tone: string }[]).map((l) => [l.src, l.tone]));
+
+    it("puts the whole exhibitor list on the participating wall", () => {
+      const participating = new Set(LS_DT_PARTICIPANTS.map((p) => p.src));
+      const dropped = LS_DT_EXHIBITORS.filter((e) => !participating.has(e.src));
+      expect(dropped.map((e) => e.label)).toEqual([]);
+    });
+
+    it("puts every finalist on the participating wall exactly once", () => {
+      const counts = new Map<string, number>();
+      for (const p of LS_DT_PARTICIPANTS) counts.set(p.src, (counts.get(p.src) ?? 0) + 1);
+      const missing = LS_DT_PITCH_FINALISTS.filter((f) => !counts.has(f.src));
+      expect(missing.map((f) => f.label)).toEqual([]);
+      expect([...counts.entries()].filter(([, n]) => n > 1)).toEqual([]);
+    });
+
+    it("de-duplicates the four companies that both exhibit and pitch", () => {
+      const overlap = LS_DT_PITCH_FINALISTS.filter((f) => LS_DT_EXHIBITORS.some((e) => e.src === f.src));
+      expect(overlap.length).toBe(4);
+      expect(LS_DT_PARTICIPANTS.length).toBe(LS_DT_EXHIBITORS.length + LS_DT_PITCH_FINALISTS.length - overlap.length);
+    });
+
+    for (const [name, roster] of [["exhibitors", LS_DT_EXHIBITORS], ["finalists", LS_DT_PITCH_FINALISTS]] as const) {
+      it(`${name}: every logo is light artwork on this dark canvas`, () => {
+        const dark = roster.filter((p) => byTone.get(p.src) !== "light");
+        expect(dark.map((p) => `${p.label} → ${p.src} [${byTone.get(p.src)}]`)).toEqual([]);
+      });
+
+      it(`${name}: every logo is a white cut, not a coloured one`, () => {
+        const CHANNEL_SPREAD = 24;
+        // Walther Therapeutics' own white cut carries one pale lavender
+        // (#b9b7dc) beside its near-white (#fcfbfb). It is not the AIESEC
+        // failure this check exists to catch — that was a saturated blue mark
+        // that disappeared into the canvas. This one is light enough to read on
+        // the dark wall, and it is the only white file the company supplies.
+        // Named explicitly so the guard still fails on the next real offender.
+        const ALLOWED = new Set(["Walther Therapeutics"]);
+        const offenders: string[] = [];
+        for (const p of roster) {
+          if (ALLOWED.has(p.label)) continue;
+          const file = join(process.cwd(), "public/logos", decodeURIComponent(p.src.replace("/logos/", "")));
+          if (!file.toLowerCase().endsWith(".svg")) continue;
+          const svg = readFileSync(file, "utf8");
+          for (const [, hex] of svg.matchAll(/(?:fill|stroke|stop-color)\s*[:=]\s*["']?(#[0-9a-fA-F]{6})/g)) {
+            const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+            if (Math.max(r, g, b) - Math.min(r, g, b) > CHANNEL_SPREAD) { offenders.push(`${p.label} → ${hex}`); break; }
+          }
+        }
+        expect(offenders).toEqual([]);
+      });
+    }
   });
 });

@@ -297,6 +297,116 @@ export const COMMUNITY_PAGES: PartnerSetEntry[][] = Array.from(
   (_, i) => COMMUNITY_PARTNERS.slice(i * COMMUNITY_PER_WALL, (i + 1) * COMMUNITY_PER_WALL),
 );
 
+/**
+ * The startups exhibiting in the Life Science x Deep Tech area, 2026.
+ *
+ * Pulled from the **Life Science Project** table in Airtable
+ * (`appgXNjXJqpk9Ebxd` / `tblvukXfmR7KTFymG`) on 2026-08-10, and the filter is
+ * worth writing down because the obvious one is wrong: the roster is
+ * `status = "Confirmed startup"` AND `Stakeholder type = "Exhibiting Startup"`,
+ * read across the WHOLE table. The "Startup Library 2026" view shows only 17 of
+ * them, and the `Confirmation` field is a shortlisting flag, not attendance —
+ * it says "Selected" for companies still marked "To be contacted", and even for
+ * two that declined.
+ *
+ * That filter returns **46**, which is the number Auri was given. Three of the
+ * 46 are tagged `LS Type: Intersection` rather than one of the three tracks
+ * (BIOADVIO, Molecular Quantum Solutions, Peak Emulsions) and were dropped on
+ * his call, leaving 43.
+ *
+ * **This set is 31, not 43.** Twelve of the 43 have no SVG in the library at
+ * all, and a wall entry with no artwork renders an empty outlined box. Missing
+ * as of 2026-08-10: AlterEcho, ArcanaBio, BÆTA Carbon Solutions, Fepod, H+H
+ * LABS, Mirno, Nordstar Medical, OvartiX, Seaqure labs, Tergy Sagava,
+ * VentriLabs, Volta Greentech. Drop a white SVG for any of them into
+ * `public/logos`, run `npm run logos`, and add the line here.
+ *
+ * Labels drop the legal suffix — no thank-you wall says "ApS".
+ */
+export const LS_DT_EXHIBITORS: PartnerSetEntry[] = [
+  { label: "Blue2", src: "/logos/Blue2%20White.svg" },
+  { label: "Completion", src: "/logos/Completion.svg" },
+  { label: "Drylabz", src: "/logos/Drylabz.svg" },
+  { label: "GreenCow Biosolutions", src: "/logos/Life%20Science%20Pitch%20Finalists%202026/greenCow%20BioSolutions.svg" },
+  { label: "Hemispherian", src: "/logos/Hemispherian.svg" },
+  { label: "Hydram Research", src: "/logos/Hydram.svg" },
+  { label: "Immunordic", src: "/logos/Life%20Science%20Pitch%20Finalists%202026/Immunordic.svg" },
+  { label: "Lucero", src: "/logos/Lucero.svg" },
+  { label: "MagCath", src: "/logos/MagCath%20White.svg" },
+  { label: "Magnolia Quantum Sensing", src: "/logos/Deep%20Tech%20Pitch%20Finalists%202026/Magnolia%20Quantum%20Sensing.svg" },
+  { label: "Mimbly", src: "/logos/Mimbly.svg" },
+  { label: "NeoCare Nordic", src: "/logos/NeoCare%20Nordic.svg" },
+  { label: "Nordiq Products", src: "/logos/Nordiq.svg" },
+  { label: "Nyctea Technologies", src: "/logos/Nyctea.svg" },
+  { label: "Ownwell", src: "/logos/Ownwell%20White.svg" },
+  { label: "Paindrainer", src: "/logos/Paindrainer%20White.svg" },
+  { label: "PERPLANT", src: "/logos/Perplant.svg" },
+  { label: "Previto", src: "/logos/Previto%20White.svg" },
+  { label: "Rilemo", src: "/logos/Deep%20Tech%20Pitch%20Finalists%202026/Rilemo.svg" },
+  { label: "Sea Growth", src: "/logos/Sea%20Growth.svg" },
+  { label: "SmartSens", src: "/logos/SmartSens%20White.svg" },
+  { label: "Sorbus Biomedical", src: "/logos/Sorbus%20Biomedical%20White.svg" },
+  { label: "Sveppa", src: "/logos/Sveppa.svg" },
+  { label: "Sylvia Health", src: "/logos/Sylvia%20Health.svg" },
+  { label: "Uman Sense", src: "/logos/Uman%20Sense.svg" },
+  { label: "UVision", src: "/logos/Uvision.svg" },
+  { label: "Vetbac", src: "/logos/Vetbac%20White.svg" },
+  { label: "Visibuilt", src: "/logos/Visibuilt.svg" },
+  { label: "Walther Therapeutics", src: "/logos/Walther%20Therapeutics%20White.svg" },
+  { label: "Yngvi Bio", src: "/logos/Yngvi%20Bio.svg" },
+  { label: "Yoke Bio", src: "/logos/Yoke%20Bio%20White.svg" },
+];
+
+/**
+ * The 16 pitch competition finalists — 8 from the Life Science Pitch
+ * Competition, 8 from the Deep Tech Pitch Competition. Auri supplied all 16 as
+ * white SVGs on 2026-08-10; they live in their own two folders under
+ * `public/logos` so the pitch cohort stays findable as a group (a folder name
+ * is a search tag, so typing "finalists" returns exactly these).
+ *
+ * Every one was checked with `npm run logos:tighten -- --check`: all 16 report
+ * their artwork filling 100% of the viewBox, so none of them will render a
+ * fraction of its neighbours' size the way the padded partner files did.
+ *
+ * Four of these companies ALSO exhibit, so the participating wall below
+ * de-duplicates rather than showing them twice.
+ */
+export const LS_DT_PITCH_FINALISTS: PartnerSetEntry[] = [
+  // ── Life Science Pitch Competition ──
+  { label: "3sonic", src: "/logos/Life%20Science%20Pitch%20Finalists%202026/3sonic.svg" },
+  { label: "AnalgesiaAI", src: "/logos/Life%20Science%20Pitch%20Finalists%202026/AnalgesiaAI.svg" },
+  { label: "Bioelectrix", src: "/logos/Life%20Science%20Pitch%20Finalists%202026/Bioelectrix.svg" },
+  { label: "Crossingbio", src: "/logos/Life%20Science%20Pitch%20Finalists%202026/Crossingbio.svg" },
+  { label: "greenCow BioSolutions", src: "/logos/Life%20Science%20Pitch%20Finalists%202026/greenCow%20BioSolutions.svg" },
+  { label: "Immunordic", src: "/logos/Life%20Science%20Pitch%20Finalists%202026/Immunordic.svg" },
+  { label: "Monix", src: "/logos/Life%20Science%20Pitch%20Finalists%202026/Monix.svg" },
+  { label: "Oasicare", src: "/logos/Life%20Science%20Pitch%20Finalists%202026/Oasicare.svg" },
+  // ── Deep Tech Pitch Competition ──
+  { label: "AnyoLabs", src: "/logos/Deep%20Tech%20Pitch%20Finalists%202026/AnyoLabs.svg" },
+  { label: "DigeHealth", src: "/logos/Deep%20Tech%20Pitch%20Finalists%202026/DigeHealth.svg" },
+  { label: "Epidetect Labs", src: "/logos/Deep%20Tech%20Pitch%20Finalists%202026/Epidetect%20Labs.svg" },
+  { label: "Magnolia Quantum Sensing", src: "/logos/Deep%20Tech%20Pitch%20Finalists%202026/Magnolia%20Quantum%20Sensing.svg" },
+  { label: "N23 health", src: "/logos/Deep%20Tech%20Pitch%20Finalists%202026/N23%20health.svg" },
+  { label: "Rilemo", src: "/logos/Deep%20Tech%20Pitch%20Finalists%202026/Rilemo.svg" },
+  { label: "Scientek", src: "/logos/Deep%20Tech%20Pitch%20Finalists%202026/Scientek.svg" },
+  { label: "Videm", src: "/logos/Deep%20Tech%20Pitch%20Finalists%202026/Videm.svg" },
+];
+
+/**
+ * "Thank you for participating" — the exhibitors and the pitch finalists on one
+ * wall, which is what was asked for over splitting them across two slides.
+ *
+ * De-duplicated **by `src`**, not by label: four companies appear in both lists
+ * and two of them are spelled differently between the two (`GreenCow
+ * Biosolutions` vs `greenCow BioSolutions`, `Immunordic` in both, `Magnolia
+ * Quantum Sensing`, `Rilemo`). Both lists already point at the same file for
+ * those, so the file path is the reliable identity. 31 + 16 - 4 = 43.
+ */
+export const LS_DT_PARTICIPANTS: PartnerSetEntry[] = [
+  ...LS_DT_EXHIBITORS,
+  ...LS_DT_PITCH_FINALISTS.filter((f) => !LS_DT_EXHIBITORS.some((e) => e.src === f.src)),
+];
+
 /** Every ready-made wall, in sidebar order. */
 export const PARTNER_SETS: PartnerSet[] = [
   {
@@ -307,6 +417,20 @@ export const PARTNER_SETS: PartnerSet[] = [
     headline: "Thank you to our partners",
     featuredCount: 0,
     logos: LIFE_SCIENCE_PARTNERS,
+  },
+  {
+    id: "ls-dt-exhibitors",
+    name: "LS x DT Exhibiting",
+    headline: "Thank you for exhibiting",
+    featuredCount: 0,
+    logos: LS_DT_EXHIBITORS,
+  },
+  {
+    id: "ls-dt-participants",
+    name: "LS x DT Participating",
+    headline: "Thank you for participating",
+    featuredCount: 0,
+    logos: LS_DT_PARTICIPANTS,
   },
   {
     id: "investor",
