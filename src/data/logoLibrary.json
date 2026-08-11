@@ -5,7 +5,7 @@
     "tags": [
       "life science pitch finalists 2026"
     ],
-    "bytes": 4173,
+    "bytes": 4192,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -69,7 +69,7 @@
     "src": "/logos/Actnation.svg",
     "name": "Actnation",
     "tags": [],
-    "bytes": 5393,
+    "bytes": 5429,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -88,14 +88,6 @@
     "bytes": 8337,
     "toneAlgo": 2,
     "tone": "light"
-  },
-  {
-    "src": "/logos/Adobe.png",
-    "name": "Adobe",
-    "tags": [],
-    "bytes": 15547,
-    "toneAlgo": 2,
-    "tone": "dark"
   },
   {
     "src": "/logos/Advores.svg",
@@ -146,14 +138,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Aiesec.png",
-    "name": "Aiesec",
-    "tags": [],
-    "bytes": 45013,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Aiesec%20White.svg",
     "name": "Aiesec White",
     "tags": [],
@@ -184,14 +168,6 @@
     "bytes": 9936,
     "toneAlgo": 2,
     "tone": "light"
-  },
-  {
-    "src": "/logos/Akademikernes%20A-kasse%20Colour.png",
-    "name": "Akademikernes A-kasse Colour",
-    "tags": [],
-    "bytes": 9662,
-    "toneAlgo": 2,
-    "tone": "dark"
   },
   {
     "src": "/logos/Aktive%20Ejere.svg",
@@ -295,7 +271,7 @@
     "tags": [
       "life science pitch finalists 2026"
     ],
-    "bytes": 5079,
+    "bytes": 5110,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -377,7 +353,7 @@
     "tags": [
       "deep tech pitch finalists 2026"
     ],
-    "bytes": 3784,
+    "bytes": 3807,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -388,22 +364,6 @@
     "bytes": 7060,
     "toneAlgo": 2,
     "tone": "light"
-  },
-  {
-    "src": "/logos/App%20Store.png",
-    "name": "App Store",
-    "tags": [],
-    "bytes": 5485,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Apple.png",
-    "name": "Apple",
-    "tags": [],
-    "bytes": 1016,
-    "toneAlgo": 2,
-    "tone": "dark"
   },
   {
     "src": "/logos/APX.svg",
@@ -441,7 +401,7 @@
     "src": "/logos/Areka%20Carbon%20Hub.svg",
     "name": "Areka Carbon Hub",
     "tags": [],
-    "bytes": 8298,
+    "bytes": 8337,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -606,14 +566,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Beyond%20Beta.svg",
-    "name": "Beyond Beta",
-    "tags": [],
-    "bytes": 38606,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Beyond%20Beta%20Building.svg",
     "name": "Beyond Beta Building",
     "tags": [],
@@ -643,7 +595,7 @@
     "tags": [
       "life science pitch finalists 2026"
     ],
-    "bytes": 5474,
+    "bytes": 5501,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -750,6 +702,14 @@
     "bytes": 10638,
     "toneAlgo": 2,
     "tone": "dark"
+  },
+  {
+    "src": "/logos/BLOXHUB.svg",
+    "name": "BLOXHUB",
+    "tags": [],
+    "bytes": 6340,
+    "toneAlgo": 2,
+    "tone": "light"
   },
   {
     "src": "/logos/Blue2%20White.svg",
@@ -915,7 +875,7 @@
     "src": "/logos/Casca.svg",
     "name": "Casca",
     "tags": [],
-    "bytes": 11354,
+    "bytes": 11391,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -952,14 +912,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/CBS%20Department%20of%20Strategy%20and%20Innovation.svg",
-    "name": "CBS Department of Strategy and Innovation",
-    "tags": [],
-    "bytes": 6264,
-    "toneAlgo": 2,
-    "tone": "mixed"
-  },
-  {
     "src": "/logos/CBS%20Department%20of%20Strategy%20and%20Innovation%20White.svg",
     "name": "CBS Department of Strategy and Innovation White",
     "tags": [],
@@ -974,14 +926,6 @@
     "bytes": 2308,
     "toneAlgo": 2,
     "tone": "light"
-  },
-  {
-    "src": "/logos/Cbslogo%20Extended.svg",
-    "name": "Cbslogo Extended",
-    "tags": [],
-    "bytes": 9835,
-    "toneAlgo": 2,
-    "tone": "mixed"
   },
   {
     "src": "/logos/Cemasys.png",
@@ -1216,6 +1160,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/CPH%20Labs.svg",
+    "name": "CPH Labs",
+    "tags": [],
+    "bytes": 3482,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/CPH%20Post.svg",
     "name": "CPH Post",
     "tags": [],
@@ -1228,14 +1180,6 @@
     "name": "CPH Volunteers",
     "tags": [],
     "bytes": 19420,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/CPHLABS.svg",
-    "name": "CPHLABS",
-    "tags": [],
-    "bytes": 3482,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -1309,7 +1253,7 @@
     "tags": [
       "life science pitch finalists 2026"
     ],
-    "bytes": 4677,
+    "bytes": 4704,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -1589,7 +1533,7 @@
     "src": "/logos/DiaDesign%20Technologie.svg",
     "name": "DiaDesign Technologie",
     "tags": [],
-    "bytes": 7264,
+    "bytes": 7301,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -1607,7 +1551,7 @@
     "tags": [
       "deep tech pitch finalists 2026"
     ],
-    "bytes": 4052,
+    "bytes": 4079,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -1626,14 +1570,6 @@
     "bytes": 6295,
     "toneAlgo": 2,
     "tone": "light"
-  },
-  {
-    "src": "/logos/Discord%20Icon.webp",
-    "name": "Discord Icon",
-    "tags": [],
-    "bytes": 21764,
-    "toneAlgo": 2,
-    "tone": "mixed"
   },
   {
     "src": "/logos/DISIE.png",
@@ -1679,7 +1615,7 @@
     "src": "/logos/Drylabz.svg",
     "name": "Drylabz",
     "tags": [],
-    "bytes": 4342,
+    "bytes": 4378,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -1690,14 +1626,6 @@
     "bytes": 4520,
     "toneAlgo": 2,
     "tone": "light"
-  },
-  {
-    "src": "/logos/DTU%20Science%20Park.png",
-    "name": "DTU Science Park",
-    "tags": [],
-    "bytes": 11793,
-    "toneAlgo": 2,
-    "tone": "dark"
   },
   {
     "src": "/logos/DTU%20Science%20Park.svg",
@@ -1716,28 +1644,12 @@
     "tone": "mixed"
   },
   {
-    "src": "/logos/DTU%20Skylab.svg",
-    "name": "DTU Skylab",
-    "tags": [],
-    "bytes": 2488,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/E%20Conomic%20Primary%20Pos.svg",
     "name": "E Conomic Primary Pos",
     "tags": [],
     "bytes": 6254,
     "toneAlgo": 2,
     "tone": "dark"
-  },
-  {
-    "src": "/logos/E%20Conomic%20White.svg",
-    "name": "E Conomic White",
-    "tags": [],
-    "bytes": 6269,
-    "toneAlgo": 2,
-    "tone": "light"
   },
   {
     "src": "/logos/Earlybird.svg",
@@ -1897,7 +1809,7 @@
     "tags": [
       "deep tech pitch finalists 2026"
     ],
-    "bytes": 5612,
+    "bytes": 5629,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -2342,28 +2254,12 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Founders%20Running%20Club.png",
-    "name": "Founders Running Club",
-    "tags": [],
-    "bytes": 7274,
-    "toneAlgo": 2,
-    "tone": "dark"
-  },
-  {
     "src": "/logos/Founders%20Running%20Club%20White.svg",
     "name": "Founders Running Club White",
     "tags": [],
     "bytes": 10645,
     "toneAlgo": 2,
     "tone": "light"
-  },
-  {
-    "src": "/logos/Fox%20News.png",
-    "name": "Fox News",
-    "tags": [],
-    "bytes": 78929,
-    "toneAlgo": 2,
-    "tone": "mixed"
   },
   {
     "src": "/logos/Framer.svg",
@@ -2402,6 +2298,14 @@
     "name": "Future Box 2",
     "tags": [],
     "bytes": 1407,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Future%20Manufacturers.svg",
+    "name": "Future Manufacturers",
+    "tags": [],
+    "bytes": 21507,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -2531,7 +2435,7 @@
     "tags": [
       "life science pitch finalists 2026"
     ],
-    "bytes": 11536,
+    "bytes": 11559,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -2579,7 +2483,7 @@
     "src": "/logos/Guideless.svg",
     "name": "Guideless",
     "tags": [],
-    "bytes": 1460,
+    "bytes": 1472,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -2949,7 +2853,7 @@
     "tags": [
       "life science pitch finalists 2026"
     ],
-    "bytes": 5493,
+    "bytes": 5521,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -3557,7 +3461,7 @@
     "src": "/logos/LedgerBee.svg",
     "name": "LedgerBee",
     "tags": [],
-    "bytes": 4846,
+    "bytes": 4870,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -3570,44 +3474,12 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Life%20Science%20Black.png",
-    "name": "Life Science Black",
-    "tags": [],
-    "bytes": 21572,
-    "toneAlgo": 2,
-    "tone": "dark"
-  },
-  {
-    "src": "/logos/Life%20Science%20Black%202.png",
-    "name": "Life Science Black 2",
-    "tags": [],
-    "bytes": 23119,
-    "toneAlgo": 2,
-    "tone": "dark"
-  },
-  {
-    "src": "/logos/Life%20Science%20Center.png",
-    "name": "Life Science Center",
-    "tags": [],
-    "bytes": 55959,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Life%20Science%20Invest.svg",
     "name": "Life Science Invest",
     "tags": [],
     "bytes": 4024,
     "toneAlgo": 2,
     "tone": "light"
-  },
-  {
-    "src": "/logos/Life%20Science%20Pitch%20Competition%20Black.png",
-    "name": "Life Science Pitch Competition Black",
-    "tags": [],
-    "bytes": 38941,
-    "toneAlgo": 2,
-    "tone": "dark"
   },
   {
     "src": "/logos/Life%20Science%20Pitch%20Competition%20White.png",
@@ -3618,34 +3490,10 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Life%20Science%20White.png",
-    "name": "Life Science White",
-    "tags": [],
-    "bytes": 21725,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Life%20Science%20White%202.png",
-    "name": "Life Science White 2",
-    "tags": [],
-    "bytes": 26856,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Lifescience%20Grey.png",
-    "name": "Lifescience Grey",
-    "tags": [],
-    "bytes": 79042,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/lilidi%20ai.svg",
     "name": "lilidi ai",
     "tags": [],
-    "bytes": 3083,
+    "bytes": 3098,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -3754,18 +3602,18 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Maersk.png",
-    "name": "Maersk",
-    "tags": [],
-    "bytes": 83432,
-    "toneAlgo": 2,
-    "tone": "dark"
-  },
-  {
     "src": "/logos/M%C3%A6rsk.svg",
     "name": "Mærsk",
     "tags": [],
     "bytes": 10056,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Maersk%20White.svg",
+    "name": "Maersk White",
+    "tags": [],
+    "bytes": 1515,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -3783,7 +3631,7 @@
     "tags": [
       "deep tech pitch finalists 2026"
     ],
-    "bytes": 12378,
+    "bytes": 12430,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -3868,22 +3716,6 @@
     "tone": "dark"
   },
   {
-    "src": "/logos/Mesh%20Community.png",
-    "name": "Mesh Community",
-    "tags": [],
-    "bytes": 11770,
-    "toneAlgo": 2,
-    "tone": "dark"
-  },
-  {
-    "src": "/logos/Mesh%20Matrikel1.png",
-    "name": "Mesh Matrikel1",
-    "tags": [],
-    "bytes": 7696,
-    "toneAlgo": 2,
-    "tone": "dark"
-  },
-  {
     "src": "/logos/Mesh%20Matrikel1%20White.svg",
     "name": "Mesh Matrikel1 White",
     "tags": [],
@@ -3953,7 +3785,7 @@
     "tags": [
       "life science pitch finalists 2026"
     ],
-    "bytes": 2659,
+    "bytes": 2679,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -4051,7 +3883,7 @@
     "tags": [
       "deep tech pitch finalists 2026"
     ],
-    "bytes": 5085,
+    "bytes": 5102,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -4248,14 +4080,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/NordicNinja%20Mark.svg",
-    "name": "NordicNinja Mark",
-    "tags": [],
-    "bytes": 8720,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/NordicNinja%20White.svg",
     "name": "NordicNinja White",
     "tags": [],
@@ -4300,22 +4124,6 @@
     "name": "North Star Pitch",
     "tags": [],
     "bytes": 5419,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/North%20Star%20Pitch%20Black.png",
-    "name": "North Star Pitch Black",
-    "tags": [],
-    "bytes": 20304,
-    "toneAlgo": 2,
-    "tone": "dark"
-  },
-  {
-    "src": "/logos/North%20Star%20Pitch%20Colour.png",
-    "name": "North Star Pitch Colour",
-    "tags": [],
-    "bytes": 19421,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -4437,7 +4245,7 @@
     "tags": [
       "life science pitch finalists 2026"
     ],
-    "bytes": 4124,
+    "bytes": 4151,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -4613,7 +4421,7 @@
     "src": "/logos/Parastruct.svg",
     "name": "Parastruct",
     "tags": [],
-    "bytes": 9839,
+    "bytes": 9903,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -4805,7 +4613,7 @@
     "src": "/logos/Rabbit%20Data.svg",
     "name": "Rabbit Data",
     "tags": [],
-    "bytes": 11963,
+    "bytes": 12049,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -4824,14 +4632,6 @@
     "bytes": 1038,
     "toneAlgo": 2,
     "tone": "light"
-  },
-  {
-    "src": "/logos/Rainmaking.png",
-    "name": "Rainmaking",
-    "tags": [],
-    "bytes": 10613,
-    "toneAlgo": 2,
-    "tone": "dark"
   },
   {
     "src": "/logos/Rainmaking.svg",
@@ -4861,7 +4661,7 @@
     "src": "/logos/Recoma.svg",
     "name": "Recoma",
     "tags": [],
-    "bytes": 2839,
+    "bytes": 2860,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -4902,14 +4702,6 @@
     "name": "ReLowCode",
     "tags": [],
     "bytes": 234999,
-    "toneAlgo": 2,
-    "tone": "mixed"
-  },
-  {
-    "src": "/logos/REmote.png",
-    "name": "REmote",
-    "tags": [],
-    "bytes": 34042,
     "toneAlgo": 2,
     "tone": "mixed"
   },
@@ -4975,15 +4767,7 @@
     "tags": [
       "deep tech pitch finalists 2026"
     ],
-    "bytes": 4187,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Rilemo%20White.svg",
-    "name": "Rilemo White",
-    "tags": [],
-    "bytes": 4076,
+    "bytes": 4209,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -5076,14 +4860,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/S%20Allume%20Black.png",
-    "name": "S Allume Black",
-    "tags": [],
-    "bytes": 8438,
-    "toneAlgo": 2,
-    "tone": "dark"
-  },
-  {
     "src": "/logos/S%20AP%20Itoolkit.svg",
     "name": "S AP Itoolkit",
     "tags": [],
@@ -5114,14 +4890,6 @@
     "bytes": 6575,
     "toneAlgo": 2,
     "tone": "dark"
-  },
-  {
-    "src": "/logos/Sabbia.svg",
-    "name": "Sabbia",
-    "tags": [],
-    "bytes": 3119,
-    "toneAlgo": 2,
-    "tone": "light"
   },
   {
     "src": "/logos/Sagava.svg",
@@ -5191,7 +4959,7 @@
     "src": "/logos/Scalign.svg",
     "name": "Scalign",
     "tags": [],
-    "bytes": 2950,
+    "bytes": 2972,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -5217,7 +4985,7 @@
     "tags": [
       "deep tech pitch finalists 2026"
     ],
-    "bytes": 2430,
+    "bytes": 2456,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -5337,7 +5105,7 @@
     "src": "/logos/Sensible%204.svg",
     "name": "Sensible 4",
     "tags": [],
-    "bytes": 5029,
+    "bytes": 5054,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -5348,14 +5116,6 @@
     "bytes": 4002,
     "toneAlgo": 2,
     "tone": "light"
-  },
-  {
-    "src": "/logos/Sequoia%20Capital%20WSV.png",
-    "name": "Sequoia Capital WSV",
-    "tags": [],
-    "bytes": 1659,
-    "toneAlgo": 2,
-    "tone": "mixed"
   },
   {
     "src": "/logos/Sextechnordics.svg",
@@ -5425,7 +5185,7 @@
     "src": "/logos/SilentCurtains.svg",
     "name": "SilentCurtains",
     "tags": [],
-    "bytes": 11854,
+    "bytes": 11884,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -5470,14 +5230,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/SkyTek%20ApS.png",
-    "name": "SkyTek ApS",
-    "tags": [],
-    "bytes": 4573,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Slize.svg",
     "name": "Slize",
     "tags": [],
@@ -5513,7 +5265,7 @@
     "src": "/logos/Snoika.svg",
     "name": "Snoika",
     "tags": [],
-    "bytes": 4344,
+    "bytes": 4367,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -5689,7 +5441,7 @@
     "src": "/logos/Startecon.svg",
     "name": "Startecon",
     "tags": [],
-    "bytes": 3759,
+    "bytes": 3782,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -5798,22 +5550,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Startup%20Showcase%20Black.png",
-    "name": "Startup Showcase Black",
-    "tags": [],
-    "bytes": 21059,
-    "toneAlgo": 2,
-    "tone": "dark"
-  },
-  {
-    "src": "/logos/Startup%20Showcase%20White.png",
-    "name": "Startup Showcase White",
-    "tags": [],
-    "bytes": 19157,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Startup%20Valencia.svg",
     "name": "Startup Valencia",
     "tags": [],
@@ -5828,14 +5564,6 @@
     "bytes": 18981,
     "toneAlgo": 2,
     "tone": "light"
-  },
-  {
-    "src": "/logos/Startup%20Wise%20Guys%20Colour.png",
-    "name": "Startup Wise Guys Colour",
-    "tags": [],
-    "bytes": 39494,
-    "toneAlgo": 2,
-    "tone": "dark"
   },
   {
     "src": "/logos/Startup%20World%20Cup.png",
@@ -5929,7 +5657,7 @@
     "src": "/logos/Surveygauge.svg",
     "name": "Surveygauge",
     "tags": [],
-    "bytes": 3660,
+    "bytes": 3684,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -6030,30 +5758,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Symbio.png",
-    "name": "Symbio",
-    "tags": [],
-    "bytes": 41079,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Symbio.svg",
-    "name": "Symbio",
-    "tags": [],
-    "bytes": 3016,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Symbion.png",
-    "name": "Symbion",
-    "tags": [],
-    "bytes": 25808,
-    "toneAlgo": 2,
-    "tone": "dark"
-  },
-  {
     "src": "/logos/Symbion.svg",
     "name": "Symbion",
     "tags": [],
@@ -6086,22 +5790,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Talent%20Garden.svg",
-    "name": "Talent Garden",
-    "tags": [],
-    "bytes": 5671,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Talent%20Garden%20Copenhagen.svg",
-    "name": "Talent Garden Copenhagen",
-    "tags": [],
-    "bytes": 12353,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Talent%20Garden%20White.svg",
     "name": "Talent Garden White",
     "tags": [],
@@ -6129,7 +5817,7 @@
     "src": "/logos/Tangently.svg",
     "name": "Tangently",
     "tags": [],
-    "bytes": 3933,
+    "bytes": 3958,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -6238,28 +5926,12 @@
     "tone": "dark"
   },
   {
-    "src": "/logos/TechBBQ%20Investor%20Day%20Black%202.svg",
-    "name": "TechBBQ Investor Day Black 2",
-    "tags": [],
-    "bytes": 1637,
-    "toneAlgo": 2,
-    "tone": "dark"
-  },
-  {
     "src": "/logos/TechBBQ%20Investor%20Day%20Colour%20Black.svg",
     "name": "TechBBQ Investor Day Colour Black",
     "tags": [],
     "bytes": 6371,
     "toneAlgo": 2,
     "tone": "mixed"
-  },
-  {
-    "src": "/logos/TechBBQ%20Investor%20Day%20Colour%20Black%202.svg",
-    "name": "TechBBQ Investor Day Colour Black 2",
-    "tags": [],
-    "bytes": 2199,
-    "toneAlgo": 2,
-    "tone": "dark"
   },
   {
     "src": "/logos/TechBBQ%20Investor%20Day%20Colour%20White.svg",
@@ -6270,36 +5942,12 @@
     "tone": "light"
   },
   {
-    "src": "/logos/TechBBQ%20Investor%20Day%20Colour%20White%202.svg",
-    "name": "TechBBQ Investor Day Colour White 2",
-    "tags": [],
-    "bytes": 2286,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/TechBBQ%20Investor%20Day%20White.svg",
     "name": "TechBBQ Investor Day White",
     "tags": [],
     "bytes": 6168,
     "toneAlgo": 2,
     "tone": "light"
-  },
-  {
-    "src": "/logos/TechBBQ%20Investor%20Day%20White%202.svg",
-    "name": "TechBBQ Investor Day White 2",
-    "tags": [],
-    "bytes": 1752,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/TechBBQ%20Orange.svg",
-    "name": "TechBBQ Orange",
-    "tags": [],
-    "bytes": 3205,
-    "toneAlgo": 2,
-    "tone": "mixed"
   },
   {
     "src": "/logos/TechBBQ%20White.svg",
@@ -6702,22 +6350,6 @@
     "tone": "dark"
   },
   {
-    "src": "/logos/Twitter.png",
-    "name": "Twitter",
-    "tags": [],
-    "bytes": 2831,
-    "toneAlgo": 2,
-    "tone": "mixed"
-  },
-  {
-    "src": "/logos/Uber%20Black.png",
-    "name": "Uber Black",
-    "tags": [],
-    "bytes": 104125,
-    "toneAlgo": 2,
-    "tone": "dark"
-  },
-  {
     "src": "/logos/Ubuntubiz.png",
     "name": "Ubuntubiz",
     "tags": [],
@@ -6825,7 +6457,7 @@
     "src": "/logos/Untuvia.svg",
     "name": "Untuvia",
     "tags": [],
-    "bytes": 5100,
+    "bytes": 5119,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -6834,46 +6466,6 @@
     "name": "Uptime Punks",
     "tags": [],
     "bytes": 6557,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Urban%20Tech%20Pitch%20Competition%20Black.png",
-    "name": "Urban Tech Pitch Competition Black",
-    "tags": [],
-    "bytes": 106106,
-    "toneAlgo": 2,
-    "tone": "dark"
-  },
-  {
-    "src": "/logos/Urban%20Tech%20Pitch%20Competition%20Colour.png",
-    "name": "Urban Tech Pitch Competition Colour",
-    "tags": [],
-    "bytes": 116277,
-    "toneAlgo": 2,
-    "tone": "dark"
-  },
-  {
-    "src": "/logos/Urban%20Tech%20Pitch%20Competition%20White.png",
-    "name": "Urban Tech Pitch Competition White",
-    "tags": [],
-    "bytes": 98135,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Urban%20Tech%20Shaping%20Future%20Cities%20Colour.png",
-    "name": "Urban Tech Shaping Future Cities Colour",
-    "tags": [],
-    "bytes": 16108,
-    "toneAlgo": 2,
-    "tone": "dark"
-  },
-  {
-    "src": "/logos/Urban%20Tech%20Shaping%20Future%20Cities%20White.png",
-    "name": "Urban Tech Shaping Future Cities White",
-    "tags": [],
-    "bytes": 34072,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -6922,14 +6514,6 @@
     "name": "Vartix",
     "tags": [],
     "bytes": 2208,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/VC4A.svg",
-    "name": "VC4A",
-    "tags": [],
-    "bytes": 2421,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -7043,7 +6627,7 @@
     "tags": [
       "deep tech pitch finalists 2026"
     ],
-    "bytes": 2339,
+    "bytes": 2361,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -7107,7 +6691,7 @@
     "src": "/logos/Voicari.svg",
     "name": "Voicari",
     "tags": [],
-    "bytes": 5564,
+    "bytes": 5586,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -7179,7 +6763,7 @@
     "src": "/logos/Whisperr.svg",
     "name": "Whisperr",
     "tags": [],
-    "bytes": 7857,
+    "bytes": 7880,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -7212,6 +6796,14 @@
     "name": "Womanindata",
     "tags": [],
     "bytes": 2774,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Women%20in%20Data%20Science.svg",
+    "name": "Women in Data Science",
+    "tags": [],
+    "bytes": 20410,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -7252,14 +6844,6 @@
     "name": "Women TechEU",
     "tags": [],
     "bytes": 16962,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Womenindatascience.svg",
-    "name": "Womenindatascience",
-    "tags": [],
-    "bytes": 20410,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -7342,6 +6926,14 @@
     "bytes": 10440,
     "toneAlgo": 2,
     "tone": "dark"
+  },
+  {
+    "src": "/logos/Yahoo%20Japan%20White.svg",
+    "name": "Yahoo Japan White",
+    "tags": [],
+    "bytes": 7559,
+    "toneAlgo": 2,
+    "tone": "light"
   },
   {
     "src": "/logos/YFN.svg",

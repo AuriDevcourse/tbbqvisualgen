@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Check, ChevronDown, Download, Film, GripVertical, Loader2, Plus, Minus, Trash2, ImagePlus, X, Square, Presentation, Smartphone, PencilRuler, Users, Handshake, HeartHandshake, Columns2, LayoutGrid, ChevronLeft, ChevronRight, Library, Save, Shuffle, Sparkles, Ticket, Timer, BadgePercent } from "lucide-react";
+import { Check, ChevronDown, Download, Film, GripVertical, Loader2, Plus, Minus, Trash2, ImagePlus, X, Square, Presentation, Smartphone, PencilRuler, Users, Handshake, HeartHandshake, Columns2, LayoutGrid, ChevronLeft, ChevronRight, Library, Save, Shuffle, Sparkles, Ticket, Timer, BadgePercent, SkipForward } from "lucide-react";
 import { Popover } from "radix-ui";
 import { TeamLibrary, type LibraryLoadedItem } from "@/components/TeamLibrary";
 import { AuthChip } from "@/components/AuthChip";
@@ -19,9 +19,9 @@ import { PARTNER_SETS, type PartnerSet } from "@/data/partnerSets";
 import { isSvgDataUrl, tintSvgDataUrl } from "@/lib/svgTint";
 import { ColorPicker } from "@/components/ColorPicker";
 import type { PlatformFormat } from "@/types/template";
-import { buildSimpleDesign, buildPartnerDesign, buildSalesDesign, bundleCoverage, docKindOf, emptyForm, emptyPartnerForm, emptyPerson, emptySalesForm, formsFromDoc, isBlankPerson, isPartnerDoc, mergePersonDescription, migrateLegacyPanelDoc, panelShapeKey, parkDoc, partnerLayoutOf, retargetPartnerLayout, retargetSalesLayout, retargetTunedDoc, salesLayoutOf, sampleFourthSpeaker, shuffleWallLogos, simpleExportName, stripFormsForSave, syncPanelChrome, syncPartnerChrome, THANKS_MAX_LOGOS, THANKS_MIN_LOGOS, THANKS_SCRIM_MAX, type SimpleForm, type PartnerForm, type PartnerLogo, type SalesForm, type SimplePerson, type SimpleDoc, type TemplateCoverage } from "@/lib/simpleLayout";
+import { buildSimpleDesign, buildNextDesign, buildPartnerDesign, buildSalesDesign, bundleCoverage, docKindOf, emptyForm, emptyNextForm, emptyPartnerForm, emptyPerson, emptySalesForm, formsFromDoc, isBlankPerson, isNextDoc, isPartnerDoc, mergePersonDescription, migrateLegacyPanelDoc, NEXT_MAX_SPEAKERS, panelShapeKey, parkDoc, partnerLayoutOf, retargetPartnerLayout, retargetSalesLayout, retargetTunedDoc, salesLayoutOf, sampleFourthSpeaker, shuffleWallLogos, simpleExportName, stripFormsForSave, syncNextChrome, syncPanelChrome, syncPartnerChrome, THANKS_MAX_LOGOS, THANKS_MIN_LOGOS, THANKS_SCRIM_MAX, type NextForm, type SimpleForm, type PartnerForm, type PartnerLogo, type SalesForm, type SimplePerson, type SimpleDoc, type TemplateCoverage } from "@/lib/simpleLayout";
 
-type TemplateKind = "panel" | "partner" | "sales";
+type TemplateKind = "panel" | "partner" | "sales" | "next";
 
 /** What the Save button produces: a still image, or a 3-second MP4 of the
  *  animated background. */
@@ -34,6 +34,7 @@ const saveLabel = (f: SaveFormat, seconds: number): string =>
 
 const TEMPLATES: { id: TemplateKind; label: string; icon: typeof Users }[] = [
   { id: "panel", label: "Panel", icon: Users },
+  { id: "next", label: "Next Session", icon: SkipForward },
   { id: "partner", label: "Partner", icon: Handshake },
   { id: "sales", label: "Sale", icon: Ticket },
 ];
@@ -100,16 +101,20 @@ function Field({ label, value, onChange, placeholder, multiline, hint }: { label
 
 // One person block (moderator or a speaker): photo + name + description.
 function PersonEditor({
-  person, onChange, onRemove, roleLabel,
+  person, onChange, onRemove, roleLabel, showPhoto = true,
 }: {
   person: SimplePerson;
   onChange: (patch: Partial<SimplePerson>) => void;
   onRemove?: () => void;
   roleLabel: string;
+  /** The Next Session board is text-only, so its rows hide the upload rather
+   *  than offering a control whose result never reaches the canvas. */
+  showPhoto?: boolean;
 }) {
   return (
     <div className="flex gap-2.5 rounded-xl border border-white/10 bg-white/[0.03] p-2.5">
       {/* Photo */}
+      {showPhoto && (
       <div className="relative shrink-0">
         <label className="relative flex items-center justify-center w-14 h-14 rounded-xl overflow-hidden border border-white/15 bg-white/5 cursor-pointer hover:border-[#FF6B00]/60 transition-colors group">
           {person.photo ? (
@@ -146,6 +151,7 @@ function PersonEditor({
           </button>
         )}
       </div>
+      )}
       {/* Fields */}
       <div className="flex-1 flex flex-col gap-1.5 min-w-0">
         <div className="flex items-center justify-between">
@@ -388,16 +394,20 @@ interface PersistedForm {
   template?: TemplateKind;
   partner?: PartnerForm;
   sales?: SalesForm;
+  next?: NextForm;
 }
 
 /** Drop dataURL photos — the fallback when the full form busts the quota. */
-function withoutPhotos({ form, format, stash, template, partner, sales }: PersistedForm): PersistedForm {
+function withoutPhotos({ form, format, stash, template, partner, sales, next }: PersistedForm): PersistedForm {
   const strip = (p: SimplePerson): SimplePerson => ({ ...p, photo: "", naturalWidth: undefined, naturalHeight: undefined });
   return {
     format,
     template,
     partner: partner ? { ...partner, logos: [] } : undefined,
     sales: sales ? { ...sales, photo: null } : undefined,
+    // The Next board renders no photos, but its people share SimplePerson, so
+    // strip them the same way rather than trusting the shape.
+    next: next ? { ...next, moderator: strip(next.moderator), speakers: next.speakers.map(strip) } : undefined,
     form: { ...form, moderator: strip(form.moderator), speakers: form.speakers.map(strip) },
     stash: stash.map(strip),
   };
@@ -463,6 +473,7 @@ export default function SimplePage() {
   const [template, setTemplate] = useState<TemplateKind>("panel");
   const [partner, setPartner] = useState<PartnerForm>(emptyPartnerForm);
   const [sales, setSales] = useState<SalesForm>(emptySalesForm);
+  const [next, setNext] = useState<NextForm>(emptyNextForm);
   const [format, setFormat] = useState<PlatformFormat>("square");
   // Gates the persist + override-drop effects until the one-time hydrate has
   // landed, so restoring a saved form doesn't read as "the user edited it".
@@ -502,8 +513,9 @@ export default function SimplePage() {
   const genDoc = useMemo(
     () => (template === "partner" ? buildPartnerDesign(partner, format)
       : template === "sales" ? buildSalesDesign(sales, format)
+      : template === "next" ? buildNextDesign(next, format)
       : buildSimpleDesign(form, format)),
-    [template, partner, sales, form, format],
+    [template, partner, sales, next, form, format],
   );
   const doc = custom ?? genDoc;
   const { width: W, height: H } = doc.customSize;
@@ -579,6 +591,9 @@ export default function SimplePage() {
           setStash((saved.stash ?? []).map(mergePersonDescription));
           if (saved.template) setTemplate(saved.template);
           if (saved.sales) setSales({ ...emptySalesForm(), ...saved.sales });
+          // Merged over the defaults so a form saved before a field existed
+          // still hydrates with that field defined.
+          if (saved.next) setNext({ ...emptyNextForm(), ...saved.next });
           if (saved.partner) {
             // Migrate the short-lived single-`logo` shape (2026-07-21 morning)
             // to the slot-array shape.
@@ -603,8 +618,8 @@ export default function SimplePage() {
   // form from overwriting a saved panel before it has been read back.
   useEffect(() => {
     if (!hydrated) return;
-    persistForm({ form, format, stash, template, partner, sales });
-  }, [hydrated, form, format, stash, template, partner, sales]);
+    persistForm({ form, format, stash, template, partner, sales, next });
+  }, [hydrated, form, format, stash, template, partner, sales, next]);
 
   // A form edit used to bin the fine-tuned design outright. Now the words are
   // re-pointed at the tuned layers instead, so retyping a title costs you
@@ -616,7 +631,7 @@ export default function SimplePage() {
     // Wait for the hydrate, else restoring a saved form looks like an edit and
     // needlessly bins the fine-tuned override.
     if (!hydrated) return;
-    const key = JSON.stringify([template, form, partner, sales, format]);
+    const key = JSON.stringify([template, form, partner, sales, next, format]);
     // A custom doc of the WRONG KIND for this template — a panel doc on the
     // canvas while the partner form is up (Auri's screenshot: Host design
     // under the Partner Announcement sidebar) — must never survive, however
@@ -634,6 +649,7 @@ export default function SimplePage() {
 
     const rebuilt = template === "partner" ? buildPartnerDesign(partner, format)
       : template === "sales" ? buildSalesDesign(sales, format)
+      : template === "next" ? buildNextDesign(next, format)
       : buildSimpleDesign(form, format);
 
     if (custom) {
@@ -660,21 +676,24 @@ export default function SimplePage() {
     // uploaded logos differs from when it was tuned. (Scan order is reversed
     // insertion order — any same-layout match is equally valid, retarget
     // re-checks format/size/roles itself.)
+    // Named `revivedNext`, not `next`: the Next Session form owns `next` in
+    // this component, and a local of that name would shadow it — including in
+    // the `buildNextDesign(next, …)` call above, which sits in the same scope.
     const revived = parked[panelShapeKey(rebuilt)];
-    let next = revived ? retargetTunedDoc(revived, rebuilt) : null;
-    if (!next && template === "partner") {
+    let revivedNext = revived ? retargetTunedDoc(revived, rebuilt) : null;
+    if (!revivedNext && template === "partner") {
       for (const d of Object.values(parked).reverse()) {
-        next = retargetPartnerLayout(d, rebuilt, partner.layout);
-        if (next) break;
+        revivedNext = retargetPartnerLayout(d, rebuilt, partner.layout);
+        if (revivedNext) break;
       }
     }
     // Same fallback for the sales template: a tuned countdown/discount design
     // must revive even when its photo slot is filled differently than when it
     // was parked (uploading the photo changes the shape, not the composition).
-    if (!next && template === "sales") {
+    if (!revivedNext && template === "sales") {
       for (const d of Object.values(parked).reverse()) {
-        next = retargetSalesLayout(d, rebuilt, sales.layout);
-        if (next) break;
+        revivedNext = retargetSalesLayout(d, rebuilt, sales.layout);
+        if (revivedNext) break;
       }
     }
     // Same format, different layout: the chrome (label position, hand-drawn
@@ -688,21 +707,32 @@ export default function SimplePage() {
       && custom.format === rebuilt.format
       && custom.customSize.width === rebuilt.customSize.width
       && custom.customSize.height === rebuilt.customSize.height) {
-      next = syncPartnerChrome(custom, next ?? rebuilt);
+      revivedNext = syncPartnerChrome(custom, revivedNext ?? rebuilt);
     }
     // Same idea for panels: a speaker-count change must not move the header
     // or the moderator card, so both are carried from the design being left.
     // Gated like the partner block — the sync returns its target UNCHANGED on
     // a guard bail, which would still wrongly promote a generic rebuild to a
     // "custom" doc if called cross-format or with a partner doc as source.
-    if (template === "panel" && custom && !isPartnerDoc(custom)
+    // docKindOf, not !isPartnerDoc: a Next board also passes the partner check,
+    // and panel chrome flowing into one would drag its banner geometry onto a
+    // panel header (and vice versa).
+    if (template === "panel" && custom && docKindOf(custom) === "panel"
       && custom.format === rebuilt.format
       && custom.customSize.width === rebuilt.customSize.width
       && custom.customSize.height === rebuilt.customSize.height) {
-      next = syncPanelChrome(custom, next ?? rebuilt);
+      revivedNext = syncPanelChrome(custom, revivedNext ?? rebuilt);
     }
-    setCustom(next);
-  }, [hydrated, template, form, partner, sales, format, custom, parked]);
+    // Same contract for the Next board: the banner, chip and title hold still
+    // while speakers come and go. Guarded identically.
+    if (template === "next" && custom && isNextDoc(custom)
+      && custom.format === rebuilt.format
+      && custom.customSize.width === rebuilt.customSize.width
+      && custom.customSize.height === rebuilt.customSize.height) {
+      revivedNext = syncNextChrome(custom, revivedNext ?? rebuilt);
+    }
+    setCustom(revivedNext);
+  }, [hydrated, template, form, partner, sales, next, format, custom, parked]);
 
   // Keep the tuned designs across tab closes — they were session-only, so
   // shutting the tab silently threw the fine-tuning away.
@@ -740,10 +770,12 @@ export default function SimplePage() {
     const nextForm = restored.form ?? form;
     const nextPartner = restored.partner ?? partner;
     const nextSales = restored.sales ?? sales;
+    const nextNext = restored.next ?? next;
     setTemplate(restored.template);
     setForm(nextForm);
     setPartner(nextPartner);
     setSales(nextSales);
+    setNext(nextNext);
     setFormat(doc.format);
     setCustom(doc);
     // The loaded item becomes the source of truth for its template: purge the
@@ -756,7 +788,7 @@ export default function SimplePage() {
       ...Object.fromEntries(Object.entries(p).filter(([, d]) => docKindOf(d) !== restored.template)),
       ...Object.fromEntries((simpleVariants ?? []).map((d) => [panelShapeKey(d), d])),
     }));
-    baselineRef.current = JSON.stringify([restored.template, nextForm, nextPartner, nextSales, doc.format]);
+    baselineRef.current = JSON.stringify([restored.template, nextForm, nextPartner, nextSales, nextNext, doc.format]);
     adoptLibraryIdentity(item.id, item.name, restored.template, bundleCoverage([doc, ...(simpleVariants ?? [])]));
   };
 
@@ -810,6 +842,9 @@ export default function SimplePage() {
     // The team has no official Sale item yet: the built-in countdown/discount
     // layouts ARE the template until someone saves one.
     sales: undefined,
+    // Same for the Next Session board — the built-in layout IS the template
+    // until someone saves an official one to the team library.
+    next: undefined,
   } as const satisfies Record<TemplateKind, string | undefined>;
   // Each template's flavours, offered as a picker above Format. Every button
   // is a door into its team-library item.
@@ -1069,14 +1104,35 @@ export default function SimplePage() {
       return { ...p, logoCount, featuredCount: Math.min(p.featuredCount, logoCount) };
     });
 
+  // ── Next Session people ─────────────────────────────────────────────────
+  // Deliberately simpler than the panel's stepper: the Next board has no
+  // photos, so a removed row costs only a name and a title, and the panel's
+  // parked-people stash would be more machinery than the loss justifies.
+  const setNextSpeaker = (i: number, patch: Partial<SimplePerson>) =>
+    setNext((n) => ({ ...n, speakers: n.speakers.map((s, j) => (j === i ? { ...s, ...patch } : s)) }));
+  const removeNextSpeaker = (i: number) =>
+    setNext((n) => (n.speakers.length <= 1 ? n : { ...n, speakers: n.speakers.filter((_, j) => j !== i) }));
+  const setNextSpeakerCount = (count: number) =>
+    setNext((n) => {
+      const target = Math.max(1, Math.min(NEXT_MAX_SPEAKERS, count));
+      if (target === n.speakers.length) return n;
+      if (target < n.speakers.length) return { ...n, speakers: n.speakers.slice(0, target) };
+      return {
+        ...n,
+        speakers: [...n.speakers, ...Array.from({ length: target - n.speakers.length }, emptyPerson)],
+      };
+    });
+
   // The accent choice belongs to whichever template is on screen, like the
   // background — a panel about LP Forum wants it just as much as a partner wall.
   const accentId = template === "partner" ? partner.accentId
     : template === "sales" ? sales.accentId
+    : template === "next" ? next.accentId
     : form.accentId;
   const setAccent = (id: string | undefined) => {
     if (template === "partner") setPartner((p) => ({ ...p, accentId: id }));
     else if (template === "sales") setSales((p) => ({ ...p, accentId: id }));
+    else if (template === "next") setNext((p) => ({ ...p, accentId: id }));
     else setForm((f) => ({ ...f, accentId: id }));
   };
 
@@ -1143,9 +1199,9 @@ export default function SimplePage() {
   // + the tuned docs of this template's other layouts (from the parked shelf).
   const currentBundle = useMemo(() => ({
     ...doc,
-    simpleForms: stripFormsForSave(template, form, partner, sales),
+    simpleForms: stripFormsForSave(template, form, partner, sales, next),
     simpleVariants: Object.values(parked).filter((d) => docKindOf(d) === template),
-  }), [doc, template, form, partner, sales, parked]);
+  }), [doc, template, form, partner, sales, next, parked]);
 
   // Header shortcut: overwrite the loaded library item with everything on
   // screen — same id, so its shared link keeps working.
@@ -1208,7 +1264,9 @@ export default function SimplePage() {
 
   const handleExport = () => {
     const salesLabel = [sales.value, sales.caption].map((t) => t.trim()).filter(Boolean).join(" ");
-    const base = simpleExportName(template, format, form.headline, salesLabel, partner.layout);
+    // The Next board is named by its own title, not the panel form's headline.
+    const headline = template === "next" ? next.title : form.headline;
+    const base = simpleExportName(template, format, headline, salesLabel, partner.layout);
     if (isVideoFormat(effectiveFormat)) {
       // The animation has to be RUNNING for the capture, so resume instead of
       // pausing (the shader is paused while a still export is in flight).
@@ -1876,6 +1934,108 @@ export default function SimplePage() {
             </section>
             </>)}
 
+            {template === "next" && (<>
+            {/* Setup — the board's composition. ON STAGE is deliberately not a
+                toggle: it is the constant that tells the room what the screen
+                is for, so it always renders. */}
+            <section className="flex flex-col gap-2">
+              <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Setup</span>
+              <div className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-white/85">Moderator</span>
+                  <button
+                    role="switch"
+                    aria-checked={next.includeModerator}
+                    aria-label="Include a moderator"
+                    onClick={() => setNext((n) => ({ ...n, includeModerator: !n.includeModerator }))}
+                    className={`relative w-10 h-6 rounded-full transition-colors ${next.includeModerator ? "bg-[#FF6B00]" : "bg-white/15"}`}
+                  >
+                    <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all ${next.includeModerator ? "left-[18px]" : "left-0.5"}`} />
+                  </button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-white/85">Speakers</span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => setNextSpeakerCount(next.speakers.length - 1)}
+                      disabled={next.speakers.length <= 1}
+                      aria-label="Fewer speakers"
+                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/5 border border-white/10 text-white/80 hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <Minus className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="w-6 text-center text-sm font-semibold tabular-nums text-white">{next.speakers.length}</span>
+                    <button
+                      onClick={() => setNextSpeakerCount(next.speakers.length + 1)}
+                      disabled={next.speakers.length >= NEXT_MAX_SPEAKERS}
+                      aria-label="More speakers"
+                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/5 border border-white/10 text-white/80 hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Content */}
+            <section className="flex flex-col gap-3">
+              <Field
+                label="Next session"
+                hint={"renders as “NEXT: …”"}
+                value={next.session}
+                onChange={(v) => setNext((n) => ({ ...n, session: v }))}
+                placeholder="Fireside Chat on the Bonfire Stage"
+              />
+              <Field
+                label="Session title"
+                hint="Enter = new line"
+                multiline
+                value={next.title}
+                onChange={(v) => setNext((n) => ({ ...n, title: v }))}
+                placeholder={"Opening with Bjarke Ingels:\nUtopian Pragmatism"}
+              />
+            </section>
+
+            {/* Speakers */}
+            <section className="flex flex-col gap-2">
+              <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Speakers ({next.speakers.length})</span>
+              <div className="flex flex-col gap-2">
+                {next.speakers.map((s, i) => (
+                  <PersonEditor
+                    key={i}
+                    person={s}
+                    onChange={(patch) => setNextSpeaker(i, patch)}
+                    onRemove={next.speakers.length > 1 ? () => removeNextSpeaker(i) : undefined}
+                    roleLabel={`Speaker ${i + 1}`}
+                    showPhoto={false}
+                  />
+                ))}
+              </div>
+              {next.speakers.length < NEXT_MAX_SPEAKERS && (
+                <button
+                  onClick={() => setNextSpeakerCount(next.speakers.length + 1)}
+                  className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-dashed border-white/15 text-xs text-white/70 hover:border-[#FF6B00]/50 hover:text-white transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Add speaker
+                </button>
+              )}
+            </section>
+
+            {/* Moderator */}
+            {next.includeModerator && (
+              <section className="flex flex-col gap-2">
+                <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Moderator</span>
+                <PersonEditor
+                  person={next.moderator}
+                  onChange={(patch) => setNext((n) => ({ ...n, moderator: { ...n.moderator, ...patch } }))}
+                  roleLabel="Moderator"
+                  showPhoto={false}
+                />
+              </section>
+            )}
+            </>)}
+
             {/* Investor accents — the circle pair in opposite corners. The FILL
                 says which investor thing the post is about, so this is a
                 content choice, not decoration: gradient for investor relations
@@ -1908,13 +2068,17 @@ export default function SimplePage() {
               <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Background</span>
               <BackgroundPicker
                 compact
-                value={template === "partner" ? partner.backgroundId : template === "sales" ? sales.backgroundId : form.backgroundId}
+                value={template === "partner" ? partner.backgroundId : template === "sales" ? sales.backgroundId : template === "next" ? next.backgroundId : form.backgroundId}
                 onChange={(id) => template === "partner"
                   ? setPartner((p) => ({ ...p, backgroundId: id }))
                   : template === "sales"
                     ? setSales((p) => ({ ...p, backgroundId: id }))
-                    : setForm((f) => ({ ...f, backgroundId: id }))}
-                excludeGroups={template === "panel" ? undefined : ["Tech Stage", "BBQ Stage", "Bonfire Stage", "Founder Stage"]}
+                    : template === "next"
+                      ? setNext((p) => ({ ...p, backgroundId: id }))
+                      : setForm((f) => ({ ...f, backgroundId: id }))}
+                // The Next board names a stage in its banner, so the per-stage
+                // gradients belong to it as much as to a panel.
+                excludeGroups={template === "panel" || template === "next" ? undefined : ["Tech Stage", "BBQ Stage", "Bonfire Stage", "Founder Stage"]}
               />
             </section>
           </aside>
@@ -1925,7 +2089,7 @@ export default function SimplePage() {
               <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
                 <div className="text-center rounded-2xl bg-black/60 backdrop-blur-sm px-7 py-6">
                   <p className="text-base text-white/90">Fill in the form to build your visual</p>
-                  <p className="text-xs mt-1 text-white/60">{template === "partner" ? "Add a label and the partner's logo on the left" : template === "sales" ? "Add the figure and its caption on the left" : "Add a headline and your speakers on the left"}</p>
+                  <p className="text-xs mt-1 text-white/60">{template === "partner" ? "Add a label and the partner's logo on the left" : template === "sales" ? "Add the figure and its caption on the left" : template === "next" ? "Name the next session and its speakers on the left" : "Add a headline and your speakers on the left"}</p>
                   <p className="text-[11px] mt-1 text-white/45">Or hit Save now to export just the background — this hint never lands in the file</p>
                 </div>
               </div>

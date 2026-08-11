@@ -33,7 +33,8 @@
  * tightened to the artwork. A contain-fit cell can't tell padding from the
  * logo, so an untightened file renders a third the size of its neighbours.
  *
- * Three logos were refreshed the same day, also from Auri. `CPHLABS.svg` and
+ * Three logos were refreshed the same day, also from Auri. `CPH Labs.svg` (then
+ * still filed as `CPHLABS.svg`, renamed 2026-08-11) and
  * `Symbion.svg` were replaced IN PLACE (old brand / thinner cut of the same
  * wordmark, originals parked in `Temp/logos-removed/replaced-2026-08-04/`), so
  * every other reference to them picks up the new artwork too. Novo Nordisk
@@ -76,7 +77,7 @@ export const LIFE_SCIENCE_PARTNERS: PartnerSetEntry[] = [
   { label: "Nebius", src: "/logos/Nebius.svg" },
   { label: "Sweden Bio", src: "/logos/Sweden%20Bio.svg" },
   { label: "Symbion", src: "/logos/Symbion.svg" },
-  { label: "CPH.LABS", src: "/logos/CPHLABS.svg" },
+  { label: "CPH.LABS", src: "/logos/CPH%20Labs.svg" },
   { label: "Novo Nordisk Foundation", src: "/logos/Novo%20Nordisk%20Foundation%20Horizontal.svg" },
   { label: "BioInnovation Institute", src: "/logos/BioInnovation%20Institute.svg" },
   { label: "Medicon Valley Alliance", src: "/logos/Medicon%20Valley%20Alliance.svg" },
@@ -278,7 +279,7 @@ export const COMMUNITY_PARTNERS: PartnerSetEntry[] = [
   { label: "TÜV SÜD", src: "/logos/Tuvsud.svg" },
   { label: "Venture Café Warsaw", src: "/logos/Venture%20Cafe%20Warsaw%20Horiz%20White.svg" },
   { label: "Voice AI Space", src: "/logos/Voice%20AI%20Space.svg" },
-  { label: "Women in Data Science, AI and ML", src: "/logos/Womenindatascience.svg" },
+  { label: "Women in Data Science, AI and ML", src: "/logos/Women%20in%20Data%20Science.svg" },
   { label: "Young AI Leaders Linz", src: "/logos/Young%20AI%20Leaders%20Community%20Linz%20Hub.svg" },
   { label: "ZOKU Copenhagen", src: "/logos/Zoku.svg" },
 ];

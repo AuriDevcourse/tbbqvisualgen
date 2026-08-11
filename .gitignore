@@ -53,6 +53,14 @@ duplicate-logos-report.json
 # Logos deleted from the library via the picker (recoverable, not committed)
 .logos-trash/
 
+# Dry-run output of `node scripts/stage-new-logos.mjs` — candidates pulled off
+# this machine, reviewed by hand before anything lands in public/logos
+.logos-staging/
+logo-staging-report.json
+# Contact sheets from `node scripts/logo-contact-sheet.mjs`
+*-contact-sheet.png
+approved.png
+
 # Local Claude Code state (incl. agent worktrees and their build output)
 .claude/
 
