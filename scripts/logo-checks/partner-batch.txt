@@ -61,7 +61,7 @@ Mountside Ventures.svg|mountsideventures.com
 Deel.svg|deel.com
 Pleo.png|pleo.io
 Valencia Innovation Capital.svg|valenciainnovationcapital.com
-CPHLABS.svg|cphlabs.dk
+CPH Labs.svg|cphlabs.dk
 Akademikernes A-kasse.svg|aka.dk
 Akademikernes A-kasse Colour.png|aka.dk
 ESA BIC.svg|esabic.dk
