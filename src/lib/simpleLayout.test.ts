@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { accentShapes, isAccentShape, syncAccentShapes, applyAccent } from "./accents";
 import { thanksRowCounts } from "./simpleLayout";
-import { adoptLegacyPanelRoles, buildPartnerDesign, buildSalesDesign, buildSimpleDesign, bundleCoverage, dedupeSpeakerRoles, docKindOf, emptyForm, parkDoc, emptyPartnerForm, emptyPerson, emptySalesForm, formsFromDoc, isBlankPerson, mergePersonDescription, migrateLegacyPanelDoc, panelShapeKey, partnerLayoutOf, retargetPartnerLayout, retargetSalesLayout, retargetTunedDoc, salesLayoutOf, sampleFourthSpeaker, shuffleWallLogos, simpleExportName, stripFormsForSave, syncPanelChrome, syncPartnerChrome, thanksFlatMaxColumns, thanksGridColumns, THANKS_MAX_LOGOS, THANKS_SCRIM_MAX, type PartnerForm, type PartnerLogo, type SalesForm, type SimpleDoc, type SimpleForm } from "./simpleLayout";
+import { adoptLegacyPanelRoles, buildNextDesign, buildPartnerDesign, buildSalesDesign, buildSimpleDesign, bundleCoverage, dedupeSpeakerRoles, docKindOf, emptyForm, emptyNextForm, parkDoc, emptyPartnerForm, emptyPerson, emptySalesForm, formsFromDoc, isBlankPerson, isNextDoc, mergePersonDescription, migrateLegacyPanelDoc, NEXT_MAX_SPEAKERS, panelShapeKey, partnerLayoutOf, retargetPartnerLayout, retargetSalesLayout, retargetTunedDoc, salesLayoutOf, sampleFourthSpeaker, shuffleWallLogos, simpleExportName, stripFormsForSave, syncNextChrome, syncPanelChrome, syncPartnerChrome, thanksFlatMaxColumns, thanksGridColumns, THANKS_MAX_LOGOS, THANKS_SCRIM_MAX, type NextForm, type PartnerForm, type PartnerLogo, type SalesForm, type SimpleDoc, type SimpleForm } from "./simpleLayout";
 import type { PlatformFormat } from "@/types/template";
 
 /** The partner-form fields the thank-you wall introduced. Spread into the
@@ -2027,5 +2027,152 @@ describe("thanksRowCounts — no logo stranded alone", () => {
       expect(c.x - c.width / 2).toBeGreaterThanOrEqual(0.059);
       expect(c.x + c.width / 2).toBeLessThanOrEqual(0.941);
     }
+  });
+});
+
+/**
+ * Next Session board — the between-sessions holding slide.
+ *
+ * The rules worth pinning are the ones a future edit could plausibly break:
+ * the ON STAGE chip is unconditional, the board never overflows into the logo
+ * however many people it holds, and its docs never get mistaken for panels
+ * (they carry the same `speaker-N.*` roles, so only the `next.*` tags separate
+ * them — get that wrong and the sidebar loads the wrong form).
+ */
+describe("next session board", () => {
+  const roles = (d: SimpleDoc) => d.design.texts.map((t) => t.simpleRole).filter(Boolean);
+  const shapeRoles = (d: SimpleDoc) => (d.design.shapes ?? []).map((s) => s.simpleRole).filter(Boolean);
+  const byRole = (d: SimpleDoc, role: string) => d.design.texts.find((t) => t.simpleRole === role);
+
+  const fullBoard = (): NextForm => ({
+    ...emptyNextForm(),
+    speakers: Array.from({ length: NEXT_MAX_SPEAKERS }, (_, i) => ({
+      name: `Speaker ${i + 1}`, title: `Partner, Company ${i + 1}`, company: "", photo: "",
+    })),
+    includeModerator: true,
+  });
+
+  it("always renders the ON STAGE chip, even with everything else cleared", () => {
+    const doc = buildNextDesign(
+      { ...emptyNextForm(), session: "", title: "", speakers: [], includeModerator: false },
+      "presentation",
+    );
+    expect(roles(doc)).toContain("next.stage");
+    expect(shapeRoles(doc)).toContain("next.stage.chip");
+    expect(shapeRoles(doc)).toContain("next.banner");
+    expect(byRole(doc, "next.stage")?.content).toBe("ON STAGE");
+  });
+
+  it("prefixes the banner with NEXT: and keeps the title separate", () => {
+    const doc = buildNextDesign({ ...emptyNextForm(), session: "Fireside Chat" }, "presentation");
+    expect(byRole(doc, "next.session")?.content).toBe("NEXT: Fireside Chat");
+    expect(byRole(doc, "headline")?.content).toBe(emptyNextForm().title);
+  });
+
+  it("reads as its own kind, not as a panel", () => {
+    const doc = buildNextDesign(emptyNextForm(), "presentation");
+    expect(isNextDoc(doc)).toBe(true);
+    expect(docKindOf(doc)).toBe("next");
+    // The mirror: a real panel must not be swept up by the new check.
+    expect(isNextDoc(buildSimpleDesign(emptyForm(), "presentation"))).toBe(false);
+    expect(docKindOf(buildSimpleDesign(emptyForm(), "presentation"))).toBe("panel");
+  });
+
+  it("caps the speaker list at four", () => {
+    const over = { ...fullBoard() };
+    over.speakers = [...over.speakers, { name: "Fifth", title: "Nope", company: "", photo: "" }];
+    const doc = buildNextDesign(over, "presentation");
+    expect(roles(doc)).toContain("speaker-3.name");
+    expect(roles(doc)).not.toContain("speaker-4.name");
+  });
+
+  it("keeps a full board clear of the TechBBQ logo in every format", () => {
+    for (const format of ["presentation", "square", "story"] as PlatformFormat[]) {
+      const doc = buildNextDesign(fullBoard(), format);
+      const lowest = Math.max(...doc.design.texts.map((t) => t.position.y));
+      expect(lowest).toBeLessThan(0.95);
+      // And the whole stack stays inside the canvas.
+      for (const t of doc.design.texts) {
+        expect(t.position.y).toBeGreaterThan(0);
+        expect(t.position.x).toBeGreaterThanOrEqual(0);
+      }
+    }
+  });
+
+  it("drops the moderator rows when the toggle is off", () => {
+    const on = buildNextDesign({ ...fullBoard(), includeModerator: true }, "presentation");
+    const off = buildNextDesign({ ...fullBoard(), includeModerator: false }, "presentation");
+    expect(roles(on)).toContain("moderator.name");
+    expect(roles(on)).toContain("next.moderatorLabel");
+    expect(roles(off)).not.toContain("moderator.name");
+    expect(roles(off)).not.toContain("next.moderatorLabel");
+  });
+
+  it("singularises the speakers heading for one person", () => {
+    const one = buildNextDesign({ ...emptyNextForm(), speakers: [emptyPerson()] }, "presentation");
+    expect(byRole(one, "next.speakersLabel")?.content).toBe("Speaker:");
+    const two = buildNextDesign({ ...emptyNextForm(), speakers: [emptyPerson(), emptyPerson()] }, "presentation");
+    expect(byRole(two, "next.speakersLabel")?.content).toBe("Speakers:");
+  });
+
+  it("round-trips through formsFromDoc", () => {
+    const form = fullBoard();
+    const doc = buildNextDesign(form, "presentation");
+    const snapshot = stripFormsForSave("next", emptyForm(), emptyPartnerForm(), emptySalesForm(), form);
+    const back = formsFromDoc("next", doc, snapshot);
+    expect(back.template).toBe("next");
+    expect(back.next?.session).toBe(form.session);
+    expect(back.next?.speakers).toHaveLength(NEXT_MAX_SPEAKERS);
+    expect(back.form).toBeNull();
+    expect(back.partner).toBeNull();
+  });
+
+  it("rebuilds the form from a doc saved without a snapshot", () => {
+    const form = { ...emptyNextForm(), session: "Closing Keynote", includeModerator: false };
+    const doc = buildNextDesign(form, "presentation");
+    const back = formsFromDoc("next", doc);
+    expect(back.template).toBe("next");
+    // The fixed "NEXT: " prefix belongs to the canvas, not the input.
+    expect(back.next?.session).toBe("Closing Keynote");
+    expect(back.next?.includeModerator).toBe(false);
+    expect(back.next?.speakers).toHaveLength(form.speakers.length);
+  });
+
+  it("holds the banner, chip and title still when the speaker count changes", () => {
+    const two = buildNextDesign({ ...emptyNextForm(), speakers: [emptyPerson(), emptyPerson()] }, "presentation");
+    // Hand-tune the chrome, as dragging it in the editor would.
+    const tuned: SimpleDoc = {
+      ...two,
+      design: {
+        ...two.design,
+        texts: two.design.texts.map((t) =>
+          t.simpleRole === "headline" ? { ...t, position: { x: 0.3, y: 0.42 }, fontSize: 77 } : t),
+        shapes: (two.design.shapes ?? []).map((s) =>
+          s.simpleRole === "next.stage.chip" ? { ...s, x: 0.55 } : s),
+      },
+    };
+    const three = buildNextDesign({ ...emptyNextForm(), speakers: [emptyPerson(), emptyPerson(), emptyPerson()] }, "presentation");
+    const synced = syncNextChrome(tuned, three);
+    const head = synced.design.texts.find((t) => t.simpleRole === "headline");
+    expect(head?.position).toEqual({ x: 0.3, y: 0.42 });
+    expect(head?.fontSize).toBe(77);
+    expect((synced.design.shapes ?? []).find((s) => s.simpleRole === "next.stage.chip")?.x).toBe(0.55);
+    // The people rows stay the target's own — three speakers, not two.
+    expect(synced.design.texts.filter((t) => t.simpleRole?.endsWith(".name")).length)
+      .toBe(three.design.texts.filter((t) => t.simpleRole?.endsWith(".name")).length);
+  });
+
+  it("refuses to sync chrome across formats or from a panel", () => {
+    const wide = buildNextDesign(emptyNextForm(), "presentation");
+    const square = buildNextDesign(emptyNextForm(), "square");
+    expect(syncNextChrome(wide, square)).toBe(square);
+    const panel = buildSimpleDesign(emptyForm(), "presentation");
+    expect(syncNextChrome(panel, wide)).toBe(wide);
+  });
+
+  it("names its export after the session title", () => {
+    expect(simpleExportName("next", "presentation", "Opening with Bjarke Ingels"))
+      .toBe("16x9 - Next - Opening with Bjarke Ingels");
+    expect(simpleExportName("next", "square", "")).toBe("1x1 - Next");
   });
 });

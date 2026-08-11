@@ -631,6 +631,59 @@ export function syncPanelChrome(from: SimpleDoc, to: SimpleDoc): SimpleDoc {
  * hand-tuned design the user keeps coming back to can never be evicted by
  * the chrome-only docs the layout tour auto-parks.
  */
+/**
+ * The Next Session equivalent of `syncPanelChrome`: adding or removing a
+ * speaker must not move the parts of the board that have nothing to do with
+ * the count — the banner and its text, the ON STAGE chip and its text, and the
+ * title. Those carry their geometry across from the design being left; the
+ * people rows are count-specific and always stay the target's own.
+ *
+ * Geometry and styling come from `from`, content stays the target's (both
+ * derive from the same form anyway). Cross-format/size pairs, and pairs where
+ * either side is not a Next doc, are returned unchanged.
+ */
+export function syncNextChrome(from: SimpleDoc, to: SimpleDoc): SimpleDoc {
+  if (from.format !== to.format) return to;
+  if (from.customSize.width !== to.customSize.width) return to;
+  if (from.customSize.height !== to.customSize.height) return to;
+  if (!isNextDoc(from) || !isNextDoc(to)) return to;
+
+  const CHROME_TEXT = new Set(["next.session", "next.stage", "headline"]);
+  const CHROME_SHAPE = new Set(["next.banner", "next.stage.chip"]);
+
+  const fromText = new Map(from.design.texts.filter((t) => t.simpleRole).map((t) => [t.simpleRole as string, t]));
+  const texts = to.design.texts.map((t) => {
+    if (!t.simpleRole || !CHROME_TEXT.has(t.simpleRole)) return t;
+    const src = fromText.get(t.simpleRole);
+    // Content stays the target's; everything else (position, size, colour,
+    // weight) is the tuning being carried.
+    return src ? { ...src, id: t.id, content: t.content } : t;
+  });
+
+  const fromShape = new Map((from.design.shapes ?? []).filter((s) => s.simpleRole).map((s) => [s.simpleRole as string, s]));
+  const shapes = (to.design.shapes ?? []).map((s) => {
+    if (!s.simpleRole || !CHROME_SHAPE.has(s.simpleRole)) return s;
+    const src = fromShape.get(s.simpleRole);
+    return src ? { ...src, id: s.id } : s;
+  });
+
+  return {
+    ...to,
+    design: {
+      ...to.design,
+      texts,
+      shapes,
+      // The logo is chrome too — a dragged logo must not snap back when the
+      // speaker count changes.
+      logoPosition: from.design.logoPosition ?? to.design.logoPosition,
+      logoCustomPosition: from.design.logoCustomPosition ?? to.design.logoCustomPosition,
+      logoScale: from.design.logoScale ?? to.design.logoScale,
+      logoStyle: from.design.logoStyle ?? to.design.logoStyle,
+      showLogo: from.design.showLogo ?? to.design.showLogo,
+    },
+  };
+}
+
 export function parkDoc(shelf: Record<string, SimpleDoc>, doc: SimpleDoc): Record<string, SimpleDoc> {
   const key = panelShapeKey(doc);
   const next = Object.fromEntries(Object.entries(shelf).filter(([k]) => k !== key));
@@ -877,6 +930,53 @@ export function isSalesDoc(doc: SimpleDoc): boolean {
   return salesLayoutOf(doc) !== null;
 }
 
+/** Speakers the Next Session board can list. Four is the design's limit, not a
+ *  storage one: a fifth row pushes the block into the TechBBQ logo. */
+export const NEXT_MAX_SPEAKERS = 4;
+
+/**
+ * The "what's on next" holding board shown between sessions: a translucent
+ * banner naming the upcoming session, a permanent ON STAGE chip, the session
+ * title, then the speakers and the moderator.
+ */
+export interface NextForm {
+  /** Named in the top banner, after the fixed "NEXT:" prefix. */
+  session: string;
+  /** The big headline — the session's own title. */
+  title: string;
+  speakers: SimplePerson[];
+  /** Whether this session has a moderator (drives the layout + form). */
+  includeModerator: boolean;
+  moderator: SimplePerson;
+  /** Investor Relations circle accents, as on the panel form. */
+  accentId?: string;
+  backgroundId: string;
+}
+
+export function emptyNextForm(): NextForm {
+  return {
+    session: "A New Person or Whatever",
+    title: "Opening with Bjarke Ingels:\nUtopian Pragmatism",
+    includeModerator: true,
+    moderator: { name: "Pierre Leroy", title: "Managing Director & Co-Head of Secondaries, Stifel", company: "", photo: "" },
+    speakers: [
+      { name: "Andrei Xydas", title: "Principal, Lightrock", company: "", photo: "" },
+      { name: "Nicholas Sando", title: "Partner, Secondaries, Molten", company: "", photo: "" },
+    ],
+    // Midnight Sky — the background the board was designed against.
+    backgroundId: "lm18",
+  };
+}
+
+/** Next Session docs are recognisable by their `next.*` roles. The banner and
+ *  the ON STAGE chip always render, so at least two of them always exist —
+ *  including on a doc whose speakers were all cleared. */
+export function isNextDoc(doc: SimpleDoc): boolean {
+  const tagged = (r: string | undefined) => Boolean(r?.startsWith("next."));
+  return doc.design.texts.some((t) => tagged(t.simpleRole))
+    || (doc.design.shapes ?? []).some((s) => tagged(s.simpleRole));
+}
+
 /**
  * Which template a doc belongs to. The single source of truth for every
  * kind guard — a doc of the wrong kind for the active sidebar is a bug the
@@ -884,9 +984,12 @@ export function isSalesDoc(doc: SimpleDoc): boolean {
  * partitioned by this too. Sales is checked first: it has no logo slots, so
  * the checks are disjoint, but the order documents the intent.
  */
-export function docKindOf(doc: SimpleDoc): "panel" | "partner" | "sales" {
+export function docKindOf(doc: SimpleDoc): "panel" | "partner" | "sales" | "next" {
   if (isSalesDoc(doc)) return "sales";
   if (isPartnerDoc(doc)) return "partner";
+  // Before the panel fallback: a Next Session doc carries panel-style
+  // `speaker-N.*` roles too, so only its `next.*` tags tell the two apart.
+  if (isNextDoc(doc)) return "next";
   return "panel";
 }
 
@@ -1677,6 +1780,216 @@ export function buildSalesDesign(form: SalesForm, format: PlatformFormat): Simpl
  * company (400) beneath it. Logo bottom-left. Photos become rounded images;
  * empty people get a rounded placeholder frame.
  */
+/**
+ * Build the Next Session board — the between-sessions holding slide.
+ *
+ * The composition is a top-down flow down the left edge, matching the design
+ * Auri built by hand in the editor (measured off that doc at 1920×1080):
+ *
+ *   1. a full-bleed translucent banner, "NEXT: <session>" inside it
+ *   2. the ON STAGE chip — ALWAYS rendered, it is the board's constant
+ *   3. the session title, auto-fitted
+ *   4. "Speakers:" then up to four people, each a name plus a role line
+ *   5. "Moderator:" then one person, same shape
+ *
+ * Sizes are fractions of the SHORTER side and vertical spans are converted
+ * through `vs`, so the 16:9 original is reproduced exactly while 1:1 and 9:16
+ * stay proportional rather than stretched. The people block is measured before
+ * it is drawn and scaled down if four speakers plus a moderator would otherwise
+ * run into the TechBBQ logo — the board must never overflow, whatever it holds.
+ */
+export function buildNextDesign(form: NextForm, format: PlatformFormat): SimpleDoc {
+  seq = 0;
+  const dims = FORMAT_DIMENSIONS[format] ?? FORMAT_DIMENSIONS.square;
+  const W = dims.width;
+  const H = dims.height;
+  const S = Math.min(W, H);
+  const vs = S / H;
+
+  const texts: TextElement[] = [];
+  const shapes: ShapeElement[] = accentShapes(form.accentId, W, H, () => uid("shape"));
+  const canvasImages: CanvasImage[] = [];
+
+  /** Left margin. Measured off the hand-built design (0.0418), not the 0.06
+   *  the panel builder uses — this board sits tighter to the edge. */
+  const M = 0.042;
+
+  const mkText = (content: string, x: number, y: number, sizeFrac: number, opts: Partial<TextElement> = {}): void => {
+    if (!content.trim()) return;
+    texts.push({
+      id: uid("text"),
+      content,
+      position: { x, y },
+      fontSize: Math.round(sizeFrac * S),
+      align: "left",
+      weight: 600,
+      font: "onest",
+      ...opts,
+    });
+  };
+
+  const lineCount = (s: string) => (s.trim() ? s.split("\n").length : 0);
+
+  // ── 1. Banner ───────────────────────────────────────────────────────────
+  // Full-bleed white wash at 59% — light enough that the gradient still reads
+  // through it, opaque enough for near-black text to pass contrast.
+  const bannerFs = 0.0278;
+  const bannerH = bannerFs * vs * 2.66;
+  shapes.push({
+    id: uid("shape"), type: "rectangle",
+    x: 0.5, y: bannerH / 2, width: 1, height: bannerH,
+    fillType: "fill", strokeWidth: 0, colorType: "solid",
+    color1: "#FFFFFF", color2: "#FF6B00", opacity: 0.59, blur: 0, rotation: 0,
+    borderRadius: 0,
+    simpleRole: "next.banner",
+  });
+  const session = form.session.trim();
+  mkText(session ? `NEXT: ${session}` : "NEXT:", M, bannerH / 2 + bannerFs * vs * 0.1, bannerFs, {
+    weight: 800, uppercase: true, color: "#15110E",
+    letterSpacing: Math.max(1, Math.round(0.0009 * S)),
+    simpleRole: "next.session",
+  });
+
+  // ── 2. ON STAGE chip — the constant. Never conditional on form content. ──
+  const STAGE = "ON STAGE";
+  const stageFs = 0.0361;
+  const stageFsPx = stageFs * S;
+  const stageLs = Math.max(1, Math.round(0.0009 * S));
+  const chipH = stageFs * vs * 1.63;
+  const chipPadL = 0.021 * S;
+  const chipPadR = 0.024 * S;
+  const stageWpx = STAGE.length * stageFsPx * 0.66 + (STAGE.length - 1) * stageLs;
+  const chipW = Math.min((stageWpx + chipPadL + chipPadR) / W, 0.9);
+  const chipY = bannerH + chipH / 2 + 0.059;
+  shapes.push({
+    id: uid("shape"), type: "rectangle",
+    x: M + chipW / 2, y: chipY, width: chipW, height: chipH,
+    fillType: "fill", strokeWidth: 0, colorType: "solid",
+    color1: "#FFFFFF", color2: "#FF6B00", opacity: 1, blur: 0, rotation: 0,
+    borderRadius: 0.165,
+    simpleRole: "next.stage.chip",
+  });
+  mkText(STAGE, M + chipPadL / W, chipY + stageFs * vs * 0.11, stageFs, {
+    weight: 800, uppercase: true, color: "#15110E", letterSpacing: stageLs,
+    simpleRole: "next.stage",
+  });
+
+  // ── 3. Title ────────────────────────────────────────────────────────────
+  // Auto-fit against the longest manually-broken line so a long title shrinks
+  // instead of running off the canvas.
+  const avail = 0.94 - M;
+  const titleTop = chipY + chipH / 2 + 0.015;
+  let cursorY = titleTop;
+  if (form.title.trim()) {
+    const longest = Math.max(1, ...form.title.split("\n").map((l) => l.trim().length));
+    const f = Math.min(0.1111 * S, (avail * W) / (longest * 0.52)) / S;
+    const blockH = lineCount(form.title) * f * vs;
+    mkText(form.title, M, cursorY + blockH / 2, f, {
+      weight: 600, color: "#FFFFFF", lineHeight: 1.0, simpleRole: "headline",
+    });
+    cursorY += blockH;
+  }
+
+  // ── 4 + 5. People ───────────────────────────────────────────────────────
+  const speakers = form.speakers.slice(0, NEXT_MAX_SPEAKERS);
+  const moderator = form.includeModerator ? form.moderator : null;
+
+  // Base metrics, then a single uniform scale if the block would collide with
+  // the logo. Measuring first (rather than clamping row by row) keeps the
+  // proportions of heading-to-name-to-role intact at any speaker count.
+  const headFs0 = 0.0463;
+  const nameFs0 = 0.0333;
+  const roleFs0 = 0.0250;
+  const personGap0 = 0.007;
+  const groupGap0 = 0.030;
+
+  const personH = (nameF: number, roleF: number, p: SimplePerson, gap: number) =>
+    nameF * vs * 1.16
+    + (p.title.trim() ? roleF * vs * 1.16 : 0)
+    + gap;
+
+  const measure = (k: number) => {
+    const headF = headFs0 * k, nameF = nameFs0 * k, roleF = roleFs0 * k;
+    const gap = personGap0 * k;
+    let h = 0;
+    if (speakers.length) {
+      h += headF * vs * 1.35;
+      for (const p of speakers) h += personH(nameF, roleF, p, gap);
+    }
+    if (moderator) {
+      if (speakers.length) h += groupGap0 * k;
+      h += headF * vs * 1.35 + personH(nameF, roleF, moderator, gap);
+    }
+    return h;
+  };
+
+  // The people block is BOTTOM-anchored: it ends just above the logo baseline
+  // and grows upward. Top-anchoring it looked right at 16:9 (where a full
+  // board nearly fills the space) but left a tall column of dead air under the
+  // names at 9:16. The block still may not climb into the title.
+  const blockBottom = 0.945;
+  const minTop = cursorY + 0.045;
+  const room = blockBottom - minTop;
+  const needed = measure(1);
+  const k = needed > room && needed > 0 ? Math.max(0.62, room / needed) : 1;
+  const blockTop = Math.max(minTop, blockBottom - measure(k));
+
+  const headFs = headFs0 * k;
+  const nameFs = nameFs0 * k;
+  const roleFs = roleFs0 * k;
+  const personGap = personGap0 * k;
+
+  cursorY = blockTop;
+  const emitPerson = (p: SimplePerson, role: string): void => {
+    const name = p.name.trim() || "Person";
+    mkText(name, M, cursorY + nameFs * vs * 0.58, nameFs, {
+      weight: 500, color: "#FFFFFF", simpleRole: `${role}.name`,
+    });
+    cursorY += nameFs * vs * 1.16;
+    if (p.title.trim()) {
+      mkText(p.title, M, cursorY + roleFs * vs * 0.52, roleFs, {
+        weight: 400, color: "rgba(255,255,255,0.72)", simpleRole: `${role}.secondary`,
+      });
+      cursorY += roleFs * vs * 1.16;
+    }
+    cursorY += personGap;
+  };
+
+  if (speakers.length) {
+    mkText(speakers.length === 1 ? "Speaker:" : "Speakers:", M, cursorY + headFs * vs * 0.62, headFs, {
+      weight: 700, color: "#FFFFFF", simpleRole: "next.speakersLabel",
+    });
+    cursorY += headFs * vs * 1.35;
+    speakers.forEach((p, i) => emitPerson(p, `speaker-${i}`));
+  }
+  if (moderator) {
+    if (speakers.length) cursorY += groupGap0 * k;
+    mkText("Moderator:", M, cursorY + headFs * vs * 0.62, headFs, {
+      weight: 700, color: "#FFFFFF", simpleRole: "next.moderatorLabel",
+    });
+    cursorY += headFs * vs * 1.35;
+    emitPerson(moderator, "moderator");
+  }
+
+  return {
+    format,
+    customSize: { width: W, height: H },
+    canvasImages,
+    design: {
+      backgroundId: form.backgroundId,
+      accentId: form.accentId,
+      texts,
+      shapes,
+      showLogo: true,
+      logoStyle: "white",
+      logoPosition: "bottom-right",
+      // Measured off the hand-built design — sits tighter into the corner than
+      // the bottom-right preset does.
+      logoCustomPosition: { x: 0.947, y: 0.939 },
+    },
+  };
+}
+
 export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): SimpleDoc {
   // Ids restart with every build, so the same form always yields the same
   // doc — server and client included.
@@ -2084,13 +2397,14 @@ export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): Sim
  * carries the current layout's slots, so stripping would lose the others.
  */
 export interface SimpleFormsSnapshot {
-  template: "panel" | "partner" | "sales";
+  template: "panel" | "partner" | "sales" | "next";
   form?: SimpleForm;
   partner?: PartnerForm;
   sales?: SalesForm;
+  next?: NextForm;
 }
 
-export function stripFormsForSave(template: "panel" | "partner" | "sales", form: SimpleForm, partner: PartnerForm, sales?: SalesForm): SimpleFormsSnapshot {
+export function stripFormsForSave(template: "panel" | "partner" | "sales" | "next", form: SimpleForm, partner: PartnerForm, sales?: SalesForm, next?: NextForm): SimpleFormsSnapshot {
   const strip = (p: SimplePerson): SimplePerson => ({ ...p, photo: "", naturalWidth: undefined, naturalHeight: undefined });
   return {
     template,
@@ -2099,6 +2413,10 @@ export function stripFormsForSave(template: "panel" | "partner" | "sales", form:
     // Kept whole, like the partner logos: countdown and discount each own a
     // photo, and the active doc only carries the current layout's slot.
     sales,
+    // The Next board never renders headshots, but the people carry the same
+    // SimplePerson shape — strip anyway so a form filled in the panel template
+    // and copied across can't smuggle a data-URL into the saved row.
+    next: next && { ...next, moderator: strip(next.moderator), speakers: next.speakers.map(strip) },
   };
 }
 
@@ -2266,7 +2584,7 @@ export function sampleFourthSpeaker(): SimplePerson {
  * Partner announcements are just "16x9 - Partner Announcement" (their label is
  * generic). Colons are illegal in Windows file names, so 16:9 → 16x9.
  */
-export function simpleExportName(template: "panel" | "partner" | "sales", format: PlatformFormat, headline: string, salesLabel?: string, partnerLayout?: PartnerLayout): string {
+export function simpleExportName(template: "panel" | "partner" | "sales" | "next", format: PlatformFormat, headline: string, salesLabel?: string, partnerLayout?: PartnerLayout): string {
   const fmt = format === "presentation" ? "16x9" : format === "story" ? "9x16" : "1x1";
   const clean = (s: string) => s
     .split("\n").join(" ")
@@ -2282,6 +2600,8 @@ export function simpleExportName(template: "panel" | "partner" | "sales", format
     return label ? `${fmt} - Sale - ${label}` : `${fmt} - Sale`;
   }
   const head = clean(headline);
+  // The Next board is named by its session title, like a panel.
+  if (template === "next") return head ? `${fmt} - Next - ${head}` : `${fmt} - Next`;
   return head ? `${fmt} - Panel - ${head}` : `${fmt} - Panel`;
 }
 
@@ -2293,9 +2613,12 @@ export function simpleExportName(template: "panel" | "partner" | "sales", format
  * Returns null for the form that doesn't belong to the doc's kind, so the
  * caller leaves that side of the state alone.
  */
-export function formsFromDoc(kind: string, doc: SimpleDoc, saved?: SimpleFormsSnapshot): { template: "panel" | "partner" | "sales"; form: SimpleForm | null; partner: PartnerForm | null; sales: SalesForm | null } {
-  const template: "panel" | "partner" | "sales" = saved?.template
-    ?? (kind === "partner" ? "partner" : kind === "sales" ? "sales" : "panel");
+export function formsFromDoc(kind: string, doc: SimpleDoc, saved?: SimpleFormsSnapshot): { template: "panel" | "partner" | "sales" | "next"; form: SimpleForm | null; partner: PartnerForm | null; sales: SalesForm | null; next: NextForm | null } {
+  const template: "panel" | "partner" | "sales" | "next" = saved?.template
+    ?? (kind === "partner" ? "partner" : kind === "sales" ? "sales"
+      // A Next board saved before snapshots carried the kind is still
+      // identifiable from the doc's own `next.*` roles.
+      : kind === "next" || isNextDoc(doc) ? "next" : "panel");
   const imgByRole = new Map(doc.canvasImages.filter((i) => i.simpleRole).map((i) => [i.simpleRole as string, i]));
   const textByRole = new Map(doc.design.texts.filter((t) => t.simpleRole).map((t) => [t.simpleRole as string, t.content]));
   const asLogo = (role: string): PartnerLogo | null => {
@@ -2314,6 +2637,7 @@ export function formsFromDoc(kind: string, doc: SimpleDoc, saved?: SimpleFormsSn
       template,
       form: null,
       partner: null,
+      next: null,
       sales: {
         ...base,
         layout,
@@ -2358,6 +2682,7 @@ export function formsFromDoc(kind: string, doc: SimpleDoc, saved?: SimpleFormsSn
       template,
       form: null,
       sales: null,
+      next: null,
       partner: {
         ...base,
         label: saved?.partner ? base.label : (textByRole.get("label") ?? base.label),
@@ -2386,6 +2711,53 @@ export function formsFromDoc(kind: string, doc: SimpleDoc, saved?: SimpleFormsSn
     };
   }
 
+  if (template === "next") {
+    const base = saved?.next ?? emptyNextForm();
+    // Builder-inserted newlines flatten back to spaces for the single-line
+    // inputs, the same contract the panel captions use. The title keeps its
+    // breaks — its input is a textarea and the breaks are the user's own.
+    const flatten = (s: string) => s.split("\n").join(" ");
+    const readPerson = (who: string, fallback: SimplePerson): SimplePerson => ({
+      ...fallback,
+      name: flatten(textByRole.get(`${who}.name`) ?? fallback.name),
+      title: flatten(textByRole.get(`${who}.secondary`) ?? fallback.title),
+    });
+    // How many speakers the CANVAS shows wins over a stale snapshot, the same
+    // rule the partner wall uses: the doc is what the user is looking at.
+    const docSpeakers = [...new Set(
+      doc.design.texts
+        .map((t) => /^speaker-(\d+)\./.exec(t.simpleRole ?? "")?.[1])
+        .filter((n): n is string => Boolean(n))
+        .map(Number),
+    )].sort((a, b) => a - b);
+    const speakers = saved?.next && !docSpeakers.length
+      ? base.speakers
+      : docSpeakers.map((i) => readPerson(`speaker-${i}`, base.speakers[i] ?? emptyPerson()));
+    // The banner text is stored with its fixed "NEXT: " prefix on canvas; the
+    // input holds only the part the user types.
+    const bannerRaw = textByRole.get("next.session");
+    const session = saved?.next
+      ? base.session
+      : (bannerRaw ? flatten(bannerRaw).replace(/^\s*NEXT:\s*/i, "") : base.session);
+    const hasModerator = doc.design.texts.some((t) => t.simpleRole?.startsWith("moderator."));
+    return {
+      template,
+      form: null,
+      partner: null,
+      sales: null,
+      next: {
+        ...base,
+        session,
+        title: saved?.next ? base.title : (textByRole.get("headline") ?? base.title),
+        speakers: speakers.slice(0, NEXT_MAX_SPEAKERS),
+        includeModerator: saved?.next ? base.includeModerator : hasModerator,
+        moderator: readPerson("moderator", base.moderator),
+        backgroundId: doc.design.backgroundId || base.backgroundId,
+        accentId: doc.design.accentId ?? base.accentId,
+      },
+    };
+  }
+
   // Panel. Photos always come from the doc's role-tagged images; text fields
   // from the snapshot when present, else reconstructed from the text roles.
   const withPhoto = (p: SimplePerson, who: string): SimplePerson => {
@@ -2398,6 +2770,7 @@ export function formsFromDoc(kind: string, doc: SimpleDoc, saved?: SimpleFormsSn
       template,
       partner: null,
       sales: null,
+      next: null,
       form: {
         ...saved.form,
         // Old snapshots carry two-field people — fold company into the
@@ -2434,6 +2807,7 @@ export function formsFromDoc(kind: string, doc: SimpleDoc, saved?: SimpleFormsSn
     template,
     partner: null,
     sales: null,
+    next: null,
     form: {
       label: textByRole.get("label") ?? "",
       headline: textByRole.get("headline") ?? "",

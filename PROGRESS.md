@@ -6,6 +6,227 @@ not required reading.
 
 ---
 
+## SESSION HANDOFF — 2026-08-11 (9): Next Session template (4th Quick Template)
+
+### State: BUILT on branch `logo-sweep-2026-08-11`, NOT COMMITTED, NOT MERGED
+
+Same branch as handoff 8 — the logo sweep and this template are both sitting
+uncommitted in the working tree. Gates after the build: **228/228 vitest** (216
+before, 12 new), **tsc clean**, **eslint clean on the touched files** (`src` as
+a whole reports 38 pre-existing problems; verified identical on a stashed
+working tree, so none are new), **production build compiled**.
+
+### What it is
+
+A between-sessions holding board, added as a 4th kind beside Panel / Partner /
+Sale on `/simple`. Top-down flow down the left edge:
+
+1. full-bleed translucent banner, `NEXT: <session>` inside it
+2. the **ON STAGE** chip — always rendered, never a toggle
+3. the session title, auto-fitted
+4. `Speakers:` then up to 4 people, each a name plus a role line
+5. `Moderator:` then one person, same shape
+
+Auri chose the name ("Next Session"), the two-line people rows, and the
+Quick-Templates placement. Speakers cap at 4 (`NEXT_MAX_SPEAKERS`) because a
+fifth row pushes the block into the logo.
+
+### Where the geometry came from — do not re-derive it by eye
+
+Auri hand-built the board in `/editor` and saved it as a **localStorage**
+template named "OPening" (key `tbbqvisualgen.templates.v1`), NOT to the team
+library — `listItems()` never showed it. It was read out of the browser and the
+builder was calibrated against those exact numbers at 1920×1080: banner height
+0.074 at 59% white, chip `0.131 × 0.059` at radius 0.165, title 120px weight
+600, left margin **0.042** (not the panel's 0.06), logo at `0.947, 0.939`,
+background `lm18` (Midnight Sky).
+
+If the board ever needs re-tuning, that saved doc is the reference — but it
+lives in one browser profile and is not backed up anywhere.
+
+### Things worth knowing before editing this
+
+- **`docKindOf` checks `next` BEFORE the panel fallback.** A Next doc carries
+  panel-style `speaker-N.*` roles, so only its `next.*` tags separate the two.
+  Get the order wrong and every Next board loads the panel sidebar.
+- **The panel chrome-sync guard was tightened** from `!isPartnerDoc(custom)` to
+  `docKindOf(custom) === "panel"`. A Next doc also passes the partner check, so
+  the old guard would have flowed panel header geometry onto a Next banner.
+- **`next` is a name collision in `/simple`.** The rebuild effect had a local
+  `let next`; the new form state is also `next`, and the local would have
+  shadowed it — including in the `buildNextDesign(next, …)` call in the same
+  scope, which is a TDZ ReferenceError, not a silent bug. The local is now
+  `revivedNext`. Do not rename it back.
+- **The people block is BOTTOM-anchored** (ends at 0.945, grows upward). It was
+  top-anchored first, which looked right at 16:9 but left a tall column of dead
+  air under the names at 9:16. It measures itself and scales down uniformly
+  (floor 0.62) rather than clipping.
+- **`PersonEditor` gained `showPhoto`** (default true). The Next board renders
+  no headshots, so its rows pass `showPhoto={false}` instead of offering an
+  upload whose result never reaches the canvas.
+- There is **no official team-library item** for this kind yet, so
+  `DEFAULT_ITEM_IDS.next` is `undefined` and the built-in layout IS the
+  template. Saving one to the team library and pasting its id there makes the
+  toggle open that instead.
+
+### Next steps for this template
+
+1. Look at it in the app and adjust the sample copy in `emptyNextForm()` if the
+   placeholder names should be something else.
+2. Save an official version to the team library, then set
+   `DEFAULT_ITEM_IDS.next` to its id.
+3. Check 1:1 — it was built and tested but only eyeballed at 16:9 and 9:16.
+
+---
+
+## SESSION HANDOFF — 2026-08-11 (8): machine-wide logo sweep, 4 logos imported
+
+### State: IMPORTED on branch `logo-sweep-2026-08-11`, NOT COMMITTED, NOT MERGED
+
+Branched off master first because prod auto-deploys from master. Working tree
+holds the change, unstaged apart from the two renames git recorded itself.
+
+Gates green after the import: **216/216 vitest**, **tsc clean**, **production
+build compiled**. Re-run after Auri's deletion pass: **216/216 vitest**, **tsc
+clean** — the build was NOT re-run because the dev server was up, and sharing
+`.next` with a running dev server causes cold compiles and ChunkLoadError. Run
+`npm run build` once the server is stopped, before merging.
+
+Auri asked whether more logo SVGs exist elsewhere on this machine. They do, but
+almost all are already in the library. 450 candidates reduced to **4 worth
+importing**, plus two renames of files already held.
+
+### What landed
+
+Added to `public/logos/`:
+
+- `BLOXHUB.svg` — new partner
+- `Future Manufacturers.svg` — new partner
+- `Maersk White.svg` — library previously had only a colour `Maersk.png`
+- `Yahoo Japan White.svg` — library previously had only the red `Yahoo Japan.svg`
+
+Renamed in `public/logos/` (same artwork, the staged copies were duplicates):
+
+- `CPHLABS.svg` → `CPH Labs.svg`
+- `Womenindatascience.svg` → `Women in Data Science.svg`
+
+Then Auri ran a cleanup pass **through the picker's delete button**, removing
+**55 logos** (dead brands, duplicate colourways, event marks no longer used —
+`Maersk.png`, `Beyond Beta.svg`, `Symbio.*`, the `Life Science *` PNG set, the
+`Startup Showcase`/`North Star Pitch` marks, and others). All 55 are recoverable
+in `.logos-trash/` (124 files now), which is gitignored. **Treat that folder as
+a decision record, not a bin** — see the gotcha below.
+
+`src/data/logoLibrary.json` regenerated by `npm run logos`: **871 entries**,
+matching disk exactly. Counting check for anyone verifying this by hand:
+`public/logos/` has **two subdirectories** (`Deep Tech Pitch Finalists 2026`,
+`Life Science Pitch Finalists 2026`) holding 16 files between them, so a
+top-level `ls` undercounts by 16 and looks like stale manifest entries. Count
+recursively, minus `README.md`.
+
+Two staged candidates were REJECTED by Auri on sight as old branding:
+Mountside Ventures (lowercase wordmark) and Symbion (with bird). The library's
+current versions of both stay.
+
+### The rename trap, hit once — READ BEFORE RENAMING ANY LOGO
+
+A rename is never just a rename. Renaming the two files broke 4 tests, because
+`src/data/partnerSets.ts` hardcodes logo srcs. Then the first fix broke 3 more:
+**`partnerSets.ts` srcs are URL-ENCODED** (`/logos/CPH%20Labs.svg`), matching
+the manifest, and a raw space silently fails the "points at a file the library
+still ships" test. `scripts/logo-checks/partner-batch.txt` needed the new name
+too, and it is NOT URL-encoded — it takes the plain filename.
+
+So renaming a logo means touching, in order: the file, `npm run logos`,
+`partnerSets.ts` (encoded), `partner-batch.txt` (plain), then re-run the suite.
+
+### What was done
+
+Two new scripts, both read-only with respect to `public/logos`:
+
+- **`scripts/stage-new-logos.mjs`** — takes source folders as args (defaults to
+  the three below), drops anything already in the library, and proposes a
+  library-style name. Writes to `.logos-staging/` plus
+  `logo-staging-report.json`. It reuses the exact fingerprint logic from
+  `find-duplicate-logos.mjs` (trim to ink box → stretch to 48×48 → compare
+  mask + aspect + ink colour), so its idea of "same mark" matches `logos:dupes`.
+- **`scripts/logo-contact-sheet.mjs`** — `node scripts/logo-contact-sheet.mjs
+  <dir> [out.png]` renders a folder into one numbered grid on **mid-grey**, so
+  white-knockout and black marks are both legible in one pass. This is how the
+  6 got named: by looking at the artwork, not the file name.
+
+`.gitignore` gained `.logos-staging/`, `logo-staging-report.json`,
+`*-contact-sheet.png`, `approved.png`.
+
+### The funnel, because the raw number is misleading
+
+Machine-wide there are ~1,500 SVGs in TechBBQ folders and 734 filenames not in
+the library. That number is noise. Of 450 candidates from the three best
+folders: 192 byte-identical, 225 same mark, 17 already in `.logos-trash/`, 9
+visually identical (padding differences slipped past the fingerprint), 1 empty
+file. Survivors: 6.
+
+Two of the four are **variants**, not new companies: Maersk and Yahoo Japan were
+already in the library in another colourway. Keep the `White` suffixes or they
+will read as duplicates later.
+
+### Gotchas found
+
+- **`.logos-trash/` is a decision record, not a bin.** 17 of the first 32
+  survivors were logos a previous session deleted with eyes on the artwork.
+  Any future importer MUST check it or it will silently undo that judgement.
+- **Two source SVGs were broken and rendered blank**, which also made them
+  invisible to the visual dedupe (density below threshold → no comparison):
+  - `BloxHub.svg` had its artwork at `x=2225, y=-1409`, outside its own
+    `viewBox="0 0 1193.6 1291.7"`.
+  - `YahoooJapan.svg` carried `<sodipodi:namedview>` with an undeclared
+    namespace, so sharp failed to parse it. Stripping the sodipodi/inkscape
+    elements fixed it.
+- **The BLOXHUB stray rect, worth its own note.** Auri re-exported the file by
+  hand, which put the artwork back inside the viewBox — but the export still
+  carried a 5.6×5.3 filled rect (`.st0`, `#4d5b58`) parked in a far corner,
+  moved from `x=2225` to `x=2164.5`. Too small to see, big enough to OWN the
+  bounding box: the viewBox measured `0 0 2170 2013`, near-square, around a
+  3.29:1 wordmark. Contain-fit would have rendered it at a third of its
+  neighbours' size. Shipped file is `-9.01 1736.96 918.6 279.38`. If a logo
+  looks shrunk or shoved to one side in a wall cell, look for a stray element
+  before touching the layout.
+- `AktiviteEjere-01.svg` is a 222-byte Illustrator export with **no content at
+  all**. Discarded, not staged.
+- A blank render is therefore a **bug signal, not an empty logo**. Anything the
+  contact sheet shows as an empty cell needs inspecting, not skipping.
+
+### Next steps
+
+1. Stop the dev server, then `npm run build` to confirm the deletion pass did
+   not break the build.
+2. Review the diff on `logo-sweep-2026-08-11` — it is large, 55 deletions plus 4
+   additions plus 2 renames — then commit and merge to master. Merging ships it;
+   prod auto-deploys from master. `src/auth.ts` is still the deliberately
+   held-back local dev bypass (see handoff 7); do not `git add -A` without
+   excluding it.
+3. **Before merging, check the 55 deletions against saved designs.** A design
+   saved earlier that referenced a now-deleted logo will 404 in prod. The
+   partner-set tests cover `partnerSets.ts` only; they say nothing about
+   user-saved designs in the library. This was NOT verified this session.
+4. Optional, larger job: `Downloads\techbbq-dk` (217 files) and
+   `TBBQ\2025 stuff\TechbqqCoding\LogoExtractor\static\extracted_logos` (60) are
+   scrapes named `svgexport-N.svg` / `logo_N_<hash>.svg`. No company names. Run
+   them through `stage-new-logos.mjs` first (most should dedupe away), then
+   contact-sheet the survivors and name them by sight.
+5. Consider folding the `.logos-trash/` check into `find-duplicate-logos.mjs`
+   too, so the same blind spot cannot reappear.
+
+### Source folders that actually held logos
+
+`C:\Users\User\Desktop\TBBQ\2025 stuff\Techbbq_partners` (57 new names) ·
+`C:\Users\User\Desktop\TBBQ\Logos` (30) ·
+`C:\Users\User\Desktop\TBBQ\2026 Season\Partners\SVG` (7). Also holding
+partner logos, mostly duplicates: `Desktop\GITHUB\tbbq\public\partners` (71),
+`Desktop\GITHUB\airtable\public\partner-logos` (18).
+
+---
+
 ## SESSION HANDOFF — 2026-08-10 (7): Life Science x Deep Tech thank-you walls
 
 ### State: PUSHED to master as `7ef9759` — LIVE

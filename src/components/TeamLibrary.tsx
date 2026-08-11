@@ -34,14 +34,14 @@ export function TeamLibrary({
 }: {
   open: boolean;
   onClose: () => void;
-  currentKind: "panel" | "partner" | "sales";
+  currentKind: "panel" | "partner" | "sales" | "next";
   /** The full save payload, built by the page: active doc + sidebar snapshot
    *  + the tuned docs for this template's other layouts. */
   currentBundle: SimpleDoc & { simpleForms: SimpleFormsSnapshot; simpleVariants: SimpleDoc[] };
   onLoad: (item: LibraryLoadedItem) => void;
   /** Called after a successful save/overwrite, so the page can adopt the item
    *  as "what I'm working on" (header Update button + URL). */
-  onSaved?: (item: { id: string; name: string; kind: "panel" | "partner" | "sales" }) => void;
+  onSaved?: (item: { id: string; name: string; kind: "panel" | "partner" | "sales" | "next" }) => void;
 }) {
   const [items, setItems] = useState<LibraryListItem[] | null>(null);
   const [needsAuth, setNeedsAuth] = useState(false);
@@ -178,7 +178,7 @@ export function TeamLibrary({
                 value={saveName}
                 onChange={(e) => setSaveName(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") void handleSave(); }}
-                placeholder={`Name this ${currentKind === "partner" ? "partner visual" : "panel"}…`}
+                placeholder={`Name this ${currentKind === "partner" ? "partner visual" : currentKind === "sales" ? "sale post" : currentKind === "next" ? "session board" : "panel"}…`}
                 className="flex-1 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder:text-white/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70"
               />
               <button
