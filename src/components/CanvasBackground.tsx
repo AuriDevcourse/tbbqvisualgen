@@ -231,6 +231,241 @@ export const ORB_REGISTRY: Record<string, OrbEntry> = {
   },
 };
 
+/**
+ * Pulsing image backgrounds — the official Life Science gradient, breathing.
+ *
+ * The base is the SAME JPG as the static `ls*` presets, so the artwork is the
+ * approved one. On top of it sit a few additive radial glows, each parked over a
+ * colour zone the artwork already has (positions and colours sampled off the
+ * files themselves, an 8x8 average grid), each brightening and dimming on its
+ * OWN sine. So the green swells while the teal fades, which reads as breathing
+ * rather than as one global fade in and out.
+ *
+ * Additive-only, so a trough returns to the untouched artwork and never crushes
+ * it. `baseDim` shades the base a little so the troughs still sit visibly under
+ * the original while the peaks go above it.
+ *
+ * A 2D canvas, like the orbs: html-to-image captures it, the MP4 exporter can
+ * read its pixels for the fast composite path, and it costs no WebGL context.
+ */
+interface PulseGlow {
+  x: number;       // 0..1 of canvas width, centre of the glow
+  y: number;       // 0..1 of canvas height
+  r: number;       // radius as a fraction of the LONGER canvas edge
+  color: string;   // sampled from the artwork's own zone
+  period: number;  // seconds for one full brighten + dim cycle
+  phase: number;   // 0..1 offset into that cycle, so zones don't pulse in unison
+  amp: number;     // peak alpha of the additive glow (0..1)
+  /**
+   * How far the glow wanders, as a fraction of the canvas. Brightness alone was
+   * too easy to miss ("difficult to notice anything is happening") — a moving
+   * edge is what the eye actually catches. Drift runs on its own slower clock
+   * (`period * DRIFT_RATIO`) so movement and brightness never lock into one
+   * obvious beat.
+   */
+  drift: number;
+  /**
+   * Radius swell, as a fraction of `r`, riding the SAME cycle as the brightness.
+   * A glow that grows while it brightens reads far more clearly than one that
+   * only changes alpha, and it costs no headroom: the extra area lands on the
+   * soft falloff, not on the already-bright centre.
+   */
+  swell: number;
+}
+
+interface PulseEntry {
+  label: string;
+  src: string;
+  /** Multiplier on the whole animation clock. 1 = the authored periods. */
+  speed: number;
+  /** Constant shade on the base draw so the dips read as dips. 1 = untouched. */
+  baseDim: number;
+  glows: PulseGlow[];
+}
+
+/** Drift clock relative to the brightness clock. Deliberately not a round
+ *  multiple, so the two cycles keep sliding against each other instead of
+ *  repeating a visible loop. */
+const DRIFT_RATIO = 2.7;
+
+export const PULSE_REGISTRY: Record<string, PulseEntry> = {
+  lsPulse1: {
+    label: "Life Science 1 Pulse",
+    src: "/backgrounds/ls-1.jpg",
+    speed: 1,
+    baseDim: 0.9,
+    glows: [
+      // amp is capped per zone so a peak lands near 240 on its dominant channel,
+      // never at 255: a clipped zone loses the gradient's shape and reads as a
+      // flat blown-out patch. Visibility comes from drift + swell instead, which
+      // cost no headroom.
+      //
+      // The budget is NOT just "242 minus this zone's base value": once glows
+      // drift they slide over each other and their tails STACK. The green and
+      // teal pair below clipped the green channel around x 12% / y 48% at
+      // amp 0.30 + 0.34 for exactly that reason. Retune with the whole canvas
+      // measured over a full cycle, never one zone at a time.
+      { x: 0.06, y: 0.48, r: 0.42, color: "#06BC85", period: 7.5, phase: 0,    amp: 0.22, drift: 0.07, swell: 0.16 },
+      { x: 0.34, y: 0.57, r: 0.36, color: "#0C928C", period: 9.5, phase: 0.35, amp: 0.26, drift: 0.09, swell: 0.2  },
+      { x: 0.78, y: 0.93, r: 0.44, color: "#049BD1", period: 8.5, phase: 0.62, amp: 0.20, drift: 0.06, swell: 0.18 },
+      { x: 0.93, y: 0.2,  r: 0.3,  color: "#078678", period: 11,  phase: 0.18, amp: 0.26, drift: 0.08, swell: 0.22 },
+    ],
+  },
+  lsPulse2: {
+    label: "Life Science 2 Pulse",
+    src: "/backgrounds/ls-2.jpg",
+    speed: 1,
+    baseDim: 0.9,
+    glows: [
+      { x: 0.28, y: 0.57, r: 0.4,  color: "#12A39A", period: 8,   phase: 0,    amp: 0.32, drift: 0.08, swell: 0.18 },
+      // Both of these sit on the bottom edge and drift toward each other, so
+      // their tails stack over the artwork's brightest blue. Kept low for that.
+      { x: 0.44, y: 0.93, r: 0.38, color: "#2895AF", period: 10,  phase: 0.4,  amp: 0.24, drift: 0.07, swell: 0.2  },
+      { x: 0.82, y: 0.93, r: 0.36, color: "#0394C8", period: 9,   phase: 0.7,  amp: 0.18, drift: 0.06, swell: 0.18 },
+      { x: 0.93, y: 0.1,  r: 0.3,  color: "#07867B", period: 12,  phase: 0.22, amp: 0.26, drift: 0.09, swell: 0.22 },
+    ],
+  },
+  lsPulseWide: {
+    label: "Life Science Wide Pulse",
+    src: "/backgrounds/ls-16x9.jpg",
+    speed: 1,
+    baseDim: 0.9,
+    glows: [
+      { x: 0.06, y: 0.5,  r: 0.3,  color: "#06C66E", period: 7.5, phase: 0,    amp: 0.20, drift: 0.06, swell: 0.16 },
+      { x: 0.33, y: 0.57, r: 0.26, color: "#0D9184", period: 9.5, phase: 0.35, amp: 0.26, drift: 0.07, swell: 0.2  },
+      { x: 0.72, y: 0.93, r: 0.32, color: "#089BD2", period: 8.5, phase: 0.62, amp: 0.19, drift: 0.05, swell: 0.18 },
+      { x: 0.94, y: 0.56, r: 0.24, color: "#338CA5", period: 11,  phase: 0.18, amp: 0.26, drift: 0.07, swell: 0.22 },
+    ],
+  },
+};
+
+// Paint one frame of a pulsing image preset. `t` is elapsed (speed-scaled)
+// seconds. The base is cover-fit by hand: `object-fit` is not a thing on a 2D
+// canvas, and a stretched official gradient would be an obvious defect.
+function drawPulse(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  t: number,
+  entry: PulseEntry,
+  img: HTMLImageElement,
+) {
+  ctx.globalCompositeOperation = "source-over";
+  ctx.fillStyle = "#0d0d0d";
+  ctx.fillRect(0, 0, w, h);
+
+  if (img.naturalWidth && img.naturalHeight) {
+    const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight);
+    const dw = img.naturalWidth * scale;
+    const dh = img.naturalHeight * scale;
+    ctx.save();
+    // Ignored by browsers without canvas filter support, which only means the
+    // base sits at full brightness and the peaks still pulse.
+    if (entry.baseDim !== 1) ctx.filter = `brightness(${entry.baseDim})`;
+    ctx.drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh);
+    ctx.restore();
+  }
+
+  // Additive glows. `lighter` adds light, so a glow at its trough contributes
+  // nothing and the artwork shows through untouched.
+  const long = Math.max(w, h);
+  ctx.globalCompositeOperation = "lighter";
+  for (const glow of entry.glows) {
+    const cycle = (t / glow.period + glow.phase) * Math.PI * 2;
+    const level = 0.5 + 0.5 * Math.sin(cycle);
+    const alpha = glow.amp * level;
+    if (alpha <= 0.002) continue;
+
+    // Wander on the slower drift clock. Sin on x, cos on y traces an ellipse,
+    // so the glow circles its zone instead of sliding back and forth along one
+    // line. The y swing is the shorter one — a mostly sideways drift sits better
+    // under text than a vertical bob.
+    const dc = (t / (glow.period * DRIFT_RATIO) + glow.phase) * Math.PI * 2;
+    const cx = (glow.x + Math.sin(dc) * glow.drift) * w;
+    const cy = (glow.y + Math.cos(dc) * glow.drift * 0.7) * h;
+    // Swell rides the brightness cycle: brighter and bigger together.
+    const r = glow.r * long * (1 + glow.swell * (level - 0.5) * 2);
+
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+    g.addColorStop(0, glow.color);
+    g.addColorStop(0.55, glow.color);
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = "source-over";
+}
+
+function PulseImageBackground({ id, width, height, paused }: CanvasBackgroundProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const timeRef = useRef(0);
+  const lastRef = useRef(0);
+  const rafRef = useRef(0);
+  // Synced in an effect, not during render: the animation loop reads it every
+  // frame, and mutating a ref mid-render is what React 19 flags.
+  const pausedRef = useRef(!!paused);
+  useEffect(() => { pausedRef.current = !!paused; }, [paused]);
+
+  const entry = PULSE_REGISTRY[id];
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !entry) return;
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const reduceMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+    // Same-origin image, so the canvas stays untainted and the MP4 exporter can
+    // still read its pixels for the fast composite path.
+    const img = new Image();
+    img.decoding = "sync";
+    let stopped = false;
+
+    const draw = () => drawPulse(ctx, width, height, timeRef.current, entry, img);
+
+    const FRAME_MS = 1000 / 30;
+    let lastDraw = 0;
+    const loop = (now: number) => {
+      if (stopped) return;
+      if (!lastRef.current) lastRef.current = now;
+      const dt = (now - lastRef.current) / 1000;
+      lastRef.current = now;
+      if (!pausedRef.current && !reduceMotion) {
+        timeRef.current += dt * entry.speed;
+        if (now - lastDraw >= FRAME_MS) {
+          draw();
+          lastDraw = now;
+        }
+      }
+      rafRef.current = requestAnimationFrame(loop);
+    };
+
+    img.onload = () => {
+      if (stopped) return;
+      draw(); // first frame must exist before any export reads the canvas
+      rafRef.current = requestAnimationFrame(loop);
+    };
+    img.src = entry.src;
+
+    return () => {
+      stopped = true;
+      cancelAnimationFrame(rafRef.current);
+    };
+  }, [entry, width, height]);
+
+  if (!entry) return null;
+  return <canvas ref={canvasRef} style={{ position: "absolute", inset: 0, width, height }} />;
+}
+
 // Paint one frame of an orb preset onto a 2D context. `t` is elapsed
 // (speed-scaled) seconds — the orbs drift via per-orb sin/cos offsets.
 function drawOrbs(ctx: CanvasRenderingContext2D, w: number, h: number, t: number, entry: OrbEntry) {
@@ -288,7 +523,7 @@ function OrbCanvasBackground({ id, width, height, paused }: CanvasBackgroundProp
   const lastRef = useRef(0);
   const rafRef = useRef(0);
   const pausedRef = useRef(!!paused);
-  pausedRef.current = !!paused;
+  useEffect(() => { pausedRef.current = !!paused; }, [paused]);
 
   const entry = ORB_REGISTRY[id];
 
@@ -359,7 +594,7 @@ interface CanvasBackgroundProps {
  * a heavy file that looks exactly like the PNG.
  */
 export function isAnimatedBackground(id: string): boolean {
-  return Boolean(BG_REGISTRY[id] || ORB_REGISTRY[id]);
+  return Boolean(BG_REGISTRY[id] || ORB_REGISTRY[id] || PULSE_REGISTRY[id]);
 }
 
 // Memoized: all props are primitives (id/width/height/paused), so the shader
@@ -377,6 +612,10 @@ export const CanvasBackground = memo(function CanvasBackground({ id, width, heig
   // "New styling" orb presets render on a 2D canvas.
   if (ORB_REGISTRY[id]) {
     return <OrbCanvasBackground id={id} width={width} height={height} paused={paused} />;
+  }
+  // Pulsing Life Science gradients — the JPG plus per-zone breathing glows.
+  if (PULSE_REGISTRY[id]) {
+    return <PulseImageBackground id={id} width={width} height={height} paused={paused} />;
   }
   const entry = BG_REGISTRY[id];
   if (!entry) return null;
@@ -425,6 +664,10 @@ function previewStyle(c: LmConfig): React.CSSProperties {
 export function BackgroundThumbnail({ id }: { id: string; size?: number }) {
   const img = IMAGE_BG_REGISTRY[id];
   if (img) return <div className="w-full h-full" style={{ backgroundImage: `url(${img.src})`, backgroundSize: "cover", backgroundPosition: "center" }} />;
+  // Pulsing presets thumbnail as their own base artwork — a live canvas per
+  // swatch would redraw every picker cell every frame for no information gain.
+  const pulse = PULSE_REGISTRY[id];
+  if (pulse) return <div className="w-full h-full" style={{ backgroundImage: `url(${pulse.src})`, backgroundSize: "cover", backgroundPosition: "center" }} />;
   const orb = ORB_REGISTRY[id];
   if (orb) return <div className="w-full h-full" style={{ background: orb.thumb }} />;
   const entry = BG_REGISTRY[id];

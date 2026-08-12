@@ -6,6 +6,206 @@ not required reading.
 
 ---
 
+## SESSION HANDOFF · 2026-08-12 (11): photo background, pulsing Life Science backgrounds, Airtable SVG re-check
+
+### State: branch `feat/photo-background`, UNCOMMITTED. Not on master, not live.
+
+Asked for by a colleague: making a new canvas, they wanted the gradient gone so an
+uploaded summit photo (a winner on stage) becomes the whole visual with the text
+on top. Most of it was already possible (a `CanvasImage` dragged to fill the
+canvas, `scrimBottom` for legibility), just invisible. This makes it a first-class
+choice instead of a trick.
+
+Gates: **243/243 vitest** (236 before, 7 new in `src/lib/photoBackground.test.ts`),
+**tsc clean**, **eslint clean on every touched file**, **production build
+compiled**, **React Doctor added zero errors** (one intentional
+`nextjs-no-img-element` on the dataURL thumbnail, same as ImagePlacer/CropDialog).
+Verified in the running app at `localhost:3001/editor`, not only in tests: upload
+via both entry points, replace, remove, the darken slider at 55% and 90%, a text
+layer rendering above the photo, survives a reload, a JPG export containing the
+photo, and a non-image file rejected with a toast. Zero console errors.
+
+### What it is
+
+`isBackdrop?: boolean` on `CanvasImage` marks one photo as THE background:
+full-bleed (x/y .5, w/h 1), `fit: "cover"`, `cornerRadius: 0`,
+`scrimBottom: 0.55`, pinned to the bottom of the layer stack. Built by
+`makePhotoBackground` in **`src/lib/photoBackground.ts`**, which also owns the
+shared upload guard `readImageFile` (type from `File.type` so a drag-and-drop
+can't bypass the `accept` attribute, 10MB cap, one error string per failure).
+
+Three entry points, because the whole point was discoverability:
+1. **`PhotoBackgroundCard`** at the top of the Canvas step's Background section
+   (`src/components/steps/StepCanvas.tsx`). Empty state reads "Use your own
+   photo". Filled state: thumbnail, pixel size, Replace, Remove, Darken slider.
+   The gradient grid below it dims and relabels to "Behind the photo".
+2. **"Start from a photo"** in the empty-canvas template gallery, next to
+   "Start blank". Opens the OS file picker straight away via a hidden input in
+   `editor/page.tsx`.
+3. **"Use your own photo"** in the empty-canvas hint.
+
+### Layer order is the part that can break
+
+A backdrop must sit BELOW the accent circles and the color overlay, or text ends
+up behind the photo. `splitImageLayerIds` (`src/types/template.ts`) splits image
+ids into backdrops and ordinary photos, and all four places that build a default
+stack now put backdrops first: `DynamicTemplate`, `reorderSelection` and
+`effectiveLayerOrder` in `editor/page.tsx`, and `LayersPanel`. Miss one and the
+z-index for that surface disagrees with the render. `addPhotoBackground` also
+prepends the new id to any STORED `layerOrder` (and drops the old backdrop's
+entry), because reconcile would otherwise slot it in at a neighbour's position.
+
+### Gotchas found on the way
+
+- Turbopack HMR served a stale `src/types/template.ts` after the new export was
+  added: SSR 500, `splitImageLayerIds is not a function`. A dev-server restart
+  fixed it. Don't debug that error, restart first.
+- The photo background is filtered OUT of the Photos tab list (`StepImages`),
+  which shows a pointer to the Canvas step instead. Its radius/border/size
+  controls would break the full-bleed fit.
+- `writeSession` swallowed sessionStorage quota errors silently, so a big photo
+  meant a reload quietly lost the design. It now warns once with a toast. The
+  underlying limit is unchanged: photos are dataURLs inside the doc.
+- Not wired into Quick Templates (`/simple`). Those layouts are panel/partner
+  templates with their own backgrounds; a full-bleed photo fights them. Open
+  question for Auri if the colleague was actually starting there.
+
+### Also this session: animated Life Science backgrounds (MP4-able)
+
+Auri asked for a moving version of the Life Science background where the
+different colours get brighter and a little less bright, savable as an MP4.
+
+Built as a THIRD background kind, `PULSE_REGISTRY` in `CanvasBackground.tsx`,
+alongside `IMAGE_BG_REGISTRY` (static JPGs) and `ORB_REGISTRY` (2D-canvas orbs).
+Three presets in the existing **Life Science** picker group:
+`lsPulse1`, `lsPulse2`, `lsPulseWide`.
+
+**Second pass, after Auri saw it:** brightness alone was "very difficult to
+notice". Two things were added, both of which cost no brightness headroom:
+- **drift** · each glow wanders on an ellipse (sin on x, cos on y) around its
+  zone, 5 to 9% of the canvas, on a SLOWER clock than its brightness
+  (`period * DRIFT_RATIO`, 2.7, deliberately not a round multiple so the two
+  cycles keep sliding instead of looping visibly). The y swing is 0.7 of the x
+  swing: a mostly sideways drift sits better under text than a vertical bob.
+- **swell** · radius grows 16 to 22% on the SAME cycle as the brightness, so a
+  glow gets bigger as it gets brighter. The extra area lands on the soft falloff,
+  not on the already-bright centre.
+- `baseDim` went 0.94 → 0.9, widening the range downward instead of upward.
+
+Measured before and after on the live canvas, whole frame downscaled to 64x64:
+mean per-second change went from barely-there to **2.3 to 4.8 levels**, biggest
+single-pixel swing **76 to 100**.
+
+How it renders (`drawPulse` + `PulseImageBackground`):
+- The base is the SAME `/backgrounds/ls-*.jpg` as the static preset, cover-fit by
+  hand on the canvas (`object-fit` does not exist on a 2D canvas, and a stretched
+  official gradient would be an obvious defect). So the artwork is the approved
+  one, it just breathes.
+- 4 additive radial glows per preset, each parked over a colour zone the artwork
+  already has, each pulsing on its OWN period (7.5s to 12s) and phase. Green
+  swells while teal fades: reads as breathing, not as one global fade.
+- `globalCompositeOperation = "lighter"`, so a trough contributes nothing and
+  returns the untouched artwork. `baseDim: 0.94` shades the base slightly so the
+  troughs still read as dips under the original.
+- Positions and colours were SAMPLED off the three JPGs (8x8 average grid), not
+  guessed. Green core sits at x 0.06 / y 0.48 in `ls-1`, teal at 0.34 / 0.57,
+  blue at 0.78 / 0.93.
+- 30fps throttle, `paused` prop and `prefers-reduced-motion` honoured, same as
+  the orbs.
+
+**`amp` is capped per zone so a peak lands near 240, never 255.** A clipped zone
+flattens into a blown-out patch. This bit twice:
+1. First pass, per-zone: 0.42 green and 0.40 blue both clipped on their own.
+2. After drift was added, the green and teal glows started sliding over each
+   other and their tails STACKED, clipping the green channel around x 12% /
+   y 48% even though each was individually safe. Same story on `lsPulse2` along
+   the bottom edge, where two blue glows drift toward each other.
+
+So the budget is NOT "242 minus this zone's base value" once anything moves.
+Retune by measuring the WHOLE canvas over a full cycle (longest period is 12s),
+never one zone at a time. Final amps run 0.18 to 0.32. The source JPGs peak at
+226 to 233 blue and 172 to 207 green, so all the headroom that exists is there.
+
+MP4 came free: the presets live in a registry `isAnimatedBackground` now checks,
+so the Save menu offers MP4 for them and hides it for the static `ls*` ones, and
+the exporter's fast composite path already reads a 2D canvas (same-origin image,
+so the canvas stays untainted and `canReadPixels` passes). Quick Templates
+(`/simple`) picks them up too: it uses the same picker and only excludes the
+stage groups.
+
+Verified in the browser, not only by eye. All three presets sampled across a full
+cycle: **zero clipped samples**, peaks 238 to 248, mean per-sample change 2.3 to
+4.8, biggest pixel swing 76 to 100. Exported two real MP4s and probed them: a 3s
+one (90 frames, 30fps, 1440x1440, per-zone green 188 → 222 → 229 while teal went
+173 → 160 → 150) and a 10s one (300 frames, exactly 10.000s) whose frames at
+0/2/4/6/8s show the glows visibly in different places, not just different
+brightnesses.
+
+**Tell people to record 10s, not the default 3s.** The cycles run 7.5 to 12s, so
+a 3s clip catches a fraction of one breath and looks nearly static. 10 to 15s is
+where it reads as intentional.
+
+Also fixed while in there: `OrbCanvasBackground` was mutating `pausedRef` during
+render, a real `react-hooks/refs` error in the baseline. Both it and the new
+component now sync that ref in an effect.
+
+### Also this session: Airtable SVG logo re-check (no files added yet)
+
+Re-pulled the `Logo` attachments on **Partner Deliverables 2026**
+(`tblTecOBecLQCNIeD` / view `viw7FVbsTb9IRaWF0`, read-only token in
+`GITHUB/airtable/.env.local`) to see what arrived since the 2026-08-10 and
+08-12 pulls. 196 records, 194 with an attachment, **226 SVG attachments**, diffed
+against all 877 library logos.
+
+Matching had to be done **twice**. A loose name match left 12 unmatched; scoring
+the artwork afterwards (`signature` / `compare` from `scripts/lib/logo-web.mjs`,
+the same silhouette test `logos:import` uses, threshold 0.12) proved 2 of those
+were logos we already have under other names, distance 0.0000:
+- `AiesecDenmark.svg` = `Aiesec White.svg`
+- `white-HumbleAI.svg` = `Humble AI White.svg`
+
+**Name matching alone is not enough on this table.** One partner is spelled three
+ways across company name, file name and library name.
+
+**9 genuinely new, all white ink, all viewBox-tight** (checked for the Spintop
+padding bug, none of them has it):
+
+| Company | Tier in Airtable | Attachment | Proposed library name |
+|---|---|---|---|
+| NVIDIA | none | `Nvidia.svg` | `NVIDIA.svg` |
+| Breeze IP | Challenger | `BreezeIP.svg` | `Breeze IP.svg` |
+| Humandone | Challenger | `Humandone_white.svg` | `Humandone.svg` |
+| Vibrant | Challenger | `Vibrant.svg` | `Vibrant.svg` |
+| Durana Tech Park | Community | `Durana Tech Park.svg` | `Durana Tech Park.svg` |
+| Improve Business | Community | `Improve Business.svg` | `Improve Business.svg` |
+| Cludo | none | `Cludo.svg` | `Cludo.svg` |
+| DTU Entrepreneurship | none | `DTUSchool.svg` | `DTU Entrepreneurship.svg` |
+| Knowsilo Inc. | none | `Knowsilo.svg` | `Knowsilo.svg` |
+
+Notes for whoever picks this up:
+- DTU Entrepreneurship is a DIFFERENT entity from the library's `DTU Science
+  Park.svg` and `DTU Skylab.png`. Real addition, not a variant.
+- Four have no `Partnership Type 2026` (NVIDIA, Cludo, DTU Entrepreneurship,
+  Knowsilo), so they cannot be placed on a tier wall in `partnerSets.ts` until
+  someone fills the tier in. The library itself does not care.
+- Files were staged outside the repo (scratchpad `logo-pull/new`) with contact
+  sheets, awaiting Auri's go-ahead. Airtable attachment URLs are signed and
+  expire in about 2h, so a later session must re-pull rather than reuse the JSON.
+- Nothing was written into `public/logos` and the manifest was NOT regenerated.
+
+### Next steps
+
+1. Review the diff, commit, merge to master (auto-deploys).
+2. Show the colleague. The flow is `/editor` then Canvas then "Use your own photo".
+3. Optional: decide whether `/simple` needs a "blank canvas with your photo" door.
+4. Logos: on a go-ahead, re-pull the 9 SVGs, drop them in `public/logos` under the
+   proposed names, `npm run logos`, on a SEPARATE branch from the photo work.
+5. Life Science pulse: show Auri, and decide whether the 3 presets want a slower
+   or wider swing before this ships. The knobs are `amp`, `period` and `baseDim`
+   in `PULSE_REGISTRY`, and `amp` has a clipping ceiling (see above).
+
+---
+
 ## SESSION HANDOFF — 2026-08-12 (10): project folders, investor wall completed, Next photo row
 
 ### State: PUSHED to master as `42eca6a` — LIVE

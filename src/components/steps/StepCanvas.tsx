@@ -3,6 +3,8 @@
 import { FormatPicker } from "@/components/FormatPicker";
 import { BackgroundPicker } from "@/components/BackgroundPicker";
 import { OverlayPicker } from "@/components/OverlayPicker";
+import { PhotoBackgroundCard } from "@/components/PhotoBackgroundCard";
+import type { CanvasImage } from "@/components/ImagePlacer";
 import { AccentThumbnail } from "@/components/CanvasAccents";
 import { ACCENT_OPTIONS, applyAccent } from "@/lib/accents";
 import { FORMAT_DIMENSIONS, type DesignConfig, type PlatformFormat } from "@/types/template";
@@ -21,12 +23,18 @@ interface StepCanvasProps {
   setCustomSize: (next: { width: number; height: number }) => void;
   design: DesignConfig;
   setDesign: (next: DesignConfig) => void;
+  /** The full-bleed uploaded photo acting as the background, if any. */
+  photoBackground: CanvasImage | null;
+  addPhotoBackground: (image: CanvasImage) => void;
+  updateCanvasImage: (id: string, patch: Partial<CanvasImage>) => void;
+  removeCanvasImage: (id: string) => void;
 }
 
 // The template picker lives in the empty-canvas gallery (single start funnel).
 // This tab is the canvas *setup*: format, background, logo, overlay.
 export function StepCanvas({
   format, setFormat, customSize, setCustomSize, design, setDesign,
+  photoBackground, addPhotoBackground, updateCanvasImage, removeCanvasImage,
 }: StepCanvasProps) {
   // The accent circles are sized off the canvas, so switching them needs the
   // real dimensions — same rule the editor uses for its own `dims`.
@@ -46,11 +54,35 @@ export function StepCanvas({
 
       <section className="flex flex-col gap-2">
         <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.18em]">Background</span>
-        <BackgroundPicker
-          value={design.backgroundId}
-          onChange={(id) => setDesign({ ...design, backgroundId: id })}
+
+        <PhotoBackgroundCard
+          image={photoBackground}
+          onPick={addPhotoBackground}
+          onUpdate={updateCanvasImage}
+          onRemove={removeCanvasImage}
         />
-        <p className="text-[10px] text-white/60">Pause/resume the animation above the canvas.</p>
+
+        {/* The gradient still renders underneath an uploaded photo, so say so
+            rather than letting the picker look broken. */}
+        <div className="flex items-center gap-2 pt-1">
+          <span className="h-px flex-1 bg-white/10" />
+          <span className="text-[9px] uppercase tracking-[0.18em] text-white/40">
+            {photoBackground ? "Behind the photo" : "Or pick a gradient"}
+          </span>
+          <span className="h-px flex-1 bg-white/10" />
+        </div>
+
+        <div className={photoBackground ? "opacity-50 transition-opacity" : "transition-opacity"}>
+          <BackgroundPicker
+            value={design.backgroundId}
+            onChange={(id) => setDesign({ ...design, backgroundId: id })}
+          />
+        </div>
+        <p className="text-[10px] text-white/60">
+          {photoBackground
+            ? "Your photo covers this. Remove the photo to see it again."
+            : "Pause/resume the animation above the canvas."}
+        </p>
       </section>
 
       {/* Investor accents — same choice as in Quick Templates, so fine-tuning

@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { DesignConfig, PlatformFormat, TextElement, ShapeElement, ShapeBorderRadii } from "@/types/template";
-import { FORMAT_DIMENSIONS, reconcileLayerOrder } from "@/types/template";
+import { FORMAT_DIMENSIONS, reconcileLayerOrder, splitImageLayerIds } from "@/types/template";
 import { COLORS, FONTS, GRADIENT_TEXT_CSS, GRADIENT_BORDER_CSS } from "@/lib/constants";
 import { CanvasBackground } from "@/components/CanvasBackground";
 import { isAccentShape } from "@/lib/accents";
@@ -304,10 +304,12 @@ export function DynamicTemplate({
   // ordinary shape. They are still normal layers: drag one forward in the Layers
   // panel and the stored order wins.
   const shapeIds = (design.shapes ?? []).map((s) => ({ id: `shape:${s.id}`, accent: isAccentShape(s) }));
+  const { backdrops: backdropIds, photos: photoIds } = splitImageLayerIds(canvasImages);
   const defaultOrder = [
+    ...backdropIds,
     ...shapeIds.filter((s) => s.accent).map((s) => s.id),
     "overlay",
-    ...(canvasImages?.map((ci) => `image:${ci.id}`) ?? []),
+    ...photoIds,
     ...shapeIds.filter((s) => !s.accent).map((s) => s.id),
     ...design.texts.map((t) => `text:${t.id}`),
     "tbbqLogo",

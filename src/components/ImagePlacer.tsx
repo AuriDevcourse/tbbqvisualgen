@@ -68,6 +68,11 @@ export interface CanvasImage {
    *  to transparent — so white text/labels overlaid on the lower part stay
    *  legible. The number is the max opacity at the very bottom edge (0–1). */
   scrimBottom?: number;
+  /** Marks this photo as the canvas BACKGROUND: full-bleed, pinned to the
+   *  bottom of the layer stack (below accents and the color overlay), and
+   *  managed from the Canvas step instead of the Photos list. Used for stage
+   *  shots that the text sits on top of. See `src/lib/photoBackground.ts`. */
+  isBackdrop?: boolean;
 }
 
 interface ImagePlacerProps {

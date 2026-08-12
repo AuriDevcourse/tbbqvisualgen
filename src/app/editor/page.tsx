@@ -17,7 +17,7 @@ import { DynamicTemplate } from "@/components/templates/DynamicTemplate";
 import { useExport, VIDEO_MAX_SECONDS, VIDEO_MIN_SECONDS, type ExportFormat } from "@/hooks/useExport";
 import { isAnimatedBackground } from "@/components/CanvasBackground";
 import { useUndoableDoc } from "@/hooks/useUndoableDoc";
-import { FORMAT_DIMENSIONS, DEFAULT_DESIGN, reconcileLayerOrder } from "@/types/template";
+import { FORMAT_DIMENSIONS, DEFAULT_DESIGN, reconcileLayerOrder, splitImageLayerIds } from "@/types/template";
 import type { PlatformFormat, DesignConfig } from "@/types/template";
 import { FeedbackButton } from "@/components/FeedbackButton";
 import { Stepper } from "@/components/Stepper";
@@ -38,6 +38,7 @@ import { useUserPresets } from "@/hooks/useUserPresets";
 import { useFolderOrder } from "@/hooks/useFolderOrder";
 import { buildPresetFromDoc } from "@/lib/presetExport";
 import { useTemplates, type SavedTemplate } from "@/hooks/useTemplates";
+import { PHOTO_ACCEPT, makePhotoBackground, readImageFile } from "@/lib/photoBackground";
 
 // Bumped storage key because the design schema changed (partnerLogo removed).
 const STORAGE_KEY = "tbbqvisualgen.session.v4";
@@ -364,11 +365,20 @@ export default function Home() {
   const latestDocRef = useRef({ format, customSize, design, canvasImages, currentStep });
   latestDocRef.current = { format, customSize, design, canvasImages, currentStep };
 
+  // Uploaded photos live in the doc as dataURLs, so one big stage shot can blow
+  // the sessionStorage quota. Skipping the write is the right call, but doing it
+  // silently means a reload quietly loses the whole design — so say it once.
+  const quotaWarnedRef = useRef(false);
   const writeSession = useCallback((doc: typeof latestDocRef.current) => {
     try {
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(doc));
     } catch {
-      // quota exceeded — skip
+      if (quotaWarnedRef.current) return;
+      quotaWarnedRef.current = true;
+      toast.warning("This design is too big to auto-save", {
+        description: "Your photos won't survive a page reload. Save the image before you leave.",
+        duration: 8000,
+      });
     }
   }, []);
 
@@ -655,6 +665,33 @@ export default function Home() {
     setSelectedImageId(img.id);
   }, []);
 
+  // Add (or replace) the full-bleed photo background. Only one can exist, so a
+  // second upload swaps the first rather than stacking. The new id is pinned to
+  // the BOTTOM of the stored layer order — without that, a doc that already has
+  // a stored order would slot the photo in at its neighbour's position and bury
+  // the text behind it.
+  // Hidden input behind the gallery's "Start from a photo" shortcut, so that
+  // path opens the OS file picker straight away instead of making the user
+  // find the same card in the Canvas step.
+  const photoBackgroundInputRef = useRef<HTMLInputElement>(null);
+
+  const addPhotoBackground = useCallback((img: CanvasImage) => {
+    setDoc((prev) => {
+      const kept = prev.canvasImages.filter((ci) => !ci.isBackdrop);
+      const dropped = new Set(prev.canvasImages.filter((ci) => ci.isBackdrop).map((ci) => `image:${ci.id}`));
+      const order = prev.design.layerOrder?.filter((l) => !dropped.has(l));
+      return {
+        ...prev,
+        design: { ...prev.design, layerOrder: order?.length ? [`image:${img.id}`, ...order] : undefined },
+        canvasImages: [img, ...kept],
+      };
+    });
+    setSelectedImageId(null);
+    // A photo background is a real design choice — get the start gallery off
+    // the preview so the result is visible immediately.
+    setGalleryDismissed(true);
+  }, [setDoc, setSelectedImageId]);
+
   const updateCanvasImage = useCallback((id: string, patch: Partial<CanvasImage>) => {
     setCanvasImages((prev) => prev.map((img) => (img.id === id ? { ...img, ...patch } : img)));
   }, []);
@@ -864,9 +901,11 @@ export default function Home() {
     setDoc((prevDoc) => {
       const prev = prevDoc.design;
       // Build the canonical bottom→top order at the moment of the action.
+      const split = splitImageLayerIds(prevDoc.canvasImages);
       const defaultOrder = [
+        ...split.backdrops,
         "overlay",
-        ...prevDoc.canvasImages.map((ci) => `image:${ci.id}`),
+        ...split.photos,
         ...(prev.shapes ?? []).map((s) => `shape:${s.id}`),
         ...prev.texts.map((t) => `text:${t.id}`),
         "tbbqLogo",
@@ -1324,14 +1363,17 @@ export default function Home() {
   }, []);
 
   const canvasIsEmpty = design.texts.length === 0 && canvasImages.length === 0;
+  const photoBackground = canvasImages.find((ci) => ci.isBackdrop) ?? null;
 
   // Compute the effective canvas-layer stack so the ImageDragOverlay's
   // z-index matches the actual rendered z of its image. Without this the
   // overlay sits below the image and never receives clicks.
   const effectiveLayerOrder = (() => {
+    const split = splitImageLayerIds(canvasImages);
     const defaultOrder = [
+      ...split.backdrops,
       "overlay",
-      ...canvasImages.map((ci) => `image:${ci.id}`),
+      ...split.photos,
       ...(design.shapes ?? []).map((s) => `shape:${s.id}`),
       ...design.texts.map((t) => `text:${t.id}`),
       "tbbqLogo",
@@ -1499,6 +1541,10 @@ export default function Home() {
                     if (next.backgroundId !== design.backgroundId) setGalleryDismissed(true);
                     setDesign(next);
                   }}
+                  photoBackground={photoBackground}
+                  addPhotoBackground={addPhotoBackground}
+                  updateCanvasImage={updateCanvasImage}
+                  removeCanvasImage={removeCanvasImage}
                 />
               )}
               {currentStep === 2 && (
@@ -1704,18 +1750,43 @@ export default function Home() {
             ref={previewContainerRef}
             className="flex-1 min-h-0 min-w-0 flex items-center justify-center overflow-hidden rounded-2xl bg-card relative"
           >
+            <input
+              ref={photoBackgroundInputRef}
+              type="file"
+              accept={PHOTO_ACCEPT}
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (photoBackgroundInputRef.current) photoBackgroundInputRef.current.value = "";
+                if (!file) return;
+                try {
+                  addPhotoBackground(makePhotoBackground(await readImageFile(file)));
+                } catch (err) {
+                  toast.error(err instanceof Error ? err.message : "Could not use that image");
+                }
+              }}
+            />
             {canvasIsEmpty && galleryDismissed && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
                 <div className="text-center rounded-2xl bg-black/60 backdrop-blur-sm px-7 py-6 shadow-xl">
                   <p className="text-base text-white/90">Your visual will appear here</p>
                   <p className="text-xs mt-1 text-white/60">Pick a tool on the left to start</p>
                   <p className="text-[11px] mt-1 text-white/45">Or just pick a background and hit Save — this hint never gets exported</p>
-                  <button
-                    onClick={() => setGalleryDismissed(false)}
-                    className="pointer-events-auto mt-3 text-[11px] font-medium text-orange hover:underline"
-                  >
-                    Browse templates
-                  </button>
+                  <div className="flex items-center justify-center gap-3 mt-3">
+                    <button
+                      onClick={() => setGalleryDismissed(false)}
+                      className="pointer-events-auto text-[11px] font-medium text-orange hover:underline"
+                    >
+                      Browse templates
+                    </button>
+                    <span className="text-white/25">·</span>
+                    <button
+                      onClick={() => { setCurrentStep(1); photoBackgroundInputRef.current?.click(); }}
+                      className="pointer-events-auto text-[11px] font-medium text-orange hover:underline"
+                    >
+                      Use your own photo
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -1724,12 +1795,23 @@ export default function Home() {
                 <div className="w-full max-w-[600px] max-h-full overflow-y-auto rounded-2xl border border-white/10 bg-black/80 backdrop-blur-md p-6 shadow-2xl">
                   <div className="flex items-baseline justify-between mb-4">
                     <h2 className="text-sm font-semibold text-white/90">Start from a template</h2>
-                    <button
-                      onClick={() => setGalleryDismissed(true)}
-                      className="text-[11px] font-medium text-white/65 hover:text-white transition-colors"
-                    >
-                      Start blank
-                    </button>
+                    <div className="flex items-baseline gap-3">
+                      {/* Second door to the photo-background flow — the moment
+                          people are deciding how to start is when they ask
+                          "can I just use my own picture?" */}
+                      <button
+                        onClick={() => { setGalleryDismissed(true); setCurrentStep(1); photoBackgroundInputRef.current?.click(); }}
+                        className="text-[11px] font-medium text-orange hover:underline transition-colors"
+                      >
+                        Start from a photo
+                      </button>
+                      <button
+                        onClick={() => setGalleryDismissed(true)}
+                        className="text-[11px] font-medium text-white/65 hover:text-white transition-colors"
+                      >
+                        Start blank
+                      </button>
+                    </div>
                   </div>
                   {visiblePresets.length === 0 ? (
                     <p className="text-[12px] text-white/65">No templates yet. Choose <span className="text-orange">Start blank</span> and design from scratch.</p>

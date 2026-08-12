@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Eye, EyeOff, Trash2, GripVertical, Type, ImageIcon, Layers as LayersIcon, Square, ImagePlus, Paintbrush, Lock, Unlock, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { DesignConfig } from "@/types/template";
-import { BACKGROUND_OPTIONS, reconcileLayerOrder } from "@/types/template";
+import { BACKGROUND_OPTIONS, reconcileLayerOrder, splitImageLayerIds } from "@/types/template";
 import type { CanvasImage } from "./ImagePlacer";
 
 interface LayersPanelProps {
@@ -45,9 +45,11 @@ export function LayersPanel({
 }: LayersPanelProps) {
 
   // Compute the effective layer stack (bottom → top).
+  const imageIds = splitImageLayerIds(canvasImages);
   const defaultStack = [
+    ...imageIds.backdrops,
     "overlay",
-    ...canvasImages.map((ci) => `image:${ci.id}`),
+    ...imageIds.photos,
     ...(design.shapes ?? []).map((s) => `shape:${s.id}`),
     ...design.texts.map((t) => `text:${t.id}`),
     "tbbqLogo",
@@ -74,7 +76,12 @@ export function LayersPanel({
       const imgId = layerId.slice("image:".length);
       const img = canvasImages.find((ci) => ci.id === imgId);
       if (img) {
-        rows.push({ id: img.id, type: "image", name: `Photo · ${img.id.slice(-4)}${img.crop ? " (cropped)" : ""}`, locked: img.locked, hasContent: true, layerId });
+        // The full-bleed photo background says what it is — people look for it
+        // by name when text ends up hidden behind it.
+        const name = img.isBackdrop
+          ? "Photo background"
+          : `Photo · ${img.id.slice(-4)}${img.crop ? " (cropped)" : ""}`;
+        rows.push({ id: img.id, type: "image", name, locked: img.locked, hasContent: true, layerId });
       }
     } else if (layerId.startsWith("shape:")) {
       const shapeId = layerId.slice("shape:".length);

@@ -26,6 +26,12 @@ export const BACKGROUND_OPTIONS: { id: string; label: string; group: string }[] 
   { id: "ls1", label: "Life Science 1", group: "Life Science" },
   { id: "ls2", label: "Life Science 2", group: "Life Science" },
   { id: "ls16x9", label: "Life Science Wide", group: "Life Science" },
+  // Same three gradients, breathing: each colour zone brightens and dims on its
+  // own cycle. Animated, so these are the Life Science options that can be
+  // saved as an MP4 (see PULSE_REGISTRY in CanvasBackground.tsx).
+  { id: "lsPulse1", label: "Life Science 1 Pulse", group: "Life Science" },
+  { id: "lsPulse2", label: "Life Science 2 Pulse", group: "Life Science" },
+  { id: "lsPulseWide", label: "Life Science Wide Pulse", group: "Life Science" },
   // Investor Relations — the pair the circle accents were drawn against.
   { id: "ir1", label: "Investor Relations 1", group: "Investor Relations" },
   { id: "ir2", label: "Investor Relations 2", group: "Investor Relations" },
@@ -319,6 +325,25 @@ export function reconcileLayerOrder(stored: string[] | undefined, available: str
     result.splice(insertAt, 0, missingId);
   }
   return result;
+}
+
+/**
+ * Split canvas-image layer ids into full-bleed backdrops and ordinary photos.
+ * A photo background (`isBackdrop`) belongs at the very BOTTOM of the default
+ * stack — below the accent circles and the color overlay — so the overlay
+ * tints it and text/logos land on top. Ordinary photos keep their usual slot
+ * just above the overlay. Both stay normal layers: drag one in the Layers
+ * panel and the stored order wins.
+ * Takes a structural param so this types module doesn't import the client
+ * component that owns `CanvasImage`.
+ */
+export function splitImageLayerIds(images: { id: string; isBackdrop?: boolean }[] | undefined) {
+  const backdrops: string[] = [];
+  const photos: string[] = [];
+  for (const img of images ?? []) {
+    (img.isBackdrop ? backdrops : photos).push(`image:${img.id}`);
+  }
+  return { backdrops, photos };
 }
 
 export type CollageLayout = "single" | "side-by-side" | "grid-2x2" | "top-bottom" | "hero-with-thumbnails";
