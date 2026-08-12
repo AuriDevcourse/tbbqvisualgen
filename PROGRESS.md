@@ -8,19 +8,28 @@ not required reading.
 
 ## SESSION HANDOFF — 2026-08-12 (10): project folders, investor wall completed, Next photo row
 
-### State: green, UNCOMMITTED on master
+### State: PUSHED to master as `42eca6a` — LIVE
+
+15 files, 910 insertions. Prod auto-deploys from master, so all three pieces
+below are live. There is no `main` branch in this repo: master IS prod.
 
 Gates: **236/236 vitest** (228 before; 3 new for the project folders, 7 for the
 Next photo row, 2 removed with the headings they tested), **tsc clean**, **eslint
-clean on the touched files**. Verified in the running app at `localhost:3001/simple`, not
-only in tests: the folders render, the rosters show real logo artwork, "Fill
-with Life Science" put 25 logos on the wall with the right headline, "Fill with
-Investor" put 22 with all five new marks reading white at grid size, zero
-console errors. Production build NOT run (the dev server was up; they cannot
-share `.next`).
+clean on the touched files**, **production build compiled**. Verified in the
+running app at `localhost:3001/simple` too, not only in tests: the folders
+render, the rosters show real logo artwork, "Fill with Life Science" put 25 logos
+on the wall with the right headline, "Fill with Investor" put 25 with every new
+mark reading white at grid size, the Next photo row renders at 16:9 with blank
+cards, at 16:9 with sample photos and at 9:16. Zero console errors throughout.
+
+Running the build meant stopping the dev server AND killing **six orphaned
+`next dev` children** that survived it — the usual trap in this repo. If a build
+hangs or a dev server serves stale chunks, look for those first
+(`Get-CimInstance Win32_Process -Filter "Name='node.exe'"`, filter on the
+project path).
 
 `src/auth.ts` is still the held-back local dev bypass — untouched again, so
-nothing had to be staged around it. Do not `git add -A`.
+nothing had to be staged around it. Do not `git add -A` without checking it.
 
 ### Also this session: the Next Session board got the panel's photo row
 
@@ -174,22 +183,28 @@ roster.
 
 ### Next steps
 
-1. Review the diff and commit. Prod auto-deploys from master, so this ships the
-   moment it is pushed.
-2. Tighten `Spintop Ventures.svg` and add it as the first support entry, taking
-   the investor wall to 23 of 25. Nothing external is needed for it.
-3. Chase **redalpine** and **Novo Nordisk** (the bull, not the Foundation) as
-   white SVGs. Neither is in the library or in Airtable.
-4. **Innovation District Copenhagen renders visibly smaller and fainter than the
+Committing and the three logo chases from the first draft of this handoff are
+DONE — Spintop, redalpine and Novo Nordisk Foundation all landed before the push,
+which is why the investor set reads 25 and not 22. What is left:
+
+1. **Use the Next photo row at 1:1 and 9:16 for real.** Auri chose ONE code path
+   for every format, so those two run the same 5-across row: at 9:16 each card is
+   roughly 190px wide and the descriptions wrap to three lines. It ships and it
+   is tested, but nobody has made a real post with it yet. The fallback already
+   discussed is a moderator row on top with the speakers in one line beneath.
+2. **Innovation District Copenhagen renders visibly smaller and fainter than the
    other three main partners.** It is a PNG, so the viewBox script cannot help
-   it; only a white SVG from marketing fixes it. Noticed on this render, not a
-   regression from this session.
-5. Decide on `LS_DT_PITCH_FINALISTS` (16 logos, its own two folders under
+   it; only a white SVG from marketing fixes it. Not a regression from this
+   session — it looked like this before.
+3. Decide on `LS_DT_PITCH_FINALISTS` (16 logos, its own two folders under
    `public/logos`). The roster exists in data and is tested, but it has no set
-   in `PARTNER_SETS`, so no folder shows it. Auri was asked; unanswered. Adding
-   it is one entry in `PARTNER_SETS` plus one line in the Life Science x Deep
-   Tech project.
-6. The Google OAuth client secret is still stale — unrelated to this change and
+   in `PARTNER_SETS`, so no folder shows it. Auri was asked twice; unanswered.
+   Adding it is one entry in `PARTNER_SETS` plus one line in the Life Science x
+   Deep Tech project.
+4. `/samples/pierre-leroy.jpg` is a photo of a woman, so the Next board's default
+   moderator card does not match its name. Cosmetic, and the panel template has
+   always shown the same thing.
+5. The Google OAuth client secret is still stale — unrelated to this change and
    still true.
 
 ---
