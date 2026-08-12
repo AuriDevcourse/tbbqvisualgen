@@ -82,6 +82,14 @@
     "tone": "dark"
   },
   {
+    "src": "/logos/Ada%20Ventures%20White.svg",
+    "name": "Ada Ventures White",
+    "tags": [],
+    "bytes": 7069,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Adeo%20Web%20White.svg",
     "name": "Adeo Web White",
     "tags": [],
@@ -346,6 +354,14 @@
     "bytes": 3003,
     "toneAlgo": 2,
     "tone": "mixed"
+  },
+  {
+    "src": "/logos/Antler%20White.svg",
+    "name": "Antler White",
+    "tags": [],
+    "bytes": 1195,
+    "toneAlgo": 2,
+    "tone": "light"
   },
   {
     "src": "/logos/Deep%20Tech%20Pitch%20Finalists%202026/AnyoLabs.svg",
@@ -3692,6 +3708,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/Mazanti-Andersen.svg",
+    "name": "Mazanti-Andersen",
+    "tags": [],
+    "bytes": 2191,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Medicon%20Valley%20Alliance.svg",
     "name": "Medicon Valley Alliance",
     "tags": [],
@@ -4674,6 +4698,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/Redalpine.svg",
+    "name": "Redalpine",
+    "tags": [],
+    "bytes": 3147,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/ReDI%20School%20of%20Digital%20Integration.svg",
     "name": "ReDI School of Digital Integration",
     "tags": [],
@@ -4856,6 +4888,14 @@
     "name": "Ruff & Co Business Innovation",
     "tags": [],
     "bytes": 9411,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Rukam%20Capital.svg",
+    "name": "Rukam Capital",
+    "tags": [],
+    "bytes": 7339,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -5158,6 +5198,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/Shift4Good.svg",
+    "name": "Shift4Good",
+    "tags": [],
+    "bytes": 3966,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Sie%20Ventures.svg",
     "name": "Sie Ventures",
     "tags": [],
@@ -5385,7 +5433,7 @@
     "src": "/logos/Spintop%20Ventures.svg",
     "name": "Spintop Ventures",
     "tags": [],
-    "bytes": 8573,
+    "bytes": 3802,
     "toneAlgo": 2,
     "tone": "light"
   },

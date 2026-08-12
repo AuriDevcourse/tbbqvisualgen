@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { PARTNER_SETS, COMMUNITY_PARTNERS, COMMUNITY_PAGES, COMMUNITY_PER_WALL, LS_DT_EXHIBITORS, LS_DT_PITCH_FINALISTS, LS_DT_PARTICIPANTS } from "./partnerSets";
+import { PARTNER_SETS, PARTNER_PROJECTS, projectLogoCount, COMMUNITY_PARTNERS, COMMUNITY_PAGES, COMMUNITY_PER_WALL, LS_DT_EXHIBITORS, LS_DT_PITCH_FINALISTS, LS_DT_PARTICIPANTS } from "./partnerSets";
 import { THANKS_MAX_LOGOS } from "../lib/simpleLayout";
 import logoLibrary from "./logoLibrary.json";
 import { readFileSync } from "node:fs";
@@ -43,6 +43,36 @@ describe("partner sets", () => {
       });
     });
   }
+
+  /**
+   * The sidebar renders PROJECTS, not PARTNER_SETS. A set that nobody filed
+   * under a project is therefore invisible in the app while still passing every
+   * check above — the failure mode is a silent one, so it gets its own guard.
+   */
+  describe("project folders", () => {
+    const filed = PARTNER_PROJECTS.flatMap((p) => p.sets.map((s) => s.id));
+
+    it("files every set under exactly one project", () => {
+      expect([...filed].sort()).toEqual([...PARTNER_SETS.map((s) => s.id)].sort());
+    });
+
+    it("gives every project a name, a note and at least one set", () => {
+      for (const p of PARTNER_PROJECTS) {
+        expect(p.name.trim()).not.toBe("");
+        expect(p.note.trim()).not.toBe("");
+        expect(p.sets.length).toBeGreaterThan(0);
+      }
+    });
+
+    /** Life Science x Deep Tech holds Exhibiting inside Participating, so a sum
+     *  of set lengths would over-count. The header shows unique logos. */
+    it("counts a project's logos once, not once per set that lists them", () => {
+      const lsdt = PARTNER_PROJECTS.find((p) => p.id === "life-science-deep-tech")!;
+      const summed = lsdt.sets.reduce((n, s) => n + s.logos.length, 0);
+      expect(projectLogoCount(lsdt)).toBeLessThan(summed);
+      expect(projectLogoCount(lsdt)).toBe(new Set(lsdt.sets.flatMap((s) => s.logos.map((l) => l.src))).size);
+    });
+  });
 
   /**
    * The community roster is paged across three walls, and the per-set checks

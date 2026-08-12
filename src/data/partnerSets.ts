@@ -106,14 +106,68 @@ export const LIFE_SCIENCE_PARTNERS: PartnerSetEntry[] = [
  *   `Worldfund White.svg`       → WORLD FUND ("world fund" with a space misses)
  *   `Forsikring Og Pension.svg` → the F&P monogram, rendered and confirmed
  *
- * NOT here, because the library has no usable white artwork (2026-08-04):
- *   **Novo Nordisk** — the bull mark plus "novo nordisk". The library only has
- *     Novo Nordisk FOUNDATION variants, which is a different organisation.
- *   **Mazanti-Andersen** — nothing at all.
- *   **Ada Ventures** — `Ada Ventures.png` is DARK artwork, invisible on this
- *     canvas, and a PNG can't be recoloured in-app (the tint is SVG-only).
- * Marketing has to supply white SVGs for those three; until then the set is 17
- * of 20 and the fill leaves no gap (the grid sizes itself to what loaded).
+ * **The page has 25 as of 2026-08-12** — 4 main and 21 support, checked against
+ * a screenshot of it. It had 20 on 2026-08-04, so treat any count in this
+ * comment as a date-stamped observation and not a constant: five support
+ * partners were added in between (Spintop, Antler, redalpine, Shift4Good, Rukam
+ * Capital). 25 fits one wall, the cap being 48.
+ *
+ * **This set is COMPLETE at 25 as of 2026-08-12** — the first time it has been.
+ * It went 17 → 22 → 25 in one session, so if a later count disagrees, the page
+ * changed, not this file.
+ *
+ * Eight were added on 2026-08-12. Every one is `#fff` and every one reported
+ * "artwork fills 100%" to `tighten-logo-viewbox.mjs --check`, so none needed a
+ * viewBox fix — unusual for a batch this size, and worth re-checking rather than
+ * assuming for the next one.
+ *
+ * From files Auri supplied by hand:
+ *   **Antler** → `Antler White.svg`, out of the techbbq-2026 WordPress uploads.
+ *     The library's older `Antler Invest.svg` is the RED cut (#ED4746) and stays
+ *     where it is; do not repoint this line at it, and do not lean on the in-app
+ *     tint to rescue it.
+ *   **Ada Ventures** → `Ada Ventures White.svg`, which finally supersedes the
+ *     dark `Ada Ventures.png` that could not be recoloured (the tint is
+ *     SVG-only). The dark PNG stays in the library for light canvases.
+ *
+ * From the `Logo` attachments on Partner Deliverables 2026
+ * (`tblTecOBecLQCNIeD` / `viw7FVbsTb9IRaWF0`), pulled with the read-only token
+ * in `GITHUB/airtable/.env.local`:
+ *   **Shift4Good** → `Shift4Good.svg`. Filed in Airtable as company
+ *     "Shift 4 Good" with the file named `Shiftforgood.svg` — three spellings of
+ *     one partner, which is why a name search has to be loose.
+ *   **Rukam Capital** → `Rukam Capital.svg` (Airtable company "Rukam").
+ *   **Mazanti-Andersen** → `Mazanti-Andersen.svg`. Its record also carries two
+ *     PNGs, one of them orange; the SVG is the white one.
+ *
+ * All three sit at **Challenger** tier in Airtable, not an investor field — that
+ * table is the deliverables tracker for every partner, so it is a source of
+ * FILES here, not of who belongs on this wall. The investor page decides that.
+ * Note also that Spintop, Antler and redalpine have no record in that table at
+ * all, so a regenerate from Airtable would not rebuild this list.
+ *
+ * The last three, all from Auri on 2026-08-12, which closed the set:
+ *   **redalpine** → `Redalpine.svg`. Nothing in Airtable, nothing in the library
+ *     before this; the file came from his Side Events folder.
+ *   **Spintop Ventures** → `Spintop Ventures.svg` **REPLACED IN PLACE**. The old
+ *     file was the same artwork padded inside a square 100×100 viewBox its wide
+ *     lockup filled only 95×34% of, which a contain-fit cell renders at a third
+ *     of its neighbours' size. The new file is the tight horizontal cut, so every
+ *     other reference to that name picks up the fix too. Original parked in
+ *     `.logos-trash/replaced-2026-08-12/`.
+ *   **Novo Nordisk Foundation** → `Novo Nordisk Foundation Horizontal.svg`, which
+ *     the library ALREADY held and the Life Science set already uses. Auri
+ *     supplied `Novo Nordisk Foundation New.svg`; it renders pixel-identical to
+ *     that file, so this set points at the existing one rather than committing a
+ *     second copy under a third name. Worth knowing that the investor page's
+ *     artwork at this slot reads as Novo Nordisk the COMPANY (the bull mark);
+ *     Auri confirmed the Foundation lockup is what belongs on the wall, so the
+ *     page and the wall differ here on purpose.
+ *
+ * Order is the PAGE's order: the four main partners, then support partners
+ * top-left to bottom-right. Keep it that way if the page gains another — insert
+ * at its page position rather than appending, so the wall keeps matching the
+ * page anyone might compare it to.
  */
 export const INVESTOR_PARTNERS: PartnerSetEntry[] = [
   // ── Main partners ──
@@ -122,8 +176,17 @@ export const INVESTOR_PARTNERS: PartnerSetEntry[] = [
   { label: "wezeo", src: "/logos/Wezeo.svg" },
   { label: "HSBC Innovation Banking", src: "/logos/HSBC%20Innovation%20Banking.png" },
   // ── Support partners ──
+  { label: "Spintop Ventures", src: "/logos/Spintop%20Ventures.svg" },
+  { label: "Antler", src: "/logos/Antler%20White.svg" },
+  { label: "redalpine", src: "/logos/Redalpine.svg" },
+  { label: "Shift4Good", src: "/logos/Shift4Good.svg" },
+  { label: "Rukam Capital", src: "/logos/Rukam%20Capital.svg" },
   { label: "embankment", src: "/logos/Embankment.svg" },
   { label: "Heartcore", src: "/logos/Heartcore.svg" },
+  // The page's 8th support slot. Auri confirmed on 2026-08-12 that the FOUNDATION
+  // lockup is the right artwork here, so this points at the file the Life Science
+  // set already uses rather than adding a second copy of it.
+  { label: "Novo Nordisk Foundation", src: "/logos/Novo%20Nordisk%20Foundation%20Horizontal.svg" },
   { label: "World Fund", src: "/logos/Worldfund%20White.svg" },
   { label: "Florent Venture Partners", src: "/logos/Florent%20Venture%20Partners.svg" },
   { label: "Rockstart", src: "/logos/Rockstart.svg" },
@@ -131,10 +194,12 @@ export const INVESTOR_PARTNERS: PartnerSetEntry[] = [
   { label: "dealroom.co", src: "/logos/Dealroom.svg" },
   { label: "FBV", src: "/logos/FBV.svg" },
   { label: "PSV", src: "/logos/PSV.svg" },
+  { label: "Ada Ventures", src: "/logos/Ada%20Ventures%20White.svg" },
   { label: "Mountside Ventures", src: "/logos/Mountside%20Ventures.svg" },
   { label: "European Investment Fund", src: "/logos/European%20Investment%20Fund%20(EIF).svg" },
   { label: "Aktive Ejere", src: "/logos/Aktive%20Ejere.svg" },
   { label: "F&P (Forsikring & Pension)", src: "/logos/Forsikring%20Og%20Pension.svg" },
+  { label: "Mazanti-Andersen", src: "/logos/Mazanti-Andersen.svg" },
 ];
 
 /**
@@ -453,4 +518,57 @@ export const PARTNER_SETS: PartnerSet[] = [
     featuredCount: 0,
     logos,
   })),
+];
+
+/**
+ * A project folder: the sets that belong to one piece of work, grouped so the
+ * sidebar answers "which projects do we have logos for" before it answers
+ * "which wall do I fill". A flat list of eight fill buttons answered neither —
+ * `Community 2 / 3` next to `LS x DT Exhibiting` reads like eight unrelated
+ * things, and nothing told you WHICH logos a set holds without filling a wall
+ * to find out. The folders name the project; each set inside opens to its
+ * roster.
+ */
+export interface PartnerProject {
+  id: string;
+  /** Folder name — the project, not the wall. */
+  name: string;
+  /** One line under the name: what the project is. */
+  note: string;
+  sets: PartnerSet[];
+}
+
+/** Every set is filed under exactly one project; the test asserts none is
+ *  orphaned, so adding a set to PARTNER_SETS and forgetting the folder fails
+ *  the suite rather than hiding the set from the sidebar. */
+const setById = (id: string): PartnerSet => {
+  const found = PARTNER_SETS.find((s) => s.id === id);
+  if (!found) throw new Error(`partnerSets: no set with id "${id}"`);
+  return found;
+};
+
+/** Unique logos across a project — the sets overlap on purpose (Participating
+ *  contains every Exhibiting logo), so summing the sets would double-count. */
+export const projectLogoCount = (project: PartnerProject): number =>
+  new Set(project.sets.flatMap((s) => s.logos.map((l) => l.src))).size;
+
+export const PARTNER_PROJECTS: PartnerProject[] = [
+  {
+    id: "life-science-deep-tech",
+    name: "Life Science x Deep Tech 2026",
+    note: "Track partners, plus the startups in the area",
+    sets: [setById("life-science"), setById("ls-dt-exhibitors"), setById("ls-dt-participants")],
+  },
+  {
+    id: "investor",
+    name: "Investor Partners 2026",
+    note: "Main partners lead, support partners fill the grid",
+    sets: [setById("investor")],
+  },
+  {
+    id: "community",
+    name: "Community Partners 2026",
+    note: `${COMMUNITY_PARTNERS.length} partners across ${COMMUNITY_PAGES.length} walls of ${COMMUNITY_PER_WALL}`,
+    sets: COMMUNITY_PAGES.map((_, i) => setById(`community-${i + 1}`)),
+  },
 ];

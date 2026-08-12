@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Check, ChevronDown, Download, Film, GripVertical, Loader2, Plus, Minus, Trash2, ImagePlus, X, Square, Presentation, Smartphone, PencilRuler, Users, Handshake, HeartHandshake, Columns2, LayoutGrid, ChevronLeft, ChevronRight, Library, Save, Shuffle, Sparkles, Ticket, Timer, BadgePercent, SkipForward } from "lucide-react";
+import { Check, ChevronDown, Download, Film, GripVertical, Loader2, Plus, Minus, Trash2, ImagePlus, X, Square, Presentation, Smartphone, PencilRuler, Users, Handshake, HeartHandshake, Columns2, LayoutGrid, ChevronLeft, ChevronRight, Library, Save, Shuffle, Ticket, Timer, BadgePercent, SkipForward } from "lucide-react";
 import { Popover } from "radix-ui";
 import { TeamLibrary, type LibraryLoadedItem } from "@/components/TeamLibrary";
 import { AuthChip } from "@/components/AuthChip";
@@ -15,7 +15,8 @@ import { isAnimatedBackground } from "@/components/CanvasBackground";
 import { AccentThumbnail } from "@/components/CanvasAccents";
 import { ACCENT_OPTIONS } from "@/lib/accents";
 import { LogoLibraryPicker, asUploadedImage } from "@/components/LogoLibraryPicker";
-import { PARTNER_SETS, type PartnerSet } from "@/data/partnerSets";
+import { PARTNER_PROJECTS, type PartnerSet } from "@/data/partnerSets";
+import { PartnerSetBrowser } from "@/components/PartnerSetBrowser";
 import { isSvgDataUrl, tintSvgDataUrl } from "@/lib/svgTint";
 import { ColorPicker } from "@/components/ColorPicker";
 import type { PlatformFormat } from "@/types/template";
@@ -107,8 +108,9 @@ function PersonEditor({
   onChange: (patch: Partial<SimplePerson>) => void;
   onRemove?: () => void;
   roleLabel: string;
-  /** The Next Session board is text-only, so its rows hide the upload rather
-   *  than offering a control whose result never reaches the canvas. */
+  /** Hides the upload for a board that renders no headshots. Both templates
+   *  show photos now — the Next board gained its photo row on 2026-08-12 — so
+   *  nothing passes false today; kept for the next text-only board. */
   showPhoto?: boolean;
 }) {
   return (
@@ -405,8 +407,8 @@ function withoutPhotos({ form, format, stash, template, partner, sales, next }: 
     template,
     partner: partner ? { ...partner, logos: [] } : undefined,
     sales: sales ? { ...sales, photo: null } : undefined,
-    // The Next board renders no photos, but its people share SimplePerson, so
-    // strip them the same way rather than trusting the shape.
+    // The Next board carries headshots too since its photo row landed
+    // (2026-08-12), and they are dataURLs like the panel's — same treatment.
     next: next ? { ...next, moderator: strip(next.moderator), speakers: next.speakers.map(strip) } : undefined,
     form: { ...form, moderator: strip(form.moderator), speakers: form.speakers.map(strip) },
     stash: stash.map(strip),
@@ -1614,19 +1616,17 @@ export default function SimplePage() {
                   reflow everything below — the jump made the whole sidebar
                   shake. */}
               {/* Ready-made sets, so a recurring wall isn't 20 searches. Each
-                  brings its own headline and tier split. */}
-              {partner.layout === "thanks" && PARTNER_SETS.map((set) => (
-                <button
-                  key={set.id}
-                  onClick={() => void fillPartnerSet(set)}
-                  disabled={fillingSet !== null}
-                  title={`Fills the grid with: ${set.logos.map((p) => p.label).join(", ")}`}
-                  className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-xs font-medium text-white/85 hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {fillingSet === set.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                  {fillingSet === set.id ? "Loading logos…" : `Fill with ${set.name} partners (${set.logos.length})`}
-                </button>
-              ))}
+                  brings its own headline and tier split. Filed in project
+                  folders that open to their rosters: which projects we hold
+                  logos for is a question the sidebar answers on its own now,
+                  without filling a wall to find out. */}
+              {partner.layout === "thanks" && (
+                <PartnerSetBrowser
+                  projects={PARTNER_PROJECTS}
+                  fillingSet={fillingSet}
+                  onFill={(set) => void fillPartnerSet(set)}
+                />
+              )}
               {/* The wall's size is a choice, not a consequence of how many
                   logos you have dropped in — pick the grid, then fill it. */}
               {partner.layout === "thanks" && (
@@ -2008,7 +2008,6 @@ export default function SimplePage() {
                     onChange={(patch) => setNextSpeaker(i, patch)}
                     onRemove={next.speakers.length > 1 ? () => removeNextSpeaker(i) : undefined}
                     roleLabel={`Speaker ${i + 1}`}
-                    showPhoto={false}
                   />
                 ))}
               </div>
@@ -2030,7 +2029,6 @@ export default function SimplePage() {
                   person={next.moderator}
                   onChange={(patch) => setNext((n) => ({ ...n, moderator: { ...n.moderator, ...patch } }))}
                   roleLabel="Moderator"
-                  showPhoto={false}
                 />
               </section>
             )}

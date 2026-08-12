@@ -6,6 +6,194 @@ not required reading.
 
 ---
 
+## SESSION HANDOFF — 2026-08-12 (10): project folders, investor wall completed, Next photo row
+
+### State: green, UNCOMMITTED on master
+
+Gates: **236/236 vitest** (228 before; 3 new for the project folders, 7 for the
+Next photo row, 2 removed with the headings they tested), **tsc clean**, **eslint
+clean on the touched files**. Verified in the running app at `localhost:3001/simple`, not
+only in tests: the folders render, the rosters show real logo artwork, "Fill
+with Life Science" put 25 logos on the wall with the right headline, "Fill with
+Investor" put 22 with all five new marks reading white at grid size, zero
+console errors. Production build NOT run (the dev server was up; they cannot
+share `.next`).
+
+`src/auth.ts` is still the held-back local dev bypass — untouched again, so
+nothing had to be staged around it. Do not `git add -A`.
+
+### Also this session: the Next Session board got the panel's photo row
+
+Auri sent the 16:9 Next board beside the hand-made Panel Discussion board and
+asked for a hybrid: keep the top (banner, ON STAGE chip, title) exactly as it is,
+and replace the people with the panel's cards — **moderator on the left with NO
+role tag** ("it is identified by sitting apart"), **up to four speakers in ONE
+line**, **name 22px, description 17px**.
+
+Gone: the `next.speakersLabel` and `next.moderatorLabel` headings and the whole
+text-list block in `buildNextDesign`. Their two tests went with them.
+
+What replaced it, in `buildNextDesign` (`src/lib/simpleLayout.ts`):
+
+- One row: moderator card, its caption to the RIGHT of the photo, then the
+  speaker cards each with the caption BELOW. Card width is solved from fixed
+  proportions (`MOD_SCALE`, `MOD_CAP_UNITS`, gaps) so a 2-speaker board fills the
+  same width as a 4-speaker one.
+- The moderator card rides `0.06 * vs` above the speaker row, which is what makes
+  the reference board read as "moderator apart" without a label.
+- Photos use the panel's `emitPhoto` shape (`cornerRadius: 8`, gradient border,
+  `fit: "cover"`, role `${who}.photo`), so a Next card retargets exactly like a
+  panel card. No photo still emits the gradient-outlined frame.
+- **Sidebar photo uploads are now on for Next rows** (`showPhoto` was hard-false)
+  and `emptyNextForm` seeds the sample headshots, so the template previews as it
+  will look.
+- `formsFromDoc("next")` rehydrates photos by role, and its speaker-count scan
+  now reads IMAGE roles as well as text roles — a speaker with a photo but no
+  name typed leaves no text layer at all and used to vanish from the sidebar.
+
+Two numbers worth not re-deriving:
+
+- **22px / 17px are stored as `22/1080` and `17/1080`**, fractions of the shorter
+  side, which is the house rule for every font in this file. That lands on
+  exactly 22 and 17 at 16:9 AND 9:16 (both have a 1080 short side) and scales up
+  on the 1500px square. Auri gave the numbers off the 16:9 board.
+- **The row bottoms out at 0.90, not the 0.945 the text list used.** This board's
+  logo is bottom-RIGHT, and the last speaker's description is the layer that
+  lands in that corner — at 0.945 it ran straight through the TechBBQ logo. The
+  title clearance is 0.055 for the mirror-image reason: the layer nearest the
+  title is the moderator's caption, which starts at its card's top edge, and at
+  0.03 its first line sat in the descenders of "Utopian Pragmatism".
+
+Auri chose ONE code path for all three formats (asked explicitly): the same
+5-across row at 1:1 and 9:16, where the cards get small and the captions wrap
+hard. If that turns out too tight in use, the alternative already discussed is a
+moderator row on top with the speakers in one line beneath.
+
+Checked in the browser at 16:9 with 4 blank cards, at 16:9 with the sample
+photos, and at 9:16. **Note:** verifying the defaults meant clearing
+`tbbqvisualgen.simpleForm.v1` in the Playwright browser profile, and the backup
+was held on `window`, which a navigation wiped — so that profile's in-progress
+sidebar draft is gone. Server-side team-library designs and the parked-designs
+key were untouched.
+
+### Also this session: the investor wall went 17 → 22 of 25
+
+Auri screenshotted the live Our Investor Partners page and asked whether our set
+was complete. It was not: **the page has 25** (4 main + 21 support), the set had
+17, and the set's own comment claimed "17 of 20" from 2026-08-04 — the page had
+grown by five support partners in between. Five logos were added, all `#fff`, all
+reporting "artwork fills 100%" so none needed a viewBox fix:
+
+| Partner | File | Came from |
+| --- | --- | --- |
+| Antler | `Antler White.svg` | techbbq-2026 WP uploads (Auri) |
+| Ada Ventures | `Ada Ventures White.svg` | Auri's Downloads |
+| Shift4Good | `Shift4Good.svg` | Airtable `Logo` attachment |
+| Rukam Capital | `Rukam Capital.svg` | Airtable `Logo` attachment |
+| Mazanti-Andersen | `Mazanti-Andersen.svg` | Airtable `Logo` attachment |
+
+Manifest is now **876 files**. Each was inserted at its PAGE position, not
+appended, so the set still reads page order top-left to bottom-right.
+
+**Three still missing: redalpine, Novo Nordisk, Spintop Ventures.** Spintop is
+the only one not waiting on anybody — it is already in the library and already
+white, it just needs its square viewBox tightened (its wordmark fills 95×34% of
+it, so it would render a third the size of its neighbours). One command, and it
+is documented at the top of `INVESTOR_PARTNERS`.
+
+Gotchas that cost time here and would cost it again:
+
+- **Partner Deliverables 2026 is a source of FILES, not of who is on this wall.**
+  All three Airtable logos sit at *Challenger* tier there, and Spintop and Antler
+  have no record in that table at all — so the investor set can never be
+  regenerated from Airtable. The investor PAGE decides membership.
+- **One partner, three spellings.** Shift4Good is company "Shift 4 Good" with the
+  file `Shiftforgood.svg`; Rukam Capital is company "Rukam". A name search has to
+  be loose or it returns zero and looks like the logo does not exist.
+- **redalpine is not in that table** — searched "red", zero hits. It is not an
+  oversight in the pull.
+- Airtable's Novo Nordisk record is Novo Nordisk FOUNDATION, a different
+  organisation. `Novo Nordisk Foundation New.svg` is NOT the bull mark the
+  investor page shows.
+- Antler's older `Antler Invest.svg` is the RED cut (#ED4746) and stays in the
+  library. Do not repoint the set at it.
+
+Read the rewritten comment above `INVESTOR_PARTNERS` before touching that set —
+it now carries all of the above, date-stamped, and treats every count as an
+observation rather than a constant.
+
+### What changed
+
+Auri's feedback on `/simple`, via Agentation: *"In thank you section, we have to
+have folder specifically for project, to understand for what projects do we have
+and what logos do we have."*
+
+The Thank you sidebar used to list all eight sets as one flat column of "Fill
+with X partners (N)" buttons. That answered neither question: `Community 2 / 3`
+beside `LS x DT Exhibiting` reads like eight unrelated things, and the ONLY way
+to see which logos a set held was to fill a wall and undo it, which costs the
+design you were working on.
+
+Now: one folder per project, each opening to its sets, each set opening to its
+roster.
+
+- **Life Science x Deep Tech 2026** · 68 logos · Life Science (25), LS x DT
+  Exhibiting (31), LS x DT Participating (43)
+- **Investor Partners 2026** · 17 logos
+- **Community Partners 2026** · 85 logos across 3 walls of 30
+
+### Files
+
+- `src/data/partnerSets.ts` — added `PartnerProject`, `PARTNER_PROJECTS`,
+  `projectLogoCount()`, and the private `setById()` lookup. **No roster data was
+  touched**: the projects are a grouping OVER the existing `PARTNER_SETS`, so
+  every note about which logo points at which file still holds.
+- `src/components/PartnerSetBrowser.tsx` — NEW. The folder UI. Folder row =
+  name, one-line note, unique logo count, Lucide `Folder`/`FolderOpen`. One
+  folder and one roster open at a time.
+- `src/app/simple/page.tsx` — the flat `PARTNER_SETS.map` button list replaced
+  by `<PartnerSetBrowser>`. `fillPartnerSet` and everything downstream is
+  UNCHANGED; the component only calls it. `Sparkles` moved out of this file's
+  lucide import (it was left unused, which eslint fails on).
+- `src/data/partnerSets.test.ts` — 3 new guards under `project folders`.
+
+### Gotchas
+
+- **`projectLogoCount` counts unique `src`, not the sum of set lengths.**
+  Participating CONTAINS every Exhibiting logo, so summing gives 99 for a
+  project that holds 68. The test asserts unique < summed so a future "simpler"
+  sum can't sneak back in.
+- **A set filed under no project is invisible in the app** while still passing
+  every per-set check. That is why the folder test asserts the filed ids equal
+  `PARTNER_SETS` exactly — add a set, file it, or the suite fails.
+- The roster grid is capped at `max-h-[220px]` with scroll. Participating is 43
+  rows; uncapped it buried the Logos stepper and the background picker.
+- Rosters render the library file with a plain `<img>` (the same thing
+  `LogoLibraryPicker` does), NOT the data-URL conversion `fillPartnerSet` uses.
+  Reading a roster therefore costs no fetches through `asUploadedImage`.
+
+### Next steps
+
+1. Review the diff and commit. Prod auto-deploys from master, so this ships the
+   moment it is pushed.
+2. Tighten `Spintop Ventures.svg` and add it as the first support entry, taking
+   the investor wall to 23 of 25. Nothing external is needed for it.
+3. Chase **redalpine** and **Novo Nordisk** (the bull, not the Foundation) as
+   white SVGs. Neither is in the library or in Airtable.
+4. **Innovation District Copenhagen renders visibly smaller and fainter than the
+   other three main partners.** It is a PNG, so the viewBox script cannot help
+   it; only a white SVG from marketing fixes it. Noticed on this render, not a
+   regression from this session.
+5. Decide on `LS_DT_PITCH_FINALISTS` (16 logos, its own two folders under
+   `public/logos`). The roster exists in data and is tested, but it has no set
+   in `PARTNER_SETS`, so no folder shows it. Auri was asked; unanswered. Adding
+   it is one entry in `PARTNER_SETS` plus one line in the Life Science x Deep
+   Tech project.
+6. The Google OAuth client secret is still stale — unrelated to this change and
+   still true.
+
+---
+
 ## SESSION HANDOFF — 2026-08-11 (9): Next Session template (4th Quick Template)
 
 ### State: PUSHED to master as `8c52525` — LIVE

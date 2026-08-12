@@ -2044,8 +2044,13 @@ describe("next session board", () => {
   const shapeRoles = (d: SimpleDoc) => (d.design.shapes ?? []).map((s) => s.simpleRole).filter(Boolean);
   const byRole = (d: SimpleDoc, role: string) => d.design.texts.find((t) => t.simpleRole === role);
 
+  /** A four-speaker board with NO headshots, so the geometry checks can find
+   *  every card by its placeholder frame. The default form ships sample photos
+   *  (its moderator included), and a filled card emits a canvasImage instead of
+   *  a frame — which is what the photo test below asserts on purpose. */
   const fullBoard = (): NextForm => ({
     ...emptyNextForm(),
+    moderator: { ...emptyNextForm().moderator, photo: "" },
     speakers: Array.from({ length: NEXT_MAX_SPEAKERS }, (_, i) => ({
       name: `Speaker ${i + 1}`, title: `Partner, Company ${i + 1}`, company: "", photo: "",
     })),
@@ -2099,20 +2104,104 @@ describe("next session board", () => {
     }
   });
 
-  it("drops the moderator rows when the toggle is off", () => {
+  it("drops the moderator card when the toggle is off", () => {
     const on = buildNextDesign({ ...fullBoard(), includeModerator: true }, "presentation");
     const off = buildNextDesign({ ...fullBoard(), includeModerator: false }, "presentation");
     expect(roles(on)).toContain("moderator.name");
-    expect(roles(on)).toContain("next.moderatorLabel");
     expect(roles(off)).not.toContain("moderator.name");
-    expect(roles(off)).not.toContain("next.moderatorLabel");
+    // The card goes too: an empty person still emits its outlined frame, so
+    // counting frames is the only way to see it leave.
+    const frames = (d: SimpleDoc) => (d.design.shapes ?? []).filter((s) => s.fillType === "outline" && s.colorType === "gradient").length;
+    expect(frames(on)).toBe(frames(off) + 1);
   });
 
-  it("singularises the speakers heading for one person", () => {
-    const one = buildNextDesign({ ...emptyNextForm(), speakers: [emptyPerson()] }, "presentation");
-    expect(byRole(one, "next.speakersLabel")?.content).toBe("Speaker:");
-    const two = buildNextDesign({ ...emptyNextForm(), speakers: [emptyPerson(), emptyPerson()] }, "presentation");
-    expect(byRole(two, "next.speakersLabel")?.content).toBe("Speakers:");
+  /**
+   * The photo row (2026-08-12). This board used to list the people as text under
+   * "Speakers:" / "Moderator:" headings; Auri asked for the panel board's cards
+   * instead — moderator on the left with NO role tag, up to four speakers in ONE
+   * line, name 22px and description 17px.
+   */
+  describe("photo row", () => {
+    it("carries no Speakers:/Moderator: headings any more", () => {
+      const doc = buildNextDesign(fullBoard(), "presentation");
+      expect(roles(doc)).not.toContain("next.speakersLabel");
+      expect(roles(doc)).not.toContain("next.moderatorLabel");
+      const words = doc.design.texts.map((t) => t.content);
+      expect(words).not.toContain("Speakers:");
+      expect(words).not.toContain("Moderator:");
+      // And no MODERATOR / SPEAKER tag overlaid on the cards, which is the one
+      // thing Auri called out explicitly.
+      expect(words.map((w) => w.toUpperCase())).not.toContain("MODERATOR");
+    });
+
+    it("sizes the name at 22px and the description at 17px on the 16:9 board", () => {
+      const doc = buildNextDesign(fullBoard(), "presentation");
+      expect(byRole(doc, "speaker-0.name")?.fontSize).toBe(22);
+      expect(byRole(doc, "speaker-0.secondary")?.fontSize).toBe(17);
+      expect(byRole(doc, "moderator.name")?.fontSize).toBe(22);
+      expect(byRole(doc, "moderator.secondary")?.fontSize).toBe(17);
+    });
+
+    it("puts every speaker card on ONE line, in form order", () => {
+      for (const format of ["presentation", "square", "story"] as PlatformFormat[]) {
+        const doc = buildNextDesign(fullBoard(), format);
+        const cards = (doc.design.shapes ?? []).filter((s) => s.fillType === "outline" && s.colorType === "gradient");
+        // 4 speakers + the moderator.
+        expect(cards).toHaveLength(NEXT_MAX_SPEAKERS + 1);
+        // Speaker cards share one baseline. The moderator is cards[0] and rides
+        // higher, so the remaining four must agree with each other exactly.
+        const bottoms = cards.slice(1).map((c) => Math.round((c.y + c.height / 2) * 1e4));
+        expect(new Set(bottoms).size).toBe(1);
+        // Names read left to right in the order they were typed.
+        const xs = Array.from({ length: NEXT_MAX_SPEAKERS }, (_, i) => byRole(doc, `speaker-${i}.name`)!.position.x);
+        expect([...xs]).toEqual([...xs].sort((a, b) => a - b));
+      }
+    });
+
+    it("sits the moderator left of every speaker, and higher", () => {
+      const doc = buildNextDesign(fullBoard(), "presentation");
+      const cards = (doc.design.shapes ?? []).filter((s) => s.fillType === "outline" && s.colorType === "gradient");
+      const mod = cards[0]; // emitted first
+      for (const c of cards.slice(1)) {
+        expect(mod.x).toBeLessThan(c.x);
+        expect(mod.y + mod.height / 2).toBeLessThan(c.y + c.height / 2);
+      }
+      // Its caption sits to the RIGHT of its card, not underneath.
+      const cap = byRole(doc, "moderator.name")!;
+      expect(cap.position.x).toBeGreaterThan(mod.x);
+    });
+
+    it("renders an uploaded headshot as a role-tagged image", () => {
+      const withPhotos: NextForm = {
+        ...fullBoard(),
+        moderator: { ...fullBoard().moderator, photo: "data:image/png;base64,AAA" },
+        speakers: fullBoard().speakers.map((p) => ({ ...p, photo: "data:image/png;base64,BBB" })),
+      };
+      const doc = buildNextDesign(withPhotos, "presentation");
+      const imgRoles = doc.canvasImages.map((i) => i.simpleRole);
+      expect(imgRoles).toContain("moderator.photo");
+      expect(imgRoles).toContain("speaker-3.photo");
+      // A photo replaces the placeholder frame rather than sitting on top of it.
+      expect((doc.design.shapes ?? []).filter((s) => s.fillType === "outline" && s.colorType === "gradient")).toHaveLength(0);
+      // And it comes back into the sidebar on load, the way panel photos do.
+      const back = formsFromDoc("next", doc);
+      expect(back.next?.moderator.photo).toBe("data:image/png;base64,AAA");
+      expect(back.next?.speakers[3].photo).toBe("data:image/png;base64,BBB");
+    });
+
+    it("keeps the cards clear of the title and the logo in every format", () => {
+      for (const format of ["presentation", "square", "story"] as PlatformFormat[]) {
+        const doc = buildNextDesign(fullBoard(), format);
+        const title = byRole(doc, "headline")!;
+        const cards = (doc.design.shapes ?? []).filter((s) => s.fillType === "outline" && s.colorType === "gradient");
+        for (const c of cards) {
+          expect(c.y - c.height / 2).toBeGreaterThan(title.position.y);
+          expect(c.y + c.height / 2).toBeLessThan(0.95);
+          expect(c.x - c.width / 2).toBeGreaterThanOrEqual(0.04);
+          expect(c.x + c.width / 2).toBeLessThanOrEqual(0.941);
+        }
+      }
+    });
   });
 
   it("round-trips through formsFromDoc", () => {

@@ -931,13 +931,17 @@ export function isSalesDoc(doc: SimpleDoc): boolean {
 }
 
 /** Speakers the Next Session board can list. Four is the design's limit, not a
- *  storage one: a fifth row pushes the block into the TechBBQ logo. */
+ *  storage one: they share ONE row with the moderator, and a fifth card cuts the
+ *  others down to a size their captions no longer sit under. */
 export const NEXT_MAX_SPEAKERS = 4;
 
 /**
  * The "what's on next" holding board shown between sessions: a translucent
  * banner naming the upcoming session, a permanent ON STAGE chip, the session
- * title, then the speakers and the moderator.
+ * title, then one row of headshots — the moderator on the left, up to four
+ * speakers beside it. The people were a plain text list under "Speakers:" /
+ * "Moderator:" headings until 2026-08-12; see `buildNextDesign` for what
+ * replaced it and why.
  */
 export interface NextForm {
   /** Named in the top banner, after the fixed "NEXT:" prefix. */
@@ -958,10 +962,13 @@ export function emptyNextForm(): NextForm {
     session: "A New Person or Whatever",
     title: "Opening with Bjarke Ingels:\nUtopian Pragmatism",
     includeModerator: true,
-    moderator: { name: "Pierre Leroy", title: "Managing Director & Co-Head of Secondaries, Stifel", company: "", photo: "" },
+    // Sample headshots, as the panel form does it — the board renders photos
+    // since 2026-08-12, and an empty-frame preview says nothing about how it
+    // actually looks. Files live in /public/samples.
+    moderator: { name: "Pierre Leroy", title: "Managing Director & Co-Head of Secondaries, Stifel", company: "", photo: "/samples/pierre-leroy.jpg" },
     speakers: [
-      { name: "Andrei Xydas", title: "Principal, Lightrock", company: "", photo: "" },
-      { name: "Nicholas Sando", title: "Partner, Secondaries, Molten", company: "", photo: "" },
+      { name: "Andrei Xydas", title: "Principal, Lightrock", company: "", photo: "/samples/andrei-xydas.jpg" },
+      { name: "Nicholas Sando", title: "Partner, Secondaries, Molten", company: "", photo: "/samples/nicholas-sando.jpg" },
     ],
     // Midnight Sky — the background the board was designed against.
     backgroundId: "lm18",
@@ -1891,84 +1898,158 @@ export function buildNextDesign(form: NextForm, format: PlatformFormat): SimpleD
   }
 
   // ── 4 + 5. People ───────────────────────────────────────────────────────
+  // One row of headshots: the moderator on the left, then up to four speakers.
+  // Replaces the text-only "Speakers:" / "Moderator:" lists this board shipped
+  // with — Auri asked for the panel board's photo row here, with NO role tag on
+  // the moderator: it is identified by sitting apart on the left, the way the
+  // hand-made panel does it.
+  //
+  // Auri set the caption sizes in pixels off the 1920×1080 board: name 22,
+  // description 17. They are stored as fractions of the SHORTER side so the
+  // captions stay the same visual size in every format (the house rule for
+  // every font in this file) — which lands on exactly 22/17px at 16:9 and 9:16,
+  // and scales up on the 1500px square.
   const speakers = form.speakers.slice(0, NEXT_MAX_SPEAKERS);
   const moderator = form.includeModerator ? form.moderator : null;
+  const n = speakers.length;
 
-  // Base metrics, then a single uniform scale if the block would collide with
-  // the logo. Measuring first (rather than clamping row by row) keeps the
-  // proportions of heading-to-name-to-role intact at any speaker count.
-  const headFs0 = 0.0463;
-  const nameFs0 = 0.0333;
-  const roleFs0 = 0.0250;
-  const personGap0 = 0.007;
-  const groupGap0 = 0.030;
+  const nameFs = 22 / 1080;
+  const roleFs = 17 / 1080;
 
-  const personH = (nameF: number, roleF: number, p: SimplePerson, gap: number) =>
-    nameF * vs * 1.16
-    + (p.title.trim() ? roleF * vs * 1.16 : 0)
-    + gap;
+  const areaLeft = M;
+  const areaRight = 0.94;
+  /** Card aspect (width:height) — portrait, matching the panel's cards. */
+  const CARD_AR = 0.9;
+  const cardHfromW = (wFrac: number) => (wFrac * (W / H)) / CARD_AR;
+  const gap = 0.018;
+  /** Photo → caption gap for the moderator, whose caption sits to its RIGHT. */
+  const capGap = 0.022;
+  /** The moderator's card, in speaker-card widths. Barely bigger, as on the
+   *  reference board: what sets it apart is the position, not the size. */
+  const MOD_SCALE = 1.14;
+  /** The moderator's caption column, also in speaker-card widths. */
+  const MOD_CAP_UNITS = 1.12;
 
-  const measure = (k: number) => {
-    const headF = headFs0 * k, nameF = nameFs0 * k, roleF = roleFs0 * k;
-    const gap = personGap0 * k;
-    let h = 0;
-    if (speakers.length) {
-      h += headF * vs * 1.35;
-      for (const p of speakers) h += personH(nameF, roleF, p, gap);
-    }
-    if (moderator) {
-      if (speakers.length) h += groupGap0 * k;
-      h += headF * vs * 1.35 + personH(nameF, roleF, moderator, gap);
-    }
-    return h;
+  const wrapNext = (text: string, maxWfrac: number, fontFrac: number, avgChar = 0.56): string => {
+    const maxChars = Math.max(6, Math.floor((maxWfrac * W) / (fontFrac * S * avgChar)));
+    return text.split("\n").map((line) => {
+      const words = line.trim().split(/\s+/);
+      const out: string[] = [];
+      let cur = "";
+      for (const w of words) {
+        const trial = cur ? `${cur} ${w}` : w;
+        if (trial.length > maxChars && cur) { out.push(cur); cur = w; }
+        else cur = trial;
+      }
+      if (cur) out.push(cur);
+      return out.join("\n");
+    }).join("\n");
   };
 
-  // The people block is BOTTOM-anchored: it ends just above the logo baseline
-  // and grows upward. Top-anchoring it looked right at 16:9 (where a full
-  // board nearly fills the space) but left a tall column of dead air under the
-  // names at 9:16. The block still may not climb into the title.
-  const blockBottom = 0.945;
-  const minTop = cursorY + 0.045;
-  const room = blockBottom - minTop;
-  const needed = measure(1);
-  const k = needed > room && needed > 0 ? Math.max(0.62, room / needed) : 1;
-  const blockTop = Math.max(minTop, blockBottom - measure(k));
+  /** Name over description, wrapped to the column. Height in H-fractions. */
+  const nextCaption = (p: SimplePerson, maxWfrac: number) => {
+    const name = wrapNext(p.name.trim() || "Person", maxWfrac, nameFs);
+    const role = p.title.trim() ? wrapNext(p.title, maxWfrac, roleFs) : "";
+    const nameH = lineCount(name) * nameFs * vs * 1.2;
+    const roleH = role ? 0.004 + lineCount(role) * roleFs * vs * 1.25 : 0;
+    return { name, role, height: nameH + roleH, nameH };
+  };
 
-  const headFs = headFs0 * k;
-  const nameFs = nameFs0 * k;
-  const roleFs = roleFs0 * k;
-  const personGap = personGap0 * k;
-
-  cursorY = blockTop;
-  const emitPerson = (p: SimplePerson, role: string): void => {
-    const name = p.name.trim() || "Person";
-    mkText(name, M, cursorY + nameFs * vs * 0.58, nameFs, {
-      weight: 500, color: "#FFFFFF", simpleRole: `${role}.name`,
+  /** Draw a caption downward from `topY`, left-aligned at `x`. */
+  const emitCaption = (p: SimplePerson, x: number, topY: number, maxWfrac: number, who: string): void => {
+    const { name, role, nameH } = nextCaption(p, maxWfrac);
+    mkText(name, x, topY + nameH / 2, nameFs, {
+      weight: 700, color: "#FFFFFF", lineHeight: 1.2, simpleRole: `${who}.name`,
     });
-    cursorY += nameFs * vs * 1.16;
-    if (p.title.trim()) {
-      mkText(p.title, M, cursorY + roleFs * vs * 0.52, roleFs, {
-        weight: 400, color: "rgba(255,255,255,0.72)", simpleRole: `${role}.secondary`,
+    if (role) {
+      const roleH = lineCount(role) * roleFs * vs * 1.25;
+      mkText(role, x, topY + nameH + 0.004 + roleH / 2, roleFs, {
+        weight: 400, color: "rgba(255,255,255,0.82)", lineHeight: 1.25, simpleRole: `${who}.secondary`,
       });
-      cursorY += roleFs * vs * 1.16;
     }
-    cursorY += personGap;
   };
 
-  if (speakers.length) {
-    mkText(speakers.length === 1 ? "Speaker:" : "Speakers:", M, cursorY + headFs * vs * 0.62, headFs, {
-      weight: 700, color: "#FFFFFF", simpleRole: "next.speakersLabel",
+  /** The photo, or the gradient-outlined frame that stands in for one. Same
+   *  shape the panel emits, so a Next doc's cards retarget the same way. */
+  const emitPhoto = (p: SimplePerson, left: number, top: number, w: number, h: number, who: string): void => {
+    const cx = left + w / 2;
+    const cy = top + h / 2;
+    if (p.photo) {
+      canvasImages.push({
+        id: uid("img"), src: p.photo, x: cx, y: cy, width: w, height: h,
+        cornerRadius: 8, border: true, borderWidth: 2 / 1500, fit: "cover",
+        naturalWidth: p.naturalWidth, naturalHeight: p.naturalHeight,
+        simpleRole: `${who}.photo`,
+      });
+    } else {
+      shapes.push({
+        id: uid("shape"), type: "rectangle", x: cx, y: cy, width: w, height: h,
+        fillType: "outline", strokeWidth: 2 / 1500, colorType: "gradient",
+        color1: "#FF6B00", color2: "#FF0028", opacity: 1, blur: 0, rotation: 0,
+        borderRadius: 0.08,
+      });
+    }
+  };
+
+  if (n || moderator) {
+    // Card width comes from the row's fixed proportions, so a 2-speaker board
+    // and a 4-speaker one both fill the width instead of leaving a hole.
+    const units = n + (moderator ? MOD_SCALE + MOD_CAP_UNITS : 0);
+    const gaps = (moderator ? capGap + gap * n : gap * Math.max(0, n - 1));
+    let sw = units > 0 ? (areaRight - areaLeft - gaps) / units : 0;
+    // The moderator's caption column is capped in absolute terms. Left purely
+    // proportional it ballooned on a 2-speaker board — the cards get wide, and a
+    // caption column 1.12 cards wide became a lake of empty space between the
+    // moderator and the first speaker. Capped, the leftover goes to the cards.
+    let modCapW = Math.min(sw * MOD_CAP_UNITS, 0.2);
+    if (moderator && modCapW < sw * MOD_CAP_UNITS) {
+      sw = (areaRight - areaLeft - gaps - modCapW) / (n + MOD_SCALE);
+      modCapW = Math.min(sw * MOD_CAP_UNITS, 0.2);
+    }
+    let sh = cardHfromW(sw);
+    let modW = sw * MOD_SCALE;
+    let modH = cardHfromW(modW);
+
+    // Captions sit BELOW the speaker photos, so the row's bottom is set by the
+    // tallest caption. It stops at 0.90 rather than the 0.945 the old text list
+    // used: the TechBBQ logo sits bottom-RIGHT on this board, and the last
+    // speaker's caption is the layer that lands in that corner — at 0.945 the
+    // description ran straight through the logo.
+    const blockBottom = 0.90;
+    const capH = Math.max(0, ...speakers.map((p) => nextCaption(p, sw).height));
+    const rowBottom = blockBottom - capH - 0.012;
+    /** How far the moderator's card rides above the speaker row, matching the
+     *  reference board. Written in H-fractions of a constant pixel amount. */
+    const modLift = 0.06 * vs;
+
+    // Everything scales down together if the row would climb into the title.
+    // Only the CARDS shrink: the caption sizes are Auri's, in pixels.
+    // The clearance is generous (0.055) because the layer that lands closest to
+    // the title is the moderator's CAPTION, which starts at the card's top edge
+    // — at 0.03 its first line sat in the descenders of "Utopian Pragmatism".
+    const roomTop = cursorY + 0.055;
+    const tallest = moderator ? modLift + modH : sh;
+    if (rowBottom - tallest < roomTop) {
+      const k = Math.max(0.4, (rowBottom - roomTop - (moderator ? modLift : 0)) / (moderator ? modH : sh));
+      sw *= k; sh = cardHfromW(sw); modW = sw * MOD_SCALE; modH = cardHfromW(modW);
+    }
+
+    let x = areaLeft;
+    if (moderator) {
+      const modTop = rowBottom - modLift - modH;
+      emitPhoto(moderator, x, modTop, modW, modH, "moderator");
+      // Caption to the RIGHT of the card, top-aligned with it — the space it
+      // uses is above the speaker photos, which start lower down.
+      const capX = x + modW + capGap;
+      emitCaption(moderator, capX, modTop, modCapW, "moderator");
+      x = capX + modCapW + gap;
+    }
+    speakers.forEach((p, i) => {
+      const top = rowBottom - sh;
+      emitPhoto(p, x, top, sw, sh, `speaker-${i}`);
+      emitCaption(p, x, rowBottom + 0.012, sw, `speaker-${i}`);
+      x += sw + gap;
     });
-    cursorY += headFs * vs * 1.35;
-    speakers.forEach((p, i) => emitPerson(p, `speaker-${i}`));
-  }
-  if (moderator) {
-    if (speakers.length) cursorY += groupGap0 * k;
-    mkText("Moderator:", M, cursorY + headFs * vs * 0.62, headFs, {
-      weight: 700, color: "#FFFFFF", simpleRole: "next.moderatorLabel",
-    });
-    cursorY += headFs * vs * 1.35;
-    emitPerson(moderator, "moderator");
   }
 
   return {
@@ -2413,9 +2494,10 @@ export function stripFormsForSave(template: "panel" | "partner" | "sales" | "nex
     // Kept whole, like the partner logos: countdown and discount each own a
     // photo, and the active doc only carries the current layout's slot.
     sales,
-    // The Next board never renders headshots, but the people carry the same
-    // SimplePerson shape — strip anyway so a form filled in the panel template
-    // and copied across can't smuggle a data-URL into the saved row.
+    // Stripped for the same reason as the panel's: the board's own photo row
+    // (since 2026-08-12) tags every headshot with its role on the doc, so the
+    // canvas already carries them and a second copy in the snapshot would spend
+    // the save quota twice. `formsFromDoc` rehydrates them by role.
     next: next && { ...next, moderator: strip(next.moderator), speakers: next.speakers.map(strip) },
   };
 }
@@ -2717,16 +2799,26 @@ export function formsFromDoc(kind: string, doc: SimpleDoc, saved?: SimpleFormsSn
     // inputs, the same contract the panel captions use. The title keeps its
     // breaks — its input is a textarea and the breaks are the user's own.
     const flatten = (s: string) => s.split("\n").join(" ");
-    const readPerson = (who: string, fallback: SimplePerson): SimplePerson => ({
-      ...fallback,
-      name: flatten(textByRole.get(`${who}.name`) ?? fallback.name),
-      title: flatten(textByRole.get(`${who}.secondary`) ?? fallback.title),
-    });
+    // Photos come from the doc's role-tagged images, exactly as the panel does
+    // it — the snapshot strips them to stay under the save quota, so the canvas
+    // is the only place a headshot survives.
+    const readPerson = (who: string, fallback: SimplePerson): SimplePerson => {
+      const img = imgByRole.get(`${who}.photo`);
+      return {
+        ...fallback,
+        name: flatten(textByRole.get(`${who}.name`) ?? fallback.name),
+        title: flatten(textByRole.get(`${who}.secondary`) ?? fallback.title),
+        ...(img ? { photo: img.src, naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight } : {}),
+      };
+    };
     // How many speakers the CANVAS shows wins over a stale snapshot, the same
     // rule the partner wall uses: the doc is what the user is looking at.
+    // Image roles count as well as text roles: a speaker who has a photo but no
+    // name typed leaves no text layer at all, and reading text alone dropped
+    // them from the sidebar.
     const docSpeakers = [...new Set(
-      doc.design.texts
-        .map((t) => /^speaker-(\d+)\./.exec(t.simpleRole ?? "")?.[1])
+      [...doc.design.texts.map((t) => t.simpleRole), ...doc.canvasImages.map((i) => i.simpleRole)]
+        .map((r) => /^speaker-(\d+)\./.exec(r ?? "")?.[1])
         .filter((n): n is string => Boolean(n))
         .map(Number),
     )].sort((a, b) => a - b);
@@ -2739,7 +2831,8 @@ export function formsFromDoc(kind: string, doc: SimpleDoc, saved?: SimpleFormsSn
     const session = saved?.next
       ? base.session
       : (bannerRaw ? flatten(bannerRaw).replace(/^\s*NEXT:\s*/i, "") : base.session);
-    const hasModerator = doc.design.texts.some((t) => t.simpleRole?.startsWith("moderator."));
+    const hasModerator = doc.design.texts.some((t) => t.simpleRole?.startsWith("moderator."))
+      || doc.canvasImages.some((i) => i.simpleRole?.startsWith("moderator."));
     return {
       template,
       form: null,
