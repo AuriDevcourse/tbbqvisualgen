@@ -8,7 +8,14 @@ not required reading.
 
 ## SESSION HANDOFF · 2026-08-12 (11): photo background, pulsing Life Science backgrounds, Airtable SVG re-check
 
-### State: branch `feat/photo-background`, UNCOMMITTED. Not on master, not live.
+### State: PUSHED to master as `cd38320` · LIVE
+
+12 files, 934 insertions. Prod auto-deploys from master, so both features below
+are live. There is no `main` branch in this repo: master IS prod.
+
+The 9 new Airtable SVG logos are NOT in this push. They were never approved and
+were only staged outside the repo, so `public/logos` is untouched. See the logo
+section below and re-pull before adding them.
 
 Asked for by a colleague: making a new canvas, they wanted the gradient gone so an
 uploaded summit photo (a winner on stage) becomes the whole visual with the text
@@ -195,9 +202,8 @@ Notes for whoever picks this up:
 
 ### Next steps
 
-1. Review the diff, commit, merge to master (auto-deploys).
-2. Show the colleague. The flow is `/editor` then Canvas then "Use your own photo".
-3. Optional: decide whether `/simple` needs a "blank canvas with your photo" door.
+1. Show the colleague. The flow is `/editor` then Canvas then "Use your own photo".
+2. Optional: decide whether `/simple` needs a "blank canvas with your photo" door.
 4. Logos: on a go-ahead, re-pull the 9 SVGs, drop them in `public/logos` under the
    proposed names, `npm run logos`, on a SEPARATE branch from the photo work.
 5. Life Science pulse: show Auri, and decide whether the 3 presets want a slower
