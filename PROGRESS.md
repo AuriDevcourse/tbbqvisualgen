@@ -6,21 +6,59 @@ not required reading.
 
 ---
 
-## SESSION HANDOFF · 2026-08-13 (12): Life Science re-sync — exhibitor wall rebuilt from the live feed
+## SESSION HANDOFF · 2026-08-13 (12): Life Science re-sync + Next Session board rebuilt
 
-### State: PUSHED to master as `9f597ea` · LIVE
+### State: PUSHED to master as `74a6fdb` · LIVE
 
-Two commits: `403b125` (logo re-sync) and `9f597ea` (Next Session rebuild).
-30 files: 20 new logos in `public/logos`, plus `partnerSets.ts`,
-`partnerSets.test.ts` and the regenerated `logoLibrary.json`. Nothing is live
-until this merges — master IS prod and auto-deploys, so the branch is the safety.
+Five commits on top of `2f153b9`, 30 files, +1761/-167:
 
-Gates: **243/243 vitest**, **tsc clean**, **eslint clean on both touched files**,
-**production build compiled**. Verified in the built app at
-`localhost:3007/simple` (not only in tests): the fill button reads 37, the wall
-renders all 37 with **zero empty boxes and zero broken images** (87 imgs, none
-with `naturalWidth === 0`), and the only console errors are the pre-existing
-signed-out ones (`/api/auth/session` 500, team-library 401s).
+| | |
+|---|---|
+| `403b125` | Life Science re-sync: 20 new logos, exhibitor wall 31 → 37, Pitch Finalists set |
+| `9f597ea` | Next Session board rebuilt against Auri's four reference exports |
+| `cb9da00` | handoff marked pushed |
+| `c1ac087` | banner default |
+| `74a6fdb` | banner split into a name field and a time field |
+
+Gates at the push: **272/272 vitest** (243 before), **tsc clean**, **eslint
+clean on every touched file**, **production build compiled**. The dev server and
+13 orphaned node children were killed before the build — building over a live
+`next dev` shares `.next` and is the failure already written up in these notes.
+
+### READ THIS FIRST: two things git does not know about
+
+**1. The team library item "Sessions on Stage"
+(`5d3c1629-72da-4e24-bb66-791392c051e5`) was edited DIRECTLY in Neon.** Twice.
+Its banner text held "A New Person or Whatever" in 11 places (the main doc, all
+9 format variants, and the form snapshot); every one now reads
+`UP NEXT: Session (XX:XX)`. Its snapshot was then moved to the new two-field
+shape (`session: "Session"`, `time: "XX:XX"`). `updated_by` was left as
+marketing@techbbq.org. Matched on the `next.session` role rather than a blind
+find-and-replace over the JSON, dry-run first. Recipe: read `DATABASE_URL` from
+`.env.local`, `neon()` from `@neondatabase/serverless`, run the script from the
+REPO ROOT (a script in the temp dir cannot resolve the package).
+
+**A saved library item overrides the builder.** This cost most of an afternoon:
+Auri kept reporting "nothing changed" after each push while looking at a board
+with the orange "Custom design active · saved" pill showing. A loaded custom
+design drives the canvas directly, so `buildNextDesign` never runs and no
+template change can appear. `emptyNextForm()` only reaches a FRESH form, and
+`syncNextChrome` deliberately keeps a tuned header across rebuilds. **Before
+debugging "my change did not apply" on this template, check for that pill and
+click Revert.**
+
+**2. Nobody has visually verified the Next Session board.** The Playwright
+browser profile was locked for the entire session, so every screenshot attempt
+failed and Auri's screenshots were the only visual check. That is not a
+footnote: BOTH real bugs in this work were invisible to 260+ passing tests and
+obvious on screen — the gradient photo border and the fireside header overlap.
+The card geometry is pinned to measured pixels by test, but "does it look right
+at 2 and 4 speakers with photos loaded" is still unconfirmed. **Do that pass.**
+
+**Also live and worth a second opinion:** the invented sample job lines
+("General Partner, Kattegat Capital", "Founder & CEO, Northbound") render on any
+added speaker slot until typed over. Placeholder-looking, but they are fake
+firms inside a TechBBQ template.
 
 ### Exhibiting wall: 31 → 37, and the SOURCE changed
 
@@ -184,7 +222,7 @@ their cards with `colorType === "gradient"`, which after the white change
 matched NOTHING: they were passing on empty arrays. There is now one shared
 `frames()` helper and the geometry tests assert a card count first.
 
-254 → 255 tests.
+The Next Session board's own tests grew from 243 to 272 across the session.
 
 ### Bug found on the way: the team library never accepted a Next Session board
 
