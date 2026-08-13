@@ -5,6 +5,21 @@
  *
  * **This is exactly the 25 on the official Partners page, in its order**
  * (top-left to bottom-right) — checked against it logo by logo on 2026-08-04.
+ *
+ * **Re-verified 2026-08-13: still 25, same companies, same order, no edit.**
+ * Done properly this time, so it does not need re-doing by eye: the wall on
+ * techbbq.dk/life-science is 24 INLINE `<svg>` elements plus one `<img>` (Ruff &
+ * Co, position 19). Inline SVG is why a text scrape of the page under-reports it
+ * and why matching on image filenames finds almost nothing. Read it in the
+ * browser as `document.querySelectorAll("svg, img")` filtered to the wall's
+ * y-range and take each logo's identity from its PARENT LINK's href, which is
+ * unambiguous where the artwork is not.
+ *
+ * NVIDIA is on that page but is deliberately NOT here: it sits in a separate
+ * "IN PARTNERSHIP WITH" credit above the wall, beside Nebius, for one partner
+ * session. That is a session credit, not a track partner. Nebius is in the wall
+ * on its own account. The library has no NVIDIA file yet either — it is one of
+ * the 9 staged-not-imported Airtable logos in PROGRESS.md handoff 11.
  * Anything not on that page stays out, even when the library has it: the 2025
  * thank-you post also carried **Amazing Hall** and **biotope by VIB**, and both
  * were dropped from this set for that reason. Both files are still in the
@@ -366,60 +381,87 @@ export const COMMUNITY_PAGES: PartnerSetEntry[][] = Array.from(
 /**
  * The startups exhibiting in the Life Science x Deep Tech area, 2026.
  *
- * Pulled from the **Life Science Project** table in Airtable
- * (`appgXNjXJqpk9Ebxd` / `tblvukXfmR7KTFymG`) on 2026-08-10, and the filter is
- * worth writing down because the obvious one is wrong: the roster is
- * `status = "Confirmed startup"` AND `Stakeholder type = "Exhibiting Startup"`,
- * read across the WHOLE table. The "Startup Library 2026" view shows only 17 of
- * them, and the `Confirmation` field is a shortlisting flag, not attendance —
- * it says "Selected" for companies still marked "To be contacted", and even for
- * two that declined.
+ * **Source changed on 2026-08-13.** This used to be a hand-filtered read of the
+ * **Life Science Project** table in Airtable (`appgXNjXJqpk9Ebxd` /
+ * `tblvukXfmR7KTFymG`). It is now taken from the connector feed that the live
+ * page eats, **`https://airtable-woad.vercel.app/api/ls-startups`**
+ * (`GITHUB/airtable`, `lib/lsstartups.ts`, view `viwC65YEXxl8iDPzN`), because
+ * that feed IS what techbbq.dk shows. Two lists that are supposed to be the same
+ * roster should not be filtered in two places.
  *
- * That filter returns **46**, which is the number Auri was given. Three of the
- * 46 are tagged `LS Type: Intersection` rather than one of the three tracks
- * (BIOADVIO, Molecular Quantum Solutions, Peak Emulsions) and were dropped on
- * his call, leaving 43.
+ * Its gate is the same one this file worked out the hard way and should not be
+ * re-litigated: `status = "Confirmed startup"`, a MULTI-select. `Confirmation =
+ * Selected` is a shortlisting flag, not attendance — it stays "Selected" for
+ * companies still being contacted and for ones that declined.
  *
- * **This set is 31, not 43.** Twelve of the 43 have no SVG in the library at
- * all, and a wall entry with no artwork renders an empty outlined box. Missing
- * as of 2026-08-10: AlterEcho, ArcanaBio, BÆTA Carbon Solutions, Fepod, H+H
- * LABS, Mirno, Nordstar Medical, OvartiX, Seaqure labs, Tergy Sagava,
- * VentriLabs, Volta Greentech. Drop a white SVG for any of them into
- * `public/logos`, run `npm run logos`, and add the line here.
+ * **Re-sync with `curl -s https://airtable-woad.vercel.app/api/ls-startups`.**
+ * The feed is public and needs no key.
+ *
+ * The roster moved a LOT between 2026-08-10 (31 here, from 43 confirmed) and
+ * 2026-08-13 (37): 17 companies fell off and 23 arrived. So treat any count in
+ * this comment as a date-stamped observation, and expect churn right up to the
+ * summit rather than assuming a stale list is still right.
+ *
+ * Dropped on 2026-08-13, files kept in the library in case they come back:
+ * Completion, Drylabz, Hemispherian, Hydram Research, Lucero, Mimbly, NeoCare
+ * Nordic, Nordiq Products, Nyctea, PERPLANT, Sea Growth, Sveppa, Sylvia Health,
+ * Uman Sense, UVision, Visibuilt, Yngvi Bio.
+ *
+ * **This set is the FULL 37 — nothing is held back for missing artwork**, which
+ * is new. The feed carries each company's logo attachment, so the 20 that had no
+ * library file were imported straight from it (36 of the 37 are white-ink SVG;
+ * Ai2Ai is the one PNG). Two arrived padded and were run through
+ * `npm run logos:tighten` (Anorit Medical, TrialMe).
+ *
+ * Three names do not match their artwork, so do not "fix" them back:
+ *   `Hydratico.svg`             → Airtable calls it "H+H LABS PSA (project
+ *                                 Hydratico)"; the artwork says hydratico
+ *   `DiaDesign Technologie.svg` → library filename is missing its final "s"
+ *   `Ai2Ai.png`                 → the only raster in this set
+ *
+ * `AUSCORA` is a white CARD with the wordmark knocked out of it, not white ink
+ * on transparent, so it renders as a white plate among 36 knockouts. That is the
+ * artwork the company supplied; flagged to Auri 2026-08-13, unchanged here.
  *
  * Labels drop the legal suffix — no thank-you wall says "ApS".
  */
 export const LS_DT_EXHIBITORS: PartnerSetEntry[] = [
+  { label: "3Sonic", src: "/logos/Life%20Science%20Pitch%20Finalists%202026/3sonic.svg" },
+  { label: "ABH Optics", src: "/logos/ABH%20Optics.svg" },
+  { label: "Ai2Ai", src: "/logos/Ai2Ai.png" },
+  { label: "Anorit Medical", src: "/logos/Anorit%20Medical.svg" },
+  { label: "AUSCORA", src: "/logos/AUSCORA.svg" },
+  { label: "AVENTIX", src: "/logos/AVENTIX.svg" },
+  { label: "Bioelectrix", src: "/logos/Life%20Science%20Pitch%20Finalists%202026/Bioelectrix.svg" },
+  { label: "Biomimica", src: "/logos/Biomimica.svg" },
   { label: "Blue2", src: "/logos/Blue2%20White.svg" },
-  { label: "Completion", src: "/logos/Completion.svg" },
-  { label: "Drylabz", src: "/logos/Drylabz.svg" },
+  { label: "CYTO365", src: "/logos/CYTO365.svg" },
+  { label: "Dalea", src: "/logos/Dalea.svg" },
+  { label: "DiaDesign Technologies", src: "/logos/DiaDesign%20Technologie.svg" },
+  { label: "DPella", src: "/logos/DPella.svg" },
+  { label: "Enduro Genetics", src: "/logos/Enduro%20Genetics.svg" },
   { label: "GreenCow Biosolutions", src: "/logos/Life%20Science%20Pitch%20Finalists%202026/greenCow%20BioSolutions.svg" },
-  { label: "Hemispherian", src: "/logos/Hemispherian.svg" },
-  { label: "Hydram Research", src: "/logos/Hydram.svg" },
+  { label: "Hydratico", src: "/logos/Hydratico.svg" },
   { label: "Immunordic", src: "/logos/Life%20Science%20Pitch%20Finalists%202026/Immunordic.svg" },
-  { label: "Lucero", src: "/logos/Lucero.svg" },
+  { label: "Insulinus", src: "/logos/Insulinus.svg" },
+  { label: "LignoSolve", src: "/logos/LignoSolve.svg" },
+  { label: "Lizard Photonics", src: "/logos/Lizard%20Photonics.svg" },
   { label: "MagCath", src: "/logos/MagCath%20White.svg" },
   { label: "Magnolia Quantum Sensing", src: "/logos/Deep%20Tech%20Pitch%20Finalists%202026/Magnolia%20Quantum%20Sensing.svg" },
-  { label: "Mimbly", src: "/logos/Mimbly.svg" },
-  { label: "NeoCare Nordic", src: "/logos/NeoCare%20Nordic.svg" },
-  { label: "Nordiq Products", src: "/logos/Nordiq.svg" },
-  { label: "Nyctea Technologies", src: "/logos/Nyctea.svg" },
   { label: "Ownwell", src: "/logos/Ownwell%20White.svg" },
   { label: "Paindrainer", src: "/logos/Paindrainer%20White.svg" },
-  { label: "PERPLANT", src: "/logos/Perplant.svg" },
   { label: "Previto", src: "/logos/Previto%20White.svg" },
+  { label: "QVersion", src: "/logos/QVersion.svg" },
+  { label: "Rebound", src: "/logos/Rebound.svg" },
+  { label: "Redoxa Therapeutics", src: "/logos/Redoxa%20Therapeutics.svg" },
+  { label: "Rekovy", src: "/logos/Rekovy.svg" },
   { label: "Rilemo", src: "/logos/Deep%20Tech%20Pitch%20Finalists%202026/Rilemo.svg" },
-  { label: "Sea Growth", src: "/logos/Sea%20Growth.svg" },
   { label: "SmartSens", src: "/logos/SmartSens%20White.svg" },
   { label: "Sorbus Biomedical", src: "/logos/Sorbus%20Biomedical%20White.svg" },
-  { label: "Sveppa", src: "/logos/Sveppa.svg" },
-  { label: "Sylvia Health", src: "/logos/Sylvia%20Health.svg" },
-  { label: "Uman Sense", src: "/logos/Uman%20Sense.svg" },
-  { label: "UVision", src: "/logos/Uvision.svg" },
+  { label: "TrialMe", src: "/logos/TrialMe.svg" },
   { label: "Vetbac", src: "/logos/Vetbac%20White.svg" },
-  { label: "Visibuilt", src: "/logos/Visibuilt.svg" },
   { label: "Walther Therapeutics", src: "/logos/Walther%20Therapeutics%20White.svg" },
-  { label: "Yngvi Bio", src: "/logos/Yngvi%20Bio.svg" },
+  { label: "Wren Bioscience", src: "/logos/Wren%20Bioscience.svg" },
   { label: "Yoke Bio", src: "/logos/Yoke%20Bio%20White.svg" },
 ];
 
@@ -434,8 +476,18 @@ export const LS_DT_EXHIBITORS: PartnerSetEntry[] = [
  * their artwork filling 100% of the viewBox, so none of them will render a
  * fraction of its neighbours' size the way the padded partner files did.
  *
- * Four of these companies ALSO exhibit, so the participating wall below
+ * Six of these companies ALSO exhibit, so the participating wall below
  * de-duplicates rather than showing them twice.
+ *
+ * **Checked against both announcement pages on 2026-08-13 — 8 and 8, no change:**
+ * techbbq.dk/life-science-pitch and techbbq.dk/deep-tech-pitch. Those pages
+ * shorten four names, so match on the COMPANY, not the string: `Oasi` is
+ * Oasicare, `Analgesia.ai` is AnalgesiaAI, `Magnolia` is Magnolia Quantum
+ * Sensing, `N23` is N23 health. Labels here stay as the artwork reads.
+ *
+ * This list got its own fill button ("LS x DT Pitch Finalists") the same day.
+ * Until then it existed only to feed the participating wall, so a roster that
+ * was correct for months had never actually been rendered on its own.
  */
 export const LS_DT_PITCH_FINALISTS: PartnerSetEntry[] = [
   // ── Life Science Pitch Competition ──
@@ -462,11 +514,15 @@ export const LS_DT_PITCH_FINALISTS: PartnerSetEntry[] = [
  * "Thank you for participating" — the exhibitors and the pitch finalists on one
  * wall, which is what was asked for over splitting them across two slides.
  *
- * De-duplicated **by `src`**, not by label: four companies appear in both lists
- * and two of them are spelled differently between the two (`GreenCow
- * Biosolutions` vs `greenCow BioSolutions`, `Immunordic` in both, `Magnolia
- * Quantum Sensing`, `Rilemo`). Both lists already point at the same file for
- * those, so the file path is the reliable identity. 31 + 16 - 4 = 43.
+ * De-duplicated **by `src`**, not by label: six companies appear in both lists
+ * and they are not spelled the same in both (`GreenCow Biosolutions` vs
+ * `greenCow BioSolutions`, `3Sonic` vs `3sonic`). Both lists already point at
+ * the same FILE for those, so the path is the reliable identity — matching on
+ * label would double-print half of them. 37 + 16 - 6 = 47 as of 2026-08-13.
+ *
+ * The overlap grew from 4 to 6 when the exhibitor roster was re-synced that day
+ * (3Sonic and Bioelectrix are now exhibiting as well as pitching), which is
+ * exactly the case the src-based dedupe exists for.
  */
 export const LS_DT_PARTICIPANTS: PartnerSetEntry[] = [
   ...LS_DT_EXHIBITORS,
@@ -490,6 +546,17 @@ export const PARTNER_SETS: PartnerSet[] = [
     headline: "Thank you for exhibiting",
     featuredCount: 0,
     logos: LS_DT_EXHIBITORS,
+  },
+  {
+    id: "ls-dt-pitch-finalists",
+    name: "LS x DT Pitch Finalists",
+    // Not a thank-you: this wall announces the cohort BEFORE they pitch, which
+    // is why it is the one set in this folder whose headline does not start
+    // "Thank you". The two competitions are deliberately not split into two
+    // buttons — 16 fits one wall, and the pages announce them as one cohort.
+    headline: "Meet our pitch finalists",
+    featuredCount: 0,
+    logos: LS_DT_PITCH_FINALISTS,
   },
   {
     id: "ls-dt-participants",
@@ -557,7 +624,12 @@ export const PARTNER_PROJECTS: PartnerProject[] = [
     id: "life-science-deep-tech",
     name: "Life Science x Deep Tech 2026",
     note: "Track partners, plus the startups in the area",
-    sets: [setById("life-science"), setById("ls-dt-exhibitors"), setById("ls-dt-participants")],
+    sets: [
+      setById("life-science"),
+      setById("ls-dt-exhibitors"),
+      setById("ls-dt-pitch-finalists"),
+      setById("ls-dt-participants"),
+    ],
   },
   {
     id: "investor",

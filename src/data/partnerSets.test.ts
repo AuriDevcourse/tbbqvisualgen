@@ -165,9 +165,14 @@ describe("partner sets", () => {
       expect([...counts.entries()].filter(([, n]) => n > 1)).toEqual([]);
     });
 
-    it("de-duplicates the four companies that both exhibit and pitch", () => {
+    // Was pinned at "the four companies"; the exhibitor re-sync on 2026-08-13
+    // took the overlap to 6 and this failed on a correct change. The count is
+    // whatever Airtable says this week, so assert the ARITHMETIC instead — that
+    // participating is exactly the union — and only that some overlap exists,
+    // which is what makes the dedupe worth having.
+    it("de-duplicates the companies that both exhibit and pitch", () => {
       const overlap = LS_DT_PITCH_FINALISTS.filter((f) => LS_DT_EXHIBITORS.some((e) => e.src === f.src));
-      expect(overlap.length).toBe(4);
+      expect(overlap.length).toBeGreaterThan(0);
       expect(LS_DT_PARTICIPANTS.length).toBe(LS_DT_EXHIBITORS.length + LS_DT_PITCH_FINALISTS.length - overlap.length);
     });
 

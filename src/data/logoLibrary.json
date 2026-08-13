@@ -18,6 +18,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/ABH%20Optics.svg",
+    "name": "ABH Optics",
+    "tags": [],
+    "bytes": 8834,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Abion.svg",
     "name": "Abion",
     "tags": [],
@@ -142,6 +150,14 @@
     "name": "AI Denmark",
     "tags": [],
     "bytes": 7265,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Ai2Ai.png",
+    "name": "Ai2Ai",
+    "tags": [],
+    "bytes": 7399,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -340,6 +356,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/Anorit%20Medical.svg",
+    "name": "Anorit Medical",
+    "tags": [],
+    "bytes": 9716,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Anthemis.svg",
     "name": "Anthemis",
     "tags": [],
@@ -454,6 +478,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/AUSCORA.svg",
+    "name": "AUSCORA",
+    "tags": [],
+    "bytes": 2564,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Auth0.svg",
     "name": "Auth0",
     "tags": [],
@@ -474,6 +506,14 @@
     "name": "AUXXO Female Catalyst Fund",
     "tags": [],
     "bytes": 11159,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/AVENTIX.svg",
+    "name": "AVENTIX",
+    "tags": [],
+    "bytes": 2400,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -636,6 +676,14 @@
     "name": "BioMedical Design",
     "tags": [],
     "bytes": 11710,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Biomimica.svg",
+    "name": "Biomimica",
+    "tags": [],
+    "bytes": 4574,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -1298,10 +1346,26 @@
     "tone": "light"
   },
   {
+    "src": "/logos/CYTO365.svg",
+    "name": "CYTO365",
+    "tags": [],
+    "bytes": 3349,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/CZech%20Founders.svg",
     "name": "CZech Founders",
     "tags": [],
     "bytes": 6257,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Dalea.svg",
+    "name": "Dalea",
+    "tags": [],
+    "bytes": 5468,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -1612,6 +1676,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/DPella.svg",
+    "name": "DPella",
+    "tags": [],
+    "bytes": 2445,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Drata.svg",
     "name": "Drata",
     "tags": [],
@@ -1800,6 +1872,14 @@
     "name": "Endless Food Co",
     "tags": [],
     "bytes": 15621,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Enduro%20Genetics.svg",
+    "name": "Enduro Genetics",
+    "tags": [],
+    "bytes": 3999,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -2768,6 +2848,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/Hydratico.svg",
+    "name": "Hydratico",
+    "tags": [],
+    "bytes": 10120,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Hydratico%20Water%20Doctors%20White.svg",
     "name": "Hydratico Water Doctors White",
     "tags": [],
@@ -3024,6 +3112,14 @@
     "bytes": 995,
     "toneAlgo": 2,
     "tone": "dark"
+  },
+  {
+    "src": "/logos/Insulinus.svg",
+    "name": "Insulinus",
+    "tags": [],
+    "bytes": 1337,
+    "toneAlgo": 2,
+    "tone": "light"
   },
   {
     "src": "/logos/Intercom.svg",
@@ -3506,6 +3602,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/LignoSolve.svg",
+    "name": "LignoSolve",
+    "tags": [],
+    "bytes": 3858,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/lilidi%20ai.svg",
     "name": "lilidi ai",
     "tags": [],
@@ -3526,6 +3630,14 @@
     "name": "Lithuania Bio",
     "tags": [],
     "bytes": 4458,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Lizard%20Photonics.svg",
+    "name": "Lizard Photonics",
+    "tags": [],
+    "bytes": 11605,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -4634,6 +4746,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/QVersion.svg",
+    "name": "QVersion",
+    "tags": [],
+    "bytes": 2359,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Rabbit%20Data.svg",
     "name": "Rabbit Data",
     "tags": [],
@@ -4682,6 +4802,14 @@
     "tone": "dark"
   },
   {
+    "src": "/logos/Rebound.svg",
+    "name": "Rebound",
+    "tags": [],
+    "bytes": 11501,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Recoma.svg",
     "name": "Recoma",
     "tags": [],
@@ -4714,12 +4842,28 @@
     "tone": "light"
   },
   {
+    "src": "/logos/Redoxa%20Therapeutics.svg",
+    "name": "Redoxa Therapeutics",
+    "tags": [],
+    "bytes": 2436,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Redpoint.png",
     "name": "Redpoint",
     "tags": [],
     "bytes": 48166,
     "toneAlgo": 2,
     "tone": "dark"
+  },
+  {
+    "src": "/logos/Rekovy.svg",
+    "name": "Rekovy",
+    "tags": [],
+    "bytes": 2089,
+    "toneAlgo": 2,
+    "tone": "light"
   },
   {
     "src": "/logos/Relow.svg",
@@ -6350,6 +6494,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/TrialMe.svg",
+    "name": "TrialMe",
+    "tags": [],
+    "bytes": 11388,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Trind.svg",
     "name": "Trind",
     "tags": [],
@@ -6950,6 +7102,14 @@
     "bytes": 52841,
     "toneAlgo": 2,
     "tone": "dark"
+  },
+  {
+    "src": "/logos/Wren%20Bioscience.svg",
+    "name": "Wren Bioscience",
+    "tags": [],
+    "bytes": 1662,
+    "toneAlgo": 2,
+    "tone": "light"
   },
   {
     "src": "/logos/WSL%20Horizontal%20Colour.png",
