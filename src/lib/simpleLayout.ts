@@ -1017,6 +1017,40 @@ function rightAlignedRow(count: number): number[] {
     RIGHT - NEXT_CARD_W - (count - 1 - i) * (NEXT_CARD_W + GAP));
 }
 
+/** The fixed prefix on the Next Session banner. */
+const NEXT_BANNER_PREFIX = "UP NEXT:";
+
+/**
+ * Compose the banner: `UP NEXT: <session> (<time>)`.
+ *
+ * The brackets live HERE, not in the input, so nobody has to remember the
+ * format and no two boards end up punctuated differently. Either half may be
+ * empty — an empty time renders no brackets, and an empty session renders just
+ * the time — so a half-filled form never shows stray "()" on a venue screen.
+ *
+ * Paired with `parseNextBanner`, which has to invert this exactly. Change one
+ * and change the other; the round-trip is tested.
+ */
+export function nextBannerText(session: string, time: string): string {
+  const parts = [session.trim(), time.trim() ? `(${time.trim()})` : ""].filter(Boolean);
+  return parts.length ? `${NEXT_BANNER_PREFIX} ${parts.join(" ")}` : NEXT_BANNER_PREFIX;
+}
+
+/**
+ * Read a banner back into its two fields.
+ *
+ * Only a TRAILING bracket group is treated as the time, and the match is
+ * anchored to the end, so a session called "Fireside (Bonfire Stage) 14:30"
+ * does not lose its middle. The `UP ` is optional: boards saved before
+ * 2026-08-13 carry the bare "NEXT:" prefix and must still load with their name
+ * intact rather than keeping "NEXT:" inside the input.
+ */
+export function parseNextBanner(raw: string): { session: string; time: string } {
+  const body = raw.replace(/^\s*(UP\s+)?NEXT:\s*/i, "").trim();
+  const m = /^(.*?)\s*\(([^()]*)\)$/.exec(body);
+  return m ? { session: m[1].trim(), time: m[2].trim() } : { session: body, time: "" };
+}
+
 /**
  * Placeholder job lines for speaker slots 3 and 4, which the default form does
  * not fill. An added slot used to arrive completely blank, so the board drew a
@@ -1058,8 +1092,14 @@ export const NEXT_MAX_SPEAKERS = 4;
  * replaced it and why.
  */
 export interface NextForm {
-  /** Named in the top banner, after the fixed "UP NEXT:" prefix. */
+  /** Named in the top banner, after the fixed "UP NEXT:" prefix. Just the
+   *  session's NAME — the start time is its own field. */
   session: string;
+  /** The start time, rendered in brackets after the session name. Typed bare
+   *  ("14:30"); the brackets belong to the canvas, not the input, so nobody has
+   *  to remember the format and no board ends up with mismatched punctuation.
+   *  Empty renders no brackets at all. */
+  time: string;
   /** The big headline — the session's own title. */
   title: string;
   /** The lighter line under the title — "Fireside with X (Role at Company)".
@@ -1076,10 +1116,11 @@ export interface NextForm {
 
 export function emptyNextForm(): NextForm {
   return {
-    // The default doubles as the instruction: the session's name, then its
-    // start time in brackets. "XX:XX" is left literal on purpose so an unedited
-    // board is obviously unfinished rather than quietly showing a wrong time.
-    session: "Session (XX:XX)",
+    // Both defaults are placeholders that read as instructions. "XX:XX" stays
+    // literal on purpose: an unedited board should look obviously unfinished
+    // rather than quietly show a wrong start time on a screen at the venue.
+    session: "Session",
+    time: "XX:XX",
     // EMPTY on purpose, unlike the sample headshots. The subtitle belongs to
     // the fireside board; on a 3- or 4-speaker board it competes with the row
     // for vertical space and the header guard answers by shrinking the title
@@ -1978,8 +2019,7 @@ export function buildNextDesign(form: NextForm, format: PlatformFormat): SimpleD
     borderRadius: 0,
     simpleRole: "next.banner",
   });
-  const session = form.session.trim();
-  mkText(session ? `UP NEXT: ${session}` : "UP NEXT:", M, bannerH / 2 + bannerFs * vs * 0.1, bannerFs, {
+  mkText(nextBannerText(form.session, form.time), M, bannerH / 2 + bannerFs * vs * 0.1, bannerFs, {
     weight: 800, uppercase: true, color: "#15110E",
     letterSpacing: Math.max(1, Math.round(0.0009 * S)),
     simpleRole: "next.session",
@@ -3003,15 +3043,27 @@ export function formsFromDoc(kind: string, doc: SimpleDoc, saved?: SimpleFormsSn
     const speakers = saved?.next && !docSpeakers.length
       ? base.speakers
       : docSpeakers.map((i) => readPerson(`speaker-${i}`, base.speakers[i] ?? emptyPerson()));
-    // The banner text is stored with its fixed "UP NEXT: " prefix on canvas;
-    // the input holds only the part the user types. The `UP ` is optional in
-    // the pattern so docs saved before 2026-08-13, when the prefix was just
-    // "NEXT:", still load with their session name intact rather than keeping a
-    // stray "NEXT:" inside the input.
+    // The banner is stored composed on canvas ("UP NEXT: Fireside (14:30)");
+    // the two inputs hold the parts. `parseNextBanner` splits it back, and it
+    // also rescues docs saved when the session name and the time were ONE
+    // field — "Session (XX:XX)" parses into the pair, so an older board opens
+    // with its time already in the new input instead of glued to its name.
     const bannerRaw = textByRole.get("next.session");
+    const parsed = bannerRaw ? parseNextBanner(flatten(bannerRaw)) : null;
+    // A snapshot written BEFORE `time` existed has the whole string in
+    // `session` — "Session (XX:XX)" — and no `time` at all. Taking it verbatim
+    // would compose "UP NEXT: Session (XX:XX) (XX:XX)" on the next build, so a
+    // legacy snapshot gets split the same way the canvas does. Detected by
+    // `time` being absent, not by looking for brackets: a CURRENT snapshot with
+    // a deliberately empty time must stay empty.
+    const legacySnapshot = Boolean(saved?.next) && base.time === undefined;
+    const fromSnapshot = legacySnapshot ? parseNextBanner(base.session) : null;
     const session = saved?.next
-      ? base.session
-      : (bannerRaw ? flatten(bannerRaw).replace(/^\s*(UP\s+)?NEXT:\s*/i, "") : base.session);
+      ? (fromSnapshot?.session ?? base.session)
+      : (parsed?.session ?? base.session);
+    const time = saved?.next
+      ? (fromSnapshot?.time ?? base.time ?? "")
+      : (parsed?.time ?? base.time ?? "");
     const hasModerator = doc.design.texts.some((t) => t.simpleRole?.startsWith("moderator."))
       || doc.canvasImages.some((i) => i.simpleRole?.startsWith("moderator."));
     return {
@@ -3022,6 +3074,7 @@ export function formsFromDoc(kind: string, doc: SimpleDoc, saved?: SimpleFormsSn
       next: {
         ...base,
         session,
+        time,
         title: saved?.next ? base.title : (textByRole.get("headline") ?? base.title),
         // An empty subtitle emits no text layer, so a doc without one has to
         // read back as "" and not as the sample copy from `base`.

@@ -1988,10 +1988,17 @@ export default function SimplePage() {
             <section className="flex flex-col gap-3">
               <Field
                 label="Next session"
-                hint={"name, then the start time in brackets"}
+                hint={"the session's name"}
                 value={next.session}
                 onChange={(v) => setNext((n) => ({ ...n, session: v }))}
-                placeholder="Session (XX:XX)"
+                placeholder="Session"
+              />
+              <Field
+                label="Time of the session"
+                hint={"brackets are added for you"}
+                value={next.time}
+                onChange={(v) => setNext((n) => ({ ...n, time: v }))}
+                placeholder="XX:XX"
               />
               <Field
                 label="Session title"

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { accentShapes, isAccentShape, syncAccentShapes, applyAccent } from "./accents";
 import { thanksRowCounts } from "./simpleLayout";
-import { adoptLegacyPanelRoles, buildNextDesign, buildPartnerDesign, buildSalesDesign, buildSimpleDesign, bundleCoverage, dedupeSpeakerRoles, docKindOf, emptyForm, emptyNextForm, parkDoc, emptyPartnerForm, emptyPerson, emptySalesForm, formsFromDoc, isBlankPerson, isNextDoc, mergePersonDescription, migrateLegacyPanelDoc, nextSampleSpeaker, NEXT_MAX_SPEAKERS, panelShapeKey, partnerLayoutOf, retargetPartnerLayout, retargetSalesLayout, retargetTunedDoc, salesLayoutOf, sampleFourthSpeaker, shuffleWallLogos, simpleExportName, stripFormsForSave, syncNextChrome, syncPanelChrome, syncPartnerChrome, thanksFlatMaxColumns, thanksGridColumns, THANKS_MAX_LOGOS, THANKS_SCRIM_MAX, type NextForm, type PartnerForm, type PartnerLogo, type SalesForm, type SimpleDoc, type SimpleForm } from "./simpleLayout";
+import { adoptLegacyPanelRoles, buildNextDesign, buildPartnerDesign, buildSalesDesign, buildSimpleDesign, bundleCoverage, dedupeSpeakerRoles, docKindOf, emptyForm, emptyNextForm, parkDoc, emptyPartnerForm, emptyPerson, emptySalesForm, formsFromDoc, isBlankPerson, isNextDoc, mergePersonDescription, migrateLegacyPanelDoc, nextBannerText, nextSampleSpeaker, parseNextBanner, NEXT_MAX_SPEAKERS, panelShapeKey, partnerLayoutOf, retargetPartnerLayout, retargetSalesLayout, retargetTunedDoc, salesLayoutOf, sampleFourthSpeaker, shuffleWallLogos, simpleExportName, stripFormsForSave, syncNextChrome, syncPanelChrome, syncPartnerChrome, thanksFlatMaxColumns, thanksGridColumns, THANKS_MAX_LOGOS, THANKS_SCRIM_MAX, type NextForm, type PartnerForm, type PartnerLogo, type SalesForm, type SimpleDoc, type SimpleForm } from "./simpleLayout";
 import type { PlatformFormat } from "@/types/template";
 
 /** The partner-form fields the thank-you wall introduced. Spread into the
@@ -2087,9 +2087,93 @@ describe("next session board", () => {
   });
 
   it("prefixes the banner with UP NEXT: and keeps the title separate", () => {
-    const doc = buildNextDesign({ ...emptyNextForm(), session: "Fireside Chat" }, "presentation");
+    const doc = buildNextDesign({ ...emptyNextForm(), session: "Fireside Chat", time: "" }, "presentation");
     expect(byRole(doc, "next.session")?.content).toBe("UP NEXT: Fireside Chat");
     expect(byRole(doc, "headline")?.content).toBe(emptyNextForm().title);
+  });
+
+  /**
+   * Session name and start time are two inputs; the BRACKETS belong to the
+   * canvas. Typing them yourself was the old way and it produced boards
+   * punctuated three different ways.
+   */
+  describe("banner composition", () => {
+    it("wraps the time in brackets after the session name", () => {
+      const doc = buildNextDesign({ ...emptyNextForm(), session: "Fireside Chat", time: "14:30" }, "presentation");
+      expect(byRole(doc, "next.session")?.content).toBe("UP NEXT: Fireside Chat (14:30)");
+    });
+
+    it("never renders empty brackets", () => {
+      expect(nextBannerText("Fireside Chat", "")).toBe("UP NEXT: Fireside Chat");
+      expect(nextBannerText("Fireside Chat", "   ")).toBe("UP NEXT: Fireside Chat");
+      // Half-filled the other way round, which a venue screen would otherwise
+      // show as a bare "UP NEXT: ()".
+      expect(nextBannerText("", "14:30")).toBe("UP NEXT: (14:30)");
+      expect(nextBannerText("", "")).toBe("UP NEXT:");
+    });
+
+    it("round-trips through parseNextBanner", () => {
+      for (const [session, time] of [
+        ["Fireside Chat", "14:30"],
+        ["Fireside Chat", ""],
+        ["", "14:30"],
+        ["", ""],
+      ] as const) {
+        expect(parseNextBanner(nextBannerText(session, time))).toEqual({ session, time });
+      }
+    });
+
+    it("keeps brackets that belong to the session NAME", () => {
+      // Only a trailing group is the time, so a middle one survives.
+      expect(parseNextBanner("UP NEXT: Fireside (Bonfire Stage) — day two (14:30)"))
+        .toEqual({ session: "Fireside (Bonfire Stage) — day two", time: "14:30" });
+    });
+
+    /** Boards saved when name and time were ONE field open with the time in
+     *  the new input rather than glued onto the name. */
+    it("splits a legacy one-field banner into the two inputs", () => {
+      expect(parseNextBanner("UP NEXT: Session (XX:XX)")).toEqual({ session: "Session", time: "XX:XX" });
+      // ...including the even older prefix.
+      expect(parseNextBanner("NEXT: Closing Keynote (16:00)")).toEqual({ session: "Closing Keynote", time: "16:00" });
+    });
+
+    /**
+     * The migration that actually bit. "Sessions on Stage" in the team library
+     * was saved when name and time were one field, so its SNAPSHOT holds
+     * `session: "Session (XX:XX)"` and no `time`. Taken verbatim, the next
+     * build composes "UP NEXT: Session (XX:XX) (XX:XX)".
+     */
+    it("splits a legacy snapshot instead of doubling its brackets", () => {
+      const doc = buildNextDesign({ ...emptyNextForm(), session: "Session", time: "XX:XX" }, "presentation");
+      // A snapshot as it was written before the `time` field existed.
+      const legacy = { next: { ...emptyNextForm(), session: "Session (XX:XX)" } } as never;
+      delete (legacy as unknown as { next: Record<string, unknown> }).next.time;
+      const back = formsFromDoc("next", doc, legacy);
+      expect(back.next?.session).toBe("Session");
+      expect(back.next?.time).toBe("XX:XX");
+      // And rebuilding from it gives the banner back unchanged.
+      const rebuilt = buildNextDesign(back.next!, "presentation");
+      expect(rebuilt.design.texts.find((t) => t.simpleRole === "next.session")?.content)
+        .toBe("UP NEXT: Session (XX:XX)");
+    });
+
+    /** A CURRENT snapshot whose time was deliberately cleared must stay clear —
+     *  which is why the legacy check reads `time === undefined`, not "does the
+     *  session string contain brackets". */
+    it("leaves a deliberately empty time empty", () => {
+      const doc = buildNextDesign({ ...emptyNextForm(), session: "Fireside Chat", time: "" }, "presentation");
+      const snap = { next: { ...emptyNextForm(), session: "Fireside Chat", time: "" } } as never;
+      const back = formsFromDoc("next", doc, snap);
+      expect(back.next?.time).toBe("");
+      expect(back.next?.session).toBe("Fireside Chat");
+    });
+
+    it("reads both fields back off a built doc", () => {
+      const doc = buildNextDesign({ ...emptyNextForm(), session: "Closing Keynote", time: "16:00" }, "presentation");
+      const back = formsFromDoc("next", doc);
+      expect(back.next?.session).toBe("Closing Keynote");
+      expect(back.next?.time).toBe("16:00");
+    });
   });
 
   /** The prefix was plain "NEXT:" until 2026-08-13. A doc saved then must still

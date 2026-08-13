@@ -124,11 +124,24 @@ not fixed sizes — nothing auto-wraps here (text elements are `max-content` +
 long enough to cross the half-width still shrinks. Break the title yourself and
 it renders at the full 88.
 
-**The banner default is now `Session (XX:XX)`**, so an untouched board reads
-"UP NEXT: Session (XX:XX)". The default doubles as the instruction: the
-session's name, then its start time in brackets. `XX:XX` stays literal on
-purpose — an unedited board should look obviously unfinished rather than quietly
-show a wrong time. 30px on the 16:9 board, pinned by a test.
+**The banner is TWO fields now: "Next session" and "Time of the session".** The
+brackets belong to the canvas, not the input — you type `14:30` and the board
+renders `UP NEXT: Fireside Chat (14:30)`. One field meant every board was
+punctuated by hand and they drifted. `nextBannerText` composes and
+`parseNextBanner` inverts it; the round-trip is tested, so change one and change
+the other. Defaults are `Session` / `XX:XX`, left literal so an unedited board
+looks obviously unfinished rather than quietly showing a wrong start time.
+
+Only a TRAILING bracket group is read as the time, anchored to the end, so a
+session called "Fireside (Bonfire Stage) — day two (14:30)" keeps its middle.
+
+**The migration is the part that bites.** A snapshot written before `time`
+existed holds the whole string in `session` ("Session (XX:XX)") and no `time`,
+so taken verbatim the next build composes `UP NEXT: Session (XX:XX) (XX:XX)`.
+`formsFromDoc` splits a legacy snapshot the same way it splits the canvas.
+Detected by `time === undefined`, NOT by looking for brackets — a current
+snapshot whose time was deliberately cleared has to stay cleared. Both cases
+are tested.
 
 **The header must not cross the fireside boundary in `syncNextChrome`.** Auri
 hit this live: on a 3-speaker board the subtitle was drawn straight through the
