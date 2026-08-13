@@ -1076,7 +1076,10 @@ export interface NextForm {
 
 export function emptyNextForm(): NextForm {
   return {
-    session: "Session Title (XX:XX)",
+    // The default doubles as the instruction: the session's name, then its
+    // start time in brackets. "XX:XX" is left literal on purpose so an unedited
+    // board is obviously unfinished rather than quietly showing a wrong time.
+    session: "Session (XX:XX)",
     // EMPTY on purpose, unlike the sample headshots. The subtitle belongs to
     // the fireside board; on a 3- or 4-speaker board it competes with the row
     // for vertical space and the header guard answers by shrinking the title

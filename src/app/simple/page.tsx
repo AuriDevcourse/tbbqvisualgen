@@ -1988,10 +1988,10 @@ export default function SimplePage() {
             <section className="flex flex-col gap-3">
               <Field
                 label="Next session"
-                hint={"renders as “UP NEXT: …”"}
+                hint={"name, then the start time in brackets"}
                 value={next.session}
                 onChange={(v) => setNext((n) => ({ ...n, session: v }))}
-                placeholder="Fireside Chat on the Bonfire Stage"
+                placeholder="Session (XX:XX)"
               />
               <Field
                 label="Session title"

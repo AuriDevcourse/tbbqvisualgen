@@ -2077,6 +2077,15 @@ describe("next session board", () => {
     expect(byRole(doc, "next.stage")?.content).toBe("ON STAGE");
   });
 
+  /** The default banner doubles as the instruction for filling it in: the
+   *  session's name, then its start time in brackets. */
+  it('defaults the banner to "UP NEXT: Session (XX:XX)"', () => {
+    const doc = buildNextDesign(emptyNextForm(), "presentation");
+    expect(byRole(doc, "next.session")?.content).toBe("UP NEXT: Session (XX:XX)");
+    // 30px on the 16:9 board, as the editor's layer panel reports it.
+    expect(byRole(doc, "next.session")?.fontSize).toBe(30);
+  });
+
   it("prefixes the banner with UP NEXT: and keeps the title separate", () => {
     const doc = buildNextDesign({ ...emptyNextForm(), session: "Fireside Chat" }, "presentation");
     expect(byRole(doc, "next.session")?.content).toBe("UP NEXT: Fireside Chat");

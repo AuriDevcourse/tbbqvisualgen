@@ -124,6 +124,12 @@ not fixed sizes — nothing auto-wraps here (text elements are `max-content` +
 long enough to cross the half-width still shrinks. Break the title yourself and
 it renders at the full 88.
 
+**The banner default is now `Session (XX:XX)`**, so an untouched board reads
+"UP NEXT: Session (XX:XX)". The default doubles as the instruction: the
+session's name, then its start time in brackets. `XX:XX` stays literal on
+purpose — an unedited board should look obviously unfinished rather than quietly
+show a wrong time. 30px on the 16:9 board, pinned by a test.
+
 **The header must not cross the fireside boundary in `syncNextChrome`.** Auri
 hit this live: on a 3-speaker board the subtitle was drawn straight through the
 moderator's card and its "Moderated by" label. A FRESH build of that board is
