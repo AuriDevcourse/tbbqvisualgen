@@ -8,9 +8,10 @@ not required reading.
 
 ## SESSION HANDOFF · 2026-08-13 (12): Life Science re-sync — exhibitor wall rebuilt from the live feed
 
-### State: branch `ls-logo-resync-2026-08-13`, NOT merged, NOT pushed
+### State: PUSHED to master as `9f597ea` · LIVE
 
-23 files: 20 new logos in `public/logos`, plus `partnerSets.ts`,
+Two commits: `403b125` (logo re-sync) and `9f597ea` (Next Session rebuild).
+30 files: 20 new logos in `public/logos`, plus `partnerSets.ts`,
 `partnerSets.test.ts` and the regenerated `logoLibrary.json`. Nothing is live
 until this merges — master IS prod and auto-deploys, so the branch is the safety.
 
