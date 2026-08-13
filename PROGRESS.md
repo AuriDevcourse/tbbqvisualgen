@@ -6,6 +6,225 @@ not required reading.
 
 ---
 
+## SESSION HANDOFF · 2026-08-13 (12): Life Science re-sync — exhibitor wall rebuilt from the live feed
+
+### State: branch `ls-logo-resync-2026-08-13`, NOT merged, NOT pushed
+
+23 files: 20 new logos in `public/logos`, plus `partnerSets.ts`,
+`partnerSets.test.ts` and the regenerated `logoLibrary.json`. Nothing is live
+until this merges — master IS prod and auto-deploys, so the branch is the safety.
+
+Gates: **243/243 vitest**, **tsc clean**, **eslint clean on both touched files**,
+**production build compiled**. Verified in the built app at
+`localhost:3007/simple` (not only in tests): the fill button reads 37, the wall
+renders all 37 with **zero empty boxes and zero broken images** (87 imgs, none
+with `naturalWidth === 0`), and the only console errors are the pre-existing
+signed-out ones (`/api/auth/session` 500, team-library 401s).
+
+### Exhibiting wall: 31 → 37, and the SOURCE changed
+
+`LS_DT_EXHIBITORS` no longer comes from a hand-filtered Airtable read. It now
+comes from **`https://airtable-woad.vercel.app/api/ls-startups`** — the connector
+feed the live techbbq.dk/life-science page eats. One roster, one filter, one
+place. The feed is public, needs no key, and re-syncing is one curl.
+
+Its gate is the same conclusion this repo reached independently:
+`status = "Confirmed startup"`, NOT `Confirmation = Selected`.
+
+The roster churned hard in three days: **17 out, 23 in, 14 unchanged.** Do not
+assume a week-old copy of this list is still right before the summit.
+
+Cross-checked against the page itself, which groups the same 37 as 11 Planetary
+Health + 14 Human Health + 12 Deep Tech. Feed and page agree exactly.
+
+### The 20 missing logos came from the feed, not a logo hunt
+
+Every startup in the feed carries its Airtable logo attachment, so the 20 with no
+library file were imported straight from it. 36 of 37 are white-ink SVG; **Ai2Ai
+is the one PNG**. Two were padded and were fixed with `npm run logos:tighten`
+(Anorit Medical 84x58%, TrialMe 39x76%). All 20 measure `tone: light`.
+
+**This is the cheapest logo source found so far — use it first next time.**
+
+Named against the ARTWORK, not the Airtable company field:
+- `Hydratico.svg` — Airtable says "H+H LABS PSA (project Hydratico)"; the artwork
+  says hydratico. It was on the old "missing" list as H+H LABS, which is why no
+  search for it ever hit.
+- `Ai2Ai.png`, and `DiaDesign Technologie.svg` keeps its existing missing "s".
+
+### Two things to look at, both cosmetic and both deliberate
+
+- **AUSCORA** is a white CARD with the wordmark knocked out, so it renders as a
+  white plate among 36 knockouts. It IS the artwork the company supplied, and
+  `Ownwell White.svg` has done the same thing on this wall for weeks, so it was
+  left alone. Say the word and it can be inverted to white ink on transparent.
+- **ABH Optics** carries an 80%-opacity white bar block. That is the brand's own
+  fade, not a background plate. Correct as-is.
+- Insulinus and Wren Bioscience supplied MARK-ONLY artwork, no wordmark. Also
+  what they gave us.
+
+### Next Session board rebuilt against four hand-built references
+
+Auri exported four boards he built by hand in the editor (1, 2, 3 and 4
+speakers) and asked the template to reproduce them. They are NOT app output —
+their banner reads "UP NEXT:" where the template said "NEXT:", no builder has
+ever drawn a "Moderated by" label, and every placeholder frame in this repo is
+the orange-red gradient while the references are white.
+
+Geometry was MEASURED off the JPGs, not eyeballed: a stroke-ridge detector found
+each card's four edges to the pixel. What it found:
+
+- Every card is **250×279px on every board**, moderator included. The old
+  builder derived the width from the count (a 2-speaker board's cards came out
+  much bigger than a 4-speaker board's) and scaled the moderator 1.14×.
+- All cards share one baseline. The moderator used to ride 0.06 higher.
+- Moderator pinned at x 97, **"Moderated by" above** the card, name and role
+  **below** it. The caption used to sit to the RIGHT, which is what made the
+  moderator block twice a speaker's width.
+- The 1-speaker board is its own thing: both cards move beside the title
+  (x 1053 / 1510, top 540 instead of 577) and the title is held to the left half.
+
+**The per-count x positions are TRANSCRIBED, on Auri's explicit call.** The
+references follow no single rule — right edges land at 1826 / 1786 / 1642 and
+gaps run 80 / 85 / 142 — because the cards were dragged by hand. A formula was
+offered and turned down, so `NEXT_SPEAKER_X` is a lookup table and
+`rightAlignedRow` covers only the counts the references do not show. A test
+asserts all sixteen measured pixel positions, so a later "tidy this into a
+formula" refactor fails loudly.
+
+One thing deliberately not transcribed: the 2-speaker board's moderator sits
+13px below its speakers. Every other board is level, so that is drag noise.
+
+Two details that only came out of reading the images closely, and that no test
+would have caught on its own:
+
+- The moderator's role wraps **wider than its own card** (~400px against 250).
+  At card width it breaks into four cramped lines instead of the reference's
+  two. Only the moderator gets the wider measure — it is the leftmost card, so
+  the overhang runs into empty canvas.
+- The row can no longer be pushed down by a long title, because its position is
+  fixed. So the HEADER gives instead: title and subtitle scale together until
+  they clear the cards. The solo board is exempt (its cards are beside the
+  title, and the width cap does that job).
+
+Also: **a subtitle field** (`NextForm.subtitle`, role `subtitle`, weight 400),
+wired into the sidebar and into `syncNextChrome` so it holds still when the
+speaker count changes. Empty emits no layer at all, and **empty is the
+default** — on a 3- or 4-speaker board the subtitle competes with the fixed row
+for height, and the header guard answers by shrinking the title from 120px to
+82px. The multi-speaker references carry no subtitle, so sample copy here would
+have made every crowded board wrong out of the box.
+
+**Type scale (Auri, second pass):** captions went 22/17 → **28/18**. The
+fireside board has its own title scale, **88px title and 38px subtitle**,
+against 120/66 on the boards whose title spans the full width. Both are CAPS,
+not fixed sizes — nothing auto-wraps here (text elements are `max-content` +
+`white-space: pre`, so a line breaks only where Enter was pressed), so a line
+long enough to cross the half-width still shrinks. Break the title yourself and
+it renders at the full 88.
+
+**The header must not cross the fireside boundary in `syncNextChrome`.** Auri
+hit this live: on a 3-speaker board the subtitle was drawn straight through the
+moderator's card and its "Moderated by" label. A FRESH build of that board is
+fine — the guard scales the header to 82/45 and it clears. What broke it was the
+chrome sync carrying the fireside board's header across when the count changed,
+and the fireside board lays its header out completely differently (cards beside
+the title, 88/38 type, half-width measure). `isFiresideDoc` now gates it: cross
+that boundary and the target keeps its own freshly-measured header. The banner
+and chip still cross, as always.
+
+**An added speaker slot starts with a sample job line** (`nextSampleSpeaker`).
+It used to arrive from `emptyPerson()`, so the board drew a card captioned
+"Person" with nothing under it next to neighbours carrying two lines — it read
+as a rendering bug rather than an empty field. The NAME stays empty on purpose:
+it falls back to "Person", which reads as "fill me in", where a sample name
+would read as real content.
+
+**"Moderated by" never changed size.** It was reported as growing with the
+speaker count; what actually changed was the caption scale going 22→28 between
+two screenshots. It is `nameFs`, constant per format. Pinned by a test across
+all four counts so the misreading cannot later become true.
+
+**A second coloured border was hiding behind the first.** Turning the empty
+frames white fixed only the EMPTY slots. A `CanvasImage` with `border: true` and
+no `borderColor` falls through to `DynamicTemplate`'s default, which is the
+yellow→orange→red gradient — so a card with a photo in it kept a coloured edge
+and the two disagreed on the same row. Only visible with photos loaded, which is
+why the first pass looked right in the tests and wrong on screen. `emitPhoto`
+now sets `borderColor: "#FFFFFF"` explicitly.
+
+The banner prefix is now "UP NEXT:". `formsFromDoc` strips `(UP )?NEXT:`, so
+docs saved before today still load with their session name in the input rather
+than a stray "NEXT:" inside it.
+
+**Five existing tests pinned the old behaviour and were rewritten, not deleted**
+— banner prefix, moderator-higher, caption-to-the-right, card-count and the
+"no MODERATOR tag" rule that today's label reverses. Two of them were finding
+their cards with `colorType === "gradient"`, which after the white change
+matched NOTHING: they were passing on empty arrays. There is now one shared
+`frames()` helper and the geometry tests assert a card count first.
+
+254 → 255 tests.
+
+### Bug found on the way: the team library never accepted a Next Session board
+
+Saving one returned **422 "kind must be panel, partner or editor"**. `KINDS` in
+`src/lib/libraryApi.ts` listed panel / partner / sales / editor — `next` was
+never added when the board shipped. `TeamLibrary.tsx` has typed its union as
+`"panel" | "partner" | "sales" | "next"` the whole time and posted `next`
+happily, so client and server disagreed and only the server knew.
+
+Pre-existing, nothing to do with the layout work. Fixed by adding `next`, and
+the message now names every accepted kind — the old one listed three of five and
+pointed the search at the Next Session board rather than at the allowlist.
+
+New `src/lib/libraryApi.test.ts` carries the guard that was missing: **every
+kind `docKindOf` can return must be a kind the API accepts.** `docKindOf` is
+what a doc IS, `KINDS` is what the API will store, and a template added to one
+and not the other stays invisible until someone tries to save. 3 tests.
+
+### New set: "LS x DT Pitch Finalists" (16)
+
+The folder now has four buttons, not three. `LS_DT_PITCH_FINALISTS` had existed
+since 2026-08-10 but only ever fed the participating wall — correct for months
+and never renderable on its own. It now has its own fill button.
+
+Checked against both announcement pages the same day, **8 and 8, no change**:
+techbbq.dk/life-science-pitch and techbbq.dk/deep-tech-pitch. All 16 files were
+already in the repo, in their two folders. The pages shorten four names, so match
+on the COMPANY and not the string: `Oasi` = Oasicare, `Analgesia.ai` =
+AnalgesiaAI, `Magnolia` = Magnolia Quantum Sensing, `N23` = N23 health.
+
+Its headline is **"Meet our pitch finalists"** — the one set in this folder that
+is not a thank-you, because the wall announces the cohort before they pitch. The
+two competitions are one button, not two: 16 fits one wall and the pages announce
+them as a single cohort.
+
+Adding a set costs no new test code — the per-set describe block generated four
+more guards on its own, 243 → 247.
+
+### Partner set: re-verified, zero changes
+
+`LIFE_SCIENCE_PARTNERS` is still exactly the right 25, same order, Ruff & Co at
+19. The method is written into the file comment because it is not obvious: the
+wall on that page is **24 inline `<svg>` elements plus one `<img>`**, so a text
+scrape under-reports it and filename matching finds nothing. Identify each logo
+by its parent link's `href`.
+
+NVIDIA is now on that page but stays OUT of the set — it is an "IN PARTNERSHIP
+WITH" session credit beside Nebius, not a track partner. The library still has no
+NVIDIA file (one of handoff 11's 9 staged-not-imported Airtable logos).
+
+### One test was loosened on purpose
+
+`de-duplicates the four companies that both exhibit and pitch` pinned the overlap
+at 4 and failed on a correct re-sync (it is 6 now: 3Sonic and Bioelectrix joined
+Immunordic, GreenCow, Magnolia and Rilemo). It now asserts the ARITHMETIC —
+participating is exactly the union of the two lists — plus that some overlap
+exists. The count is whatever Airtable says that week; the invariant is not.
+
+---
+
 ## SESSION HANDOFF · 2026-08-12 (11): photo background, pulsing Life Science backgrounds, Airtable SVG re-check
 
 ### State: PUSHED to master as `cd38320` · LIVE

@@ -20,7 +20,7 @@ import { PartnerSetBrowser } from "@/components/PartnerSetBrowser";
 import { isSvgDataUrl, tintSvgDataUrl } from "@/lib/svgTint";
 import { ColorPicker } from "@/components/ColorPicker";
 import type { PlatformFormat } from "@/types/template";
-import { buildSimpleDesign, buildNextDesign, buildPartnerDesign, buildSalesDesign, bundleCoverage, docKindOf, emptyForm, emptyNextForm, emptyPartnerForm, emptyPerson, emptySalesForm, formsFromDoc, isBlankPerson, isNextDoc, isPartnerDoc, mergePersonDescription, migrateLegacyPanelDoc, NEXT_MAX_SPEAKERS, panelShapeKey, parkDoc, partnerLayoutOf, retargetPartnerLayout, retargetSalesLayout, retargetTunedDoc, salesLayoutOf, sampleFourthSpeaker, shuffleWallLogos, simpleExportName, stripFormsForSave, syncNextChrome, syncPanelChrome, syncPartnerChrome, THANKS_MAX_LOGOS, THANKS_MIN_LOGOS, THANKS_SCRIM_MAX, type NextForm, type SimpleForm, type PartnerForm, type PartnerLogo, type SalesForm, type SimplePerson, type SimpleDoc, type TemplateCoverage } from "@/lib/simpleLayout";
+import { buildSimpleDesign, buildNextDesign, buildPartnerDesign, buildSalesDesign, bundleCoverage, docKindOf, emptyForm, emptyNextForm, emptyPartnerForm, emptyPerson, emptySalesForm, formsFromDoc, isBlankPerson, nextSampleSpeaker, isNextDoc, isPartnerDoc, mergePersonDescription, migrateLegacyPanelDoc, NEXT_MAX_SPEAKERS, panelShapeKey, parkDoc, partnerLayoutOf, retargetPartnerLayout, retargetSalesLayout, retargetTunedDoc, salesLayoutOf, sampleFourthSpeaker, shuffleWallLogos, simpleExportName, stripFormsForSave, syncNextChrome, syncPanelChrome, syncPartnerChrome, THANKS_MAX_LOGOS, THANKS_MIN_LOGOS, THANKS_SCRIM_MAX, type NextForm, type SimpleForm, type PartnerForm, type PartnerLogo, type SalesForm, type SimplePerson, type SimpleDoc, type TemplateCoverage } from "@/lib/simpleLayout";
 
 type TemplateKind = "panel" | "partner" | "sales" | "next";
 
@@ -1121,7 +1121,13 @@ export default function SimplePage() {
       if (target < n.speakers.length) return { ...n, speakers: n.speakers.slice(0, target) };
       return {
         ...n,
-        speakers: [...n.speakers, ...Array.from({ length: target - n.speakers.length }, emptyPerson)],
+        // A sample ROLE, not `emptyPerson`: a blank slot rendered a card
+        // captioned "Person" with nothing beneath it, next to neighbours that
+        // had both lines, which reads as a bug rather than an empty field.
+        speakers: [
+          ...n.speakers,
+          ...Array.from({ length: target - n.speakers.length }, (_, i) => nextSampleSpeaker(n.speakers.length + i)),
+        ],
       };
     });
 
@@ -1982,7 +1988,7 @@ export default function SimplePage() {
             <section className="flex flex-col gap-3">
               <Field
                 label="Next session"
-                hint={"renders as “NEXT: …”"}
+                hint={"renders as “UP NEXT: …”"}
                 value={next.session}
                 onChange={(v) => setNext((n) => ({ ...n, session: v }))}
                 placeholder="Fireside Chat on the Bonfire Stage"
@@ -1994,6 +2000,14 @@ export default function SimplePage() {
                 value={next.title}
                 onChange={(v) => setNext((n) => ({ ...n, title: v }))}
                 placeholder={"Opening with Bjarke Ingels:\nUtopian Pragmatism"}
+              />
+              <Field
+                label="Subtitle"
+                hint="optional, sits under the title"
+                multiline
+                value={next.subtitle}
+                onChange={(v) => setNext((n) => ({ ...n, subtitle: v }))}
+                placeholder={"Fireside with Max Welling\n(Co-founder at CuspAI)"}
               />
             </section>
 

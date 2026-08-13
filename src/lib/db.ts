@@ -15,7 +15,7 @@ function sql() {
 export interface LibraryRow {
   id: string;
   name: string;
-  kind: string; // "panel" | "partner" | "sales" | "editor"
+  kind: string; // "panel" | "partner" | "sales" | "next" | "editor" — KINDS in libraryApi.ts
   doc: unknown;
   updated_by: string;
   updated_at: string;

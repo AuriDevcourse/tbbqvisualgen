@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { accentShapes, isAccentShape, syncAccentShapes, applyAccent } from "./accents";
 import { thanksRowCounts } from "./simpleLayout";
-import { adoptLegacyPanelRoles, buildNextDesign, buildPartnerDesign, buildSalesDesign, buildSimpleDesign, bundleCoverage, dedupeSpeakerRoles, docKindOf, emptyForm, emptyNextForm, parkDoc, emptyPartnerForm, emptyPerson, emptySalesForm, formsFromDoc, isBlankPerson, isNextDoc, mergePersonDescription, migrateLegacyPanelDoc, NEXT_MAX_SPEAKERS, panelShapeKey, partnerLayoutOf, retargetPartnerLayout, retargetSalesLayout, retargetTunedDoc, salesLayoutOf, sampleFourthSpeaker, shuffleWallLogos, simpleExportName, stripFormsForSave, syncNextChrome, syncPanelChrome, syncPartnerChrome, thanksFlatMaxColumns, thanksGridColumns, THANKS_MAX_LOGOS, THANKS_SCRIM_MAX, type NextForm, type PartnerForm, type PartnerLogo, type SalesForm, type SimpleDoc, type SimpleForm } from "./simpleLayout";
+import { adoptLegacyPanelRoles, buildNextDesign, buildPartnerDesign, buildSalesDesign, buildSimpleDesign, bundleCoverage, dedupeSpeakerRoles, docKindOf, emptyForm, emptyNextForm, parkDoc, emptyPartnerForm, emptyPerson, emptySalesForm, formsFromDoc, isBlankPerson, isNextDoc, mergePersonDescription, migrateLegacyPanelDoc, nextSampleSpeaker, NEXT_MAX_SPEAKERS, panelShapeKey, partnerLayoutOf, retargetPartnerLayout, retargetSalesLayout, retargetTunedDoc, salesLayoutOf, sampleFourthSpeaker, shuffleWallLogos, simpleExportName, stripFormsForSave, syncNextChrome, syncPanelChrome, syncPartnerChrome, thanksFlatMaxColumns, thanksGridColumns, THANKS_MAX_LOGOS, THANKS_SCRIM_MAX, type NextForm, type PartnerForm, type PartnerLogo, type SalesForm, type SimpleDoc, type SimpleForm } from "./simpleLayout";
 import type { PlatformFormat } from "@/types/template";
 
 /** The partner-form fields the thank-you wall introduced. Spread into the
@@ -2043,6 +2043,15 @@ describe("next session board", () => {
   const roles = (d: SimpleDoc) => d.design.texts.map((t) => t.simpleRole).filter(Boolean);
   const shapeRoles = (d: SimpleDoc) => (d.design.shapes ?? []).map((s) => s.simpleRole).filter(Boolean);
   const byRole = (d: SimpleDoc, role: string) => d.design.texts.find((t) => t.simpleRole === role);
+  /**
+   * The empty-slot card frames. This board's frames turned WHITE on 2026-08-13
+   * — every other builder still draws the orange-red gradient — so the old
+   * `colorType === "gradient"` predicate silently matched nothing here and the
+   * geometry assertions passed on empty arrays. Matching on the accent circles'
+   * opposite (an outline rectangle that is NOT a gradient) keeps it honest.
+   */
+  const frames = (d: SimpleDoc) =>
+    (d.design.shapes ?? []).filter((s) => s.fillType === "outline" && s.colorType === "solid" && s.color1 === "#FFFFFF");
 
   /** A four-speaker board with NO headshots, so the geometry checks can find
    *  every card by its placeholder frame. The default form ships sample photos
@@ -2068,10 +2077,25 @@ describe("next session board", () => {
     expect(byRole(doc, "next.stage")?.content).toBe("ON STAGE");
   });
 
-  it("prefixes the banner with NEXT: and keeps the title separate", () => {
+  it("prefixes the banner with UP NEXT: and keeps the title separate", () => {
     const doc = buildNextDesign({ ...emptyNextForm(), session: "Fireside Chat" }, "presentation");
-    expect(byRole(doc, "next.session")?.content).toBe("NEXT: Fireside Chat");
+    expect(byRole(doc, "next.session")?.content).toBe("UP NEXT: Fireside Chat");
     expect(byRole(doc, "headline")?.content).toBe(emptyNextForm().title);
+  });
+
+  /** The prefix was plain "NEXT:" until 2026-08-13. A doc saved then must still
+   *  load with its session name in the input, not "NEXT: Closing Keynote". */
+  it("strips the OLD NEXT: prefix when reading a doc back", () => {
+    const doc = buildNextDesign({ ...emptyNextForm(), session: "Closing Keynote" }, "presentation");
+    const legacy: SimpleDoc = {
+      ...doc,
+      design: {
+        ...doc.design,
+        texts: doc.design.texts.map((t) =>
+          t.simpleRole === "next.session" ? { ...t, content: "NEXT: Closing Keynote" } : t),
+      },
+    };
+    expect(formsFromDoc("next", legacy).next?.session).toBe("Closing Keynote");
   });
 
   it("reads as its own kind, not as a panel", () => {
@@ -2111,8 +2135,10 @@ describe("next session board", () => {
     expect(roles(off)).not.toContain("moderator.name");
     // The card goes too: an empty person still emits its outlined frame, so
     // counting frames is the only way to see it leave.
-    const frames = (d: SimpleDoc) => (d.design.shapes ?? []).filter((s) => s.fillType === "outline" && s.colorType === "gradient").length;
-    expect(frames(on)).toBe(frames(off) + 1);
+    expect(frames(on).length).toBe(frames(off).length + 1);
+    // And its label goes with it.
+    expect(roles(on)).toContain("next.moderatorLabel");
+    expect(roles(off)).not.toContain("next.moderatorLabel");
   });
 
   /**
@@ -2125,32 +2151,81 @@ describe("next session board", () => {
     it("carries no Speakers:/Moderator: headings any more", () => {
       const doc = buildNextDesign(fullBoard(), "presentation");
       expect(roles(doc)).not.toContain("next.speakersLabel");
-      expect(roles(doc)).not.toContain("next.moderatorLabel");
       const words = doc.design.texts.map((t) => t.content);
       expect(words).not.toContain("Speakers:");
       expect(words).not.toContain("Moderator:");
-      // And no MODERATOR / SPEAKER tag overlaid on the cards, which is the one
-      // thing Auri called out explicitly.
-      expect(words.map((w) => w.toUpperCase())).not.toContain("MODERATOR");
     });
 
-    it("sizes the name at 22px and the description at 17px on the 16:9 board", () => {
+    /**
+     * The moderator label came BACK on 2026-08-13. This board shipped without
+     * one from 2026-08-12, when the moderator was meant to be identified by
+     * sitting apart on the left; the reference boards Auri built carry an
+     * explicit "Moderated by" over the card, so the earlier rule is reversed.
+     * Left as its own test, with the history, so nobody deletes it again on the
+     * strength of the older comment.
+     */
+    it('labels the moderator "Moderated by", above the card', () => {
       const doc = buildNextDesign(fullBoard(), "presentation");
-      expect(byRole(doc, "speaker-0.name")?.fontSize).toBe(22);
-      expect(byRole(doc, "speaker-0.secondary")?.fontSize).toBe(17);
-      expect(byRole(doc, "moderator.name")?.fontSize).toBe(22);
-      expect(byRole(doc, "moderator.secondary")?.fontSize).toBe(17);
+      const label = byRole(doc, "next.moderatorLabel");
+      expect(label?.content).toBe("Moderated by");
+      const mod = frames(doc)[0];
+      expect(label!.position.y).toBeLessThan(mod.y - mod.height / 2);
+      expect(label!.position.x).toBeCloseTo(mod.x - mod.width / 2, 5);
     });
 
-    it("puts every speaker card on ONE line, in form order", () => {
+    // 22/17 until 2026-08-13, when Auri raised them to 28/18 on the reference
+    // boards. The label matches the name size.
+    it("sizes the name at 28px and the description at 18px on the 16:9 board", () => {
+      const doc = buildNextDesign(fullBoard(), "presentation");
+      expect(byRole(doc, "speaker-0.name")?.fontSize).toBe(28);
+      expect(byRole(doc, "speaker-0.secondary")?.fontSize).toBe(18);
+      expect(byRole(doc, "moderator.name")?.fontSize).toBe(28);
+      expect(byRole(doc, "moderator.secondary")?.fontSize).toBe(18);
+      expect(byRole(doc, "next.moderatorLabel")?.fontSize).toBe(28);
+    });
+
+    /** The fireside board's own type scale: 88px title, 38px subtitle, against
+     *  120/66 on the boards whose title spans the full width. */
+    it("sets the fireside board's title to 88px and its subtitle to 38px", () => {
+      const solo = buildNextDesign({
+        ...fullBoard(),
+        speakers: fullBoard().speakers.slice(0, 1),
+        title: "Opening with Bjarke\nIngels: Utopian\nPragmatism",
+        subtitle: "Fireside with Max Welling\n(Co-founder at CuspAI)",
+      }, "presentation");
+      expect(byRole(solo, "headline")?.fontSize).toBe(88);
+      expect(byRole(solo, "subtitle")?.fontSize).toBe(38);
+      // A wider board keeps the bigger scale, at the same content.
+      const wide = buildNextDesign({
+        ...fullBoard(),
+        title: "Opening with Bjarke\nIngels: Utopian\nPragmatism",
+        subtitle: "",
+      }, "presentation");
+      expect(wide.design.texts.find((t) => t.simpleRole === "headline")!.fontSize).toBeGreaterThan(88);
+    });
+
+    /**
+     * The default board ships NO subtitle. On a 3- or 4-speaker board the
+     * subtitle competes with the fixed row for height and the header guard
+     * answers by shrinking the title — 120px down to 82px. Auri's multi-speaker
+     * references have no subtitle, so sample copy here would make every crowded
+     * board wrong out of the box.
+     */
+    it("ships no default subtitle, so a crowded board keeps its full-size title", () => {
+      expect(emptyNextForm().subtitle).toBe("");
+      const doc = buildNextDesign(fullBoard(), "presentation");
+      expect(byRole(doc, "headline")!.fontSize).toBe(120);
+    });
+
+    it("puts every card on ONE line, in form order", () => {
       for (const format of ["presentation", "square", "story"] as PlatformFormat[]) {
         const doc = buildNextDesign(fullBoard(), format);
-        const cards = (doc.design.shapes ?? []).filter((s) => s.fillType === "outline" && s.colorType === "gradient");
+        const cards = frames(doc);
         // 4 speakers + the moderator.
         expect(cards).toHaveLength(NEXT_MAX_SPEAKERS + 1);
-        // Speaker cards share one baseline. The moderator is cards[0] and rides
-        // higher, so the remaining four must agree with each other exactly.
-        const bottoms = cards.slice(1).map((c) => Math.round((c.y + c.height / 2) * 1e4));
+        // ALL FIVE now share one baseline. The moderator used to ride higher;
+        // the reference boards have every card level, so it no longer does.
+        const bottoms = cards.map((c) => Math.round((c.y + c.height / 2) * 1e4));
         expect(new Set(bottoms).size).toBe(1);
         // Names read left to right in the order they were typed.
         const xs = Array.from({ length: NEXT_MAX_SPEAKERS }, (_, i) => byRole(doc, `speaker-${i}.name`)!.position.x);
@@ -2158,17 +2233,70 @@ describe("next session board", () => {
       }
     });
 
-    it("sits the moderator left of every speaker, and higher", () => {
-      const doc = buildNextDesign(fullBoard(), "presentation");
-      const cards = (doc.design.shapes ?? []).filter((s) => s.fillType === "outline" && s.colorType === "gradient");
-      const mod = cards[0]; // emitted first
-      for (const c of cards.slice(1)) {
-        expect(mod.x).toBeLessThan(c.x);
-        expect(mod.y + mod.height / 2).toBeLessThan(c.y + c.height / 2);
+    /**
+     * Card SIZE is now fixed. It used to be derived from the count so the row
+     * always filled the canvas, which made a 2-speaker board's cards visibly
+     * bigger than a 4-speaker board's, and the moderator's bigger again
+     * (MOD_SCALE 1.14). The references are 250×279 on every board.
+     */
+    it("draws every card the same fixed size, whatever the count", () => {
+      const sizes = new Set<string>();
+      for (let n = 1; n <= NEXT_MAX_SPEAKERS; n++) {
+        const doc = buildNextDesign({
+          ...fullBoard(),
+          speakers: fullBoard().speakers.slice(0, n),
+        }, "presentation");
+        for (const c of frames(doc)) sizes.add(`${c.width.toFixed(6)}x${c.height.toFixed(6)}`);
       }
-      // Its caption sits to the RIGHT of its card, not underneath.
+      expect(sizes.size).toBe(1);
+      expect([...sizes][0]).toBe(`${(250 / 1920).toFixed(6)}x${((250 / 1920) * (1920 / 1080) / 0.9).toFixed(6)}`);
+    });
+
+    it("sits the moderator left of every speaker, with its caption below", () => {
+      const doc = buildNextDesign(fullBoard(), "presentation");
+      const cards = frames(doc);
+      const mod = cards[0]; // emitted first
+      for (const c of cards.slice(1)) expect(mod.x).toBeLessThan(c.x);
+      // Its caption sits UNDER the card now, like every speaker's — it used to
+      // sit to the right, which doubled the moderator block's width.
       const cap = byRole(doc, "moderator.name")!;
-      expect(cap.position.x).toBeGreaterThan(mod.x);
+      expect(cap.position.y).toBeGreaterThan(mod.y + mod.height / 2);
+      expect(cap.position.x).toBeCloseTo(mod.x - mod.width / 2, 5);
+    });
+
+    /**
+     * The transcribed positions, asserted against the pixels measured off
+     * Auri's four reference exports. These are the whole point of the layout
+     * tables — a refactor that "tidies" them into a formula fails here.
+     */
+    it("reproduces the measured card positions for every speaker count", () => {
+      const expected: Record<number, { mod: number; spk: number[] }> = {
+        1: { mod: 1053, spk: [1510] },
+        2: { mod: 97, spk: [1000, 1392] },
+        3: { mod: 97, spk: [866, 1205, 1536] },
+        4: { mod: 97, spk: [585, 919, 1251, 1576] },
+      };
+      for (const [count, want] of Object.entries(expected)) {
+        const n = Number(count);
+        const doc = buildNextDesign({
+          ...fullBoard(),
+          speakers: fullBoard().speakers.slice(0, n),
+        }, "presentation");
+        const lefts = frames(doc).map((c) => Math.round((c.x - c.width / 2) * 1920));
+        expect(lefts).toEqual([want.mod, ...want.spk]);
+      }
+    });
+
+    it("lifts the one-speaker board beside the title instead of under it", () => {
+      const solo = buildNextDesign({ ...fullBoard(), speakers: fullBoard().speakers.slice(0, 1) }, "presentation");
+      const pair = buildNextDesign({ ...fullBoard(), speakers: fullBoard().speakers.slice(0, 2) }, "presentation");
+      const topOf = (d: SimpleDoc) => Math.round((frames(d)[0].y - frames(d)[0].height / 2) * 1080);
+      expect(topOf(solo)).toBe(540);
+      expect(topOf(pair)).toBe(577);
+      // And the title is held to the left half so it cannot run under them.
+      const title = solo.design.texts.find((t) => t.simpleRole === "headline")!;
+      const modLeft = frames(solo)[0].x - frames(solo)[0].width / 2;
+      expect(title.position.x).toBeLessThan(modLeft);
     });
 
     it("renders an uploaded headshot as a role-tagged image", () => {
@@ -2182,7 +2310,7 @@ describe("next session board", () => {
       expect(imgRoles).toContain("moderator.photo");
       expect(imgRoles).toContain("speaker-3.photo");
       // A photo replaces the placeholder frame rather than sitting on top of it.
-      expect((doc.design.shapes ?? []).filter((s) => s.fillType === "outline" && s.colorType === "gradient")).toHaveLength(0);
+      expect(frames(doc)).toHaveLength(0);
       // And it comes back into the sidebar on load, the way panel photos do.
       const back = formsFromDoc("next", doc);
       expect(back.next?.moderator.photo).toBe("data:image/png;base64,AAA");
@@ -2193,14 +2321,98 @@ describe("next session board", () => {
       for (const format of ["presentation", "square", "story"] as PlatformFormat[]) {
         const doc = buildNextDesign(fullBoard(), format);
         const title = byRole(doc, "headline")!;
-        const cards = (doc.design.shapes ?? []).filter((s) => s.fillType === "outline" && s.colorType === "gradient");
+        const cards = frames(doc);
+        expect(cards).toHaveLength(NEXT_MAX_SPEAKERS + 1);
         for (const c of cards) {
           expect(c.y - c.height / 2).toBeGreaterThan(title.position.y);
           expect(c.y + c.height / 2).toBeLessThan(0.95);
           expect(c.x - c.width / 2).toBeGreaterThanOrEqual(0.04);
-          expect(c.x + c.width / 2).toBeLessThanOrEqual(0.941);
+          // 0.951, not the old 0.941: the reference 4-speaker board runs its
+          // last card to 1826 of 1920. It clears the logo, which sits lower.
+          expect(c.x + c.width / 2).toBeLessThanOrEqual(0.9516);
         }
       }
+    });
+
+    /**
+     * The header has to give way, because the row cannot. Card positions are
+     * transcribed and fixed, so a long title plus a subtitle can no longer push
+     * the cards down — it gets scaled instead. Without this the two overlap.
+     */
+    it("shrinks a long title + subtitle rather than colliding with the row", () => {
+      const doc = buildNextDesign({
+        ...fullBoard(),
+        title: "A Very Long Session Title:\nThat Runs To Three\nWhole Lines Of Copy",
+        subtitle: "Fireside with Somebody Notable\n(Co-founder and Chief Executive)\nand a third line for good measure",
+      }, "presentation");
+      const sub = byRole(doc, "subtitle")!;
+      const cardTop = frames(doc)[0].y - frames(doc)[0].height / 2;
+      expect(sub.position.y).toBeLessThan(cardTop);
+      expect(byRole(doc, "headline")!.position.y).toBeLessThan(sub.position.y);
+    });
+
+    /**
+     * The moderator's role wraps wider than its own card. On the references
+     * "Managing Director & Co-Head of Secondaries, Stifel" breaks into TWO
+     * lines that overhang the card; held to the card width it becomes four
+     * cramped ones. It is the leftmost card, so the overhang costs nothing.
+     */
+    it("wraps the moderator's role wider than its card, in two lines", () => {
+      const doc = buildNextDesign(fullBoard(), "presentation");
+      const role = byRole(doc, "moderator.secondary")!;
+      expect(role.content.split("\n")).toHaveLength(2);
+      // A speaker with the same text would break into more lines, because it
+      // wraps to the narrower card measure.
+      const narrow = buildNextDesign({
+        ...fullBoard(),
+        speakers: fullBoard().speakers.map((p) => ({ ...p, title: fullBoard().moderator.title })),
+      }, "presentation");
+      const speakerRole = narrow.design.texts.find((t) => t.simpleRole === "speaker-0.secondary")!;
+      expect(speakerRole.content.split("\n").length).toBeGreaterThan(2);
+    });
+
+    /**
+     * The label is the same size on every board. Auri read it as growing with
+     * the speaker count; what actually changed was the caption scale going
+     * 22→28 between two screenshots. Pinned so a future count-dependent tweak
+     * cannot make the misreading true.
+     */
+    it("keeps the moderator label the same size at every speaker count", () => {
+      const sizes = new Set<number>();
+      for (let n = 1; n <= NEXT_MAX_SPEAKERS; n++) {
+        const doc = buildNextDesign({
+          ...fullBoard(),
+          speakers: fullBoard().speakers.slice(0, n),
+        }, "presentation");
+        sizes.add(byRole(doc, "next.moderatorLabel")!.fontSize);
+        // And it matches the names it sits above.
+        expect(byRole(doc, "next.moderatorLabel")!.fontSize).toBe(byRole(doc, "moderator.name")!.fontSize);
+      }
+      expect([...sizes]).toEqual([28]);
+    });
+
+    /** A slot added with the + button used to arrive completely blank, so the
+     *  board drew a "Person" card with nothing under it beside neighbours that
+     *  had two lines. It now starts with a sample role. */
+    it("gives an added speaker slot a job line", () => {
+      for (let i = 0; i < NEXT_MAX_SPEAKERS; i++) {
+        expect(nextSampleSpeaker(i).title.trim()).not.toBe("");
+        // The NAME stays empty: it falls back to "Person", which reads as
+        // "fill me in" where a sample name would read as real content.
+        expect(nextSampleSpeaker(i).name).toBe("");
+      }
+      const doc = buildNextDesign({
+        ...fullBoard(),
+        speakers: [fullBoard().speakers[0], nextSampleSpeaker(1), nextSampleSpeaker(2)],
+      }, "presentation");
+      for (const i of [0, 1, 2]) expect(roles(doc)).toContain(`speaker-${i}.secondary`);
+    });
+
+    it("omits the subtitle layer entirely when the field is empty", () => {
+      const doc = buildNextDesign({ ...fullBoard(), subtitle: "" }, "presentation");
+      expect(roles(doc)).not.toContain("subtitle");
+      // And it reads back as empty rather than picking the sample copy up.
+      expect(formsFromDoc("next", doc).next?.subtitle).toBe("");
     });
   });
 
@@ -2249,6 +2461,42 @@ describe("next session board", () => {
     // The people rows stay the target's own — three speakers, not two.
     expect(synced.design.texts.filter((t) => t.simpleRole?.endsWith(".name")).length)
       .toBe(three.design.texts.filter((t) => t.simpleRole?.endsWith(".name")).length);
+  });
+
+  /**
+   * ...but NOT across the fireside boundary. The one-speaker board lays its
+   * header out completely differently — cards beside the title, 88/38 type,
+   * fitted to half the width — so carrying that header onto a 3-speaker board
+   * dropped the subtitle straight through the moderator's card and its
+   * "Moderated by" label. Auri hit this live on 2026-08-13.
+   */
+  it("does NOT carry the fireside header onto a multi-speaker board", () => {
+    const withSub = (speakers: number): NextForm => ({
+      ...emptyNextForm(),
+      subtitle: "Fireside with Max Welling\n(Co-founder at CuspAI)",
+      includeModerator: true,
+      speakers: Array.from({ length: speakers }, emptyPerson),
+    });
+    const fireside = buildNextDesign(withSub(1), "presentation");
+    const three = buildNextDesign(withSub(3), "presentation");
+    const synced = syncNextChrome(fireside, three);
+
+    const sub = synced.design.texts.find((t) => t.simpleRole === "subtitle")!;
+    const head = synced.design.texts.find((t) => t.simpleRole === "headline")!;
+    // The target's own measurements survive, not the fireside board's.
+    expect(sub.fontSize).toBe(three.design.texts.find((t) => t.simpleRole === "subtitle")!.fontSize);
+    expect(head.fontSize).toBe(three.design.texts.find((t) => t.simpleRole === "headline")!.fontSize);
+
+    // Which is the point: the header clears the cards and the label.
+    const frame = (synced.design.shapes ?? []).find((s) =>
+      s.fillType === "outline" && s.colorType === "solid" && s.color1 === "#FFFFFF")!;
+    const label = synced.design.texts.find((t) => t.simpleRole === "next.moderatorLabel")!;
+    expect(sub.position.y).toBeLessThan(label.position.y);
+    expect(sub.position.y).toBeLessThan(frame.y - frame.height / 2);
+
+    // The banner and chip still cross, as they always did.
+    expect(synced.design.texts.find((t) => t.simpleRole === "next.session")?.content)
+      .toBe(fireside.design.texts.find((t) => t.simpleRole === "next.session")?.content);
   });
 
   it("refuses to sync chrome across formats or from a panel", () => {

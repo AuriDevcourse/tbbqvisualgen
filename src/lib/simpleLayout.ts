@@ -642,13 +642,48 @@ export function syncPanelChrome(from: SimpleDoc, to: SimpleDoc): SimpleDoc {
  * derive from the same form anyway). Cross-format/size pairs, and pairs where
  * either side is not a Next doc, are returned unchanged.
  */
+/**
+ * How many speakers a built Next doc holds, read back off its role tags. Used
+ * to tell the fireside board apart from the rest without the form in hand.
+ */
+function nextSpeakerCountOf(doc: SimpleDoc): number {
+  const roles = [
+    ...doc.design.texts.map((t) => t.simpleRole),
+    ...doc.canvasImages.map((i) => i.simpleRole),
+  ];
+  return new Set(
+    roles.map((r) => /^speaker-(\d+)\./.exec(r ?? "")?.[1]).filter(Boolean),
+  ).size;
+}
+
+/** The fireside board: exactly one speaker AND a moderator. Its header is laid
+ *  out differently from every other count, so several rules branch on it. */
+function isFiresideDoc(doc: SimpleDoc): boolean {
+  const hasModerator = doc.design.texts.some((t) => t.simpleRole?.startsWith("moderator."))
+    || doc.canvasImages.some((i) => i.simpleRole?.startsWith("moderator."));
+  return hasModerator && nextSpeakerCountOf(doc) === 1;
+}
+
 export function syncNextChrome(from: SimpleDoc, to: SimpleDoc): SimpleDoc {
   if (from.format !== to.format) return to;
   if (from.customSize.width !== to.customSize.width) return to;
   if (from.customSize.height !== to.customSize.height) return to;
   if (!isNextDoc(from) || !isNextDoc(to)) return to;
 
-  const CHROME_TEXT = new Set(["next.session", "next.stage", "headline"]);
+  // The subtitle is chrome too: it flows with the title, so a speaker added or
+  // removed must not re-fit it. `next.moderatorLabel` is NOT here on purpose —
+  // it belongs to the moderator card, which is count-specific and moves.
+  //
+  // The header is chrome only WITHIN a family, though. The fireside board (one
+  // moderator, one speaker) puts its cards beside the title and runs its own
+  // type scale — 88/38 against 120/66, fitted to half the width. Carrying that
+  // header onto a 3-speaker board, whose cards sit under the title, dropped the
+  // subtitle straight through the moderator's card and its label. Crossing that
+  // boundary, the target keeps its own freshly-measured header.
+  const crossesFireside = isFiresideDoc(from) !== isFiresideDoc(to);
+  const CHROME_TEXT = crossesFireside
+    ? new Set(["next.session", "next.stage"])
+    : new Set(["next.session", "next.stage", "headline", "subtitle"]);
   const CHROME_SHAPE = new Set(["next.banner", "next.stage.chip"]);
 
   const fromText = new Map(from.design.texts.filter((t) => t.simpleRole).map((t) => [t.simpleRole as string, t]));
@@ -930,6 +965,85 @@ export function isSalesDoc(doc: SimpleDoc): boolean {
   return salesLayoutOf(doc) !== null;
 }
 
+/**
+ * The Next Session people row, measured off the four reference boards Auri
+ * hand-built in the editor on 2026-08-13 and exported at 1920×1080.
+ *
+ * **These are transcribed positions, not a formula, on Auri's explicit call.**
+ * The references do not follow one rule — the speaker group's right edge lands
+ * at 1826, 1786 and 1642 px across the 4-, 3- and 2-speaker boards, and the
+ * gaps run 80, 85 and 142 — because the cards were dragged by hand. A formula
+ * was offered and turned down, so the tables below reproduce each board and
+ * `rightAlignedRow` covers only the counts the references do not show.
+ *
+ * The one thing NOT transcribed: on the 2-speaker board the moderator's card
+ * sits 13px lower than the speakers'. Every other board has them level, so that
+ * is drag noise rather than intent, and all three share `ROW_TOP` here.
+ *
+ * Everything is a fraction of the WIDTH (x, card width) or the HEIGHT (row
+ * top). The card's height is derived from its width through the 0.9 aspect
+ * rather than stored, so the card stays the same SHAPE on the square and story
+ * canvases instead of stretching — the house rule for this file.
+ */
+/** Card width: 250px on the 1920-wide reference. */
+const NEXT_CARD_W = 250 / 1920;
+/** Shared top edge for the 2-, 3- and 4-speaker rows: 577px of 1080. */
+const NEXT_ROW_TOP = 577 / 1080;
+/** The moderator's left edge on those same rows: 97px of 1920. */
+const NEXT_MOD_X = 97 / 1920;
+/** The one-speaker board moves BOTH cards beside the title and lifts them.
+ *  Moderator 1053px, speaker 1510px, top 540px. */
+const SOLO_MOD_X = 1053 / 1920;
+const SOLO_SPK_X = 1510 / 1920;
+const SOLO_ROW_TOP = 540 / 1080;
+/** Speaker left edges, indexed by speaker count, for a board WITH a moderator.
+ *  Count 1 is handled by the solo constants above, so it is absent here. */
+const NEXT_SPEAKER_X: Record<number, number[]> = {
+  2: [1000 / 1920, 1392 / 1920],
+  3: [866 / 1920, 1205 / 1920, 1536 / 1920],
+  4: [585 / 1920, 919 / 1920, 1251 / 1920, 1576 / 1920],
+};
+/**
+ * The fallback for counts the references do not cover — a moderator-less board,
+ * or a moderator with no speakers at all. Right-aligned to the 4-speaker
+ * board's right edge (1826px) with its 80px gap, which is the one rule the
+ * references DO agree on: applied to four speakers it returns 586/916/1246/1576
+ * against the measured 585/919/1251/1576.
+ */
+function rightAlignedRow(count: number): number[] {
+  const GAP = 80 / 1920;
+  const RIGHT = 1826 / 1920;
+  return Array.from({ length: count }, (_, i) =>
+    RIGHT - NEXT_CARD_W - (count - 1 - i) * (NEXT_CARD_W + GAP));
+}
+
+/**
+ * Placeholder job lines for speaker slots 3 and 4, which the default form does
+ * not fill. An added slot used to arrive completely blank, so the board drew a
+ * card captioned "Person" with nothing under it while its neighbours carried a
+ * name and a role — it read as a rendering bug rather than an empty field.
+ * A sample role makes the slot look like the others until it is typed over.
+ *
+ * The NAME is deliberately left empty: it falls back to "Person" on canvas,
+ * which reads as "fill me in". A sample name would look like real content.
+ */
+const NEXT_SAMPLE_ROLES = [
+  "Principal, Lightrock",
+  "Partner, Secondaries, Molten",
+  "General Partner, Kattegat Capital",
+  "Founder & CEO, Northbound",
+];
+
+/** The person a newly added speaker slot starts as. */
+export function nextSampleSpeaker(index: number): SimplePerson {
+  return {
+    name: "",
+    title: NEXT_SAMPLE_ROLES[index] ?? NEXT_SAMPLE_ROLES[NEXT_SAMPLE_ROLES.length - 1],
+    company: "",
+    photo: "",
+  };
+}
+
 /** Speakers the Next Session board can list. Four is the design's limit, not a
  *  storage one: they share ONE row with the moderator, and a fifth card cuts the
  *  others down to a size their captions no longer sit under. */
@@ -944,10 +1058,13 @@ export const NEXT_MAX_SPEAKERS = 4;
  * replaced it and why.
  */
 export interface NextForm {
-  /** Named in the top banner, after the fixed "NEXT:" prefix. */
+  /** Named in the top banner, after the fixed "UP NEXT:" prefix. */
   session: string;
   /** The big headline — the session's own title. */
   title: string;
+  /** The lighter line under the title — "Fireside with X (Role at Company)".
+   *  Optional: an empty subtitle emits nothing and the row keeps its place. */
+  subtitle: string;
   speakers: SimplePerson[];
   /** Whether this session has a moderator (drives the layout + form). */
   includeModerator: boolean;
@@ -959,7 +1076,15 @@ export interface NextForm {
 
 export function emptyNextForm(): NextForm {
   return {
-    session: "A New Person or Whatever",
+    session: "Session Title (XX:XX)",
+    // EMPTY on purpose, unlike the sample headshots. The subtitle belongs to
+    // the fireside board; on a 3- or 4-speaker board it competes with the row
+    // for vertical space and the header guard answers by shrinking the title
+    // (120px → 82px on the default board). Auri's multi-speaker references
+    // carry no subtitle, so shipping sample copy here would make every crowded
+    // board wrong by default. The field is always visible in the sidebar, so
+    // nothing is hidden by leaving it blank.
+    subtitle: "",
     title: "Opening with Bjarke Ingels:\nUtopian Pragmatism",
     includeModerator: true,
     // Sample headshots, as the panel form does it — the board renders photos
@@ -1851,7 +1976,7 @@ export function buildNextDesign(form: NextForm, format: PlatformFormat): SimpleD
     simpleRole: "next.banner",
   });
   const session = form.session.trim();
-  mkText(session ? `NEXT: ${session}` : "NEXT:", M, bannerH / 2 + bannerFs * vs * 0.1, bannerFs, {
+  mkText(session ? `UP NEXT: ${session}` : "UP NEXT:", M, bannerH / 2 + bannerFs * vs * 0.1, bannerFs, {
     weight: 800, uppercase: true, color: "#15110E",
     letterSpacing: Math.max(1, Math.round(0.0009 * S)),
     simpleRole: "next.session",
@@ -1881,18 +2006,75 @@ export function buildNextDesign(form: NextForm, format: PlatformFormat): SimpleD
     simpleRole: "next.stage",
   });
 
-  // ── 3. Title ────────────────────────────────────────────────────────────
+  // ── 3. Title + subtitle ─────────────────────────────────────────────────
   // Auto-fit against the longest manually-broken line so a long title shrinks
   // instead of running off the canvas.
-  const avail = 0.94 - M;
+  //
+  // The ONE-speaker board is the exception: its cards sit beside the title
+  // rather than under it (see the layout table below), so the title has to be
+  // told it only owns the left half. Given the full width it would run clean
+  // under the moderator's card.
+  const speakerCount = Math.min(form.speakers.length, NEXT_MAX_SPEAKERS);
+  // The solo BOARD is one speaker plus a moderator. Turn the moderator off and
+  // the lone speaker drops to the ordinary bottom row, where it is out of the
+  // title's way — so the narrow measure would only shrink the title for nothing.
+  const solo = speakerCount === 1 && form.includeModerator;
+  const avail = (solo ? SOLO_MOD_X - 0.02 : 0.94) - M;
   const titleTop = chipY + chipH / 2 + 0.015;
+
+  // Both fonts are sized BEFORE either is drawn, because the people row now
+  // sits at a fixed height instead of being pushed down by the title. The old
+  // builder could shrink the CARDS to make room; a transcribed row cannot move,
+  // so the header is what gives. Title and subtitle scale together by one
+  // factor, which keeps their relative sizes as the reference has them.
+  //
+  // The solo board is exempt: its cards sit beside the title, not under it, so
+  // a tall header is free there. Its width cap (`avail`) does that job instead.
+  const fitTitle = (text: string, capFrac: number, charW: number) =>
+    Math.min(capFrac * S, (avail * W) / (Math.max(1, ...text.split("\n").map((l) => l.trim().length)) * charW)) / S;
+
+  // The fireside board (one moderator, one speaker) has its own type scale:
+  // 88px title and 38px subtitle, against 120/66 on the wider boards. It is the
+  // layout whose title only spans HALF the canvas, so the same 120px would have
+  // to shrink itself to fit and would land somewhere arbitrary.
+  //
+  // These are CAPS, not fixed sizes: a line long enough to cross `avail` still
+  // shrinks, because nothing here auto-wraps (text elements are `max-content`
+  // and `white-space: pre`, so a line breaks only where Enter was pressed).
+  // Break a long title yourself and it renders at the full 88px.
+  const titleCap = solo ? 88 / 1080 : 0.1111;
+  const subCap = solo ? 38 / 1080 : 0.0611;
+  let titleF = form.title.trim() ? fitTitle(form.title, titleCap, 0.52) : 0;
+  let subF = form.subtitle.trim() ? fitTitle(form.subtitle, subCap, 0.5) : 0;
+  const SUB_GAP = 0.022;
+  const headerH = () =>
+    (titleF ? lineCount(form.title) * titleF * vs : 0)
+    + (subF ? SUB_GAP + lineCount(form.subtitle) * subF * vs * 1.25 : 0);
+
+  if (!solo) {
+    // Clearance is generous because the layer closest to the header is the
+    // "Moderated by" label, which sits ABOVE the card's top edge.
+    const room = NEXT_ROW_TOP - 0.055 - titleTop;
+    const h = headerH();
+    if (h > room && h > 0) {
+      const k = Math.max(0.45, room / h);
+      titleF *= k; subF *= k;
+    }
+  }
+
   let cursorY = titleTop;
-  if (form.title.trim()) {
-    const longest = Math.max(1, ...form.title.split("\n").map((l) => l.trim().length));
-    const f = Math.min(0.1111 * S, (avail * W) / (longest * 0.52)) / S;
-    const blockH = lineCount(form.title) * f * vs;
-    mkText(form.title, M, cursorY + blockH / 2, f, {
+  if (titleF) {
+    const blockH = lineCount(form.title) * titleF * vs;
+    mkText(form.title, M, cursorY + blockH / 2, titleF, {
       weight: 600, color: "#FFFFFF", lineHeight: 1.0, simpleRole: "headline",
+    });
+    cursorY += blockH;
+  }
+  if (subF) {
+    const blockH = lineCount(form.subtitle) * subF * vs * 1.25;
+    cursorY += SUB_GAP;
+    mkText(form.subtitle, M, cursorY + blockH / 2, subF, {
+      weight: 400, color: "rgba(255,255,255,0.95)", lineHeight: 1.25, simpleRole: "subtitle",
     });
     cursorY += blockH;
   }
@@ -1913,22 +2095,22 @@ export function buildNextDesign(form: NextForm, format: PlatformFormat): SimpleD
   const moderator = form.includeModerator ? form.moderator : null;
   const n = speakers.length;
 
-  const nameFs = 22 / 1080;
-  const roleFs = 17 / 1080;
+  // Auri's sizes, in pixels off the 1920×1080 board. Were 22/17 until
+  // 2026-08-13. Stored as fractions of the SHORTER side so a caption stays the
+  // same visual size in every format, the house rule for every font here.
+  const nameFs = 28 / 1080;
+  const roleFs = 18 / 1080;
 
-  const areaLeft = M;
-  const areaRight = 0.94;
   /** Card aspect (width:height) — portrait, matching the panel's cards. */
   const CARD_AR = 0.9;
   const cardHfromW = (wFrac: number) => (wFrac * (W / H)) / CARD_AR;
-  const gap = 0.018;
-  /** Photo → caption gap for the moderator, whose caption sits to its RIGHT. */
-  const capGap = 0.022;
-  /** The moderator's card, in speaker-card widths. Barely bigger, as on the
-   *  reference board: what sets it apart is the position, not the size. */
-  const MOD_SCALE = 1.14;
-  /** The moderator's caption column, also in speaker-card widths. */
-  const MOD_CAP_UNITS = 1.12;
+  /** Card top edge → caption first line. 41px on the reference board. */
+  const CAP_GAP = 41 / 1080;
+  /** "Moderated by" sits this far above the moderator's card. */
+  const LABEL_GAP = 8 / 1080;
+  /** Wrap measure for the moderator's caption — wider than its card, measured
+   *  off the references at roughly 400px of 1920. */
+  const MOD_CAP_W = 0.2;
 
   const wrapNext = (text: string, maxWfrac: number, fontFrac: number, avgChar = 0.56): string => {
     const maxChars = Math.max(6, Math.floor((maxWfrac * W) / (fontFrac * S * avgChar)));
@@ -1978,77 +2160,70 @@ export function buildNextDesign(form: NextForm, format: PlatformFormat): SimpleD
       canvasImages.push({
         id: uid("img"), src: p.photo, x: cx, y: cy, width: w, height: h,
         cornerRadius: 8, border: true, borderWidth: 2 / 1500, fit: "cover",
+        // WHITE, explicitly. A CanvasImage with `border: true` and NO
+        // borderColor falls through to DynamicTemplate's default, which is the
+        // yellow→orange→red gradient — so a FILLED card kept a coloured edge
+        // even after the empty frames went white, and the two disagreed on the
+        // same row. Both are white now.
+        borderColor: "#FFFFFF",
         naturalWidth: p.naturalWidth, naturalHeight: p.naturalHeight,
         simpleRole: `${who}.photo`,
       });
     } else {
       shapes.push({
         id: uid("shape"), type: "rectangle", x: cx, y: cy, width: w, height: h,
-        fillType: "outline", strokeWidth: 2 / 1500, colorType: "gradient",
-        color1: "#FF6B00", color2: "#FF0028", opacity: 1, blur: 0, rotation: 0,
+        // WHITE, not the orange-red gradient every other board uses for an
+        // empty slot. The reference boards are white-outlined and Auri called
+        // it out by name; this is the only builder that differs.
+        fillType: "outline", strokeWidth: 2 / 1500, colorType: "solid",
+        color1: "#FFFFFF", color2: "#FFFFFF", opacity: 1, blur: 0, rotation: 0,
         borderRadius: 0.08,
       });
     }
   };
 
   if (n || moderator) {
-    // Card width comes from the row's fixed proportions, so a 2-speaker board
-    // and a 4-speaker one both fill the width instead of leaving a hole.
-    const units = n + (moderator ? MOD_SCALE + MOD_CAP_UNITS : 0);
-    const gaps = (moderator ? capGap + gap * n : gap * Math.max(0, n - 1));
-    let sw = units > 0 ? (areaRight - areaLeft - gaps) / units : 0;
-    // The moderator's caption column is capped in absolute terms. Left purely
-    // proportional it ballooned on a 2-speaker board — the cards get wide, and a
-    // caption column 1.12 cards wide became a lake of empty space between the
-    // moderator and the first speaker. Capped, the leftover goes to the cards.
-    let modCapW = Math.min(sw * MOD_CAP_UNITS, 0.2);
-    if (moderator && modCapW < sw * MOD_CAP_UNITS) {
-      sw = (areaRight - areaLeft - gaps - modCapW) / (n + MOD_SCALE);
-      modCapW = Math.min(sw * MOD_CAP_UNITS, 0.2);
-    }
-    let sh = cardHfromW(sw);
-    let modW = sw * MOD_SCALE;
-    let modH = cardHfromW(modW);
+    // Every card is the SAME fixed size on every board — the moderator's
+    // included. The old builder derived the width from the count so the row
+    // always filled the canvas, which made a 2-speaker board's cards much
+    // bigger than a 4-speaker board's. The references are all 250px.
+    const cw = NEXT_CARD_W;
+    const chh = cardHfromW(cw);
 
-    // Captions sit BELOW the speaker photos, so the row's bottom is set by the
-    // tallest caption. It stops at 0.90 rather than the 0.945 the old text list
-    // used: the TechBBQ logo sits bottom-RIGHT on this board, and the last
-    // speaker's caption is the layer that lands in that corner — at 0.945 the
-    // description ran straight through the logo.
-    const blockBottom = 0.90;
-    const capH = Math.max(0, ...speakers.map((p) => nextCaption(p, sw).height));
-    const rowBottom = blockBottom - capH - 0.012;
-    /** How far the moderator's card rides above the speaker row, matching the
-     *  reference board. Written in H-fractions of a constant pixel amount. */
-    const modLift = 0.06 * vs;
+    // Which of the transcribed rows applies. Solo is its own board; the rest
+    // read the table, and anything the references do not cover falls back to
+    // the right-aligned rule.
+    const rowTop = solo ? SOLO_ROW_TOP : NEXT_ROW_TOP;
+    const modX = solo ? SOLO_MOD_X : NEXT_MOD_X;
+    const speakerXs = solo
+      ? [SOLO_SPK_X]
+      : (moderator ? NEXT_SPEAKER_X[n] : undefined) ?? rightAlignedRow(n);
 
-    // Everything scales down together if the row would climb into the title.
-    // Only the CARDS shrink: the caption sizes are Auri's, in pixels.
-    // The clearance is generous (0.055) because the layer that lands closest to
-    // the title is the moderator's CAPTION, which starts at the card's top edge
-    // — at 0.03 its first line sat in the descenders of "Utopian Pragmatism".
-    const roomTop = cursorY + 0.055;
-    const tallest = moderator ? modLift + modH : sh;
-    if (rowBottom - tallest < roomTop) {
-      const k = Math.max(0.4, (rowBottom - roomTop - (moderator ? modLift : 0)) / (moderator ? modH : sh));
-      sw *= k; sh = cardHfromW(sw); modW = sw * MOD_SCALE; modH = cardHfromW(modW);
-    }
-
-    let x = areaLeft;
     if (moderator) {
-      const modTop = rowBottom - modLift - modH;
-      emitPhoto(moderator, x, modTop, modW, modH, "moderator");
-      // Caption to the RIGHT of the card, top-aligned with it — the space it
-      // uses is above the speaker photos, which start lower down.
-      const capX = x + modW + capGap;
-      emitCaption(moderator, capX, modTop, modCapW, "moderator");
-      x = capX + modCapW + gap;
+      // "Moderated by" above the card — the label the references carry and the
+      // previous build deliberately left out. The moderator used to be told
+      // apart by sitting alone on the left; it is now named.
+      const labelH = nameFs * vs * 1.2;
+      mkText("Moderated by", modX, rowTop - LABEL_GAP - labelH / 2, nameFs, {
+        weight: 700, color: "#FFFFFF", lineHeight: 1.2, simpleRole: "next.moderatorLabel",
+      });
+      emitPhoto(moderator, modX, rowTop, cw, chh, "moderator");
+      // Caption BELOW the card now, like every speaker. It used to sit to the
+      // right, which is what made the moderator's block twice as wide as a
+      // speaker's and forced the whole row to be measured differently.
+      //
+      // It wraps WIDER than its card, though — 0.2 of the width against the
+      // card's 0.13. On the references "Managing Director & Co-Head of
+      // Secondaries, Stifel" breaks into two lines that both overhang the card,
+      // and holding it to the card width instead turns it into four cramped
+      // ones. Only the moderator gets this: it is the leftmost card, so the
+      // overhang runs into empty canvas rather than into the next speaker.
+      emitCaption(moderator, modX, rowTop + chh + CAP_GAP, MOD_CAP_W, "moderator");
     }
     speakers.forEach((p, i) => {
-      const top = rowBottom - sh;
-      emitPhoto(p, x, top, sw, sh, `speaker-${i}`);
-      emitCaption(p, x, rowBottom + 0.012, sw, `speaker-${i}`);
-      x += sw + gap;
+      const x = speakerXs[i] ?? (NEXT_MOD_X + i * (cw + 80 / 1920));
+      emitPhoto(p, x, rowTop, cw, chh, `speaker-${i}`);
+      emitCaption(p, x, rowTop + chh + CAP_GAP, cw, `speaker-${i}`);
     });
   }
 
@@ -2825,12 +3000,15 @@ export function formsFromDoc(kind: string, doc: SimpleDoc, saved?: SimpleFormsSn
     const speakers = saved?.next && !docSpeakers.length
       ? base.speakers
       : docSpeakers.map((i) => readPerson(`speaker-${i}`, base.speakers[i] ?? emptyPerson()));
-    // The banner text is stored with its fixed "NEXT: " prefix on canvas; the
-    // input holds only the part the user types.
+    // The banner text is stored with its fixed "UP NEXT: " prefix on canvas;
+    // the input holds only the part the user types. The `UP ` is optional in
+    // the pattern so docs saved before 2026-08-13, when the prefix was just
+    // "NEXT:", still load with their session name intact rather than keeping a
+    // stray "NEXT:" inside the input.
     const bannerRaw = textByRole.get("next.session");
     const session = saved?.next
       ? base.session
-      : (bannerRaw ? flatten(bannerRaw).replace(/^\s*NEXT:\s*/i, "") : base.session);
+      : (bannerRaw ? flatten(bannerRaw).replace(/^\s*(UP\s+)?NEXT:\s*/i, "") : base.session);
     const hasModerator = doc.design.texts.some((t) => t.simpleRole?.startsWith("moderator."))
       || doc.canvasImages.some((i) => i.simpleRole?.startsWith("moderator."));
     return {
@@ -2842,6 +3020,9 @@ export function formsFromDoc(kind: string, doc: SimpleDoc, saved?: SimpleFormsSn
         ...base,
         session,
         title: saved?.next ? base.title : (textByRole.get("headline") ?? base.title),
+        // An empty subtitle emits no text layer, so a doc without one has to
+        // read back as "" and not as the sample copy from `base`.
+        subtitle: saved?.next ? base.subtitle : (textByRole.get("subtitle") ?? ""),
         speakers: speakers.slice(0, NEXT_MAX_SPEAKERS),
         includeModerator: saved?.next ? base.includeModerator : hasModerator,
         moderator: readPerson("moderator", base.moderator),

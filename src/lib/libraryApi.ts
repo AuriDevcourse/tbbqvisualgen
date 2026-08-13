@@ -28,7 +28,20 @@ export function checkRate(key: string): NextResponse | null {
   return null;
 }
 
-const KINDS = new Set(["panel", "partner", "sales", "editor"]);
+/**
+ * Every template that can be saved to the team library, plus `editor` for a
+ * doc saved out of the advanced editor.
+ *
+ * **`next` was missing until 2026-08-13**, so saving a Next Session board 422'd
+ * with a message that did not even list the kinds it accepted. The client has
+ * typed its union as `"panel" | "partner" | "sales" | "next"` since the board
+ * shipped (`TeamLibrary.tsx`), so the two sides simply disagreed and only the
+ * server knew.
+ *
+ * ADDING A TEMPLATE? Add it here. `docKindOf` in simpleLayout is the other
+ * list; they have to agree, and nothing checks that for you.
+ */
+export const KINDS = new Set(["panel", "partner", "sales", "next", "editor"]);
 /** Keep well under Vercel's ~4.5MB serverless body cap so failures are OURS
  *  (a clear 413) rather than an opaque platform error. */
 const MAX_BYTES = 4_000_000;
@@ -62,7 +75,12 @@ export async function validateItemBody(req: Request): Promise<ItemBody | NextRes
   const name = typeof b.name === "string" ? b.name.trim().slice(0, 120) : "";
   if (!name) return NextResponse.json({ error: "A name is required" }, { status: 422 });
   if (typeof b.kind !== "string" || !KINDS.has(b.kind)) {
-    return NextResponse.json({ error: "kind must be panel, partner or editor" }, { status: 422 });
+    // Name every accepted kind: the old message listed three of the five and
+    // sent Auri looking for a bug in the Next Session board instead of here.
+    return NextResponse.json(
+      { error: `kind must be one of: ${[...KINDS].join(", ")}` },
+      { status: 422 },
+    );
   }
   const doc = b.doc;
   if (!doc || typeof doc !== "object" || !("design" in doc) || !("format" in doc)) {
