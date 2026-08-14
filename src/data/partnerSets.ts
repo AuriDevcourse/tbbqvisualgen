@@ -394,23 +394,35 @@ export const COMMUNITY_PAGES: PartnerSetEntry[][] = Array.from(
  * Selected` is a shortlisting flag, not attendance — it stays "Selected" for
  * companies still being contacted and for ones that declined.
  *
- * **Re-sync with `curl -s https://airtable-woad.vercel.app/api/ls-startups`.**
- * The feed is public and needs no key.
+ * **Re-sync with `npm run logos:ls-feed`** (`scripts/sync-ls-feed.mjs`), which
+ * reads this array out of this file, diffs it against the feed and downloads
+ * anything new to `.logos-feed/` without writing to the library. It reports
+ * three things, and the third is the one a name diff misses: who arrived, who
+ * fell off, and whose ARTWORK changed under an unchanged name (silhouette
+ * compare, same 0.12 threshold `logos:import` uses). The feed is public and
+ * needs no key.
  *
  * The roster moved a LOT between 2026-08-10 (31 here, from 43 confirmed) and
  * 2026-08-13 (37): 17 companies fell off and 23 arrived. So treat any count in
  * this comment as a date-stamped observation, and expect churn right up to the
  * summit rather than assuming a stale list is still right.
  *
+ * **Re-synced 2026-08-14: 37 → 44. Seven arrived, nothing fell off, and no held
+ * logo's artwork changed.** New, all imported from the feed as white-ink SVG
+ * filling 100% of their viewBox (so none needed `logos:tighten`): Ally, Ambr
+ * Institute, AMMISORB, Armenta Bioscience, Ironic Biotech, LumenAR, Oceanswell
+ * Energy. `AMMISORB` is a white CARD with the artwork knocked out of it, the
+ * same shape as AUSCORA below.
+ *
  * Dropped on 2026-08-13, files kept in the library in case they come back:
  * Completion, Drylabz, Hemispherian, Hydram Research, Lucero, Mimbly, NeoCare
  * Nordic, Nordiq Products, Nyctea, PERPLANT, Sea Growth, Sveppa, Sylvia Health,
  * Uman Sense, UVision, Visibuilt, Yngvi Bio.
  *
- * **This set is the FULL 37 — nothing is held back for missing artwork**, which
- * is new. The feed carries each company's logo attachment, so the 20 that had no
- * library file were imported straight from it (36 of the 37 are white-ink SVG;
- * Ai2Ai is the one PNG). Two arrived padded and were run through
+ * **This set is the FULL 44 — nothing is held back for missing artwork**, which
+ * is new. The feed carries each company's logo attachment, so every company that
+ * had no library file was imported straight from it (43 of the 44 are white-ink
+ * SVG; Ai2Ai is the one PNG). Two arrived padded and were run through
  * `npm run logos:tighten` (Anorit Medical, TrialMe).
  *
  * Three names do not match their artwork, so do not "fix" them back:
@@ -419,9 +431,10 @@ export const COMMUNITY_PAGES: PartnerSetEntry[][] = Array.from(
  *   `DiaDesign Technologie.svg` → library filename is missing its final "s"
  *   `Ai2Ai.png`                 → the only raster in this set
  *
- * `AUSCORA` is a white CARD with the wordmark knocked out of it, not white ink
- * on transparent, so it renders as a white plate among 36 knockouts. That is the
- * artwork the company supplied; flagged to Auri 2026-08-13, unchanged here.
+ * `AUSCORA` and `AMMISORB` are white CARDS with the artwork knocked out of them,
+ * not white ink on transparent, so they render as white plates among 42
+ * knockouts. That is the artwork the companies supplied; AUSCORA was flagged to
+ * Auri 2026-08-13 and AMMISORB 2026-08-14, both unchanged here.
  *
  * Labels drop the legal suffix — no thank-you wall says "ApS".
  */
@@ -429,7 +442,11 @@ export const LS_DT_EXHIBITORS: PartnerSetEntry[] = [
   { label: "3Sonic", src: "/logos/Life%20Science%20Pitch%20Finalists%202026/3sonic.svg" },
   { label: "ABH Optics", src: "/logos/ABH%20Optics.svg" },
   { label: "Ai2Ai", src: "/logos/Ai2Ai.png" },
+  { label: "Ally", src: "/logos/Ally.svg" },
+  { label: "Ambr Institute", src: "/logos/Ambr%20Institute.svg" },
+  { label: "AMMISORB", src: "/logos/AMMISORB.svg" },
   { label: "Anorit Medical", src: "/logos/Anorit%20Medical.svg" },
+  { label: "Armenta Bioscience", src: "/logos/Armenta%20Bioscience.svg" },
   { label: "AUSCORA", src: "/logos/AUSCORA.svg" },
   { label: "AVENTIX", src: "/logos/AVENTIX.svg" },
   { label: "Bioelectrix", src: "/logos/Life%20Science%20Pitch%20Finalists%202026/Bioelectrix.svg" },
@@ -444,10 +461,13 @@ export const LS_DT_EXHIBITORS: PartnerSetEntry[] = [
   { label: "Hydratico", src: "/logos/Hydratico.svg" },
   { label: "Immunordic", src: "/logos/Life%20Science%20Pitch%20Finalists%202026/Immunordic.svg" },
   { label: "Insulinus", src: "/logos/Insulinus.svg" },
+  { label: "Ironic Biotech", src: "/logos/Ironic%20Biotech.svg" },
   { label: "LignoSolve", src: "/logos/LignoSolve.svg" },
   { label: "Lizard Photonics", src: "/logos/Lizard%20Photonics.svg" },
+  { label: "LumenAR", src: "/logos/LumenAR.svg" },
   { label: "MagCath", src: "/logos/MagCath%20White.svg" },
   { label: "Magnolia Quantum Sensing", src: "/logos/Deep%20Tech%20Pitch%20Finalists%202026/Magnolia%20Quantum%20Sensing.svg" },
+  { label: "Oceanswell Energy", src: "/logos/Oceanswell%20Energy.svg" },
   { label: "Ownwell", src: "/logos/Ownwell%20White.svg" },
   { label: "Paindrainer", src: "/logos/Paindrainer%20White.svg" },
   { label: "Previto", src: "/logos/Previto%20White.svg" },
@@ -479,11 +499,25 @@ export const LS_DT_EXHIBITORS: PartnerSetEntry[] = [
  * Six of these companies ALSO exhibit, so the participating wall below
  * de-duplicates rather than showing them twice.
  *
- * **Checked against both announcement pages on 2026-08-13 — 8 and 8, no change:**
- * techbbq.dk/life-science-pitch and techbbq.dk/deep-tech-pitch. Those pages
- * shorten four names, so match on the COMPANY, not the string: `Oasi` is
- * Oasicare, `Analgesia.ai` is AnalgesiaAI, `Magnolia` is Magnolia Quantum
- * Sensing, `N23` is N23 health. Labels here stay as the artwork reads.
+ * **Re-checked against both announcement pages on 2026-08-14: ONE change.** The
+ * Deep Tech page now lists **insellar** where this set had **Epidetect Labs**;
+ * Life Science's 8 are untouched. Auri asked for exactly this check, so treat
+ * the two pages as the authority on the cohort and re-read them rather than
+ * trusting a count. `Epidetect Labs.svg` stays in the library in case it comes
+ * back.
+ *
+ * The two pages block `curl` (a WAF answers "455 Security Incident Detected"),
+ * so read them in a browser. Each logo is an INLINE `<svg>` inside a link, and
+ * the link's href is the only unambiguous identity — the artwork often does not
+ * spell the company the way Airtable does. Those pages shorten four names, so
+ * match on the COMPANY, not the string: `Oasi` is Oasicare, `Analgesia.ai` is
+ * AnalgesiaAI, `Magnolia` is Magnolia Quantum Sensing, `N23` is N23 health.
+ * Labels here stay as the artwork reads, which is why insellar is lowercase.
+ *
+ * `Insellar.svg` was rebuilt from that page's inline SVG (its four paths and the
+ * `.st0/.st1` style block, white ink with the final A at 80% opacity) because the
+ * company has no website — the page links its LinkedIn. Rendered and checked
+ * against the page before being listed.
  *
  * This list got its own fill button ("LS x DT Pitch Finalists") the same day.
  * Until then it existed only to feed the participating wall, so a roster that
@@ -502,7 +536,7 @@ export const LS_DT_PITCH_FINALISTS: PartnerSetEntry[] = [
   // ── Deep Tech Pitch Competition ──
   { label: "AnyoLabs", src: "/logos/Deep%20Tech%20Pitch%20Finalists%202026/AnyoLabs.svg" },
   { label: "DigeHealth", src: "/logos/Deep%20Tech%20Pitch%20Finalists%202026/DigeHealth.svg" },
-  { label: "Epidetect Labs", src: "/logos/Deep%20Tech%20Pitch%20Finalists%202026/Epidetect%20Labs.svg" },
+  { label: "insellar", src: "/logos/Deep%20Tech%20Pitch%20Finalists%202026/Insellar.svg" },
   { label: "Magnolia Quantum Sensing", src: "/logos/Deep%20Tech%20Pitch%20Finalists%202026/Magnolia%20Quantum%20Sensing.svg" },
   { label: "N23 health", src: "/logos/Deep%20Tech%20Pitch%20Finalists%202026/N23%20health.svg" },
   { label: "Rilemo", src: "/logos/Deep%20Tech%20Pitch%20Finalists%202026/Rilemo.svg" },
@@ -518,7 +552,7 @@ export const LS_DT_PITCH_FINALISTS: PartnerSetEntry[] = [
  * and they are not spelled the same in both (`GreenCow Biosolutions` vs
  * `greenCow BioSolutions`, `3Sonic` vs `3sonic`). Both lists already point at
  * the same FILE for those, so the path is the reliable identity — matching on
- * label would double-print half of them. 37 + 16 - 6 = 47 as of 2026-08-13.
+ * label would double-print half of them. 44 + 16 - 6 = 54 as of 2026-08-14.
  *
  * The overlap grew from 4 to 6 when the exhibitor roster was re-synced that day
  * (3Sonic and Bioelectrix are now exhibiting as well as pitching), which is

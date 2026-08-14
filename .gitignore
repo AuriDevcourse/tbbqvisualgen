@@ -57,6 +57,12 @@ duplicate-logos-report.json
 # this machine, reviewed by hand before anything lands in public/logos
 .logos-staging/
 logo-staging-report.json
+# Dry-run output of `npm run logos:ls-feed` — the LS x DT roster's logo
+# attachments downloaded from the connector feed, kept only long enough to
+# review and name before copying into public/logos
+.logos-feed/
+ls-feed-sync-report.json
+
 # Contact sheets from `node scripts/logo-contact-sheet.mjs`
 *-contact-sheet.png
 approved.png

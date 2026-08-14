@@ -6,6 +6,98 @@ not required reading.
 
 ---
 
+## SESSION HANDOFF · 2026-08-14 (13): LS x DT re-sync, 37 → 44, wall cap 48 → 56
+
+### State: UNCOMMITTED on `master`
+
+### The pitch finalists changed too: Epidetect Labs → insellar
+
+What Auri actually asked for was a check that the **16 pitch finalists** are all
+in the app, and one of them had changed. Both announcement pages were re-read on
+2026-08-14: Life Science's 8 are unchanged, and the Deep Tech page now lists
+**insellar** where this repo had **Epidetect Labs**. Swapped in
+`LS_DT_PITCH_FINALISTS`; `Epidetect Labs.svg` stays in the library in case it
+comes back. The participating wall stays at 54 — a 1-for-1 swap, and neither
+company exhibits.
+
+Two things that made this harder than it should have been, both worth knowing
+next time:
+
+- **`curl` cannot read those pages.** The site's WAF answers `455 Security
+  Incident Detected` to a plain fetch, so the check has to run in a browser.
+- **insellar has no website**, only the LinkedIn the page links, so there was no
+  site to pull a logo from. `Insellar.svg` was **rebuilt from the page's own
+  inline SVG** — four paths plus its `.st0/.st1` style block, white ink with the
+  final A at 80% opacity — then rendered and compared against the page. Reading
+  it out took several small calls: the browser tool refuses to return long
+  HTML-ish strings, so ask for `viewBox`, the style text, and each path's `d`
+  separately rather than `outerHTML`.
+
+On the 54-logo wall insellar is the faintest logo there — a hairline wordmark in
+a 63px cell. It reads, but it is the one to look at if that wall ever feels too
+dense. On the 16-logo finalists wall it is perfectly clear.
+
+Gates: **272/272 vitest**, **tsc clean**, **eslint unchanged** (the same 41
+pre-existing problems in `src` + `scripts`, none from these files).
+
+**The roster grew again, one day later.** `npm run logos:ls-feed` (new, below)
+against the connector feed: **44 confirmed startups, up from 37. Seven arrived,
+nothing fell off, and no logo already in the library changed artwork.** New, all
+imported from the feed as white-ink SVG already filling 100% of their viewBox, so
+none needed `logos:tighten`: **Ally, Ambr Institute, AMMISORB, Armenta
+Bioscience, Ironic Biotech, LumenAR, Oceanswell Energy**. Library 897 → 904.
+
+Two things to look at, both artwork the companies supplied:
+
+- **AMMISORB** is a white CARD with the mark knocked out of it, so it renders as
+  a white plate. `AUSCORA` has done this on the same wall since 2026-08-13.
+  Both can be inverted to white ink on transparent on a word from Auri.
+- The Oceanswell artwork reads **"Oceanswell Energy"**; Airtable spells it
+  "OceanSwell". The label follows the artwork, as everything on these walls does.
+
+**`THANKS_MAX_LOGOS` went 48 → 56, and that was a real decision, not a bump to
+make a test pass.** The participating wall is exhibitors + pitch finalists
+de-duplicated, so 44 + 16 - 6 = **54**, over the 48 cap, and
+`partnerSets.test.ts` caught it. Splitting the wall across two slides was
+rejected when this wall was built ("everyone gets thanked on one image"), so the
+cap moved instead. Columns are capped at 8, so 54 is the **first wall to grow a
+seventh row**: measured at 1920×1080 the cells go 169×74px at 44 logos to
+**169×63px at 54**, and the block still lands inside the bottom margin
+(279–1015 of 1080). Rows past six cost height, not width.
+
+**Both walls were rendered and read logo by logo before this was written** — 44
+and 54, every cell filled, nothing clipped, every wordmark still readable at 54.
+Not through the app: `/simple` took over ten minutes to compile and never
+answered, so the check was done offline by dumping the doc
+`buildPartnerDesign(form, "presentation")` emits and compositing the real library
+files at the real cell geometry with sharp. That proves geometry and legibility,
+NOT the app's fonts or background, so the wall is still worth one look in the
+editor. If 63px ever reads too small, the fallback is paginating this one wall the
+way Community does (`COMMUNITY_PER_WALL`), not shrinking further.
+
+### Re-syncing is now one command, and it checks artwork too
+
+`npm run logos:ls-feed` (`scripts/sync-ls-feed.mjs`) is a DRY RUN. It parses
+`LS_DT_EXHIBITORS` out of `partnerSets.ts`, diffs it against the feed, and
+reports **arrived / artwork changed / dropped / unreadable**. The middle one is
+the reason it exists: a name diff cannot see a company re-supplying its logo
+under an unchanged name, so every held file is silhouette-compared against the
+feed's attachment at the same 0.12 threshold `logos:import` uses. Downloads land
+in gitignored `.logos-feed/`; nothing is written to `public/logos` or to
+`partnerSets.ts`.
+
+Three feed names cannot be matched to a label by rule and live in an `ALIASES`
+table in that script: `H+H LABS PSA (project Hydratico)` → Hydratico,
+`Bioelectrix Sweden AB` → Bioelectrix, `Rilemo S.r.l.` → Rilemo. Without them the
+script reports three phantom drops and three phantom arrivals.
+
+**AUSCORA and AMMISORB cannot be silhouette-compared at all** — a white card
+trims to a solid block and the signature throws "blank". AUSCORA was checked by
+rendering both copies side by side instead. Expect it in the UNREADABLE column
+every run; it is not a failure.
+
+---
+
 ## SESSION HANDOFF · 2026-08-13 (12): Life Science re-sync + Next Session board rebuilt
 
 ### State: PUSHED to master as `74a6fdb` · LIVE
@@ -2346,6 +2438,7 @@ Dev server may still be running on localhost:3000.
 | `npm run logos:sweep` | Domain status for the whole library. Weak — see its header comment. |
 | `npm run logos:svgify -- <batch>` | Find SVG versions of raster logos on the companies own sites. Shape-verified, staged for review. |
 | `npm run logos:import -- <folder>` | Import a site export. Artwork-matches against the library, stages only the new files, renders naming sheets. Never writes to `public/logos`. |
+| `npm run logos:ls-feed` | Re-sync the LS x DT exhibiting roster against the connector feed. Reports arrived / artwork changed / dropped, downloads to `.logos-feed/`. Never writes to `public/logos`. |
 
 ### Gotchas discovered this session
 
@@ -2659,6 +2752,7 @@ resumes after. Two passes — first warms up font loading, second captures.
 | `scripts/logo-checks/techbbq-partners.txt` | ~95 partners with real URLs, read off techbbq.dk/partners. Refresh when the partner list changes. |
 | `scripts/svgify-logos.mjs` | Raster -> SVG upgrade hunt. Keeps only genuine vectors, scores them against our raster so a wrong logo cannot slip in. |
 | `scripts/import-site-logos.mjs` | Import a site export by matching ARTWORK against the library (export filenames are meaningless). Stages new files + renders naming sheets; never writes to `public/logos`. |
+| `scripts/sync-ls-feed.mjs` | Diff `LS_DT_EXHIBITORS` against `airtable-woad.vercel.app/api/ls-startups`: arrivals, drops, and artwork changed under an unchanged name. Dry run. |
 
 ---
 

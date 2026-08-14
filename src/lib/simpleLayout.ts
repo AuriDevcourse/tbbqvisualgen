@@ -776,17 +776,22 @@ export type PartnerLayout = "single" | "duo" | "quad" | "thanks";
  * The ceiling was 30 — a 6×5 grid, the most that reads at 16:9 while the wall
  * stays capped at 5 columns. Raised to 48 on 2026-08-10 for the Life Science x
  * Deep Tech thank-you posts, where the roster is the whole exhibiting cohort
- * (43 on the participating wall) and splitting it across slides was rejected:
- * everyone gets thanked on one image. A wall over 30 widens past 5 columns
- * instead of growing rows — see `thanksFlatMaxColumns` — so the cells shrink far
- * less than the count suggests. 48 is 8×6, the point where a wordmark at
- * 1920×1080 is still legible.
+ * and splitting it across slides was rejected: everyone gets thanked on one
+ * image. A wall over 30 widens past 5 columns instead of growing rows — see
+ * `thanksFlatMaxColumns` — so the cells shrink far less than the count suggests.
+ *
+ * Raised again to 56 on 2026-08-14, for the same reason and by the same call:
+ * the LS x DT roster grew to 44 exhibitors, which puts the participating wall
+ * (exhibitors + pitch finalists, de-duplicated) at 54. Columns are capped at 8,
+ * so this is the first wall to grow a SEVENTH row, and 8×7 = 56 is where the cap
+ * now sits. Rows past six cost cell height, not width, so the shrink is
+ * ~1/7 per logo rather than the halving a column change would cause.
  *
  * Walls of 30 or fewer are untouched by this: same column count, same cell
  * size, same output as before.
  */
 export const THANKS_MIN_LOGOS = 1;
-export const THANKS_MAX_LOGOS = 48;
+export const THANKS_MAX_LOGOS = 56;
 
 /**
  * How the logo block sits in the room below the headline: the share of the

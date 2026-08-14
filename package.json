@@ -19,7 +19,8 @@
     "logos:match": "node scripts/match-partner-domains.mjs",
     "logos:import": "node scripts/import-site-logos.mjs",
     "logos:svgify": "node scripts/svgify-logos.mjs",
-    "logos:tighten": "node scripts/tighten-logo-viewbox.mjs"
+    "logos:tighten": "node scripts/tighten-logo-viewbox.mjs",
+    "logos:ls-feed": "node scripts/sync-ls-feed.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

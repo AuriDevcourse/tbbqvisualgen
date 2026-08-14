@@ -21,7 +21,7 @@
     "src": "/logos/ABH%20Optics.svg",
     "name": "ABH Optics",
     "tags": [],
-    "bytes": 8834,
+    "bytes": 8884,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -258,6 +258,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/Ally.svg",
+    "name": "Ally",
+    "tags": [],
+    "bytes": 1461,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Alter%20Echo.svg",
     "name": "Alter Echo",
     "tags": [],
@@ -282,10 +290,26 @@
     "tone": "dark"
   },
   {
+    "src": "/logos/Ambr%20Institute.svg",
+    "name": "Ambr Institute",
+    "tags": [],
+    "bytes": 4155,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Amela.svg",
     "name": "Amela",
     "tags": [],
     "bytes": 3320,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/AMMISORB.svg",
+    "name": "AMMISORB",
+    "tags": [],
+    "bytes": 4894,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -359,7 +383,7 @@
     "src": "/logos/Anorit%20Medical.svg",
     "name": "Anorit Medical",
     "tags": [],
-    "bytes": 9716,
+    "bytes": 9755,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -446,6 +470,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/Armenta%20Bioscience.svg",
+    "name": "Armenta Bioscience",
+    "tags": [],
+    "bytes": 6052,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Arrow.png",
     "name": "Arrow",
     "tags": [],
@@ -481,7 +513,7 @@
     "src": "/logos/AUSCORA.svg",
     "name": "AUSCORA",
     "tags": [],
-    "bytes": 2564,
+    "bytes": 2580,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -513,7 +545,7 @@
     "src": "/logos/AVENTIX.svg",
     "name": "AVENTIX",
     "tags": [],
-    "bytes": 2400,
+    "bytes": 2421,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -683,7 +715,7 @@
     "src": "/logos/Biomimica.svg",
     "name": "Biomimica",
     "tags": [],
-    "bytes": 4574,
+    "bytes": 4597,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -1349,7 +1381,7 @@
     "src": "/logos/CYTO365.svg",
     "name": "CYTO365",
     "tags": [],
-    "bytes": 3349,
+    "bytes": 3372,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -1365,7 +1397,7 @@
     "src": "/logos/Dalea.svg",
     "name": "Dalea",
     "tags": [],
-    "bytes": 5468,
+    "bytes": 5490,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -1679,7 +1711,7 @@
     "src": "/logos/DPella.svg",
     "name": "DPella",
     "tags": [],
-    "bytes": 2445,
+    "bytes": 2466,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -1879,7 +1911,7 @@
     "src": "/logos/Enduro%20Genetics.svg",
     "name": "Enduro Genetics",
     "tags": [],
-    "bytes": 3999,
+    "bytes": 4023,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -2851,7 +2883,7 @@
     "src": "/logos/Hydratico.svg",
     "name": "Hydratico",
     "tags": [],
-    "bytes": 10120,
+    "bytes": 10147,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -3106,6 +3138,16 @@
     "tone": "light"
   },
   {
+    "src": "/logos/Deep%20Tech%20Pitch%20Finalists%202026/Insellar.svg",
+    "name": "Insellar",
+    "tags": [
+      "deep tech pitch finalists 2026"
+    ],
+    "bytes": 1685,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Instagram%20Icon.svg",
     "name": "Instagram Icon",
     "tags": [],
@@ -3117,7 +3159,7 @@
     "src": "/logos/Insulinus.svg",
     "name": "Insulinus",
     "tags": [],
-    "bytes": 1337,
+    "bytes": 1341,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -3208,6 +3250,14 @@
     "bytes": 380787,
     "toneAlgo": 2,
     "tone": "mixed"
+  },
+  {
+    "src": "/logos/Ironic%20Biotech.svg",
+    "name": "Ironic Biotech",
+    "tags": [],
+    "bytes": 4296,
+    "toneAlgo": 2,
+    "tone": "light"
   },
   {
     "src": "/logos/Islanding%20Innovation.png",
@@ -3605,7 +3655,7 @@
     "src": "/logos/LignoSolve.svg",
     "name": "LignoSolve",
     "tags": [],
-    "bytes": 3858,
+    "bytes": 3883,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -3637,7 +3687,7 @@
     "src": "/logos/Lizard%20Photonics.svg",
     "name": "Lizard Photonics",
     "tags": [],
-    "bytes": 11605,
+    "bytes": 11637,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -3678,6 +3728,14 @@
     "name": "Luggagehero",
     "tags": [],
     "bytes": 62929,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/LumenAR.svg",
+    "name": "LumenAR",
+    "tags": [],
+    "bytes": 2651,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -4394,6 +4452,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/Oceanswell%20Energy.svg",
+    "name": "Oceanswell Energy",
+    "tags": [],
+    "bytes": 5298,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Octupus.svg",
     "name": "Octupus",
     "tags": [],
@@ -4749,7 +4815,7 @@
     "src": "/logos/QVersion.svg",
     "name": "QVersion",
     "tags": [],
-    "bytes": 2359,
+    "bytes": 2378,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -4805,7 +4871,7 @@
     "src": "/logos/Rebound.svg",
     "name": "Rebound",
     "tags": [],
-    "bytes": 11501,
+    "bytes": 11527,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -4845,7 +4911,7 @@
     "src": "/logos/Redoxa%20Therapeutics.svg",
     "name": "Redoxa Therapeutics",
     "tags": [],
-    "bytes": 2436,
+    "bytes": 2455,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -4861,7 +4927,7 @@
     "src": "/logos/Rekovy.svg",
     "name": "Rekovy",
     "tags": [],
-    "bytes": 2089,
+    "bytes": 2106,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -7107,7 +7173,7 @@
     "src": "/logos/Wren%20Bioscience.svg",
     "name": "Wren Bioscience",
     "tags": [],
-    "bytes": 1662,
+    "bytes": 1678,
     "toneAlgo": 2,
     "tone": "light"
   },
