@@ -20,7 +20,9 @@
     "logos:import": "node scripts/import-site-logos.mjs",
     "logos:svgify": "node scripts/svgify-logos.mjs",
     "logos:tighten": "node scripts/tighten-logo-viewbox.mjs",
-    "logos:ls-feed": "node scripts/sync-ls-feed.mjs"
+    "logos:ls-feed": "node scripts/sync-ls-feed.mjs",
+    "logos:tiers": "node scripts/sync-partner-tiers.mjs",
+    "logos:tiers:gen": "node scripts/gen-partner-tiers.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

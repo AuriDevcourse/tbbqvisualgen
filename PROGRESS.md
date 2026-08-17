@@ -6,6 +6,174 @@ not required reading.
 
 ---
 
+## SESSION HANDOFF · 2026-08-17 (15): All Partners — 209 partners, 12 tiers, from Airtable
+
+### State: UNCOMMITTED on `master`, 40 new logo files + generated roster
+
+A new project folder in the Thank you sidebar: **All Partners 2026**, built from
+Airtable's `Marketing Project Overview` view "Partner Deliverables 2026"
+(`tblTecOBecLQCNIeD` / `viw7FVbsTb9IRaWF0`) — the same list techbbq.dk's partner
+page comes from. 220 rows in, 216 flagged `Put on web`, **211 placed on walls,
+209 unique logos, 3 unresolved**.
+
+Two new commands, and they are the whole story:
+
+| | |
+|---|---|
+| `npm run logos:tiers` | DRY RUN. Fetches the view, resolves every partner to a library file, audits the artwork, writes `partner-tiers-report.json`. `-- --write` imports the new files. |
+| `npm run logos:tiers:gen` | Turns that report into the `ALL_PARTNER_TIERS` block in `partnerSets.ts` (between markers — never hand-edit inside them). |
+
+**Tier order is MONEY order, from Auri: Prime, Main, Conqueror, Pioneer, Core,
+Challenger, Community.** Then five groups that are separate deals rather than
+rungs on that ladder: Investor, Tailored, International, Academic, and `Other`
+(the 33 rows with no `Partnership Type 2026` — Danske Bank, Deloitte, NVIDIA,
+Carta, Seed Capital…). `Core Plus` folds into Core.
+
+### The four things the resolver does that a download cannot
+
+1. **Matches by NAME, then by ARTWORK** (silhouette, 0.12 — the threshold
+   `logos:import` uses). 74 of the 211 resolved on artwork alone: TÜV SÜD was
+   filed as `Tuvsud`, Medicon Valley Alliance is misspelled "Valleyh" in
+   Airtable, BETA.HEALTH is `Beta Heath.svg`. Without it the import would have
+   added 121 files instead of 40, most of them second copies.
+   **`compare()` returns `{ shape, ink }`, not a number** — comparing the object
+   silently matched nothing on the first run, and the count (121 "new") looked
+   plausible. Only the silhouette decides sameness here; the ink differs by
+   design, because we hold white knockouts and Airtable holds brand files.
+2. **Prefers WHITE artwork and produces it when it is missing.** A dark or
+   coloured logo is invisible (or off-brand) on this canvas, so a name/artwork hit
+   only counts when the file is wall-ready. Otherwise the vector from Airtable is
+   rewritten to white ink — the on-disk twin of `src/lib/svgTint.ts` — and lands
+   BESIDE the coloured original as `<Company> White.svg` (or `… Knockout.svg`,
+   for Adeo Web, whose supplied "White" file is coloured). That is how Novo
+   Nordisk Foundation, NORNORM, TONIK, Carta, eryk and e-conomic reached the
+   walls at all.
+3. **Refuses what it cannot fix**, rather than shipping a box on a wall: an
+   `.eps`-only row, a raster-only row, and — the one worth remembering — an SVG
+   that is a SHEET EXPORT with an opaque full-canvas `<rect>` behind the mark.
+   Whitening that gives a white plate; leaving it gives a black one. SHE/THEY
+   Club is the example.
+4. **Drops a file that would appear twice on one wall** and says whose row it
+   dropped (two Radia Network rows; Business Helsinki and AISTART Incubator
+   supplied the same artwork).
+
+### Three partners are NOT on a wall — they need a human
+
+They are in source as `ALL_PARTNERS_UNRESOLVED`, so the gap is visible:
+
+- **AWS Startups** (Main) — Airtable holds three `.eps` files and nothing else.
+- **Creative Business Network** (Core) — one PNG carrying the white AND black
+  cut side by side in the same image; it needs cropping, or a vector.
+- **SHE/THEY Club** (Core) — the sheet export above.
+
+### Worth an eye before anything is published
+
+The resolver is confident, not right. Each of these is a real match by
+silhouette, and still a judgement call: **Nordea** resolves to the `Nordea
+Startup & Growth` lockup (it is Prime, so this one shows), **Mentorspace
+Lithuania** supplied artwork that reads LT BIG BROTHER, **ProWoc** occupies two
+Community rows under two names with two files, and **French Tech Copenhagen**'s
+SVG only wraps a PNG, so the white rewrite could not touch its pixels (it happens
+to be a knockout already). The full resolution list is in the report, and
+`npm run logos:tiers` prints all 74 artwork matches every run.
+
+### The wall itself: 16 per-tier walls plus one tiered wall
+
+`buildThanksDesign` used to know exactly two tiers (lead + rest). It now draws a
+LIST of bands — `PartnerForm.tiers`, each band with its own column count, which
+is what sets its cell size. The two-tier path is expressed through the same code
+and every existing snapshot is byte-identical; that was the constraint.
+
+- **Per tier**: one wall each, paginated at `TIER_PER_WALL = 30` (Community runs
+  to 99, so it is 4 walls) — the readable option, same call `COMMUNITY_PER_WALL`
+  already makes.
+- **All tiers, one wall**: 209 logos on one image, tier by tier, capped by the
+  new `THANKS_TIERED_MAX_LOGOS = 240` rather than the flat 56. Rendered and
+  checked: it works, the hierarchy reads, and at 16:9 the Community band is
+  around 40px. **It is a poster, not a slide** — build it in 9:16 or a tall custom
+  size when it has to be read. This was Auri's explicit "both" call, with that
+  tradeoff stated.
+- Headlines stay the generic "Thank you to our partners" on every tier wall:
+  Prime and Conqueror are what the DEAL is called internally, not something to
+  print. The tier is on the button.
+
+This roster **overlaps** `COMMUNITY_PARTNERS` and the LS x DT sets on purpose.
+Those were built logo by logo against published pages and re-cutting them would
+change who was thanked on which post. This one answers "who is on the partner
+list right now, at what tier".
+
+Gates: **375/375 vitest** (299 before — the new walls multiply through the
+per-set checks, plus 9 roster tests incl. white-artwork and tier-ladder rules),
+**tsc clean**, **eslint clean on every touched file**, library **905 → 945 files**.
+
+### NEXT SESSION STARTS HERE: why logos come out different sizes
+
+Auri asked why some logos on these walls are big and some small. Three separate
+answers, and only the first is intentional. **Nothing below is fixed yet** — it is
+the open list.
+
+**1. Across tiers: by design.** A band's cell size comes from its COLUMN COUNT,
+so the ladder is the hierarchy. Measured on the one-image wall at 1920×1080:
+
+| tier | logos | cols | cell width |
+|---|---|---|---|
+| Prime | 5 | 4 | 386px |
+| Main | 4 | 4 | 386px |
+| Conqueror | 6 | 5 | 299px |
+| Pioneer | 7 | 5 | 299px |
+| Core | 11 | 6 | 241px |
+| Challenger | 24 | 9 | 145px |
+| Community | 99 | 18 | 48px |
+| Investor | 10 | 6 | 241px |
+| Tailored | 7 | 5 | 299px |
+| International | 4 | 4 | 386px |
+| Academic | 1 | 1 | **1690px** |
+| Other | 33 | 10 | 125px |
+
+**Academic is a bug in that table**: one partner, one column, so NTNU Discovery
+gets a cell the full width of the canvas. The band's `cols` needs a floor tied to
+the tier ABOVE it (or a max cell width), not just `min(count, auto)`.
+
+**2. Within a tier, unfixable half.** Cells are contain-fit and wider than tall
+(`CELL_ASPECT = 0.45`). A wide wordmark fills the cell's width; a square or
+stacked mark can only fill its height, so it reads about a third the size in an
+identical box. Short of hand-placing, that is the cost of one grid.
+
+**3. Within a tier, FIXABLE half: 19 roster files carry padding inside their
+viewBox.** A contain fit cannot tell padding from artwork, so those render small
+beside a neighbour cropped to its ink — this is the visible defect on the Prime
+wall, where `Erhvervsfremmebestyrelsen` and `Beyond Beta Building` come out
+smaller than Novo Nordisk Foundation. Both are on the list:
+
+> Beyond Beta Building · Erhvervsfremmebestyrelsen · Nordea Startup & Growth ·
+> ICDK · Southern Sweden · City · Danish Business Authority 2 · Adeo Web ·
+> Hackyourfuture · Health Tech Hub Copenhagen · INCUBA x KITCHEN ·
+> STHLM Music City · Ubuntubiz · Business Region Göteborg · Microsoft White ·
+> Danske Bank · Deloitte · Seed Capital · Superseed
+
+`node scripts/tighten-logo-viewbox.mjs --check <files>` lists them; without
+`--check` it fixes them (viewBox window only, no path data, originals copied to
+`.logos-trash/`). **Deliberately NOT run yet**: Danske Bank, Deloitte and
+Microsoft White also sit on OTHER walls, where tightening makes them bigger too.
+That is an improvement, but it changes walls already published from, so it is
+Auri's call to make in one go.
+
+### Direction Auri set for the one-image wall (2026-08-17)
+
+"We will update it. Maybe we will have to split to multiple slides instead." So
+treat `all-partners-one` as a first cut, not the answer: 209 logos on one 16:9
+image puts Community at a 48px cell, and the likely resolution is SLIDES — the
+per-tier walls already do this, and a middle option would be grouped slides (say
+Prime→Core on one, Challenger on one, Community across three) rather than one
+poster. `THANKS_TIERED_MAX_LOGOS = 240` and the band machinery stay useful either
+way: a grouped slide is just a tiered wall with fewer bands.
+
+Order of work when this is picked up:
+1. Floor the band columns so a one-partner tier cannot span the canvas (Academic).
+2. Run `logos:tighten` on the 19, re-run `npm run logos`, re-check the walls that
+   share those files.
+3. Decide the slide split with Auri, then cut `ALL_PARTNER_WALLS` to match.
+
 ## SESSION HANDOFF · 2026-08-17 (14): Host on Stage, the panel's third flavour
 
 ### State: UNCOMMITTED on `master` (4 files)

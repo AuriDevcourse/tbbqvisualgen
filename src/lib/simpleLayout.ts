@@ -799,6 +799,22 @@ export const THANKS_MIN_LOGOS = 1;
 export const THANKS_MAX_LOGOS = 56;
 
 /**
+ * The cap for a TIERED wall — a wall whose form carries `tiers`, i.e. the whole
+ * partner list drawn tier by tier rather than one flat grid.
+ *
+ * It is four times the flat cap because it answers a different question. The
+ * flat cap is "how many logos still READ at one size on this canvas"; a tiered
+ * wall has already accepted that the bottom tiers are small — the point of it is
+ * that the complete list fits one image, with the hierarchy showing. 240 covers
+ * the 2026 list (211 partners) with room for the roster to grow.
+ *
+ * A wall this dense is a POSTER, not a slide: at 16:9 the Community tier lands
+ * near 40px cells. Build it in 9:16 or a tall custom size when it has to be read
+ * rather than glanced at — the per-tier walls exist for everything else.
+ */
+export const THANKS_TIERED_MAX_LOGOS = 240;
+
+/**
  * How the logo block sits in the room below the headline: the share of the
  * leftover height placed ABOVE the block. 0.5 = dead centre, 0 = flush under
  * the headline, so LOWER means the logos ride higher.
@@ -813,6 +829,18 @@ export const THANKS_MAX_LOGOS = 56;
  * the two and strands the grid high with a wide empty band along the bottom.
  */
 export const THANKS_GRID_BIAS = 0.42;
+
+/** One tier band of a tiered wall: how many of the wall's logos it holds, and
+ *  optionally how many columns to draw them in. The COLUMN COUNT is what makes a
+ *  tier's cells bigger or smaller (a 4-across cell is 1.5x the width of a
+ *  6-across one), so passing it is how the caller sets the hierarchy; omitted, it
+ *  is derived from the band's size. */
+export interface PartnerTierBand {
+  count: number;
+  cols?: number;
+  /** Shown in no design — carried so a wall can be read back and explained. */
+  label?: string;
+}
 
 export interface PartnerForm {
   /** Announcement label rendered across the top — e.g. "Partner Announcement".
@@ -830,6 +858,14 @@ export interface PartnerForm {
    *  rendered bigger than the rest (main partners over support partners).
    *  0 = one uniform grid. */
   featuredCount: number;
+  /** Thank-you layout only: tier BANDS, in order, when the wall draws the whole
+   *  list tier by tier (All Partners). Each band gets its own column count and
+   *  therefore its own cell size, and the bands stack down the canvas. When set
+   *  this REPLACES the lead/rest split — `featuredCount` is ignored — and the
+   *  cell cap becomes `THANKS_TIERED_MAX_LOGOS`. Bands are a form field rather
+   *  than something read off the doc's roles, so a tiered wall reloaded from a
+   *  library item without a form snapshot comes back as a flat wall. */
+  tiers?: PartnerTierBand[];
   /** Thank-you layout only: the big centred headline. Its own field so
    *  switching layouts never overwrites the label chip's wording. */
   headline: string;
@@ -1600,10 +1636,14 @@ function buildThanksDesign(form: PartnerForm, format: PlatformFormat): SimpleDoc
   }
 
   // ── Logo grid, block-centred in what is left below the headline ──
-  const count = Math.min(THANKS_MAX_LOGOS, Math.max(THANKS_MIN_LOGOS, Math.round(form.logoCount || THANKS_MIN_LOGOS)));
+  // A tiered wall is capped higher than a flat one: its whole point is that the
+  // complete list fits one image, and it has already accepted small bottom tiers.
+  const tiered = (form.tiers ?? []).filter((t) => t.count > 0);
+  const cap = tiered.length ? THANKS_TIERED_MAX_LOGOS : THANKS_MAX_LOGOS;
+  const count = Math.min(cap, Math.max(THANKS_MIN_LOGOS, Math.round(form.logoCount || THANKS_MIN_LOGOS)));
   // The lead tier: the first `featuredCount` logos, rendered bigger. Main
   // partners over support partners, the shape the investor wall needs.
-  const lead = Math.min(count, Math.max(0, Math.round(form.featuredCount || 0)));
+  const lead = tiered.length ? Math.min(count, tiered[0].count) : Math.min(count, Math.max(0, Math.round(form.featuredCount || 0)));
   const rest = count - lead;
 
   const gapX = 0.045 * S;
@@ -1639,30 +1679,67 @@ function buildThanksDesign(form: PartnerForm, format: PlatformFormat): SimpleDoc
   // single logo stranded on the last row gets squeezed into the row above it.
   const leadCounts = leadCols ? thanksRowCounts(lead, leadCols) : [];
   const restCounts = restCols ? thanksRowCounts(rest, restCols) : [];
-  const leadRows = leadCounts.length;
-  const restRows = restCounts.length;
+
+  /**
+   * The wall as a list of BANDS to stack: `{ from, counts, cols }`.
+   *
+   * A flat or lead/rest wall is the two-band case and keeps the numbers computed
+   * above verbatim — that is deliberate, so every wall that shipped before tiers
+   * existed is byte-identical afterwards. A tiered wall replaces them with one
+   * band per tier, in tier order, each sized by its own column count: more
+   * columns, smaller cells, which is the same mechanism the lead/rest split
+   * already used to make main partners bigger.
+   */
+  const bands: { from: number; counts: number[]; cols: number }[] = [];
+  if (tiered.length) {
+    // Cells are wide, so a band of n logos wants roughly sqrt(3n) columns —
+    // 5 logos across 4, 24 across 9, 99 across 18. Clamped to the count (never
+    // more columns than logos) and to 2x the flat maximum, past which a cell is
+    // narrower than a wordmark can survive.
+    const hardMax = thanksMaxColumns(W / H) * 2;
+    let at = 0;
+    for (const band of tiered) {
+      const n = Math.min(band.count, Math.max(0, count - at));
+      if (n <= 0) break;
+      const auto = Math.ceil(Math.sqrt(n * 3));
+      const cols = Math.max(1, Math.min(n, hardMax, Math.round(band.cols ?? auto)));
+      bands.push({ from: at, counts: thanksRowCounts(n, cols), cols });
+      at += n;
+    }
+    // Anything past the last band (a logo count raised without re-tiering) joins
+    // the final band rather than vanishing.
+    if (at < count && bands.length) {
+      const last = bands[bands.length - 1];
+      last.counts = thanksRowCounts(count - last.from, last.cols);
+    }
+  } else {
+    if (lead) bands.push({ from: 0, counts: leadCounts, cols: leadCols });
+    if (rest) bands.push({ from: lead, counts: restCounts, cols: restCols });
+  }
 
   // Cells are wider than tall — a logo is a wordmark far more often than a
   // square mark.
   const CELL_ASPECT = 0.45;
   const roomH = H * (1 - MARGIN - gridTop);
-  const gapSlots = Math.max(0, leadRows - 1) + Math.max(0, restRows - 1);
-  let leadCellH = lead ? widthOf(leadCols) * CELL_ASPECT : 0;
-  let restCellH = rest ? widthOf(restCols) * CELL_ASPECT : 0;
+  // Row gaps live INSIDE a band; the step between bands is `tierGap`, counted
+  // once per boundary.
+  const gapSlots = bands.reduce((n, b) => n + Math.max(0, b.counts.length - 1), 0);
+  const cellH = bands.map((b) => widthOf(b.cols) * CELL_ASPECT);
   let gapYMin = 0.055 * S;
   // A visible step between the tiers, so the size difference reads as two
   // groups rather than an accident.
-  let tierGap = lead && rest ? 0.085 * S : 0;
+  let tierGap = bands.length > 1 ? 0.085 * S : 0;
 
   // Too tall for the canvas? Scale cells AND gaps by one factor, so the block
   // lands exactly on the room and the ratio between the tiers survives
   // (shrinking the cells alone overflowed the bottom margin, and shrinking one
   // tier alone would flatten the hierarchy).
-  const natural = leadRows * leadCellH + restRows * restCellH + tierGap + gapSlots * gapYMin;
+  const bandsH = () => bands.reduce((h, b, i) => h + b.counts.length * cellH[i], 0);
+  const boundaries = Math.max(0, bands.length - 1);
+  const natural = bandsH() + boundaries * tierGap + gapSlots * gapYMin;
   if (natural > roomH) {
     const shrink = roomH / natural;
-    leadCellH *= shrink;
-    restCellH *= shrink;
+    for (let i = 0; i < cellH.length; i++) cellH[i] *= shrink;
     gapYMin *= shrink;
     tierGap *= shrink;
   }
@@ -1670,8 +1747,8 @@ function buildThanksDesign(form: PartnerForm, format: PlatformFormat): SimpleDoc
   // Leftover height goes into the row gaps rather than leaving the whole block
   // floating in the middle of a tall canvas — capped, so a 3-logo wall on a
   // 9:16 story spreads without the rows drifting apart.
-  const fixedH = leadRows * leadCellH + restRows * restCellH + tierGap;
-  const smallestCell = Math.min(...[lead ? leadCellH : Infinity, rest ? restCellH : Infinity]);
+  const fixedH = bandsH() + boundaries * tierGap;
+  const smallestCell = bands.length ? Math.min(...cellH) : Infinity;
   const gapY = gapSlots
     ? Math.min(smallestCell * 0.85, Math.max(gapYMin, (roomH - fixedH) / gapSlots))
     : 0;
@@ -1723,11 +1800,11 @@ function buildThanksDesign(form: PartnerForm, format: PlatformFormat): SimpleDoc
     });
   };
 
-  if (lead) emitTier(0, leadCounts, widthOf(leadCols), leadCellH, blockTop);
-  if (rest) {
-    const restTop = blockTop + (leadRows ? leadRows * leadCellH + (leadRows - 1) * gapY + tierGap : 0);
-    emitTier(lead, restCounts, widthOf(restCols), restCellH, restTop);
-  }
+  let bandTop = blockTop;
+  bands.forEach((b, i) => {
+    emitTier(b.from, b.counts, widthOf(b.cols), cellH[i], bandTop);
+    bandTop += b.counts.length * cellH[i] + Math.max(0, b.counts.length - 1) * gapY + tierGap;
+  });
 
   return {
     format,

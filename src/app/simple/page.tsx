@@ -20,7 +20,7 @@ import { PartnerSetBrowser } from "@/components/PartnerSetBrowser";
 import { isSvgDataUrl, tintSvgDataUrl } from "@/lib/svgTint";
 import { ColorPicker } from "@/components/ColorPicker";
 import type { PlatformFormat } from "@/types/template";
-import { buildSimpleDesign, buildNextDesign, buildPartnerDesign, buildSalesDesign, bundleCoverage, docKindOf, emptyForm, emptyNextForm, emptyPartnerForm, emptyPerson, emptySalesForm, formsFromDoc, isBlankPerson, nextSampleSpeaker, isNextDoc, isPartnerDoc, isStageHostDoc, mergePersonDescription, migrateLegacyPanelDoc, NEXT_MAX_SPEAKERS, panelShapeKey, parkDoc, partnerLayoutOf, retargetPartnerLayout, retargetSalesLayout, retargetTunedDoc, salesLayoutOf, sampleFourthSpeaker, shuffleWallLogos, simpleExportName, stripFormsForSave, syncNextChrome, syncPanelChrome, syncPartnerChrome, STAGE_HOSTS_MAX, stageHostsOf, THANKS_MAX_LOGOS, THANKS_MIN_LOGOS, THANKS_SCRIM_MAX, type NextForm, type PanelLayout, type SimpleForm, type PartnerForm, type PartnerLogo, type SalesForm, type SimplePerson, type SimpleDoc, type TemplateCoverage } from "@/lib/simpleLayout";
+import { buildSimpleDesign, buildNextDesign, buildPartnerDesign, buildSalesDesign, bundleCoverage, docKindOf, emptyForm, emptyNextForm, emptyPartnerForm, emptyPerson, emptySalesForm, formsFromDoc, isBlankPerson, nextSampleSpeaker, isNextDoc, isPartnerDoc, isStageHostDoc, mergePersonDescription, migrateLegacyPanelDoc, NEXT_MAX_SPEAKERS, panelShapeKey, parkDoc, partnerLayoutOf, retargetPartnerLayout, retargetSalesLayout, retargetTunedDoc, salesLayoutOf, sampleFourthSpeaker, shuffleWallLogos, simpleExportName, stripFormsForSave, syncNextChrome, syncPanelChrome, syncPartnerChrome, STAGE_HOSTS_MAX, stageHostsOf, THANKS_MAX_LOGOS, THANKS_MIN_LOGOS, THANKS_SCRIM_MAX, THANKS_TIERED_MAX_LOGOS, type NextForm, type PanelLayout, type PartnerTierBand, type SimpleForm, type PartnerForm, type PartnerLogo, type SalesForm, type SimplePerson, type SimpleDoc, type TemplateCoverage } from "@/lib/simpleLayout";
 
 type TemplateKind = "panel" | "partner" | "sales" | "next";
 
@@ -1158,14 +1158,27 @@ export default function SimplePage() {
       // A logo that failed to fetch is DROPPED, not left as a hole: an empty
       // lead cell in a published wall is worse than a tighter grid. The count
       // that failed goes in the toast so it can't pass unnoticed.
-      const kept = loaded.map((l, i) => ({ logo: l, lead: i < set.featuredCount })).filter((x) => x.logo);
+      const kept = loaded.map((l, i) => ({ logo: l, index: i, lead: i < set.featuredCount })).filter((x) => x.logo);
       if (!kept.length) { toast.error("Couldn't load those logos"); return; }
+      // A tiered set's bands are COUNTS, so a logo that failed to load would
+      // shift every band below it by one. Re-cut them against what actually
+      // loaded: each band keeps the entries whose original index falls inside it.
+      let tiers: PartnerTierBand[] | undefined;
+      if (set.tiers?.length) {
+        let at = 0;
+        tiers = set.tiers.map((b) => {
+          const from = at;
+          at += b.count;
+          return { ...b, count: kept.filter((x) => x.index >= from && x.index < at).length };
+        }).filter((b) => b.count > 0);
+      }
       setPartner((p) => ({
         ...p,
         layout: "thanks",
         logos: kept.map((x) => x.logo as PartnerLogo),
-        logoCount: Math.min(THANKS_MAX_LOGOS, kept.length),
-        featuredCount: kept.filter((x) => x.lead).length,
+        logoCount: Math.min(tiers ? THANKS_TIERED_MAX_LOGOS : THANKS_MAX_LOGOS, kept.length),
+        featuredCount: tiers ? 0 : kept.filter((x) => x.lead).length,
+        tiers,
         headline: set.headline,
       }));
       const failed = set.logos.length - kept.length;
@@ -1184,7 +1197,9 @@ export default function SimplePage() {
    */
   const setThanksCount = (n: number) =>
     setPartner((p) => {
-      const logoCount = Math.max(THANKS_MIN_LOGOS, Math.min(THANKS_MAX_LOGOS, n));
+      // A tiered wall is capped higher — clamping it to the flat cap would drop
+      // 150 partners off the All Partners wall on the first press of the stepper.
+      const logoCount = Math.max(THANKS_MIN_LOGOS, Math.min(p.tiers?.length ? THANKS_TIERED_MAX_LOGOS : THANKS_MAX_LOGOS, n));
       // The lead tier can never outgrow the grid it sits in.
       return { ...p, logoCount, featuredCount: Math.min(p.featuredCount, logoCount) };
     });
@@ -1742,7 +1757,7 @@ export default function SimplePage() {
                     <span className="w-6 text-center text-sm font-semibold tabular-nums text-white">{partner.logoCount}</span>
                     <button
                       onClick={() => setThanksCount(partner.logoCount + 1)}
-                      disabled={partner.logoCount >= THANKS_MAX_LOGOS}
+                      disabled={partner.logoCount >= (partner.tiers?.length ? THANKS_TIERED_MAX_LOGOS : THANKS_MAX_LOGOS)}
                       aria-label="More logos"
                       className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/5 border border-white/10 text-white/80 hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     >

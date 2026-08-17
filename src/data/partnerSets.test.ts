@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { PARTNER_SETS, PARTNER_PROJECTS, projectLogoCount, COMMUNITY_PARTNERS, COMMUNITY_PAGES, COMMUNITY_PER_WALL, LS_DT_EXHIBITORS, LS_DT_PITCH_FINALISTS, LS_DT_PARTICIPANTS } from "./partnerSets";
-import { THANKS_MAX_LOGOS } from "../lib/simpleLayout";
+import { PARTNER_SETS, PARTNER_PROJECTS, projectLogoCount, COMMUNITY_PARTNERS, COMMUNITY_PAGES, COMMUNITY_PER_WALL, LS_DT_EXHIBITORS, LS_DT_PITCH_FINALISTS, LS_DT_PARTICIPANTS, ALL_PARTNER_TIERS, ALL_PARTNER_WALLS, ALL_PARTNERS_FLAT, ALL_PARTNERS_TIER_BANDS, TIER_PER_WALL } from "./partnerSets";
+import { THANKS_MAX_LOGOS, THANKS_TIERED_MAX_LOGOS } from "../lib/simpleLayout";
 import logoLibrary from "./logoLibrary.json";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -33,7 +33,11 @@ describe("partner sets", () => {
         // Was a literal 30. Reading the real constant is the point of the test:
         // the cap moved to 48 for the Life Science x Deep Tech walls, and a
         // literal would have had to be edited in step with it every time.
-        expect(set.logos.length).toBeLessThanOrEqual(THANKS_MAX_LOGOS);
+        //
+        // A TIERED set is capped higher on purpose (the All Partners one-image
+        // wall carries the whole list, drawn tier by tier): its cap is the one
+        // the builder applies to it, not the flat wall's.
+        expect(set.logos.length).toBeLessThanOrEqual(set.tiers?.length ? THANKS_TIERED_MAX_LOGOS : THANKS_MAX_LOGOS);
       });
 
       it("has a headline and a lead tier that fits the set", () => {
@@ -71,6 +75,88 @@ describe("partner sets", () => {
       const summed = lsdt.sets.reduce((n, s) => n + s.logos.length, 0);
       expect(projectLogoCount(lsdt)).toBeLessThan(summed);
       expect(projectLogoCount(lsdt)).toBe(new Set(lsdt.sets.flatMap((s) => s.logos.map((l) => l.src))).size);
+    });
+  });
+
+  /**
+   * ALL PARTNERS 2026 — the generated roster. Nothing here is hand-written, so
+   * these are the checks that catch a bad SYNC rather than a bad edit: the two
+   * scripts resolved every partner to a library file, and the questions worth
+   * asking are whether that artwork can go on a dark wall at all, and whether the
+   * per-tier walls and the one-image wall still describe the same roster.
+   */
+  describe("All Partners roster", () => {
+    const byTone = new Map((logoLibrary as { src: string; tone: string }[]).map((l) => [l.src, l.tone]));
+
+    it("has every tier, highest value first", () => {
+      expect(ALL_PARTNER_TIERS.map((t) => t.tier)).toEqual([
+        "Prime", "Main", "Conqueror", "Pioneer", "Core", "Challenger", "Community",
+        "Investor", "Tailored", "International", "Academic", "Other",
+      ]);
+      // The money ladder is the first seven; the rest are separate deals.
+      expect(ALL_PARTNER_TIERS.filter((t) => t.ladder).map((t) => t.tier))
+        .toEqual(["Prime", "Main", "Conqueror", "Pioneer", "Core", "Challenger", "Community"]);
+    });
+
+    it("uses only white knockout artwork — the sync is supposed to guarantee it", () => {
+      const dark = ALL_PARTNER_TIERS.flatMap((t) => t.logos).filter((l) => byTone.get(l.src) !== "light");
+      expect(dark.map((l) => `${l.label} → ${l.src} [${byTone.get(l.src)}]`)).toEqual([]);
+    });
+
+    /** Same rule the community wall carries: a mostly-white logo with one
+     *  coloured mark still measures light, so the SVG source is read. */
+    it("points at white artwork, not a coloured cut", () => {
+      const CHANNEL_SPREAD = 24;
+      const offenders: string[] = [];
+      for (const l of ALL_PARTNERS_FLAT) {
+        const file = join(process.cwd(), "public/logos", decodeURIComponent(l.src.replace("/logos/", "")));
+        if (!file.toLowerCase().endsWith(".svg")) continue;
+        const svg = readFileSync(file, "utf8");
+        for (const [, hex] of svg.matchAll(/(?:fill|stroke|stop-color)\s*[:=]\s*["']?(#[0-9a-fA-F]{6})/g)) {
+          const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+          if (Math.max(r, g, b) - Math.min(r, g, b) > CHANNEL_SPREAD) { offenders.push(`${l.label} → ${hex}`); break; }
+        }
+      }
+      expect(offenders).toEqual([]);
+    });
+
+    it("pages a tier that outgrows one wall, dropping nobody", () => {
+      for (const t of ALL_PARTNER_TIERS) {
+        const walls = ALL_PARTNER_WALLS.filter((w) => w.tier === t.tier);
+        expect(walls.flatMap((w) => w.logos)).toEqual(t.logos);
+        for (const w of walls) expect(w.logos.length).toBeLessThanOrEqual(TIER_PER_WALL);
+      }
+    });
+
+    it("keeps a partner listed twice off the one-image wall twice", () => {
+      const srcs = ALL_PARTNERS_FLAT.map((l) => l.src);
+      expect(srcs.filter((x, i) => srcs.indexOf(x) !== i)).toEqual([]);
+      // The per-tier walls DO keep both listings — a partner can hold two deals —
+      // so the flat wall is the shorter of the two.
+      const listed = ALL_PARTNER_TIERS.reduce((n, t) => n + t.logos.length, 0);
+      expect(ALL_PARTNERS_FLAT.length).toBeLessThanOrEqual(listed);
+    });
+
+    it("bands the one-image wall to exactly its logos", () => {
+      expect(ALL_PARTNERS_TIER_BANDS.reduce((n, b) => n + b.count, 0)).toBe(ALL_PARTNERS_FLAT.length);
+      for (const b of ALL_PARTNERS_TIER_BANDS) {
+        expect(b.cols).toBeGreaterThan(0);
+        expect(b.cols).toBeLessThanOrEqual(b.count);
+      }
+    });
+
+    /** The whole point of the ladder: a higher tier drawn in FEWER columns has
+     *  bigger cells, so its column count must never grow back down the list. */
+    it("never draws a higher money tier smaller than a lower one", () => {
+      const ladder = new Set(ALL_PARTNER_TIERS.filter((t) => t.ladder).map((t) => t.tier));
+      const cols = ALL_PARTNERS_TIER_BANDS.filter((b) => ladder.has(b.label)).map((b) => b.cols);
+      expect(cols).toEqual([...cols].sort((a, b) => a - b));
+    });
+
+    it("files the one-image wall and every per-tier wall under the project", () => {
+      const project = PARTNER_PROJECTS.find((p) => p.id === "all-partners")!;
+      expect(project.sets.map((s) => s.id)).toEqual(["all-partners-one", ...ALL_PARTNER_WALLS.map((w) => w.id)]);
+      expect(project.sets.find((s) => s.id === "all-partners-one")!.tiers?.length).toBe(ALL_PARTNERS_TIER_BANDS.length);
     });
   });
 

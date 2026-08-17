@@ -61,6 +61,7 @@ logo-staging-report.json
 # attachments downloaded from the connector feed, kept only long enough to
 # review and name before copying into public/logos
 .logos-feed/
+.logos-tiers/
 ls-feed-sync-report.json
 
 # Contact sheets from `node scripts/logo-contact-sheet.mjs`

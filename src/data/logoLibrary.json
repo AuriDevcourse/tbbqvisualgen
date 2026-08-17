@@ -98,6 +98,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/Adeo%20Web.svg",
+    "name": "Adeo Web",
+    "tags": [],
+    "bytes": 8349,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Adeo%20Web%20White.svg",
     "name": "Adeo Web White",
     "tags": [],
@@ -150,6 +158,14 @@
     "name": "AI Denmark",
     "tags": [],
     "bytes": 7265,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/AI%20Oresund.svg",
+    "name": "AI Oresund",
+    "tags": [],
+    "bytes": 4413,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -824,6 +840,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/Bobbie%20%26%20Beastie.svg",
+    "name": "Bobbie & Beastie",
+    "tags": [],
+    "bytes": 5043,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/BPOC.svg",
     "name": "BPOC",
     "tags": [],
@@ -838,6 +862,14 @@
     "bytes": 1154,
     "toneAlgo": 2,
     "tone": "mixed"
+  },
+  {
+    "src": "/logos/Breeze%20IP.svg",
+    "name": "Breeze IP",
+    "tags": [],
+    "bytes": 2258,
+    "toneAlgo": 2,
+    "tone": "light"
   },
   {
     "src": "/logos/Brella.png",
@@ -968,6 +1000,14 @@
     "tone": "dark"
   },
   {
+    "src": "/logos/Carta%20White.svg",
+    "name": "Carta White",
+    "tags": [],
+    "bytes": 1618,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Casca.svg",
     "name": "Casca",
     "tags": [],
@@ -1040,6 +1080,14 @@
     "tone": "dark"
   },
   {
+    "src": "/logos/Cherry%20Ventures.svg",
+    "name": "Cherry Ventures",
+    "tags": [],
+    "bytes": 1737,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/City.svg",
     "name": "City",
     "tags": [],
@@ -1100,6 +1148,14 @@
     "name": "Cloudflare",
     "tags": [],
     "bytes": 2936,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Cludo.svg",
+    "name": "Cludo",
+    "tags": [],
+    "bytes": 2687,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -1716,6 +1772,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/DPIIT.svg",
+    "name": "DPIIT",
+    "tags": [],
+    "bytes": 56794,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Drata.svg",
     "name": "Drata",
     "tags": [],
@@ -1748,6 +1812,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/DTU%20Entrepreneurship.svg",
+    "name": "DTU Entrepreneurship",
+    "tags": [],
+    "bytes": 1720,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/DTU%20Science%20Park.svg",
     "name": "DTU Science Park",
     "tags": [],
@@ -1764,12 +1836,28 @@
     "tone": "mixed"
   },
   {
+    "src": "/logos/Durana%20Tech%20Park.svg",
+    "name": "Durana Tech Park",
+    "tags": [],
+    "bytes": 5312,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/E%20Conomic%20Primary%20Pos.svg",
     "name": "E Conomic Primary Pos",
     "tags": [],
     "bytes": 6254,
     "toneAlgo": 2,
     "tone": "dark"
+  },
+  {
+    "src": "/logos/e-conomic%20White.svg",
+    "name": "e-conomic White",
+    "tags": [],
+    "bytes": 6198,
+    "toneAlgo": 2,
+    "tone": "light"
   },
   {
     "src": "/logos/Earlybird.svg",
@@ -1808,6 +1896,14 @@
     "name": "EIFO",
     "tags": [],
     "bytes": 1808,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/EIFO%20(Export%20%26%20Investment%20Fund%20of%20Denmark).svg",
+    "name": "EIFO (Export & Investment Fund of Denmark)",
+    "tags": [],
+    "bytes": 9766,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -1982,6 +2078,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/eryk%20White.svg",
+    "name": "eryk White",
+    "tags": [],
+    "bytes": 3761,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/ESA%20BIC.svg",
     "name": "ESA BIC",
     "tags": [],
@@ -2118,10 +2222,26 @@
     "tone": "dark"
   },
   {
+    "src": "/logos/Even%20Founders%20White.svg",
+    "name": "Even Founders White",
+    "tags": [],
+    "bytes": 2274,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Evli%20Growth%20Partners.svg",
     "name": "Evli Growth Partners",
     "tags": [],
     "bytes": 5608,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/EY%20Danmark.svg",
+    "name": "EY Danmark",
+    "tags": [],
+    "bytes": 12966,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -2146,6 +2266,14 @@
     "name": "Fail Forward",
     "tags": [],
     "bytes": 8634,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/FailForward%20by%20ForwardThinks.svg",
+    "name": "FailForward by ForwardThinks",
+    "tags": [],
+    "bytes": 4325,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -2398,6 +2526,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/French%20Tech%20Copenhagen.svg",
+    "name": "French Tech Copenhagen",
+    "tags": [],
+    "bytes": 250993,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Frontline.svg",
     "name": "Frontline",
     "tags": [],
@@ -2442,6 +2578,14 @@
     "name": "Futuremanufacturers",
     "tags": [],
     "bytes": 6413,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Futuro%20Perfecto%20Innovation.svg",
+    "name": "Futuro Perfecto Innovation",
+    "tags": [],
+    "bytes": 11175,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -2502,6 +2646,22 @@
     "tone": "light"
   },
   {
+    "src": "/logos/Global%20Startup%20Awards%20(XO%20Group%20ApS).svg",
+    "name": "Global Startup Awards (XO Group ApS)",
+    "tags": [],
+    "bytes": 6619,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Global%20Stratalogues.svg",
+    "name": "Global Stratalogues",
+    "tags": [],
+    "bytes": 8050,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Goldman%20Sachs.png",
     "name": "Goldman Sachs",
     "tags": [],
@@ -2554,6 +2714,14 @@
     "name": "Grant Thornton",
     "tags": [],
     "bytes": 6097,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Greeks%20in%20the%20Nordics.svg",
+    "name": "Greeks in the Nordics",
+    "tags": [],
+    "bytes": 10326,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -2864,6 +3032,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/Humandone.svg",
+    "name": "Humandone",
+    "tags": [],
+    "bytes": 3571,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Humble%20AI%20White.svg",
     "name": "Humble AI White",
     "tags": [],
@@ -3034,6 +3210,14 @@
     "tone": "dark"
   },
   {
+    "src": "/logos/Improve%20Business.svg",
+    "name": "Improve Business",
+    "tags": [],
+    "bytes": 730,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Impulsemedia.svg",
     "name": "Impulsemedia",
     "tags": [],
@@ -3054,6 +3238,14 @@
     "name": "INCUBA",
     "tags": [],
     "bytes": 2571,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/INCUBA%20x%20KITCHEN.svg",
+    "name": "INCUBA x KITCHEN",
+    "tags": [],
+    "bytes": 6970,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -3118,6 +3310,14 @@
     "name": "Innovation Norway",
     "tags": [],
     "bytes": 3845,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Innovation%20Sk%C3%A5ne.svg",
+    "name": "Innovation Skåne",
+    "tags": [],
+    "bytes": 3122,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -3524,6 +3724,22 @@
     "tone": "light"
   },
   {
+    "src": "/logos/Knowledgeboard.svg",
+    "name": "Knowledgeboard",
+    "tags": [],
+    "bytes": 5299,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Knowsilo%20Inc.svg",
+    "name": "Knowsilo Inc",
+    "tags": [],
+    "bytes": 3846,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Koebenhavns%20Erhvervshus.png",
     "name": "Koebenhavns Erhvervshus",
     "tags": [],
@@ -3636,6 +3852,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/Legora%20AB.svg",
+    "name": "Legora AB",
+    "tags": [],
+    "bytes": 2856,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Life%20Science%20Invest.svg",
     "name": "Life Science Invest",
     "tags": [],
@@ -3680,6 +3904,22 @@
     "name": "Lithuania Bio",
     "tags": [],
     "bytes": 4458,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Lithuanian%20Professionals%20in%20Copenhagen.svg",
+    "name": "Lithuanian Professionals in Copenhagen",
+    "tags": [],
+    "bytes": 1643,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Lithuanian%20Youth%20Society%20In%20Denmark.svg",
+    "name": "Lithuanian Youth Society In Denmark",
+    "tags": [],
+    "bytes": 1924,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -3898,6 +4138,14 @@
     "name": "Medicon Village",
     "tags": [],
     "bytes": 4318,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Mentorspace%20Lithuania%2C%20V%C5%A1%C4%AE.svg",
+    "name": "Mentorspace Lithuania, VšĮ",
+    "tags": [],
+    "bytes": 4777,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -4426,6 +4674,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/NVIDIA.svg",
+    "name": "NVIDIA",
+    "tags": [],
+    "bytes": 2554,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Nyctea.svg",
     "name": "Nyctea",
     "tags": [],
@@ -4740,6 +4996,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/Professional%20Women%20of%20Colour%20Network%20(ProWoc).svg",
+    "name": "Professional Women of Colour Network (ProWoc)",
+    "tags": [],
+    "bytes": 15653,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/PropTech%20Denmark.svg",
     "name": "PropTech Denmark",
     "tags": [],
@@ -4768,6 +5032,14 @@
     "name": "Prowoc",
     "tags": [],
     "bytes": 3395,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/ProWoc%20-%20Professional%20Women%20of%20Colour.svg",
+    "name": "ProWoc - Professional Women of Colour",
+    "tags": [],
+    "bytes": 15653,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -4836,6 +5108,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/Radia%20Network.svg",
+    "name": "Radia Network",
+    "tags": [],
+    "bytes": 4422,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Rail.svg",
     "name": "Rail",
     "tags": [],
@@ -4868,10 +5148,26 @@
     "tone": "dark"
   },
   {
+    "src": "/logos/REBBLS.svg",
+    "name": "REBBLS",
+    "tags": [],
+    "bytes": 6466,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Rebound.svg",
     "name": "Rebound",
     "tags": [],
     "bytes": 11527,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/rebriQ.svg",
+    "name": "rebriQ",
+    "tags": [],
+    "bytes": 2552,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -6336,6 +6632,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/The%20Energy%20Consortium%2C%20IIT%20Madras.svg",
+    "name": "The Energy Consortium, IIT Madras",
+    "tags": [],
+    "bytes": 17640,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/The%20Guardian.png",
     "name": "The Guardian",
     "tags": [],
@@ -6880,6 +7184,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/Vibrant.svg",
+    "name": "Vibrant",
+    "tags": [],
+    "bytes": 2560,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Vicinity%20by%20Lab08.svg",
     "name": "Vicinity by Lab08",
     "tags": [],
@@ -6982,6 +7294,14 @@
     "name": "Walther Therapeutics White",
     "tags": [],
     "bytes": 11302,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Wave%20by%20Vento.svg",
+    "name": "Wave by Vento",
+    "tags": [],
+    "bytes": 2868,
     "toneAlgo": 2,
     "tone": "light"
   },
