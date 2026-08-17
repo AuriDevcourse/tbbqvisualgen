@@ -20,7 +20,7 @@ import { PartnerSetBrowser } from "@/components/PartnerSetBrowser";
 import { isSvgDataUrl, tintSvgDataUrl } from "@/lib/svgTint";
 import { ColorPicker } from "@/components/ColorPicker";
 import type { PlatformFormat } from "@/types/template";
-import { buildSimpleDesign, buildNextDesign, buildPartnerDesign, buildSalesDesign, bundleCoverage, docKindOf, emptyForm, emptyNextForm, emptyPartnerForm, emptyPerson, emptySalesForm, formsFromDoc, isBlankPerson, nextSampleSpeaker, isNextDoc, isPartnerDoc, mergePersonDescription, migrateLegacyPanelDoc, NEXT_MAX_SPEAKERS, panelShapeKey, parkDoc, partnerLayoutOf, retargetPartnerLayout, retargetSalesLayout, retargetTunedDoc, salesLayoutOf, sampleFourthSpeaker, shuffleWallLogos, simpleExportName, stripFormsForSave, syncNextChrome, syncPanelChrome, syncPartnerChrome, THANKS_MAX_LOGOS, THANKS_MIN_LOGOS, THANKS_SCRIM_MAX, type NextForm, type SimpleForm, type PartnerForm, type PartnerLogo, type SalesForm, type SimplePerson, type SimpleDoc, type TemplateCoverage } from "@/lib/simpleLayout";
+import { buildSimpleDesign, buildNextDesign, buildPartnerDesign, buildSalesDesign, bundleCoverage, docKindOf, emptyForm, emptyNextForm, emptyPartnerForm, emptyPerson, emptySalesForm, formsFromDoc, isBlankPerson, nextSampleSpeaker, isNextDoc, isPartnerDoc, isStageHostDoc, mergePersonDescription, migrateLegacyPanelDoc, NEXT_MAX_SPEAKERS, panelShapeKey, parkDoc, partnerLayoutOf, retargetPartnerLayout, retargetSalesLayout, retargetTunedDoc, salesLayoutOf, sampleFourthSpeaker, shuffleWallLogos, simpleExportName, stripFormsForSave, syncNextChrome, syncPanelChrome, syncPartnerChrome, STAGE_HOSTS_MAX, stageHostsOf, THANKS_MAX_LOGOS, THANKS_MIN_LOGOS, THANKS_SCRIM_MAX, type NextForm, type PanelLayout, type SimpleForm, type PartnerForm, type PartnerLogo, type SalesForm, type SimplePerson, type SimpleDoc, type TemplateCoverage } from "@/lib/simpleLayout";
 
 type TemplateKind = "panel" | "partner" | "sales" | "next";
 
@@ -102,12 +102,17 @@ function Field({ label, value, onChange, placeholder, multiline, hint }: { label
 
 // One person block (moderator or a speaker): photo + name + description.
 function PersonEditor({
-  person, onChange, onRemove, roleLabel, showPhoto = true,
+  person, onChange, onRemove, roleLabel, showPhoto = true, showCompany = false, titlePlaceholder = "Job title, company",
 }: {
   person: SimplePerson;
   onChange: (patch: Partial<SimplePerson>) => void;
   onRemove?: () => void;
   roleLabel: string;
+  /** Adds a third input for the company on its own line. Only the stage-host
+   *  layout renders a separate company line — everywhere else the company is
+   *  part of the description (see `mergePersonDescription`). */
+  showCompany?: boolean;
+  titlePlaceholder?: string;
   /** Hides the upload for a board that renders no headshots. Both templates
    *  show photos now — the Next board gained its photo row on 2026-08-12 — so
    *  nothing passes false today; kept for the next text-only board. */
@@ -166,8 +171,12 @@ function PersonEditor({
         </div>
         <input type="text" value={person.name} onChange={(e) => onChange({ name: e.target.value })} placeholder="Full name"
           className="w-full px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 text-sm font-medium text-white placeholder:text-white/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70 focus:border-[#FF6B00]/40" />
-        <input type="text" value={person.title} onChange={(e) => onChange({ title: e.target.value })} placeholder="Job title, company" aria-label="Description"
+        <input type="text" value={person.title} onChange={(e) => onChange({ title: e.target.value })} placeholder={titlePlaceholder} aria-label={showCompany ? "Job title" : "Description"}
           className="w-full px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-white placeholder:text-white/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70 focus:border-[#FF6B00]/40" />
+        {showCompany && (
+          <input type="text" value={person.company} onChange={(e) => onChange({ company: e.target.value })} placeholder="Company" aria-label="Company"
+            className="w-full px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-white placeholder:text-white/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70 focus:border-[#FF6B00]/40" />
+        )}
       </div>
     </div>
   );
@@ -585,6 +594,9 @@ export default function SimplePage() {
           // Old saved forms carry two-field people — fold company into the
           // single description field (no-op on current forms).
           setForm({
+            // Merged over the defaults so a panel saved before a field existed
+            // (panelLayout, stageHost) still hydrates with that field defined.
+            ...emptyForm(),
             ...saved.form,
             moderator: mergePersonDescription(saved.form.moderator),
             speakers: saved.form.speakers.map(mergePersonDescription),
@@ -719,7 +731,11 @@ export default function SimplePage() {
     // docKindOf, not !isPartnerDoc: a Next board also passes the partner check,
     // and panel chrome flowing into one would drag its banner geometry onto a
     // panel header (and vice versa).
+    // isStageHostDoc equality: the two panel layouts share no header, and an
+    // ungated call would return the rebuild UNCHANGED — which still promotes a
+    // generic rebuild to a "custom design active" doc on every flavour switch.
     if (template === "panel" && custom && docKindOf(custom) === "panel"
+      && isStageHostDoc(custom) === isStageHostDoc(rebuilt)
       && custom.format === rebuilt.format
       && custom.customSize.width === rebuilt.customSize.width
       && custom.customSize.height === rebuilt.customSize.height) {
@@ -850,12 +866,16 @@ export default function SimplePage() {
   } as const satisfies Record<TemplateKind, string | undefined>;
   // Each template's flavours, offered as a picker above Format. Every button
   // is a door into its team-library item.
-  const FLAVOURS: Partial<Record<TemplateKind, { heading: string; options: readonly { key: string; label: string; itemId: string }[] }>> = {
+  // An option is EITHER a door into a library item (`itemId`) or a built-in
+  // layout the panel builder emits (`layout`) — Host on Stage has no official
+  // item to open, it is generated from the form like the Sale layouts are.
+  const FLAVOURS: Partial<Record<TemplateKind, { heading: string; options: readonly { key: string; label: string; itemId?: string; layout?: PanelLayout }[] }>> = {
     panel: {
       heading: "Panel type",
       options: [
         { key: "discussion", label: "Panel Discussion", itemId: DEFAULT_ITEM_IDS.panel },
         { key: "host", label: "Host", itemId: HOST_ITEM_ID },
+        { key: "stage-host", label: "Host on Stage", layout: "stage-host" },
       ],
     },
     partner: {
@@ -893,7 +913,7 @@ export default function SimplePage() {
   useEffect(() => {
     if (!hydrated || prefetchTried.current) return;
     prefetchTried.current = true;
-    for (const id of Object.values(FLAVOURS).flatMap((f) => f.options.map((o) => o.itemId))) void fetchLibraryItem(id);
+    for (const id of Object.values(FLAVOURS).flatMap((f) => f.options.map((o) => o.itemId)).filter((id): id is string => Boolean(id))) void fetchLibraryItem(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated]);
 
@@ -971,8 +991,14 @@ export default function SimplePage() {
       }
       return next;
     });
-    // The address bar and Update button stop claiming a library design we no
-    // longer show.
+    clearLibraryIdentity();
+  };
+
+  // The address bar and Update button stop claiming a library design we no
+  // longer show. Shared with the built-in panel flavours: switching to Host on
+  // Stage leaves whichever item was loaded, but must NOT bin its tuning the way
+  // Revert does — the rebuild effect parks that instead.
+  const clearLibraryIdentity = () => {
     setLoadedItem(null);
     setCoverage(null);
     try {
@@ -980,6 +1006,32 @@ export default function SimplePage() {
       sessionStorage.removeItem(DEEPLINK_DONE_KEY);
       sessionStorage.removeItem(LOADED_ITEM_KEY);
     } catch { /* cosmetics only */ }
+  };
+
+  // Panel type picker: a library flavour opens its item, a built-in one just
+  // switches the layout the builder emits.
+  const pickPanelFlavour = (opt: { itemId?: string; layout?: PanelLayout }) => {
+    if (opt.layout) {
+      setForm((f) => {
+        if (opt.layout !== "stage-host") return { ...f, panelLayout: opt.layout };
+        // Never arrive on a blank card. A library item's snapshot replaces the
+        // whole form and carries no stage host, so seed it from whoever the
+        // panel on screen is about — the Host template's single host, else the
+        // moderator. The company line starts empty: the description those
+        // layouts use already has the company folded into it.
+        const held = stageHostsOf(f);
+        if (held.some((p) => !isBlankPerson(p))) return { ...f, panelLayout: "stage-host" };
+        const src = [f.speakers[0], f.moderator].find((p) => p && !isBlankPerson(p));
+        return { ...f, panelLayout: "stage-host", stageHosts: src ? [{ ...src, company: "" }] : held };
+      });
+      clearLibraryIdentity();
+      return;
+    }
+    if (!opt.itemId) return;
+    // Back to the panel composition the official items are built in — leaving
+    // the flag on would rebuild the item's doc as a stage-host card.
+    setForm((f) => ({ ...f, panelLayout: "discussion" }));
+    void loadItemById(opt.itemId);
   };
 
   // Scale the canvas to fit the preview column.
@@ -1016,6 +1068,37 @@ export default function SimplePage() {
   // The Host flavour: people are "hosts" (max 2, no moderator concept) — the
   // sidebar renames itself and hides the moderator toggle.
   const hostMode = loadedItem?.id === HOST_ITEM_ID;
+  // The Host on Stage flavour: one host, built from the form (no library item),
+  // so the sidebar swaps the panel fields for its own four.
+  const stageHostMode = template === "panel" && (form.panelLayout ?? "discussion") === "stage-host";
+  const stageHosts = stageHostsOf(form);
+  const setStageHost = (i: number, patch: Partial<SimplePerson>) =>
+    setForm((f) => ({
+      ...f,
+      stageHosts: stageHostsOf(f).map((p, idx) => (idx === i ? { ...p, ...patch } : p)),
+    }));
+  // Stepping down keeps the dropped host in `stash`, like the panel's speakers,
+  // so 1 -> 2 -> 1 -> 2 gives the same person back rather than a blank column.
+  const setStageHostCount = (n: number) => {
+    const count = Math.max(1, Math.min(STAGE_HOSTS_MAX, n));
+    const current = stageHosts.length;
+    if (count === current) return;
+    if (count < current) {
+      const dropped = stageHosts.slice(count).filter((p) => !isBlankPerson(p));
+      if (dropped.length) setStash((st) => [...dropped, ...st]);
+      setForm((f) => ({ ...f, stageHosts: stageHostsOf(f).slice(0, count) }));
+      return;
+    }
+    const restored = stash.slice(0, count - current);
+    if (restored.length) setStash((st) => st.slice(restored.length));
+    setForm((f) => ({
+      ...f,
+      stageHosts: [
+        ...stageHostsOf(f),
+        ...Array.from({ length: count - current }, (_, i) => restored[i] ?? emptyPerson()),
+      ],
+    }));
+  };
   const MAX_SPEAKERS = hostMode ? 2 : 9;
   const personNoun = hostMode ? "Host" : "Speaker";
   // Lowering the count parks the dropped people in `stash` instead of binning
@@ -1261,7 +1344,9 @@ export default function SimplePage() {
     ? !custom && !(partner.layout === "thanks" ? partner.headline : partner.label).trim() && !partner.logos.some((l) => l?.src)
     : template === "sales"
       ? !custom && !sales.value.trim() && !sales.caption.trim() && !sales.headline.trim() && !sales.photo?.src
-      : !custom && !form.headline.trim() && !form.label.trim() && form.speakers.every((s) => !s.name.trim()) && !form.moderator.name.trim();
+      : stageHostMode
+        ? !custom && !form.label.trim() && stageHosts.every((h) => !h.name.trim() && !h.photo)
+        : !custom && !form.headline.trim() && !form.label.trim() && form.speakers.every((s) => !s.name.trim()) && !form.moderator.name.trim();
 
   // Only an animated background has anything to record; a static season/stage
   // JPG would give a 3-second video of a still frame.
@@ -1273,7 +1358,11 @@ export default function SimplePage() {
   const handleExport = () => {
     const salesLabel = [sales.value, sales.caption].map((t) => t.trim()).filter(Boolean).join(" ");
     // The Next board is named by its own title, not the panel form's headline.
-    const headline = template === "next" ? next.title : form.headline;
+    // The stage-host card has no headline field — its host is what the file
+    // should be named after ("16x9 - Panel - Pierre Leroy").
+    const headline = template === "next" ? next.title
+      : stageHostMode ? stageHosts.map((h) => h.name.trim()).filter(Boolean).join(" & ")
+        : form.headline;
     const base = simpleExportName(template, format, headline, salesLabel, partner.layout);
     if (isVideoFormat(effectiveFormat)) {
       // The animation has to be RUNNING for the capture, so resume instead of
@@ -1519,11 +1608,14 @@ export default function SimplePage() {
               <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">{FLAVOURS[template]!.heading}</span>
               <div className="flex gap-1.5">
                 {FLAVOURS[template]!.options.map((a) => {
-                  const active = loadedItem?.id === a.itemId;
+                  // A built-in layout is active on the form flag alone; a
+                  // library flavour also needs the form OFF that layout, else
+                  // both buttons would light up at once.
+                  const active = a.layout ? stageHostMode : Boolean(a.itemId) && loadedItem?.id === a.itemId && !stageHostMode;
                   return (
                     <button
                       key={a.key}
-                      onClick={() => { if (!active) void loadItemById(a.itemId); }}
+                      onClick={() => { if (!active) pickPanelFlavour(a); }}
                       aria-pressed={active}
                       className={`flex-1 px-2 py-2 rounded-lg text-xs font-medium transition-all ${active ? "bg-[#FF0028] text-white" : "bg-white/5 border border-white/10 text-white/70 hover:bg-white/10"}`}
                     >
@@ -1853,7 +1945,60 @@ export default function SimplePage() {
             </section>
             </>)}
 
-            {template === "panel" && (<>
+            {/* Host on Stage — one host, four fields. No composition section:
+                the layout is fixed (photo left, words right), so there is
+                nothing to toggle or count. */}
+            {stageHostMode && (
+            <>
+            <section className="flex flex-col gap-3">
+              <Field label="Stage name" value={form.label} onChange={(v) => setForm((f) => ({ ...f, label: v }))} placeholder="BBQ Stage" />
+            </section>
+            <section className="flex flex-col gap-2">
+              <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Setup</span>
+              <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                <span className="text-sm text-white/85">Hosts</span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setStageHostCount(stageHosts.length - 1)}
+                    disabled={stageHosts.length <= 1}
+                    aria-label="Fewer hosts"
+                    className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/5 border border-white/10 text-white/80 hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <Minus className="w-3.5 h-3.5" />
+                  </button>
+                  <span className="w-6 text-center text-sm font-semibold tabular-nums text-white">{stageHosts.length}</span>
+                  <button
+                    onClick={() => setStageHostCount(stageHosts.length + 1)}
+                    disabled={stageHosts.length >= STAGE_HOSTS_MAX}
+                    aria-label="More hosts"
+                    className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/5 border border-white/10 text-white/80 hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            </section>
+            <section className="flex flex-col gap-2">
+              <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">
+                {stageHosts.length > 1 ? `Stage hosts (${stageHosts.length})` : "Stage host"}
+              </span>
+              <div className="flex flex-col gap-2">
+                {stageHosts.map((h, i) => (
+                  <PersonEditor
+                    key={i}
+                    person={h}
+                    onChange={(patch) => setStageHost(i, patch)}
+                    roleLabel={stageHosts.length > 1 ? `Stage host ${i + 1}` : "Stage host"}
+                    showCompany
+                    titlePlaceholder="Job title"
+                  />
+                ))}
+              </div>
+            </section>
+            </>
+            )}
+
+            {template === "panel" && !stageHostMode && (<>
             {/* Setup — panel composition: moderator + how many speakers */}
             <section className="flex flex-col gap-2">
               <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Setup</span>

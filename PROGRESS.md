@@ -6,6 +6,75 @@ not required reading.
 
 ---
 
+## SESSION HANDOFF · 2026-08-17 (14): Host on Stage, the panel's third flavour
+
+### State: UNCOMMITTED on `master` (4 files)
+
+Panel type now has three buttons: **Panel Discussion · Host · Host on Stage**.
+The new one is a BUILT-IN layout, not a library item — the first flavour button
+that opens nothing. `buildStageHostDesign` in `simpleLayout.ts` emits it from
+the form, so it needs no team-library row and no item id to wire up.
+
+What it renders, drawn from Auri's 16:9 reference: the host's photo left in a
+**white-outlined** frame (`borderColor: "#FFFFFF"`, `borderWidth: 2 / W` — the
+renderer multiplies the fraction by canvas WIDTH, so this is exactly 2px in
+every format), and on the right
+the stage name in the label chip, the host's name, their job title and their
+company. Four fields, one person, no headline, no subtitle, no moderator.
+Measured against the reference at 1920×1080 the photo box, the chip, and all
+three font sizes land within a thousandth of it.
+
+**It holds one host or two** (`STAGE_HOSTS_MAX = 2`), stepped in the sidebar.
+Two is a composition, not a cap that happens to be low: one host is
+photo-beside-words, two are equal centred columns with the stage chip demoted to
+a top-left corner label and each caption sitting under its own photo at a smaller
+type scale (name 0.06 vs 0.105). A third would need a third layout. Both
+geometries are measured off Auri's references.
+
+Four things worth knowing before touching it:
+
+- **The hosts are their own `SimplePerson[]`, `form.stageHosts`, NOT
+  `speakers`.** Every hydrate runs `mergePersonDescription` over
+  `moderator`/`speakers`, which folds `company` into `title` — using speaker
+  slots would eat the company line on the next page load. Read the list through
+  `stageHostsOf` (forms saved before the layout have none); the roles are
+  `stageHost-N.name` / `.title` / `.company` / `.photo`, indexed even for a
+  single host.
+- **Captions WRAP, they don't auto-shrink.** Fitting each line on its own set the
+  job title and the company at different sizes, which reads as a mistake. Only
+  the name shrinks to fit its column.
+- **`isStageHostDoc` gates `syncPanelChrome` in BOTH directions**, in the lib and
+  at the /simple call site. The two panel layouts share no header (the
+  discussion's chip sits under a headline on the left, this one's opens the right
+  column), so an ungated sync dragged the chip into the wrong column — and
+  because the sync returns its target unchanged on a bail, calling it at all
+  promoted the generic rebuild to a "custom design active" doc on every flavour
+  click.
+- **Portrait formats stack instead of splitting** — photo above the words, a
+  smaller frame on 1:1 (0.34 × 0.43; a taller one pushed the company line off the
+  bottom) and a tighter gap under the chip. 16:9 is the format it was drawn for;
+  the other two exist so switching format isn't a dead end.
+
+Switching to the flavour seeds the host from whoever the panel on screen is
+about (`speakers[0]`, else the moderator) — a library item's snapshot replaces
+the whole form and carries no stage host, so without the seed the card arrived
+blank.
+
+Gates: **299/299 vitest** (272 before; 27 new, incl. 6 layout snapshots — one
+and two hosts × three formats), **tsc clean**, **eslint clean on all four
+touched files**. Checked in the running app: 16:9 matches both references, 1:1
+and 9:16 stack with every layer inside the canvas, stepping 1 <-> 2 hosts keeps
+the person (stashed like the panel's speakers), and typing updates the card live.
+
+The host count is read off the CANVAS, not the snapshot (`stageHostsFromDoc`) —
+the same rule the partner wall uses for its logo count, so a two-host design
+loaded from the library doesn't collapse to one on the first keystroke.
+
+Not done: no library item was created for it (it needs none), and no team
+template was saved. If the team ever wants a hand-tuned official version, saving
+one now works — `formsFromDoc` reads a stage-host doc back into the right fields
+from either the snapshot or the doc's own roles.
+
 ## SESSION HANDOFF · 2026-08-14 (13): LS x DT re-sync, 37 → 44, wall cap 48 → 56
 
 ### State: UNCOMMITTED on `master`

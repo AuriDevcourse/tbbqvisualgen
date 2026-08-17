@@ -531,6 +531,11 @@ export function syncPanelChrome(from: SimpleDoc, to: SimpleDoc): SimpleDoc {
   if (from.customSize.width !== to.customSize.width) return to;
   if (from.customSize.height !== to.customSize.height) return to;
   if (isPartnerDoc(from) || isPartnerDoc(to)) return to;
+  // The two panel layouts have different headers: the discussion's chip sits
+  // under a headline on the left, the stage-host's is the top of the right-hand
+  // column. Carrying chrome across the flavour switch would drag the label (and
+  // its chip) into the wrong column.
+  if (isStageHostDoc(from) !== isStageHostDoc(to)) return to;
 
   // The chrome roles: header + moderator caption. `moderator.secondary` is
   // the grid layout's merged "title, company" line.
@@ -1174,11 +1179,45 @@ export function docKindOf(doc: SimpleDoc): "panel" | "partner" | "sales" | "next
   return "panel";
 }
 
+/** Which composition the panel template renders.
+ *
+ *  - "discussion" · the house panel: headline, subtitle, label chip, then the
+ *    moderator + speaker cards. Everything shipped before 2026-08-17.
+ *  - "stage-host" · the stage card for one host: their photo in a
+ *    white-outlined frame on the left, the stage name in the label chip on the
+ *    right, then the host's name, job title and company. One person only, no
+ *    headline and no subtitle.
+ *
+ *  Optional on the form so panels saved before it existed still deserialize —
+ *  read it as `form.panelLayout ?? "discussion"`. */
+export type PanelLayout = "discussion" | "stage-host";
+
+/** How many hosts the stage-host card holds. Two is a composition, not a cap
+ *  that happens to be low: one host is photo-beside-words, two are equal
+ *  columns, and a third would need a third layout. */
+export const STAGE_HOSTS_MAX = 2;
+
+/** The stage-host layout's hosts, always at least one and never more than
+ *  `STAGE_HOSTS_MAX` — forms saved before the layout existed have none. */
+export function stageHostsOf(form: SimpleForm): SimplePerson[] {
+  const held = (form.stageHosts ?? []).slice(0, STAGE_HOSTS_MAX);
+  return held.length ? held : [emptyPerson()];
+}
+
 export interface SimpleForm {
-  /** Eyebrow / session label — e.g. "Fireside Chat", the discussion topic. */
+  /** Eyebrow / session label — e.g. "Fireside Chat", the discussion topic.
+   *  On the stage-host layout this is the STAGE NAME in the chip. */
   label: string;
   headline: string;
   subtitle: string;
+  /** Which panel composition to build. Absent = "discussion". */
+  panelLayout?: PanelLayout;
+  /** The stage-host layout's hosts — one or two (`STAGE_HOSTS_MAX`). Their own
+   *  people rather than `speakers`, because that array is folded by
+   *  `mergePersonDescription` on every hydrate, which would swallow the
+   *  separate company line this layout renders. Absent on forms saved before
+   *  the layout existed — read it through `stageHostsOf`. */
+  stageHosts?: SimplePerson[];
   /** Whether this panel has a moderator (drives the layout + form). */
   includeModerator: boolean;
   moderator: SimplePerson;
@@ -1197,6 +1236,10 @@ export function emptyForm(): SimpleForm {
     label: "Panel Discussion",
     headline: "Continuation Capital\n& Venture Secondaries:",
     subtitle: "Financing the Next Phase of European Growth",
+    panelLayout: "discussion",
+    // Sample host for the stage-host layout, same idea as the sample panel:
+    // pressing the flavour shows a filled design, not four empty fields.
+    stageHosts: [{ name: "Pierre Leroy", title: "Managing Director & Co-Head of Secondaries", company: "Stifel", photo: "/samples/pierre-leroy.jpg" }],
     includeModerator: true,
     moderator: { name: "Pierre Leroy", title: "Managing Director & Co-Head of Secondaries at Stifel", company: "", photo: "/samples/pierre-leroy.jpg" },
     speakers: [
@@ -2294,7 +2337,262 @@ export function buildNextDesign(form: NextForm, format: PlatformFormat): SimpleD
   };
 }
 
+/** True for a doc built by `buildStageHostDesign` — read from its own roles, so
+ *  a saved library item is recognised without a snapshot. Panel chrome must
+ *  never flow between the two panel layouts (their headers are different
+ *  compositions), and the sidebar uses it to pick the stage-host fields. */
+export function isStageHostDoc(doc: SimpleDoc): boolean {
+  const tagged = (r: string | undefined) => Boolean(r?.startsWith("stageHost-"));
+  return doc.design.texts.some((t) => tagged(t.simpleRole))
+    || doc.canvasImages.some((i) => tagged(i.simpleRole));
+}
+
+/**
+ * Read the hosts back off a stage-host doc. HOW MANY the canvas shows wins over
+ * the snapshot — the same rule the partner wall uses for its logo count, and the
+ * reason a two-host design loaded from the library doesn't collapse to one on
+ * the first keystroke. Words come from the snapshot when there is one (it keeps
+ * the user's own line breaks); the doc's role-tagged layers are the fallback,
+ * and its images are always the only source of the headshots.
+ */
+export function stageHostsFromDoc(
+  doc: SimpleDoc,
+  saved: SimplePerson[] | undefined,
+  withPhoto: (p: SimplePerson, who: string) => SimplePerson,
+  flat: (s: string) => string = (s) => s.split("\n").join(" "),
+): SimplePerson[] {
+  const textByRole = new Map(doc.design.texts.filter((t) => t.simpleRole).map((t) => [t.simpleRole as string, t.content]));
+  const roles = [...textByRole.keys(), ...doc.canvasImages.map((i) => i.simpleRole ?? "")];
+  const shown = 1 + Math.max(0, ...roles
+    .map((r) => /^stageHost-(\d+)\./.exec(r))
+    .filter((m): m is RegExpExecArray => Boolean(m))
+    .map((m) => Number(m[1])));
+  return Array.from({ length: Math.min(shown, STAGE_HOSTS_MAX) }, (_, i) => {
+    const held = saved?.[i];
+    const person: SimplePerson = held ?? {
+      name: flat(textByRole.get(`stageHost-${i}.name`) ?? ""),
+      title: flat(textByRole.get(`stageHost-${i}.title`) ?? ""),
+      company: flat(textByRole.get(`stageHost-${i}.company`) ?? ""),
+      photo: "",
+    };
+    return withPhoto(person, `stageHost-${i}`);
+  });
+}
+
+/**
+ * Build the stage-host card: one host's photo in a WHITE-outlined frame on the
+ * left, and on the right the stage name in the label chip, the host's name,
+ * their job title and their company. No headline, no subtitle, no moderator —
+ * the whole point is that the screen names the person hosting a stage.
+ *
+ * 16:9 is the format it was drawn for (a stage screen), so that geometry is
+ * measured off Auri's reference. Square and story keep the same elements and
+ * the same type scale with the photo stacked ABOVE the words, because a
+ * side-by-side split has no room in a portrait canvas.
+ */
+export function buildStageHostDesign(form: SimpleForm, format: PlatformFormat): SimpleDoc {
+  seq = 0;
+  const dims = FORMAT_DIMENSIONS[format] ?? FORMAT_DIMENSIONS.square;
+  const W = dims.width;
+  const H = dims.height;
+  // Same contract as the panel builder: font sizes are fractions of the
+  // SHORTER side, and `vs` converts a font-fraction into the share of HEIGHT
+  // one line of it occupies.
+  const S = Math.min(W, H);
+  const vs = S / H;
+  const hosts = stageHostsOf(form);
+  const pair = hosts.length > 1;
+
+  const texts: TextElement[] = [];
+  const shapes: ShapeElement[] = accentShapes(form.accentId, W, H, () => uid("shape"));
+  const canvasImages: CanvasImage[] = [];
+
+  const mkText = (content: string, x: number, y: number, sizeFrac: number, opts: Partial<TextElement> = {}): void => {
+    if (!content.trim()) return;
+    texts.push({
+      id: uid("text"), content, position: { x, y },
+      fontSize: Math.round(sizeFrac * S), align: "left", weight: 600, font: "onest",
+      ...opts,
+    });
+  };
+  const lineCount = (t: string) => (t.trim() ? t.split("\n").length : 0);
+  /** Shrink a font until the longest line fits the column. */
+  const fitFont = (text: string, baseFrac: number, colW: number, avgChar = 0.58): number => {
+    const longest = Math.max(1, ...text.split("\n").map((l) => l.trim().length));
+    return Math.min(baseFrac * S, (colW * W) / (longest * avgChar)) / S;
+  };
+  /** Word-wrap `text` so no line is wider than `colW`, honouring any manual
+   *  break. Captions WRAP rather than shrink — auto-fitting each line on its own
+   *  set the job title and the company at different sizes, which reads as a
+   *  mistake (the reference has them equal). */
+  const wrapToWidth = (text: string, colW: number, fontFrac: number, avgChar = 0.56): string => {
+    const maxChars = Math.max(6, Math.floor((colW * W) / (fontFrac * S * avgChar)));
+    return text.split("\n").map((line) => {
+      const out: string[] = [];
+      let cur = "";
+      for (const word of line.trim().split(/\s+/)) {
+        const trial = cur ? `${cur} ${word}` : word;
+        if (trial.length > maxChars && cur) { out.push(cur); cur = word; }
+        else cur = trial;
+      }
+      if (cur) out.push(cur);
+      return out.join("\n");
+    }).join("\n");
+  };
+
+  // ── Geometry ─────────────────────────────────────────────────────────────
+  // ONE host: the reference 16:9 split, photo left and words right (portrait
+  // formats stack instead — a side-by-side has no room there).
+  // TWO hosts: the chip moves to the top-left corner and the canvas becomes two
+  // equal columns, each a photo with its own caption underneath.
+  const wide = W > H;
+  // Frames are portrait (4:5-ish) in every format, so a headshot never has to
+  // be cropped to a letterbox.
+  const portraitH = (w: number) => (w * W) / 0.79 / H;
+  const single = wide
+    ? { left: MARGIN, w: 0.282, h: 0.634, top: 0.183 }
+    : format === "story"
+      ? { left: MARGIN, w: 0.62, h: 0.44, top: 0.16 }
+      // Square is the tightest canvas: the words need the bottom half, so the
+      // frame is the smallest here (a taller one pushed the company line off
+      // the canvas).
+      : { left: MARGIN, w: 0.34, h: 0.43, top: 0.10 };
+  // The pair's cell width per format. Wide takes the reference's measurements;
+  // portrait splits the usable width evenly with a narrower gutter, since two
+  // columns of a 1080-wide canvas are tight already.
+  const cellW = wide ? 0.237 : 0.38;
+  const gutter = wide ? 0.192 : 0.08;
+  const cellH = wide ? 0.535 : portraitH(cellW);
+  const pairLeft = (1 - (cellW * 2 + gutter)) / 2; // centred as a block
+  const pairTop = wide ? 0.181 : format === "story" ? 0.30 : 0.24;
+
+  // ── Stage name chip. The pair's is a corner label, top-left; a single host's
+  //    opens the right-hand column (or sits under the photo when stacked). ───
+  const chipLeft = pair || !wide ? MARGIN : 0.40;
+  let y = pair ? 0.06 : wide ? 0.234 : single.top + single.h + 0.055;
+  if (form.label.trim()) {
+    const labelText = form.label.toUpperCase();
+    const fsFrac = 0.04;
+    const fsPx = fsFrac * S;
+    const letterSpacingPx = Math.round(0.0005 * S);
+    const padLeft = 0.03 * S;
+    const padRight = 0.046 * S;
+    const textWpx = labelText.length * fsPx * 0.62 + Math.max(0, labelText.length - 1) * letterSpacingPx;
+    const chipH = fsFrac * vs * 1.7;
+    const chipW = Math.min((textWpx + padLeft + padRight) / W, 0.94);
+    const chipY = y + chipH / 2;
+    shapes.push({
+      id: uid("shape"), type: "rectangle",
+      x: chipLeft + chipW / 2, y: chipY, width: chipW, height: chipH,
+      fillType: "fill", strokeWidth: 0, colorType: "solid",
+      color1: "#FFFFFF", color2: "#FF6B00", opacity: 1, blur: 0, rotation: 0,
+      borderRadius: 0.22,
+      simpleRole: "label.chip",
+    });
+    // Caps sit high in their line box — nudge the text down to optically centre
+    // them in the chip.
+    mkText(labelText, chipLeft + padLeft / W, chipY + fsFrac * vs * 0.11, fsFrac, {
+      weight: 800, uppercase: true, color: "#15110E", letterSpacing: letterSpacingPx,
+      simpleRole: "label",
+    });
+    // Wide has room for the reference's generous air under the chip; stacked
+    // formats spend that height on the photo instead. The pair ignores this —
+    // its columns are placed against `pairTop`, not flowed under the chip.
+    y += chipH + (wide ? 0.075 : 0.045);
+  }
+
+  /** One host: the white-outlined photo (or the slot it drops into) plus the
+   *  name / job / company block, anchored at (capLeft, capTop). */
+  const emitHost = (
+    p: SimplePerson, i: number,
+    frame: { left: number; w: number; h: number; top: number },
+    cap: { left: number; top: number; width: number; nameFrac: number; captionFrac: number },
+  ): void => {
+    const cx = frame.left + frame.w / 2;
+    const cy = frame.top + frame.h / 2;
+    if (p.photo) {
+      canvasImages.push({
+        id: uid("img"), src: p.photo, x: cx, y: cy, width: frame.w, height: frame.h,
+        // White, and exactly 2px whatever the canvas: the renderer multiplies
+        // borderWidth by canvas WIDTH, so a fixed fraction would be 2px on 1:1
+        // and 2.6px on 16:9.
+        cornerRadius: 5, border: true, borderColor: "#FFFFFF", borderWidth: 2 / W,
+        fit: "cover",
+        naturalWidth: p.naturalWidth, naturalHeight: p.naturalHeight,
+        simpleRole: `stageHost-${i}.photo`,
+      });
+    } else {
+      shapes.push({
+        id: uid("shape"), type: "rectangle", x: cx, y: cy, width: frame.w, height: frame.h,
+        fillType: "outline", strokeWidth: 2 / 1500, colorType: "gradient",
+        color1: "#FF6B00", color2: "#FF0028", opacity: 1, blur: 0, rotation: 0,
+        borderRadius: 0.05,
+      });
+    }
+    let ty = cap.top;
+    if (p.name.trim()) {
+      const f = fitFont(p.name, cap.nameFrac, cap.width);
+      const blockH = lineCount(p.name) * f * vs;
+      mkText(p.name, cap.left, ty + blockH / 2, f, {
+        weight: 800, color: "#FFFFFF", simpleRole: `stageHost-${i}.name`,
+      });
+      ty += blockH + (pair ? 0.012 : 0.018);
+    }
+    for (const [suffix, content] of [["title", p.title], ["company", p.company]] as const) {
+      if (!content.trim()) continue;
+      const wrapped = wrapToWidth(content, cap.width, cap.captionFrac);
+      const blockH = lineCount(wrapped) * cap.captionFrac * vs;
+      mkText(wrapped, cap.left, ty + blockH / 2, cap.captionFrac, {
+        weight: 500, color: "#FFFFFF", simpleRole: `stageHost-${i}.${suffix}`,
+      });
+      ty += blockH + 0.004;
+    }
+  };
+
+  if (pair) {
+    // Each caption sits UNDER its own photo, left-aligned with the frame, at a
+    // smaller type scale than the single-host card: two columns of the big one
+    // would collide in the middle.
+    const capTop = pairTop + cellH + (wide ? 0.042 : 0.028);
+    hosts.slice(0, STAGE_HOSTS_MAX).forEach((p, i) => {
+      const left = pairLeft + i * (cellW + gutter);
+      emitHost(p, i, { left, w: cellW, h: cellH, top: pairTop }, {
+        // The caption may run a little wider than its frame before it wraps —
+        // the gutter is there to absorb it.
+        left, top: capTop, width: cellW * 1.2, nameFrac: 0.06, captionFrac: 0.032,
+      });
+    });
+  } else {
+    emitHost(hosts[0], 0, single, {
+      left: wide ? 0.40 : MARGIN, top: y, width: wide ? 0.54 : 0.88,
+      nameFrac: 0.105, captionFrac: 0.049,
+    });
+  }
+
+  return {
+    format,
+    customSize: { width: W, height: H },
+    canvasImages,
+    design: {
+      backgroundId: form.backgroundId || "orb7",
+      ...(form.accentId ? { accentId: form.accentId } : {}),
+      texts,
+      shapes,
+      showLogo: true,
+      logoStyle: "white",
+      // Bottom-RIGHT here, unlike the panel: the photo owns the bottom-left
+      // corner in the wide layout and the words end well above the baseline on
+      // the right.
+      logoPosition: "bottom-right",
+    },
+  };
+}
+
 export function buildSimpleDesign(form: SimpleForm, format: PlatformFormat): SimpleDoc {
+  // The stage-host card is its own composition, not a variation on the panel's
+  // header + cards flow — so it gets its own builder rather than a branch
+  // threaded through this one.
+  if ((form.panelLayout ?? "discussion") === "stage-host") return buildStageHostDesign(form, format);
   // Ids restart with every build, so the same form always yields the same
   // doc — server and client included.
   seq = 0;
@@ -2712,7 +3010,14 @@ export function stripFormsForSave(template: "panel" | "partner" | "sales" | "nex
   const strip = (p: SimplePerson): SimplePerson => ({ ...p, photo: "", naturalWidth: undefined, naturalHeight: undefined });
   return {
     template,
-    form: { ...form, moderator: strip(form.moderator), speakers: form.speakers.map(strip) },
+    form: {
+      ...form,
+      moderator: strip(form.moderator),
+      speakers: form.speakers.map(strip),
+      // Same reason as the others: the doc carries these headshots under
+      // `stageHost-N.photo`, and a second copy would spend the save quota twice.
+      ...(form.stageHosts ? { stageHosts: form.stageHosts.map(strip) } : {}),
+    },
     partner,
     // Kept whole, like the partner logos: countdown and discount each own a
     // photo, and the active doc only carries the current layout's slot.
@@ -3108,6 +3413,12 @@ export function formsFromDoc(kind: string, doc: SimpleDoc, saved?: SimpleFormsSn
       next: null,
       form: {
         ...saved.form,
+        // The CANVAS decides which panel layout the sidebar shows, the same
+        // rule the partner wall uses for its logo count: the doc is what the
+        // user is looking at, and a stale snapshot would rebuild it into the
+        // other layout on the first keystroke.
+        panelLayout: isStageHostDoc(doc) ? "stage-host" : "discussion",
+        ...(isStageHostDoc(doc) ? { stageHosts: stageHostsFromDoc(doc, saved.form.stageHosts, withPhoto) } : {}),
         // Old snapshots carry two-field people — fold company into the
         // description so the single sidebar input shows everything.
         moderator: mergePersonDescription(withPhoto(saved.form.moderator, "moderator")),
@@ -3138,6 +3449,24 @@ export function formsFromDoc(kind: string, doc: SimpleDoc, saved?: SimpleFormsSn
     .filter((m): m is RegExpExecArray => Boolean(m))
     .map((m) => Number(m[1])));
   const includeModerator = roles.some((r) => r.startsWith("moderator"));
+  // A stage-host doc with no snapshot — a hand-made or pre-snapshot library
+  // item — reads back from its own roles.
+  if (isStageHostDoc(doc)) {
+    return {
+      template,
+      partner: null,
+      sales: null,
+      next: null,
+      form: {
+        ...emptyForm(),
+        panelLayout: "stage-host",
+        label: textByRole.get("label") ?? "",
+        stageHosts: stageHostsFromDoc(doc, undefined, withPhoto, flat),
+        backgroundId: doc.design.backgroundId || "orb7",
+        accentId: doc.design.accentId,
+      },
+    };
+  }
   return {
     template,
     partner: null,

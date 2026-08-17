@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { accentShapes, isAccentShape, syncAccentShapes, applyAccent } from "./accents";
 import { thanksRowCounts } from "./simpleLayout";
-import { adoptLegacyPanelRoles, buildNextDesign, buildPartnerDesign, buildSalesDesign, buildSimpleDesign, bundleCoverage, dedupeSpeakerRoles, docKindOf, emptyForm, emptyNextForm, parkDoc, emptyPartnerForm, emptyPerson, emptySalesForm, formsFromDoc, isBlankPerson, isNextDoc, mergePersonDescription, migrateLegacyPanelDoc, nextBannerText, nextSampleSpeaker, parseNextBanner, NEXT_MAX_SPEAKERS, panelShapeKey, partnerLayoutOf, retargetPartnerLayout, retargetSalesLayout, retargetTunedDoc, salesLayoutOf, sampleFourthSpeaker, shuffleWallLogos, simpleExportName, stripFormsForSave, syncNextChrome, syncPanelChrome, syncPartnerChrome, thanksFlatMaxColumns, thanksGridColumns, THANKS_MAX_LOGOS, THANKS_SCRIM_MAX, type NextForm, type PartnerForm, type PartnerLogo, type SalesForm, type SimpleDoc, type SimpleForm } from "./simpleLayout";
+import { adoptLegacyPanelRoles, buildNextDesign, buildPartnerDesign, buildSalesDesign, buildSimpleDesign, bundleCoverage, dedupeSpeakerRoles, docKindOf, emptyForm, emptyNextForm, parkDoc, emptyPartnerForm, emptyPerson, emptySalesForm, formsFromDoc, isBlankPerson, isNextDoc, mergePersonDescription, migrateLegacyPanelDoc, nextBannerText, nextSampleSpeaker, parseNextBanner, NEXT_MAX_SPEAKERS, panelShapeKey, partnerLayoutOf, retargetPartnerLayout, retargetSalesLayout, retargetTunedDoc, salesLayoutOf, sampleFourthSpeaker, shuffleWallLogos, simpleExportName, STAGE_HOSTS_MAX, stageHostsOf, stripFormsForSave, syncNextChrome, syncPanelChrome, syncPartnerChrome, thanksFlatMaxColumns, thanksGridColumns, THANKS_MAX_LOGOS, THANKS_SCRIM_MAX, type NextForm, type PartnerForm, type PartnerLogo, type SalesForm, type SimpleDoc, type SimpleForm } from "./simpleLayout";
 import type { PlatformFormat } from "@/types/template";
 
 /** The partner-form fields the thank-you wall introduced. Spread into the
@@ -2604,5 +2604,191 @@ describe("next session board", () => {
     expect(simpleExportName("next", "presentation", "Opening with Bjarke Ingels"))
       .toBe("16x9 - Next - Opening with Bjarke Ingels");
     expect(simpleExportName("next", "square", "")).toBe("1x1 - Next");
+  });
+});
+
+/**
+ * Host on Stage — the panel template's third flavour (2026-08-17). One host,
+ * photo in a WHITE-outlined frame, stage name in the chip, then name / job /
+ * company. Its own composition, so what these tests pin is that it stays
+ * separate from the discussion layout: different shape key, no header roles,
+ * and no chrome flowing between the two.
+ */
+describe("Host on Stage", () => {
+  const HOST_A = { name: "Pierre Leroy", title: "Managing Director", company: "Stifel", photo: "a.jpg" };
+  const HOST_B = { name: "Omolade Adebisi", title: "Head of Secondaries", company: "ISOMER Capital", photo: "b.jpg" };
+  const stageForm = (over: Partial<SimpleForm> = {}): SimpleForm => ({
+    ...emptyForm(),
+    panelLayout: "stage-host",
+    label: "BBQ Stage",
+    stageHosts: [HOST_A],
+    ...over,
+  });
+  const pairForm = (over: Partial<SimpleForm> = {}) => stageForm({ stageHosts: [HOST_A, HOST_B], ...over });
+  const roleOf = (doc: SimpleDoc, role: string) => doc.design.texts.find((t) => t.simpleRole === role);
+
+  it.each(FORMATS)("one host: layout is stable for %s", (format) => {
+    expect(normalize(buildSimpleDesign(stageForm(), format))).toMatchSnapshot();
+  });
+
+  it.each(FORMATS)("two hosts: layout is stable for %s", (format) => {
+    expect(normalize(buildSimpleDesign(pairForm(), format))).toMatchSnapshot();
+  });
+
+  it("renders the four fields and nothing from the panel header", () => {
+    const doc = buildSimpleDesign(stageForm(), "presentation");
+    const roles = doc.design.texts.map((t) => t.simpleRole).sort();
+    expect(roles).toEqual(["label", "stageHost-0.company", "stageHost-0.name", "stageHost-0.title"]);
+    expect(doc.canvasImages.map((i) => i.simpleRole)).toEqual(["stageHost-0.photo"]);
+    // No headline, no subtitle, no moderator or speaker cards — the sample form
+    // still carries all of them, so this catches a leak from the panel branch.
+    expect(roles.some((r) => r === "headline" || r === "subtitle" || r?.startsWith("speaker-") || r?.startsWith("moderator."))).toBe(false);
+  });
+
+  it("gives the second host their own layers", () => {
+    const doc = buildSimpleDesign(pairForm(), "presentation");
+    expect(doc.canvasImages.map((i) => i.simpleRole)).toEqual(["stageHost-0.photo", "stageHost-1.photo"]);
+    expect(roleOf(doc, "stageHost-1.name")?.content).toBe(HOST_B.name);
+    expect(roleOf(doc, "stageHost-1.company")?.content).toBe(HOST_B.company);
+  });
+
+  it("never renders more than STAGE_HOSTS_MAX", () => {
+    const doc = buildSimpleDesign(stageForm({ stageHosts: [HOST_A, HOST_B, { ...HOST_A, name: "Third" }] }), "presentation");
+    expect(doc.canvasImages).toHaveLength(STAGE_HOSTS_MAX);
+    expect(roleOf(doc, "stageHost-2.name")).toBeUndefined();
+  });
+
+  it("two hosts: equal columns, captions under their own photo, chip in the corner", () => {
+    const doc = buildSimpleDesign(pairForm(), "presentation");
+    const [a, b] = doc.canvasImages;
+    // Same size, same top edge, and the pair is centred on the canvas.
+    expect(a.width).toBe(b.width);
+    expect(a.height).toBe(b.height);
+    expect(a.y).toBe(b.y);
+    expect((a.x + b.x) / 2).toBeCloseTo(0.5, 5);
+    // Each caption starts under its own frame, left-aligned with it.
+    for (const [img, i] of [[a, 0], [b, 1]] as const) {
+      const name = roleOf(doc, `stageHost-${i}.name`)!;
+      expect(name.position.x).toBeCloseTo(img.x - img.width / 2, 5);
+      expect(name.position.y).toBeGreaterThan(img.y + img.height / 2);
+    }
+    // The stage chip is a top-left corner label, above both photos.
+    const chip = (doc.design.shapes ?? []).find((sh) => sh.simpleRole === "label.chip")!;
+    expect(chip.y + chip.height / 2).toBeLessThan(a.y - a.height / 2);
+    expect(chip.x - chip.width / 2).toBeCloseTo(0.06, 5);
+  });
+
+  it("two hosts read smaller than one, so two columns fit", () => {
+    const one = buildSimpleDesign(stageForm(), "presentation");
+    const two = buildSimpleDesign(pairForm(), "presentation");
+    expect(roleOf(two, "stageHost-0.name")!.fontSize).toBeLessThan(roleOf(one, "stageHost-0.name")!.fontSize);
+    expect(two.canvasImages[0].width).toBeLessThan(one.canvasImages[0].width);
+  });
+
+  it.each(FORMATS)("outlines every photo in white, 2px on %s", (format) => {
+    const doc = buildSimpleDesign(pairForm(), format);
+    expect(doc.canvasImages).toHaveLength(2);
+    for (const img of doc.canvasImages) {
+      expect(img.border).toBe(true);
+      expect(img.borderColor).toBe("#FFFFFF");
+      // DynamicTemplate renders the stroke as borderWidth × canvas WIDTH, so 2px
+      // in every format means the fraction changes with the format.
+      expect(Math.round((img.borderWidth ?? 0) * doc.customSize.width)).toBe(2);
+    }
+  });
+
+  it("shows an outlined slot per host with no photo uploaded yet", () => {
+    const blank = { name: "", title: "", company: "", photo: "" };
+    const doc = buildSimpleDesign(stageForm({ stageHosts: [blank, blank] }), "presentation");
+    expect(doc.canvasImages).toHaveLength(0);
+    expect((doc.design.shapes ?? []).filter((sh) => sh.fillType === "outline" && sh.colorType === "gradient")).toHaveLength(2);
+  });
+
+  it.each(FORMATS)("keeps every layer inside the canvas on %s", (format) => {
+    for (const form of [stageForm({ label: "Bonfire Stage" }), pairForm({ label: "Bonfire Stage" })]) {
+      const doc = buildSimpleDesign(form, format);
+      for (const t of doc.design.texts) {
+        expect(t.position.y).toBeGreaterThan(0);
+        expect(t.position.y).toBeLessThan(0.98);
+        expect(t.position.x).toBeLessThan(0.96);
+      }
+      for (const sh of doc.design.shapes ?? []) expect(sh.y + sh.height / 2).toBeLessThan(1);
+      for (const i of doc.canvasImages) expect(i.y + i.height / 2).toBeLessThan(1);
+    }
+  });
+
+  it("shrinks a long name to the column instead of overflowing it", () => {
+    const short = buildSimpleDesign(stageForm(), "presentation");
+    const long = buildSimpleDesign(stageForm({
+      stageHosts: [{ name: "Bartholomew Featherstonehaugh", title: "", company: "", photo: "" }],
+    }), "presentation");
+    expect(roleOf(long, "stageHost-0.name")!.fontSize).toBeLessThan(roleOf(short, "stageHost-0.name")!.fontSize);
+  });
+
+  it("is a different composition from the discussion layout, and one host from two", () => {
+    const one = buildSimpleDesign(stageForm(), "presentation");
+    const two = buildSimpleDesign(pairForm(), "presentation");
+    const discussion = buildSimpleDesign(emptyForm(), "presentation");
+    expect(panelShapeKey(one)).not.toBe(panelShapeKey(discussion));
+    // Two hosts must not revive a one-host tuning: it has no layers for them.
+    expect(panelShapeKey(one)).not.toBe(panelShapeKey(two));
+    expect(docKindOf(one)).toBe("panel");
+    expect(docKindOf(two)).toBe("panel");
+  });
+
+  it("carries a word change into a tuned card, keeping the tuning", () => {
+    const tuned = buildSimpleDesign(pairForm(), "presentation");
+    // Hand-drag the second host's name.
+    tuned.design.texts = tuned.design.texts.map((t) =>
+      t.simpleRole === "stageHost-1.name" ? { ...t, position: { x: 0.5, y: 0.2 } } : t);
+    const rebuilt = buildSimpleDesign(pairForm({ stageHosts: [HOST_A, { ...HOST_B, company: "Molten" }] }), "presentation");
+    const out = retargetTunedDoc(tuned, rebuilt)!;
+    expect(out).not.toBeNull();
+    expect(roleOf(out, "stageHost-1.company")?.content).toBe("Molten");
+    expect(roleOf(out, "stageHost-1.name")?.position).toEqual({ x: 0.5, y: 0.2 });
+  });
+
+  it("never flows panel chrome across the flavour switch", () => {
+    const stage = buildSimpleDesign(stageForm(), "presentation");
+    const discussion = buildSimpleDesign(emptyForm(), "presentation");
+    // Both directions: the label chip belongs to a different column in each.
+    expect(syncPanelChrome(discussion, stage)).toBe(stage);
+    expect(syncPanelChrome(stage, discussion)).toBe(discussion);
+  });
+
+  it.each([1, 2])("reads %i host(s) back into the stage-host fields, snapshot or not", (count) => {
+    const form = count === 1 ? stageForm() : pairForm();
+    const doc = buildSimpleDesign(form, "presentation");
+    const snap = stripFormsForSave("panel", form, emptyPartnerForm());
+    // The snapshot drops the headshots — the doc's role-tagged images restore them.
+    expect(snap.form?.stageHosts?.every((h) => h.photo === "")).toBe(true);
+
+    const fromSnap = formsFromDoc("panel", doc, snap).form!;
+    expect(fromSnap.panelLayout).toBe("stage-host");
+    expect(fromSnap.stageHosts).toEqual(form.stageHosts);
+
+    const reconstructed = formsFromDoc("panel", doc).form!;
+    expect(reconstructed.panelLayout).toBe("stage-host");
+    expect(reconstructed.label).toBe("BBQ STAGE"); // the chip is uppercased on the canvas
+    expect(reconstructed.stageHosts).toEqual(form.stageHosts);
+  });
+
+  it("the canvas decides the host count, not a stale snapshot", () => {
+    // Saved as a pair, doc rebuilt with one: loading must follow the doc.
+    const snap = stripFormsForSave("panel", pairForm(), emptyPartnerForm());
+    const one = buildSimpleDesign(stageForm(), "presentation");
+    expect(formsFromDoc("panel", one, snap).form?.stageHosts).toHaveLength(1);
+  });
+
+  it("a panel snapshot loaded onto a discussion doc stays on the discussion layout", () => {
+    const snap = stripFormsForSave("panel", stageForm(), emptyPartnerForm());
+    const discussion = buildSimpleDesign(emptyForm(), "presentation");
+    expect(formsFromDoc("panel", discussion, snap).form?.panelLayout).toBe("discussion");
+  });
+
+  it("stageHostsOf always yields one to two people", () => {
+    expect(stageHostsOf({ ...emptyForm(), stageHosts: undefined })).toHaveLength(1);
+    expect(stageHostsOf({ ...emptyForm(), stageHosts: [] })).toHaveLength(1);
+    expect(stageHostsOf({ ...emptyForm(), stageHosts: [HOST_A, HOST_B, HOST_A] })).toHaveLength(STAGE_HOSTS_MAX);
   });
 });
