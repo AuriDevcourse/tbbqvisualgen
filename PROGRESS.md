@@ -6,6 +6,63 @@ not required reading.
 
 ---
 
+## SESSION HANDOFF · 2026-08-18 (19): Six per-tier thank-you slides (1:1)
+
+### State: six designs in the shared Team library · no code change
+
+One 1:1 slide per money tier, each headline naming its tier, each wall holding
+only that tier's logos. Built in `/simple` — Partner → Official Announcement →
+1:1 → Thank you layout — and saved to the Team library, so everyone on the team
+sees them.
+
+| Slide | Logos | Deep link `/simple?load=` |
+|---|---|---|
+| Thank you to our Prime partners | 5 | `535dbeea-fe26-497b-8921-56f44d2f5922` |
+| Thank you to our Main partners | 4 | `b0b0ec8d-46cc-45f5-abf5-a8e004a1ab4e` |
+| Thank you to our Conqueror partners | 6 | `dbc812fb-4d53-4f09-b594-8482983ad1d8` |
+| Thank you to our Pioneer partners | 7 | `c1fee772-0120-4909-b45b-9e3eea6efcf9` |
+| Thank you to our Core partners | 11 | `1d60b456-375c-4904-a168-ead36a8a4288` |
+| Thank you to our Challenger partners | 24 | `8f48e8d5-5a78-4f43-a1a0-c977904b4eea` |
+
+Named `Thank you · <Tier> partners` so they sort together in the library modal.
+
+### Verified
+
+Every slide checked through `GET /api/library/<id>`: headline text contains its
+tier, `format` is `square`, and the `logo-thanks-*` image count matches the
+roster exactly (5/4/6/7/11/24). Reload from a deep link confirmed on the Prime
+slide. The 24-logo Challenger wall reads evenly across a 5-column grid, which is
+the logo tightening from handoff 17 paying off.
+
+### Why six, not seven
+
+The money ladder is Prime, Main, Conqueror, Pioneer, Core, Challenger, Community.
+Community is 99 partners across 4 walls of 30, so it cannot be one slide and was
+left out. Not yet built, if the full sequence is ever wanted: Community 1–4, plus
+the non-ladder groups Investor (10), Tailored (7), International (4), Academic
+(1) and Other (33, two walls).
+
+### Two gotchas
+
+**`Fill with <tier>` resets the headline** to "Thank you to our partners". Fill
+first, then type the headline, or the tier name is lost. The button's own tooltip
+says as much.
+
+**Saving a NEW library item means the modal's Save with a fresh name.** The
+header's `Update "<name>"` button overwrites whatever is currently tracked, which
+after the first save is the previous tier's slide.
+
+### Next steps
+
+1. Export the images: open each link and press Save image. Not done here because
+   downloads from an automation browser land in its own throwaway profile.
+2. Decide whether the Community / Investor / Tailored / International / Academic
+   / Other slides are wanted too.
+3. Still open from handoff 18: confirm whether Auri deleted the story preset and
+   hid the Panel built-in himself. Nothing is restored while that is unanswered.
+
+---
+
 ## SESSION HANDOFF · 2026-08-18 (18): Sessions on Stage editor presets
 
 ### State: 6 presets in the shared library · one code change UNCOMMITTED
@@ -68,13 +125,21 @@ Two rows disappeared from the shared library without being deliberately deleted:
 row `Dup-id bug repro` (`user-dupbug-test`). Separately, `hiddenPresets` had
 gained `panel-3-moderator`, hiding the built-in Panel preset.
 
-All three were restored from API snapshots captured earlier in the session, and
-the library is back to 6 presets with `hiddenPresets: []`. **The mechanism is
-unknown.** Nothing in `useUserPresets` or `sharedEditorLibrary` prunes rows —
-`deletePresetItem` has exactly one caller, the modal's delete button — and the
-GET reported `truncated: false`, so it was not the 500-row cap. Automated
-clicking in the Templates modal is the likeliest culprit (delete and hide are
-icon buttons on every card), but that is a guess, not a finding.
+All three were restored from API snapshots captured earlier in the session. They
+then went AGAIN, and this is where it stands: **4 presets (the four 16:9 speaker
+boards) with `hiddenPresets: ["panel-3-moderator"]`**. The story (9:16) preset
+and the `Dup-id bug repro` row are gone, and the built-in Panel preset reads as
+hidden. That state is also exactly what Auri's own screenshot showed, and it
+looks like a deliberate tidy-up, so **the open question is simply whether Auri
+did it himself** — he was asked and has not answered yet. Do not re-restore
+anything until he does.
+
+If it turns out he did NOT: nothing in `useUserPresets` or `sharedEditorLibrary`
+prunes rows — `deletePresetItem` has exactly one caller, the modal's delete
+button — and the GET reported `truncated: false`, so it is not the 500-row cap.
+The second disappearance happened while only LOADING presets and running tests,
+with no delete or hide clicked, which argues against automation clicking being
+the cause.
 
 **This deserves a real look before the team relies on the library**: silent loss
 of a shared preset is worse than any layout bug on this list. Suggested first
