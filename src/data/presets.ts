@@ -1,5 +1,5 @@
 import type { DesignConfig, PlatformFormat } from "@/types/template";
-import { FORMAT_DIMENSIONS } from "@/types/template";
+import { FORMAT_DIMENSIONS, uniqueShapeIds } from "@/types/template";
 import type { CanvasImage } from "@/components/ImagePlacer";
 
 /**
@@ -50,7 +50,7 @@ export interface Preset {
 /** Pick the right snapshot to load given the canvas's current format.
  *
  * Resolution order (highest priority wins):
- *   1. localStorage override variant for the current format
+ *   1. team-saved override variant for the current format
  *   2. preset.variants[currentFormat]   (shipped variant)
  *   3. preset defaults                  (the top-level fields)
  *
@@ -66,7 +66,7 @@ export function resolvePresetForFormat(
     return {
       format: currentFormat,
       customSize: override.customSize,
-      design: override.design,
+      design: healDesign(override.design),
       canvasImages: override.canvasImages,
     };
   }
@@ -75,7 +75,7 @@ export function resolvePresetForFormat(
     return {
       format: currentFormat,
       customSize: variant.customSize,
-      design: variant.design,
+      design: healDesign(variant.design),
       canvasImages: variant.canvasImages,
     };
   }
@@ -87,7 +87,7 @@ export function resolvePresetForFormat(
     return {
       format: preset.format,
       customSize: preset.customSize,
-      design: preset.design,
+      design: healDesign(preset.design),
       canvasImages: preset.canvasImages,
     };
   }
@@ -95,9 +95,31 @@ export function resolvePresetForFormat(
   return {
     format: currentFormat,
     customSize: { width: fallbackDims.width, height: fallbackDims.height },
-    design: preset.design,
+    design: healDesign(preset.design),
     canvasImages: preset.canvasImages,
   };
+}
+
+/**
+ * Repair a design on its way onto the canvas.
+ *
+ * Presets saved before 2026-08-18 can carry two shapes with the same id,
+ * because `buildPresetFromDoc` numbered its placeholder slots from 1 without
+ * checking what was already taken. Clicking "Upload photo" on the second such
+ * rectangle looked the FIRST one up, so the photo landed in the wrong place and
+ * both rectangles vanished. Healing on load means those presets work without
+ * anyone having to re-save them.
+ *
+ * The renamed shape is left out of `layerOrder` on purpose: it had no entry of
+ * its own to begin with (the id it was colliding with owned that entry), and
+ * `reconcileLayerOrder` slots an unlisted layer in at its default depth.
+ */
+function healDesign(design: DesignConfig): DesignConfig {
+  const shapes = design.shapes;
+  if (!shapes?.length) return design;
+  const { shapes: unique, renamed } = uniqueShapeIds(shapes);
+  if (renamed.size === 0) return design;
+  return { ...design, shapes: unique };
 }
 
 // Built-in templates. The team authors these in-app, then ships them via

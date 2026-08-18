@@ -48,11 +48,11 @@ interface TemplatesModalProps {
   /** Restore all hidden presets. Shown in footer when any are hidden. */
   hiddenPresetCount?: number;
   onRestoreHidden?: () => void;
-  /** Save the current canvas as a NEW user preset (localStorage). */
+  /** Save the current canvas as a NEW team preset (shared with everyone). */
   onSaveAsPreset?: (name: string) => void;
-  /** Predicate: is this preset a user (localStorage) preset, vs built-in? */
+  /** Predicate: is this preset a team-saved preset, vs a built-in from source? */
   isUserPreset?: (preset: Preset) => boolean;
-  /** Override a built-in preset's display name (stored in localStorage). */
+  /** Override a built-in preset's display name (shared with the team). */
   onRenamePreset?: (id: string, name: string) => void;
   /** Resolve a preset's currently-displayed name (factoring in overrides). */
   presetDisplayName?: (preset: Preset) => string;
@@ -73,10 +73,10 @@ interface TemplatesModalProps {
    *  scoped to currentFormat. */
   onSaveVariant?: (presetId: string) => void;
   /** Per-format variant indicators: returns the set of formats this preset
-   *  has user-saved (localStorage) variants for. Used to render a small
+   *  has team-saved variants for. Used to render a small
    *  override dot on format badges. */
   presetCustomVariants?: (preset: Preset) => Set<PlatformFormat>;
-  /** Reset a single localStorage variant override for this preset/format. */
+  /** Reset a single team-saved variant override for this preset/format. */
   onResetVariant?: (presetId: string, format: PlatformFormat) => void;
 }
 
@@ -186,7 +186,7 @@ export function TemplatesModal({
             onClick={handleSave}
             disabled={saving}
             aria-label="Save template"
-            title="Save template — stores the current canvas locally (no multi-format variants)"
+            title="Save template — shares the current canvas with the whole team (no multi-format variants)"
             className="flex items-center justify-center w-8 h-8 rounded-md bg-white/5 border border-white/10 text-white/80 hover:bg-white/10 hover:text-white transition-colors disabled:opacity-50"
           >
             <Save className="w-3.5 h-3.5" />
@@ -195,7 +195,7 @@ export function TemplatesModal({
             <button
               onClick={() => onSaveAsPreset(name.trim() || `My preset ${templates.length + 1}`)}
               aria-label="Save as preset"
-              title="Save as preset — stores locally with multi-format variants"
+              title="Save as preset — shares it with the whole team, with multi-format variants"
               className="flex items-center justify-center w-8 h-8 rounded-md bg-gradient-to-r from-[#FF6B00] to-[#FF0028] text-white hover:from-[#FF7A1A] hover:to-[#E00224] transition-all shadow-[0_3px_12px_-4px_rgba(255,0,40,0.5)]"
             >
               <Star className="w-3.5 h-3.5" />
@@ -229,7 +229,7 @@ export function TemplatesModal({
           {presets && presets.length > 0 && onLoadPreset && (() => {
             const groupOf = (p: Preset) => {
               const resolved = presetDisplayGroup ? presetDisplayGroup(p) : p.group;
-              return resolved || (isUserPreset?.(p) ? "My presets" : "Other");
+              return resolved || (isUserPreset?.(p) ? "Team presets" : "Other");
             };
             const groups = new Map<string, Preset[]>();
             for (const p of presets) {
@@ -344,7 +344,7 @@ export function TemplatesModal({
                         <p className="text-[11px] font-semibold text-white/85 text-center leading-tight">{displayName}</p>
                         <p className="text-[9px] text-white/45 text-center leading-tight px-2 line-clamp-2">{p.description}</p>
                         {/* Format chips overlaid on thumbnail (top-right) so they're prominent.
-                         *  A green dot indicates the format has a user-saved (localStorage)
+                         *  A green dot indicates the format has a team-saved
                          *  variant on top of (or replacing) what ships in source. */}
                         <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
                           {formats.map((f) => {
@@ -359,7 +359,7 @@ export function TemplatesModal({
                                 }`}
                                 title={[
                                   currentFormat === f ? `Tuned for current canvas (${FORMAT_BADGES[f]})` : `${FORMAT_BADGES[f]} variant available`,
-                                  isCustom ? "Includes your saved customizations" : null,
+                                  isCustom ? "Includes the team's saved customizations" : null,
                                 ].filter(Boolean).join(" · ")}
                               >
                                 {FORMAT_BADGES[f]}
@@ -407,14 +407,14 @@ export function TemplatesModal({
                                 <Pencil className="w-2.5 h-2.5 text-white/60 opacity-0 group-hover/name:opacity-100 transition-opacity shrink-0" />
                               </p>
                               <p className={`text-[8.5px] uppercase tracking-wider font-semibold ${isUserPreset?.(p) ? "text-emerald-300/85" : "text-[#FF6B00]/80"}`}>
-                                {isUserPreset?.(p) ? "Yours" : "Built-in"}
+                                {isUserPreset?.(p) ? "Team" : "Built-in"}
                               </p>
                             </button>
                           ) : (
                             <>
                               <p className="text-[11px] text-white/85 truncate">{displayName}</p>
                               <p className={`text-[8.5px] uppercase tracking-wider font-semibold ${isUserPreset?.(p) ? "text-emerald-300/85" : "text-[#FF6B00]/80"}`}>
-                                {isUserPreset?.(p) ? "Yours" : "Built-in"}
+                                {isUserPreset?.(p) ? "Team" : "Built-in"}
                               </p>
                             </>
                           )}
@@ -539,7 +539,7 @@ export function TemplatesModal({
           <section className="flex flex-col gap-2">
             {templates.length > 0 && (
               <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.18em]">
-                Your templates ({templates.length})
+                Team templates ({templates.length})
               </span>
             )}
           {templates.length === 0 && (!presets || presets.length === 0) && (
@@ -647,7 +647,7 @@ export function TemplatesModal({
 
         <div className="px-5 py-2 border-t border-white/10 flex items-center justify-between gap-2">
           <span className="text-[10px] text-white/60">
-            Saved locally in this browser. Built-in presets hide rather than delete.
+            Shared with everyone on the TechBBQ team. Built-in presets hide rather than delete.
           </span>
           {onRestoreHidden && hiddenPresetCount !== undefined && hiddenPresetCount > 0 && (
             <button

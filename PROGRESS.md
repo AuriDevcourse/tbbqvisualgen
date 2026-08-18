@@ -6,6 +6,108 @@ not required reading.
 
 ---
 
+## SESSION HANDOFF · 2026-08-18 (16): Editor templates are now shared team-wide
+
+### State: UNCOMMITTED on `master` — move to a branch before committing
+
+Everything the editor's Templates modal used to keep in `localStorage` now
+lives in Neon and is shared with every signed-in TechBBQ person. Before this, a
+preset one person built was invisible to everyone else.
+
+**All five stores moved**, per Auri's call:
+
+| Hook | What it holds | Where it lives now |
+|---|---|---|
+| `useUserPresets` | team-saved presets | `editor_items` kind `preset` |
+| `useTemplates` | saved templates + thumbnails | `editor_items` kind `template` |
+| `usePresetOverrides` | renames / folder moves / format variants of built-ins | `editor_items` kind `override` |
+| `useHiddenPresets` | hidden built-ins | `editor_settings` key `hiddenPresets` |
+| `useFolderOrder` | folder ordering | `editor_settings` key `folderOrder` |
+
+Every hook kept its exact signature, so **no call site in `editor/page.tsx`
+changed** beyond copy. They are thin wrappers over one external store,
+`lib/sharedEditorLibrary.ts`, which does a single GET on mount no matter how
+many hooks are mounted, and mutates optimistically.
+
+### New files
+
+- `lib/editorLibraryDb.ts` · two tables, created on demand
+- `lib/editorLibraryApi.ts` · rate limit, id/body validation, safe errors
+- `lib/sharedEditorLibrary.ts` · client store (useSyncExternalStore)
+- `types/sharedLibrary.ts` · `SavedTemplate` + `PresetOverride`, moved out of
+  the hooks so the store can import them without a circular graph
+- `api/editor-library/` · `GET /`, `GET /thumbnails`, `PUT|DELETE /items/[id]`,
+  `PUT /settings/[key]`
+
+### Decisions worth knowing
+
+**Row per item, not one blob.** Presets and templates carry full design
+snapshots and photo data URLs, up to megabytes each. One blob row would mean
+every rename rewrote the whole library and two simultaneous saves would stomp
+each other.
+
+**Reads open, writes gated.** `/editor` has no auth gate, and a visitor who
+cannot read the team's templates has an empty editor. So GET is public
+(rate-limited per IP) and every write needs an `@techbbq.org` session
+(rate-limited per account, SECURITY.md r5/r8). The GET returns `canWrite` so
+the client refuses a save up front instead of showing a preset appear, 401,
+then vanish.
+
+**Thumbnails are fetched separately.** A template thumbnail is ~90KB of base64,
+so inlining them in the list read would make the editor download megabytes on
+every load. `readLibrary` strips them, `GET /thumbnails` serves them, and the
+card shows "No preview" for the moment in between. The list read is ~800 bytes
+with one template instead of ~90KB.
+
+**The upsert carries a missing thumbnail over.** Because the client is served
+thumbnail-free templates, a rename issued before the previews finish loading
+would otherwise write the template back without its thumbnail and lose it. The
+`ON CONFLICT` clause restores it from the stored row (see `upsertItem`).
+
+**On a failed write we refetch, not revert.** Restoring a pre-mutation snapshot
+would silently undo whatever else changed in the meantime.
+
+**Focus refresh.** Re-reads the library when the tab regains focus, so a
+teammate's save shows up without a reload. Thumbnails are skipped when nothing
+is missing.
+
+### No migration, by design
+
+Auri chose to ignore existing localStorage presets. The old keys
+(`tbbqvisualgen.userPresets.v1`, `.templates.v1`, `.presetOverrides.v1`,
+`.hiddenPresets.v1`, `.folderOrder.v1`) are simply no longer read. Anything
+sitting in them is orphaned, not deleted — if someone wants an old preset back,
+they re-save it from the editor.
+
+### Verified
+
+- `tsc --noEmit` clean · `eslint` clean on all touched files (4 pre-existing
+  errors remain in ImagePlacer / LogoDragOverlay / StepElements / StepText)
+- 375 tests pass
+- Every API path exercised against the real Neon DB: create, list, override,
+  settings, delete, plus 400 on a path-traversal id, 422 on an unknown kind and
+  an unknown settings key
+- **Write gate proven** by temporarily disabling `DEV_FAKE_USER`: GET returns
+  `canWrite: false`, all three write paths 401, nothing written
+- Real UI in Playwright: saved a preset and a template, confirmed both landed in
+  the DB, reloaded a fresh page and saw them come back from the server with the
+  thumbnail filling in, hid and restored a built-in, deleted both. Zero console
+  errors.
+
+### Next steps
+
+1. Move these changes to a branch before committing. `master` auto-deploys.
+2. On Vercel, nothing to configure: `DATABASE_URL` is already set for the
+   existing team library and both tables self-create on first request.
+3. Copy in the modal now says "Shared with everyone on the TechBBQ team" and
+   preset chips read "Team" rather than "Yours". Check the wording reads right
+   to you.
+4. Watch the list read as templates accumulate. 500 rows is the hard cap and it
+   warns when hit. If the team saves hundreds of templates, the next step is
+   lazy-loading thumbnails per card rather than all at once.
+
+---
+
 ## SESSION HANDOFF · 2026-08-17 (15): All Partners — 209 partners, 12 tiers, from Airtable
 
 ### State: UNCOMMITTED on `master`, 40 new logo files + generated roster

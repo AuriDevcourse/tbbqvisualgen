@@ -180,7 +180,8 @@ export default function Home() {
   // placement (no position adjustment, no guide lines).
   const [snapEnabled, setSnapEnabled] = useState(true);
 
-  // Saved-templates (localStorage) — open via the header button.
+  // Saved templates + presets — shared with the whole team via
+  // /api/editor-library. Open the list via the header button.
   const { templates, saveTemplate, deleteTemplate, renameTemplate } = useTemplates();
   const { hidden: hiddenPresets, hide: hidePreset, restoreAll: restoreHiddenPresets } = useHiddenPresets();
   const {
@@ -716,8 +717,10 @@ export default function Home() {
     naturalHeight: number,
   ) => {
     setDoc((prev) => {
-      const shape = (prev.design.shapes ?? []).find((s) => s.id === shapeId);
-      if (!shape) return prev;
+      const shapes = prev.design.shapes ?? [];
+      const shapeIndex = shapes.findIndex((s) => s.id === shapeId);
+      if (shapeIndex === -1) return prev;
+      const shape = shapes[shapeIndex];
       const newImageId = `img-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
       const newImage: CanvasImage = {
         id: newImageId,
@@ -739,7 +742,10 @@ export default function Home() {
         // contain-fit (no crop) after the actual file is uploaded.
         ...(shape.imagePlaceholder?.mode ? { fit: shape.imagePlaceholder.mode } : {}),
       };
-      const nextShapes = (prev.design.shapes ?? []).filter((s) => s.id !== shapeId);
+      // Drop by INDEX, not by id. Filtering on id would remove every shape
+      // sharing it, so one upload could delete a second rectangle (see
+      // uniqueShapeIds — presets saved before 2026-08-18 can carry duplicates).
+      const nextShapes = shapes.filter((_, i) => i !== shapeIndex);
       const nextLayerOrder = prev.design.layerOrder
         ? prev.design.layerOrder.map((l) => (l === `shape:${shapeId}` ? `image:${newImageId}` : l))
         : prev.design.layerOrder;
@@ -2424,7 +2430,7 @@ export default function Home() {
           });
           addUserPreset(preset);
           setLastLoadedPresetId(id);
-          toast.success(`Saved "${name}" as a preset — find it under "Built-in presets"`);
+          toast.success(`Saved "${name}" as a preset — shared with the team, under "Built-in presets"`);
         }}
         currentPresetId={lastLoadedPresetId}
         onSaveVariant={(presetId) => {

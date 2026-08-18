@@ -1,4 +1,5 @@
 import type { DesignConfig, PlatformFormat, ShapeElement } from "@/types/template";
+import { uniqueShapeIds } from "@/types/template";
 import type { CanvasImage } from "@/components/ImagePlacer";
 import { PRESETS, type Preset } from "@/data/presets";
 
@@ -24,7 +25,6 @@ interface SerializeOpts {
  * in localStorage).
  */
 export function buildPresetFromDoc(doc: DocSnapshot, opts: SerializeOpts): Preset {
-  const placeholderShapes = doc.canvasImages.map(canvasImageToPlaceholder);
   return {
     id: opts.id,
     name: opts.name,
@@ -32,11 +32,42 @@ export function buildPresetFromDoc(doc: DocSnapshot, opts: SerializeOpts): Prese
     ...(opts.category ? { category: opts.category } : {}),
     format: doc.format,
     customSize: doc.customSize,
-    design: {
-      ...doc.design,
-      shapes: [...(doc.design.shapes ?? []), ...placeholderShapes],
-    },
+    design: designWithPlaceholders(doc),
     canvasImages: [],
+  };
+}
+
+/**
+ * The doc's design with every CanvasImage turned into a placeholder shape.
+ *
+ * Two things this has to get right, both of which it used to get wrong:
+ *
+ *   - **Ids can't collide.** Numbering placeholders from 1 clashed with
+ *     leftover `shape-placeholder-N` shapes from the preset this doc was loaded
+ *     from, and a duplicate id sends an uploaded photo into the wrong rectangle
+ *     (see `uniqueShapeIds`).
+ *   - **Photos keep their z-position.** Each `image:<id>` entry in `layerOrder`
+ *     is rewritten to the `shape:<id>` that replaced it. Dropping the entry
+ *     instead let `reconcileLayerOrder` slot the slot back in at its default
+ *     depth, quietly restacking the design.
+ */
+function designWithPlaceholders(doc: DocSnapshot): DesignConfig {
+  const existing = doc.design.shapes ?? [];
+  const raw = [...existing, ...doc.canvasImages.map(canvasImageToPlaceholder)];
+  const { shapes, renamed } = uniqueShapeIds(raw);
+
+  // image layer id -> the shape id that now stands in for it
+  const swap = new Map<string, string>();
+  doc.canvasImages.forEach((ci, i) => {
+    const index = existing.length + i;
+    swap.set(`image:${ci.id}`, `shape:${renamed.get(index)?.to ?? raw[index].id}`);
+  });
+
+  const layerOrder = doc.design.layerOrder?.map((l) => swap.get(l) ?? l);
+  return {
+    ...doc.design,
+    shapes,
+    ...(layerOrder ? { layerOrder } : {}),
   };
 }
 
@@ -123,11 +154,7 @@ function findExistingPreset(name: string, id: string) {
  * a format-specific override (e.g. a square version of an existing 16:9 preset).
  */
 export function serializeAsPreset(doc: DocSnapshot, opts: SerializeOpts): string {
-  const placeholderShapes = doc.canvasImages.map(canvasImageToPlaceholder);
-  const designWithPlaceholders: DesignConfig = {
-    ...doc.design,
-    shapes: [...(doc.design.shapes ?? []), ...placeholderShapes],
-  };
+  const designForPreset = designWithPlaceholders(doc);
 
   // ── Variant-emit mode ────────────────────────────────────────────────────
   // If a preset with this name/id already ships, emit ONLY the variant block
@@ -137,7 +164,7 @@ export function serializeAsPreset(doc: DocSnapshot, opts: SerializeOpts): string
   if (existing) {
     const variantBlock = {
       customSize: doc.customSize,
-      design: designWithPlaceholders,
+      design: designForPreset,
       canvasImages: [] as CanvasImage[],
     };
     return [
@@ -157,7 +184,7 @@ export function serializeAsPreset(doc: DocSnapshot, opts: SerializeOpts): string
     ...(opts.category ? { category: opts.category } : {}),
     format: doc.format,
     customSize: doc.customSize,
-    design: designWithPlaceholders,
+    design: designForPreset,
     canvasImages: [] as CanvasImage[],
   };
 

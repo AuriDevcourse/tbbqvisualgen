@@ -302,6 +302,41 @@ export interface DesignConfig {
 }
 
 /**
+ * Force shape ids to be unique, renaming later duplicates and reporting what
+ * changed so a caller can remap its `layerOrder` entries.
+ *
+ * Ids have to be unique within a design because that is how a clicked element
+ * is looked up. Two shapes sharing an id means clicking the second one finds
+ * the FIRST one's coordinates, so an uploaded photo lands in the wrong
+ * rectangle and both rectangles disappear — reported 2026-08-18 as "it adds a
+ * new image, not inside". `buildPresetFromDoc` used to mint colliding
+ * `shape-placeholder-N` ids, so presets saved before the fix carry the
+ * collision and are repaired on load by `resolvePresetForFormat`.
+ *
+ * The FIRST occurrence keeps its id, so any layerOrder entry already pointing
+ * at it stays valid.
+ */
+export function uniqueShapeIds<T extends { id: string }>(
+  shapes: T[],
+): { shapes: T[]; renamed: Map<number, { from: string; to: string }> } {
+  const taken = new Set<string>();
+  const renamed = new Map<number, { from: string; to: string }>();
+  const out = shapes.map((shape, index) => {
+    if (!taken.has(shape.id)) {
+      taken.add(shape.id);
+      return shape;
+    }
+    let n = 2;
+    let candidate = `${shape.id}-${n}`;
+    while (taken.has(candidate)) candidate = `${shape.id}-${++n}`;
+    taken.add(candidate);
+    renamed.set(index, { from: shape.id, to: candidate });
+    return { ...shape, id: candidate };
+  });
+  return { shapes: out, renamed };
+}
+
+/**
  * Reconcile a stored layerOrder with the currently-available layers:
  *   - drop entries that no longer exist (e.g. a deleted image or text)
  *   - insert new entries at their default stack position so a fresh text/photo

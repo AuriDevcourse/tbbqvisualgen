@@ -1,50 +1,20 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 import { toPng } from "html-to-image";
-import type { DesignConfig, PlatformFormat } from "@/types/template";
-import type { CanvasImage } from "@/components/ImagePlacer";
+import {
+  deleteTemplateItem,
+  readSharedLibrary,
+  saveTemplateItem,
+  useSharedLibrary,
+} from "@/lib/sharedEditorLibrary";
+import type { SavedTemplate } from "@/types/sharedLibrary";
 
-/** A saved template — full document snapshot + a thumbnail dataURL. */
-export interface SavedTemplate {
-  id: string;
-  name: string;
-  /** ms since epoch. */
-  createdAt: number;
-  thumbnail?: string;
-  doc: {
-    format: PlatformFormat;
-    customSize: { width: number; height: number };
-    design: DesignConfig;
-    canvasImages: CanvasImage[];
-  };
-}
+export type { SavedTemplate };
 
-const STORAGE_KEY = "tbbqvisualgen.templates.v1";
-/** Local storage cap is ~5MB per origin. Keep templates trim to fit ~30+. */
+/** Thumbnails are stored inline as data URLs, so keep them small — a full-size
+ *  PNG per template would blow the 4MB per-row save cap. */
 const THUMBNAIL_MAX_PIXEL_RATIO = 0.18;
-
-function loadFromStorage(): SavedTemplate[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed;
-  } catch {
-    return [];
-  }
-}
-
-function saveToStorage(templates: SavedTemplate[]) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(templates));
-  } catch {
-    // quota exceeded — ignore. The in-memory copy is still authoritative
-    // for this session.
-  }
-}
 
 /**
  * Capture a small PNG of the canvas (whatever is inside `node`) for use as a
@@ -65,14 +35,13 @@ async function captureThumbnail(node: HTMLElement | null): Promise<string | unde
   }
 }
 
+/**
+ * Saved templates — shared with the whole team via /api/editor-library.
+ * Was localStorage until 2026-08-18, so a template one person saved was
+ * invisible to everyone else.
+ */
 export function useTemplates() {
-  const [templates, setTemplates] = useState<SavedTemplate[]>([]);
-  const [hydrated, setHydrated] = useState(false);
-
-  useEffect(() => {
-    setTemplates(loadFromStorage());
-    setHydrated(true);
-  }, []);
+  const { templates, hydrated } = useSharedLibrary();
 
   const saveTemplate = useCallback(async (params: {
     name: string;
@@ -87,28 +56,18 @@ export function useTemplates() {
       thumbnail,
       doc: params.doc,
     };
-    setTemplates((prev) => {
-      const next = [t, ...prev];
-      saveToStorage(next);
-      return next;
-    });
+    saveTemplateItem(t, `Template "${t.name}"`);
     return t;
   }, []);
 
   const deleteTemplate = useCallback((id: string) => {
-    setTemplates((prev) => {
-      const next = prev.filter((t) => t.id !== id);
-      saveToStorage(next);
-      return next;
-    });
+    deleteTemplateItem(id);
   }, []);
 
   const renameTemplate = useCallback((id: string, name: string) => {
-    setTemplates((prev) => {
-      const next = prev.map((t) => (t.id === id ? { ...t, name: name.trim() || "Untitled template" } : t));
-      saveToStorage(next);
-      return next;
-    });
+    const existing = readSharedLibrary().templates.find((t) => t.id === id);
+    if (!existing) return;
+    saveTemplateItem({ ...existing, name: name.trim() || "Untitled template" }, "Rename");
   }, []);
 
   return { templates, hydrated, saveTemplate, deleteTemplate, renameTemplate };
