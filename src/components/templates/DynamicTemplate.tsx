@@ -142,8 +142,15 @@ function renderShapeElement(
   // Image-placeholder gets a subtle dashed border so the "drop zone" feel
   // reads even before the Upload button is hovered. Label/icon live on the
   // ShapeDragOverlay button (overlay-only), not in the exported pixels.
+  // A slot that asks for an OUTLINE keeps its own stroke: the speaker frames on
+  // the Sessions on Stage boards are a white hairline, and forcing the dashed
+  // drop-zone border on them made every empty slot look like a different
+  // element than the frames beside it. Filled slots (fillType "fill", which is
+  // every slot that shipped before this) keep the dashed drop-zone look.
   const placeholderBorder = s.imagePlaceholder
-    ? `${Math.max(2, Math.round(Math.min(w, h) * 0.012))}px dashed rgba(255,255,255,0.35)`
+    ? (isOutline
+        ? `${strokeW}px solid ${s.color1}`
+        : `${Math.max(2, Math.round(Math.min(w, h) * 0.012))}px dashed rgba(255,255,255,0.35)`)
     : undefined;
 
   if (s.type === "rectangle") {

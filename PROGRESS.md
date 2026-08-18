@@ -6,6 +6,198 @@ not required reading.
 
 ---
 
+## SESSION HANDOFF · 2026-08-18 (18): Sessions on Stage editor presets
+
+### State: 6 presets in the shared library · one code change UNCOMMITTED
+
+Five editor presets built from the saved simple design `5d3c1629`, so the board
+can be fine-tuned instead of only filled in Quick Templates:
+
+| Preset | Format | Layers |
+|---|---|---|
+| Sessions on Stage · moderator + 1 speaker | 16:9 | 9 texts, 4 shapes, 2 slots |
+| Sessions on Stage · moderator + 2 speakers | 16:9 | 11 texts, 5 shapes, 3 slots |
+| Sessions on Stage · moderator + 3 speakers | 16:9 | 13 texts, 6 shapes, 4 slots |
+| Sessions on Stage · moderator + 4 speakers | 16:9 | 15 texts, 7 shapes, 5 slots |
+| Sessions on Stage · story (9:16) | 9:16 | 9 texts, 4 shapes, 2 slots |
+
+4 speakers is the app's maximum (the stepper disables there), so the 16:9 set is
+complete. Presets are DB rows, not code — nothing to commit for them.
+
+**How they were made:** `/simple?load=<id>` → set the speaker count → Edit &
+fine-tune → Templates → Save as preset. Never hand-written JSON.
+
+### The build gotcha, worth knowing before repeating this
+
+**After Edit & fine-tune, do not navigate to `/editor` again before saving.**
+The handoff (`tbbqvisualgen.session.v4`) is consumed on arrival, so a second
+navigation leaves a blank canvas and the modal saves an EMPTY preset — 0 texts,
+0 shapes. Happened once; that row was deleted and the preset redone.
+
+### Photo slots: what a slot actually is
+
+A photo slot is a shape carrying `imagePlaceholder: { label }`. The simple
+builder only emits one for a person who HAS a photo uploaded; an empty person
+comes through as a plain `fillType: "outline"` rectangle. So the presets saved
+with 2 slots and the rest of the people as dead rectangles you cannot drop a
+photo into (Auri spotted it: "the second person is not a photo slot").
+
+Fixed by rewriting the rows through the API: every shape with no `simpleRole` is
+a person (the only roled shapes on this board are `next.banner` and
+`next.stage.chip`, so the rule yields exactly moderator + N — asserted per
+preset before writing). All of them now carry `imagePlaceholder`, and every slot
+is styled the same, per Auri: **white 1px border, 8% corner radius**
+(`fillType: "outline"`, `color1: "#FFFFFF"`, `strokeWidth: 1/1920` so
+`round(strokeWidth * canvasWidth)` lands on 1px, `borderRadius: 0.08` which
+`radiusCSS` reads as a fraction of the shorter side → 20px on a 250px slot).
+
+### Code change: DynamicTemplate lets an outline slot keep its own stroke
+
+`placeholderBorder` forced a dashed translucent border on ANY shape with
+`imagePlaceholder`, ignoring its stroke, so a white hairline slot was impossible
+and empty slots looked like a different element than the frames beside them. Now
+a slot with `fillType: "outline"` renders `${strokeW}px solid ${color1}`;
+`fillType: "fill"` placeholders keep the dashed drop-zone look. Backwards
+compatible: no preset in source combines outline with `imagePlaceholder`
+(checked), so nothing that shipped before changes.
+
+### Presets went missing mid-session — cause NOT established
+
+Two rows disappeared from the shared library without being deliberately deleted:
+`Sessions on Stage · story (9:16)` (`user-1787059424579-tot1`) and the old test
+row `Dup-id bug repro` (`user-dupbug-test`). Separately, `hiddenPresets` had
+gained `panel-3-moderator`, hiding the built-in Panel preset.
+
+All three were restored from API snapshots captured earlier in the session, and
+the library is back to 6 presets with `hiddenPresets: []`. **The mechanism is
+unknown.** Nothing in `useUserPresets` or `sharedEditorLibrary` prunes rows —
+`deletePresetItem` has exactly one caller, the modal's delete button — and the
+GET reported `truncated: false`, so it was not the 500-row cap. Automated
+clicking in the Templates modal is the likeliest culprit (delete and hide are
+icon buttons on every card), but that is a guess, not a finding.
+
+**This deserves a real look before the team relies on the library**: silent loss
+of a shared preset is worse than any layout bug on this list. Suggested first
+steps: add a server-side audit log line on DELETE (r14 covers this anyway), and
+check whether the hide/delete icons can fire without their confirm step.
+
+### Next steps
+
+1. Investigate the disappearing rows above. Highest priority here.
+2. Commit `src/components/templates/DynamicTemplate.tsx`. Still uncommitted from
+   earlier: 24 logo files, `src/data/logoLibrary.json`,
+   `scripts/tighten-logo-viewbox.mjs`, `PROGRESS.md`. Commit `9b5ee28` is still
+   unpushed and `master` auto-deploys.
+3. Missing formats: 1:1 for all five boards, and 9:16 for the 2/3/4-speaker
+   ones. Each 9:16 needs hand-fitting (see below).
+4. Ask Auri whether `Dup-id bug repro` should be deleted for good.
+
+### Story (9:16) still wants Auri's eye
+
+The auto-retarget put the headline ~115px off the right edge of the 1080 canvas;
+dropped it 88px → 72px. The ON STAGE label spilled off its white pill because
+the text scaled and the rectangle did not; fitted the label 39px → 24px, which
+leaves a chunky pill around a smallish label. The better fix is dragging that
+rectangle narrower and putting the label back up — shapes only resize by canvas
+handles, which automation cannot do reliably.
+
+---
+
+## SESSION HANDOFF · 2026-08-18 (17): Partner logos were drawing at the wrong size
+
+### State: UNCOMMITTED on `master` — 24 logo files, the manifest, one script
+
+Auri: "some big, some small, some incorrectly placed." Nothing was misplaced.
+A wall cell is contain-fit and a contain fit cannot tell padding from artwork,
+so 23 of the 211 roster logos, whose artwork floats inside an oversized canvas
+(usually a square `viewBox="0 0 100 100"` wrapping a wide wordmark), drew at a
+fraction of a tight neighbour's size. Erhvervsfremmebestyrelsen filled 91% of
+its box's width and **13%** of its height, so it came out roughly an eighth of
+Danish Life Science Cluster beside it.
+
+All 23 are fixed by retargeting the viewBox to the ink bounding box. No path
+data was touched, so the artwork is bit-identical; only the window changed.
+**No re-upload was needed for any of them** · every file's artwork was already
+correct. Originals are in `.logos-trash/viewbox-2026-08-18/`.
+
+The worst offenders, by how much of their own box the artwork filled:
+INCUBA x KITCHEN 58x33, Copenhagen (`City.svg`) 65x68, HackYourFuture 70x70,
+Deloitte 80x15, Adeo Web 81x47, Nordea 82x45, Danske Bank 88x16,
+Health Tech Hub Copenhagen 89x18, Microsoft 90x19, Seed Capital 90x20,
+Erhvervsfremmebestyrelsen 91x13, Google Cloud 98x17.
+
+### Two bugs in `scripts/tighten-logo-viewbox.mjs`, both fixed
+
+1. **It tested the larger axis.** `Math.max(b.w, b.h) >= 0.97` reported Google
+   Cloud as "already tight (98%)" while its height filled 17%. A wide strip in
+   a square box is the WORST case on a wall and it was the one case the script
+   skipped. Now both axes must be tight.
+
+2. **It measured before stripping `width`/`height`.** Those attributes override
+   the viewBox aspect when rasterising, so for Flatpay (`viewBox` 4.7:1 with
+   `width`/`height` 200x200) the ink fractions described a SQUARE render, and
+   mapping them onto a 4.7:1 viewBox wrote a box that CLIPPED the artwork. The
+   first run of this session did exactly that to `Flatpay.svg` and
+   `San Francisco.svg`; caught in a Core wall screenshot, restored with
+   `git checkout -- public/logos/`, re-run after the fix. The probe now
+   rasterises a size-stripped copy, so raster aspect always equals viewBox
+   aspect, which is what the conversion assumes.
+
+3. Added a third case: strip a conflicting `width`/`height` even when the
+   viewBox is already tight. That was Flatpay's and San Francisco's actual
+   problem and the script previously had no path to fix it · it skipped them as
+   tight and never wrote. `Force Technology.svg` was the same defect, found by
+   sweeping all 945 library SVGs for viewBox-vs-attribute conflicts. Zero remain.
+
+### Deliberately NOT fixed: the one-column collapse (Auri's call)
+
+`thanksGridColumns` collapses to a SINGLE column at 3, 5, 7 and 9 logos, which
+on 9:16 gives full-width stacked logos plus a final pair (Prime renders 1,1,1,2;
+Pioneer 1,1,1,1,1,2). Cause: the lone-logo penalty is `count % cols === 1`,
+which can never be true when `cols` is 1, so a single column dodges the penalty
+and wins on tie. It also hits 1:1 at 3 and 5, and 16:9 at 3.
+
+The fix is one term · penalise `cols === 1` when `count > 2` · and **no test
+asserts the current shape** (the suite covers 1, 2, 11, 12, 25, 30, all
+unaffected). Auri chose files-only this session because it changes the
+composition of every small wall. Pick it up when he wants the layout revisited.
+
+### Still open, and these need a REAL re-upload
+
+- **Innovation District Copenhagen** (Main) · near-square PNG (0.99:1) whose
+  wordmark is tiny inside itself. In a landscape cell it can only be as tall as
+  the cell, so it reads small whatever we do. Needs a horizontal lockup, vector.
+- **Clarma Capital** (Community) · raster, 23% empty. A viewBox cannot fix a
+  PNG; needs a vector or a cropped file. The only roster logo still failing the
+  audit.
+- **HSBC Innovation Banking**, **Industriens Fond** · PNG but correctly
+  proportioned. Fine on screen, will soften at export size.
+- **Southern Sweden** · the "SWEDEN" line is low-contrast where it lands on the
+  orange glow. Colour, not size, so tightening did not touch it.
+
+### Verified
+
+385 tests, `tsc --noEmit` clean, all 211 roster logos re-measured (only the
+Clarma Capital PNG remains), Prime / Main / Conqueror / Pioneer / Core
+re-rendered in the browser with zero console errors. Before/after screenshots
+in `C:\Users\User\`: `prime-9x16.png` (before), `prime-after.png`,
+`main-after.png`, `conqueror-after.png`, `core-fixed.png`.
+
+### Next steps
+
+1. Commit the 24 logo files + `src/data/logoLibrary.json` + the script. Handoff
+   16's commit `9b5ee28` is also still unpushed; `master` auto-deploys, so both
+   land in prod on push.
+2. Chase vector/horizontal artwork for Innovation District Copenhagen and
+   Clarma Capital.
+3. Re-run the audit after any `logos:tiers -- --write` import: new partner files
+   arrive with the same padded canvases. `node scripts/tighten-logo-viewbox.mjs
+   --check "<file>.svg"` now reports both the padding and the attribute
+   conflict.
+4. Optional, when the layout is on the table: the one-column collapse above.
+
+---
+
 ## SESSION HANDOFF · 2026-08-18 (16): Editor templates are now shared team-wide
 
 ### State: UNCOMMITTED on `master` — move to a branch before committing
