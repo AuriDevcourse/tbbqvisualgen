@@ -831,8 +831,19 @@ describe("simpleExportName — saved-image naming convention", () => {
     expect(simpleExportName("panel", "square", "Continuation Capital\n& Venture Secondaries:")).toBe("1x1 - Panel - Continuation Capital & Venture Secondaries");
     expect(simpleExportName("panel", "presentation", "AI in 2026")).toBe("16x9 - Panel - AI in 2026");
     expect(simpleExportName("panel", "story", "")).toBe("9x16 - Panel");
-    expect(simpleExportName("partner", "presentation", "ignored")).toBe("16x9 - Partner Announcement");
-    expect(simpleExportName("partner", "presentation", "ignored", undefined, "thanks")).toBe("16x9 - Thank You Partners");
+    // The partner wall is named after its OWN headline, which is what tells a
+    // folder of exports apart: eight tier walls used to arrive as eight files
+    // called "Thank You Partners".
+    expect(simpleExportName("partner", "presentation", "Thank you to our Prime partners", undefined, "thanks")).toBe("16x9 - Thank You Prime Partners TechBBQ 2026");
+    expect(simpleExportName("partner", "square", "Thank you to our Community partners", undefined, "thanks")).toBe("1x1 - Thank You Community Partners TechBBQ 2026");
+    // A typed-over headline keeps its own words; only a THANK-YOU line loses the
+    // "to our" filler, so this one stays a sentence.
+    expect(simpleExportName("partner", "square", "Meet our pitch finalists", undefined, "thanks")).toBe("1x1 - Meet Our Pitch Finalists TechBBQ 2026");
+    // Empty headline still names the layout rather than the season alone.
+    expect(simpleExportName("partner", "presentation", "", undefined, "thanks")).toBe("16x9 - Thank You Partners TechBBQ 2026");
+    expect(simpleExportName("partner", "presentation", "")).toBe("16x9 - Partner Announcement TechBBQ 2026");
+    // Already says TechBBQ, so it is not said twice.
+    expect(simpleExportName("partner", "square", "TechBBQ x ProWoc", undefined, "thanks")).toBe("1x1 - TechBBQ x ProWoc 2026");
   });
 
   it("strips characters that break file names", () => {
@@ -1317,8 +1328,9 @@ describe("sales form round-trip through the library", () => {
     expect(simpleExportName("sales", "square", "", "48 days left")).toBe("1x1 - Sale - 48 days left");
     expect(simpleExportName("sales", "presentation", "", "10% off")).toBe("16x9 - Sale - 10% off");
     expect(simpleExportName("sales", "story", "", "")).toBe("9x16 - Sale");
-    // The panel and partner names are unchanged.
-    expect(simpleExportName("partner", "square", "ignored")).toBe("1x1 - Partner Announcement");
+    // The panel name is unchanged. The partner name follows its headline now, so
+    // an announcement wall with no headline falls back to naming the layout.
+    expect(simpleExportName("partner", "square", "")).toBe("1x1 - Partner Announcement TechBBQ 2026");
   });
 });
 

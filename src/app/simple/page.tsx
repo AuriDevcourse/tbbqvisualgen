@@ -1375,9 +1375,13 @@ export default function SimplePage() {
     // The Next board is named by its own title, not the panel form's headline.
     // The stage-host card has no headline field — its host is what the file
     // should be named after ("16x9 - Panel - Pierre Leroy").
+    // The partner wall has its own headline field, and it is what the file is
+    // named after now — passing the panel form's headline here left every tier
+    // wall exporting under the same name.
     const headline = template === "next" ? next.title
-      : stageHostMode ? stageHosts.map((h) => h.name.trim()).filter(Boolean).join(" & ")
-        : form.headline;
+      : template === "partner" ? partner.headline
+        : stageHostMode ? stageHosts.map((h) => h.name.trim()).filter(Boolean).join(" & ")
+          : form.headline;
     const base = simpleExportName(template, format, headline, salesLabel, partner.layout);
     if (isVideoFormat(effectiveFormat)) {
       // The animation has to be RUNNING for the capture, so resume instead of

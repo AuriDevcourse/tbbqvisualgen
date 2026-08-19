@@ -89,10 +89,16 @@ describe("partner sets", () => {
     const byTone = new Map((logoLibrary as { src: string; tone: string }[]).map((l) => [l.src, l.tone]));
 
     it("has every tier, highest value first", () => {
-      expect(ALL_PARTNER_TIERS.map((t) => t.tier)).toEqual([
+      // `Other` is in the order but not asserted present: it only appears when a
+      // row resolves to no tier at all, and since the sync falls back to the
+      // `Partnership Tier` lookup it is normally empty and the generator drops
+      // it. The tiers that ARE present must still come in value order.
+      const ORDER = [
         "Prime", "Main", "Conqueror", "Pioneer", "Core", "Challenger", "Community",
         "Investor", "Tailored", "International", "Academic", "Other",
-      ]);
+      ];
+      const present = ALL_PARTNER_TIERS.map((t) => t.tier);
+      expect(present).toEqual(ORDER.filter((t) => present.includes(t)));
       // The money ladder is the first seven; the rest are separate deals.
       expect(ALL_PARTNER_TIERS.filter((t) => t.ladder).map((t) => t.tier))
         .toEqual(["Prime", "Main", "Conqueror", "Pioneer", "Core", "Challenger", "Community"]);
@@ -103,12 +109,36 @@ describe("partner sets", () => {
       expect(dark.map((l) => `${l.label} → ${l.src} [${byTone.get(l.src)}]`)).toEqual([]);
     });
 
+    /** Partners whose OWN MARK carries colour, so a white cut of it would be the
+     *  wrong logo rather than a tidier one. Each is the artwork techbbq.dk serves:
+     *  the roster is downloaded from the same Airtable attachment the live wall
+     *  renders, and parity with that wall is the point (Auri, 2026-08-19: "make
+     *  sure that all of them are the same logos as in this whole tier list").
+     *
+     *  A closed list, not a relaxed rule. Everything outside it must still be a
+     *  pure knockout, which is what caught Industriens Fond shipping in green.
+     *  Each entry names the colour so a NEW one shows up as a diff rather than
+     *  slipping through a wildcard:
+     *
+     *    eryk                        #e10615  the cat's collar stripes
+     *    Adeo Web                    #F05F22  the orange cursor bar
+     *    INCUBA x KITCHEN            #c0e3ea  pale blue on the cube
+     *    French Tech Copenhagen      #e6433d  the red rooster in the pin
+     *    Mentorspace Lithuania, VšĮ  #ffce00  the yellow half of the LT mark
+     *
+     *  Creative Business Network's gem and Erhvervshus Sjælland's EU frieze are
+     *  the same case but ship as PNG, which this check skips. */
+    const BRAND_COLOUR_OK = new Set([
+      "eryk", "Adeo Web", "INCUBA x KITCHEN", "French Tech Copenhagen", "Mentorspace Lithuania, VšĮ",
+    ]);
+
     /** Same rule the community wall carries: a mostly-white logo with one
      *  coloured mark still measures light, so the SVG source is read. */
     it("points at white artwork, not a coloured cut", () => {
       const CHANNEL_SPREAD = 24;
       const offenders: string[] = [];
       for (const l of ALL_PARTNERS_FLAT) {
+        if (BRAND_COLOUR_OK.has(l.label)) continue;
         const file = join(process.cwd(), "public/logos", decodeURIComponent(l.src.replace("/logos/", "")));
         if (!file.toLowerCase().endsWith(".svg")) continue;
         const svg = readFileSync(file, "utf8");
@@ -139,9 +169,14 @@ describe("partner sets", () => {
 
     it("bands the one-image wall to exactly its logos", () => {
       expect(ALL_PARTNERS_TIER_BANDS.reduce((n, b) => n + b.count, 0)).toBe(ALL_PARTNERS_FLAT.length);
+      const ladder = new Set(ALL_PARTNER_TIERS.filter((t) => t.ladder).map((t) => t.tier));
       for (const b of ALL_PARTNERS_TIER_BANDS) {
         expect(b.cols).toBeGreaterThan(0);
-        expect(b.cols).toBeLessThanOrEqual(b.count);
+        // A ladder band may be wider than its own logo count: the column count
+        // sets the cell SIZE, and a lower tier has to keep the grid width of the
+        // tier above it or its logos come out bigger. Off the ladder there is no
+        // hierarchy to hold, so a band never exceeds its count.
+        if (!ladder.has(b.label)) expect(b.cols).toBeLessThanOrEqual(b.count);
       }
     });
 

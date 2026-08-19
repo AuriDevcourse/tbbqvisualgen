@@ -1693,17 +1693,24 @@ function buildThanksDesign(form: PartnerForm, format: PlatformFormat): SimpleDoc
   const bands: { from: number; counts: number[]; cols: number }[] = [];
   if (tiered.length) {
     // Cells are wide, so a band of n logos wants roughly sqrt(3n) columns —
-    // 5 logos across 4, 24 across 9, 99 across 18. Clamped to the count (never
-    // more columns than logos) and to 2x the flat maximum, past which a cell is
-    // narrower than a wordmark can survive.
+    // 5 logos across 4, 24 across 9, 99 across 18. Clamped to 2x the flat
+    // maximum, past which a cell is narrower than a wordmark can survive.
+    //
+    // The column count does two separate jobs, and they part ways when a band
+    // holds fewer logos than its grid is wide: `cols` sets the CELL SIZE, so it
+    // keeps whatever the roster asked for, while the ROW fill is clamped to the
+    // logos actually there. Prime at 6 asks for 5 columns and Main at 4 inherits
+    // that 5 to stay the same size — clamping its size to 4 columns would draw
+    // the lower tier's logos bigger than the higher one's. Main simply lays out
+    // as one short, centred row of 4.
     const hardMax = thanksMaxColumns(W / H) * 2;
     let at = 0;
     for (const band of tiered) {
       const n = Math.min(band.count, Math.max(0, count - at));
       if (n <= 0) break;
       const auto = Math.ceil(Math.sqrt(n * 3));
-      const cols = Math.max(1, Math.min(n, hardMax, Math.round(band.cols ?? auto)));
-      bands.push({ from: at, counts: thanksRowCounts(n, cols), cols });
+      const cols = Math.max(1, Math.min(hardMax, Math.round(band.cols ?? auto)));
+      bands.push({ from: at, counts: thanksRowCounts(n, Math.min(n, cols)), cols });
       at += n;
     }
     // Anything past the last band (a logo count raised without re-tiering) joins
@@ -3271,6 +3278,56 @@ export function sampleFourthSpeaker(): SimplePerson {
  * Partner announcements are just "16x9 - Partner Announcement" (their label is
  * generic). Colons are illegal in Windows file names, so 16:9 → 16x9.
  */
+/** The season the partner walls describe, for the export filename. NOT the
+ *  current year: it names the roster, which comes from the Airtable view
+ *  "Partner Deliverables 2026", so it changes when that view does and never
+ *  because a clock rolled over. */
+export const PARTNER_SEASON = 2026;
+
+/** Headline to filename: "Thank you to our Prime partners" becomes
+ *  "Thank You Prime Partners".
+ *
+ *  Two rules, both there to keep the tier legible. The filler between the verb
+ *  and the tier carries nothing in a filename, so "to our" and its variants go.
+ *  And a word that ALREADY has a capital keeps its own casing — otherwise
+ *  "TechBBQ", "LS x DT" and "ProWoc" come out mangled — while the small joining
+ *  words stay lowercase so it reads as a title rather than a shout. */
+/** Words that carry nothing in a filename. Dropped as WHOLE WORDS by walking the
+ *  list rather than by a regex: a word boundary written inside a pattern here is
+ *  one keystroke from being the BACKSPACE character instead, which matches
+ *  nothing and fails silently — this helper shipped that way once and left every
+ *  file called "Thank You to Our Prime Partners". lib/partners.ts avoids regex
+ *  word boundaries for the same reason. */
+const NAME_FILLER = new Set(["to", "our", "all", "of", "the"]);
+/** Small joining words that stay lowercase inside a title. */
+const NAME_SMALL = new Set(["a", "an", "and", "at", "by", "for", "in", "of", "on", "the", "to", "with", "x"]);
+
+/** Headline to filename: "Thank you to our Prime partners" becomes
+ *  "Thank You Prime Partners".
+ *
+ *  A word that ALREADY carries a capital keeps its own casing, so "TechBBQ",
+ *  "ProWoc" and "DTU" survive; everything else is capitalised unless it is one of
+ *  the small joining words. */
+function titleCaseName(text: string): string {
+  const words = text.split(" ").filter(Boolean);
+  // Filler is only dropped from a THANK-YOU headline, where "to our" sits between
+  // the verb and the tier and carries nothing: "Thank you to our Prime partners"
+  // becomes "Thank You Prime Partners". Anywhere else the small words are part of
+  // the sentence — "Meet our pitch finalists" reads wrong as "Meet Pitch
+  // Finalists" — so those headlines keep every word and only get their casing
+  // tidied.
+  const thanks = words[0]?.toLowerCase() === "thank";
+  const kept = thanks ? words.filter((w) => !NAME_FILLER.has(w.toLowerCase())) : words;
+  const out = kept.length ? kept : words;
+  return out
+    .map((w, i) => {
+      if (/[A-Z]/.test(w)) return w;
+      if (i > 0 && NAME_SMALL.has(w.toLowerCase())) return w.toLowerCase();
+      return w[0].toUpperCase() + w.slice(1);
+    })
+    .join(" ");
+}
+
 export function simpleExportName(template: "panel" | "partner" | "sales" | "next", format: PlatformFormat, headline: string, salesLabel?: string, partnerLayout?: PartnerLayout): string {
   const fmt = format === "presentation" ? "16x9" : format === "story" ? "9x16" : "1x1";
   const clean = (s: string) => s
@@ -3279,7 +3336,16 @@ export function simpleExportName(template: "panel" | "partner" | "sales" | "next
     .replace(/\s+/g, " ")
     .trim();
   if (template === "partner") {
-    return partnerLayout === "thanks" ? `${fmt} - Thank You Partners` : `${fmt} - Partner Announcement`;
+    // Named after the HEADLINE, so a set of tier walls exported together arrives
+    // as "Thank You Prime Partners TechBBQ 2026", "…Main…", "…Core…" rather than
+    // eight files called "Thank You Partners" with a number bolted on by the
+    // browser (Auri, 2026-08-19). The headline already names the tier — see
+    // tierHeadline() in src/data/partnerSets.ts.
+    const head = titleCaseName(clean(headline));
+    const what = head || (partnerLayout === "thanks" ? "Thank You Partners" : "Partner Announcement");
+    // A headline that already says TechBBQ does not need it twice.
+    const brand = /\btechbbq\b/i.test(what) ? "" : "TechBBQ ";
+    return `${fmt} - ${what} ${brand}${PARTNER_SEASON}`;
   }
   // Sales: the figure and its caption say what the post is — "48 days left".
   if (template === "sales") {

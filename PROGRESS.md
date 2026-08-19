@@ -6,6 +6,561 @@ not required reading.
 
 ---
 
+## SESSION HANDOFF · 2026-08-19 (23): the Exceptions column, and export names that say which wall
+
+### State: 217 partners, 0 disagreements with techbbq.dk, 361 tests green
+
+Two things: a tier source this repo was not reading, and export filenames that
+name the tier.
+
+### The `Exceptions` column decides the tier, ahead of everything else
+
+Auri corrected some partners' year links and asked for a re-check. The re-sync
+came back 2 partners apart from the live wall — Challenger 50/Community 106 here
+against 52/104 there — and Airtable's `Partnership Tier (from Tier)` said
+**Community** for both, so the reference was disagreeing with its own lookup.
+
+The reference had changed under us. `Desktop/GITHUB/airtable` commit **ab142d7**,
+"Partner wall: read the Exceptions column as the tier override": the deliverables
+view has always carried a free-text `Exceptions` cell where the partnerships team
+writes "move this one", and neither wall read it. Now ported here.
+
+The cell is PROSE, not an enum, and it stays prose. All four in the view:
+
+| Company | Cell | Lookup says | Wall shows |
+|---|---|---|---|
+| Highbridge Law Firm | "Has to be Placed in Challenger" | Community | **Challenger** |
+| rebriQ | "we gotta put in in the Challenger tier" | Community | **Challenger** |
+| Jyske Bank Growth | "Has to be placed in Pioneer" | Core | Pioneer |
+| Skytek Nordics ApS | "Has to be in Core" | Community | Core |
+
+So `exceptionTier()` SCANS the cell for the name of a band as a whole word and
+accepts the answer only when exactly one appears. Two names or none is logged and
+ignored: guessing there puts a partner in a band nobody chose. It runs ahead of
+`TIER_EXCEPTIONS`, because a cell typed in Airtable this morning should beat a
+constant written here last week — which makes the Skytek and Jyske Bank hardcodes
+redundant rather than contradictory. They stay as a floor if a cell is cleared.
+
+Resolution order now: **`Exceptions` cell → `TIER_EXCEPTIONS` → the deal lookup →
+`NO_CONTRACT_TIERS`.**
+
+Result: Challenger 52, Community 104, and **0 disagreements** with the live wall
+across all 217 partners. `INCUBA x KITCHEN` also swapped artwork on its own
+(INCUBA's mark to KITCHEN Aarhus University's) — checked on #0d0d0d, clean white.
+
+### Export filenames name the wall
+
+`simpleExportName` ignored the headline for the partner template, so every tier
+wall exported as `16x9 - Thank You Partners` and a folder of eight of them was
+eight files the browser had numbered. Auri: "make it also when saving the file
+names to be corresponding with the template you are using. So for the
+partnerships, it has to say Thank You Prime Partners TechbbQ 2026."
+
+Now `1x1 - Thank You Prime Partners TechBBQ 2026`, built from the headline, which
+already names the tier via `tierHeadline()`. The caller was also passing the PANEL
+form's headline for a partner export; it passes `partner.headline` now.
+
+- The `to our` filler is dropped **only from a thank-you headline**, where it sits
+  between the verb and the tier. Anywhere else the words are part of the sentence,
+  so "Meet our pitch finalists" stays "Meet Our Pitch Finalists" rather than
+  becoming "Meet Pitch Finalists".
+- A word that already carries a capital keeps its casing, so TechBBQ, ProWoc and
+  DTU survive; small joining words stay lowercase.
+- A headline that already says TechBBQ does not get it twice.
+- The format prefix stays. Exporting the same wall at 1:1 and 16:9 would otherwise
+  collide in the downloads folder.
+- `PARTNER_SEASON = 2026` names the ROSTER's season, from the Airtable view
+  "Partner Deliverables 2026". Deliberately not read off the clock.
+
+**A trap worth remembering:** the first version wrote `` into a regex literal
+and it landed as the BACKSPACE byte, so the filler stripping matched nothing and
+every file came out "Thank You to Our Prime Partners". `lib/partners.ts` carries a
+comment warning about exactly this in `exceptionTier()`. Both helpers now avoid
+regex word boundaries and walk a word list instead.
+
+### Verified
+
+- Tier counts against `GET /api/partners`: 4 / 3 / 9 / 11 / 34 / 52 / 104, **0
+  disagreements, 0 partners on one side only**.
+- Artwork: 216 / 217 byte-identical to the attachment `lib/logoPick.ts` picks from
+  a fresh Airtable read; the 217th is the Erhvervshus frieze override, itself
+  byte-identical to the live wall's own file.
+- `npm test` — 361 passed. `npx tsc --noEmit` clean.
+- Highbridge, rebriQ and INCUBA x KITCHEN rendered on #0d0d0d.
+- No stray control bytes in `simpleLayout.ts` (`grep -c $''` returns 0).
+
+### Still open
+
+1. The Erhvervshus Sjælland frieze still renders in a normal cell; the live wall
+   spans it across a row. `gen-partner-tiers.mjs` drops the `wide` flag the sync
+   records. Unchanged from handoff 22.
+2. AWS Startups has no tier and no usable logo. Product Therapy, Danish-Swedish
+   summit, Swedish VIP Reception are unticked; Repodo is embargoed to 26 August.
+3. Nothing is committed.
+
+### Re-run before exporting
+
+The view is edited through the day, and the reference file itself changed twice
+this session. Parity is structural, so this reproduces it — but only as of when it
+runs, and it is worth checking `git log` in the airtable repo too:
+
+    npm run logos:tiers -- --write
+    npm run logos:tiers:gen
+
+---
+
+## SESSION HANDOFF · 2026-08-19 (22): every logo now comes from techbbq.dk's own source
+
+### State: 217 partners, 216 byte-identical to what the live wall serves
+
+The 217th is Erhvervshus Sjælland, which the live wall serves from its own repo
+rather than Airtable, and our copy is byte-identical to that file too. So parity
+is complete.
+
+Auri's instruction: "make sure that all of them are the same logos as in this
+whole tier list", pointing at `localhost:3000/partners`, after spotting Southern
+Sweden with different artwork. Handoff 21 matched the TIERS to that wall but left
+the artwork to a name-and-artwork match against the library, and that match was
+wrong on 25 of 221 partners.
+
+### The matching step is gone
+
+`scripts/sync-partner-tiers.mjs` used to ask "does the library already hold this
+company?" and only fall back to Airtable. It now downloads the same attachment
+techbbq.dk renders, for every partner, into **`public/logos/Partners 2026/`** —
+a subfolder, so it becomes the library tag "partners 2026" and never fights the
+curated library for filenames. `lib/logoPick.ts` is ported across, so both walls
+score the candidates identically.
+
+What the old match got wrong, and none of it was visible without opening two files
+side by side:
+
+- **Southern Sweden** — the library held the SOUTHERN SWEDEN logotype; the wall
+  serves "Delegation from southern Sweden". The case Auri spotted.
+- **DanBAN, ReDI School, Radia Network, Copenhagen Institute for Futures Studies,
+  HSBC, EIFO, Health Tech Hub, Rockstart, PROSA** — different marks, different
+  wordmark treatments, or the Danish name against the English one.
+- **Six partners had the SAME FILENAME on both sides holding different artwork**,
+  which no name rule can ever catch.
+
+The artwork is stored AS IS, with no white rewrite. Parity is the point, and five
+partners carry brand colour on the live wall: eryk's collar stripes, Adeo Web's
+orange bar, INCUBA x KITCHEN's pale blue cube, French Tech Copenhagen's red
+rooster, Mentorspace's yellow. `BRAND_COLOUR_OK` in `partnerSets.test.ts` names
+each with its hex, so a NEW coloured file still fails the test — which is what
+caught Industriens Fond shipping in green in handoff 21.
+
+### Three bugs found while proving parity
+
+**The background-plate check was a false positive, and it cost a logo.**
+`hasBackgroundPlate` was a regex looking for a full-canvas filled `<rect>`.
+`white-Business Iceland.svg` carries three of them as ANIMATED MASKS
+(`class="absolute will-change-transform"`, `animation-name:mask-over-…`) and
+renders as clean white artwork. The regex rejected it, the walk moved on to
+`business-iceland-nott-1.svg`, and that one is dark grey — all but invisible on
+#0d0d0d, and worse than the file it refused. The regex is now a cheap pre-filter
+and the verdict is `rendersAsPlate()`: rasterise, probe the four corners and the
+edge midpoints, and call it a plate only if every probe is opaque. Validated
+against both Business Iceland files and both SHE/THEY files.
+
+**Two rows for one company overwrote each other's file.** Radia Network,
+Copenhagen School of Entrepreneurship, NORNORM, ProWoc and Kalvebod Fælled Skole
+each sit in the view twice, and both rows name their download after the company.
+The second copy replaced the first while the roster kept the FIRST row's entry, so
+write order was quietly choosing the logo — and Radia's two rows hold genuinely
+different artwork ("Radia Network.svg" against a bare "Vector.svg"). First write
+now wins, matching the live wall's dedupe.
+
+**A dry run measured nothing.** The audit read `tone` from the manifest, which
+cannot know a file downloaded seconds ago, so every row came back
+"tone: undefined" and the colour and duplicate checks passed on absent files.
+Roster entries now carry `staged`, and tone is MEASURED (`meanLuminance`) rather
+than looked up.
+
+### Verified
+
+- `scripts` re-run, then every roster file byte-compared against the attachment
+  `lib/logoPick.ts` picks from a FRESH Airtable fetch: **216 / 217 identical**, the
+  remainder being the deliberate override, itself byte-identical to the live wall's
+  `Erhvervshus-frieze.png`.
+- Tier counts still exact: 4 / 3 / 9 / 11 / 34 / 50 / 106.
+- `npm test` — 369 passed. `npx tsc --noEmit` clean.
+- Prime, Main, Conqueror and Pioneer rendered on #0d0d0d and looked at. Southern
+  Sweden now shows the delegation strip; Novo Nordisk keeps its ring.
+- 219 files, 2.5 MB. Nothing over the 400KB save-limit warning.
+
+### Wall pagination: 36 per wall, split evenly
+
+`TIER_PER_WALL` was 30 and sliced at a fixed size, so the remainder landed alone on
+the last wall. Auri asked for Community on three walls (2026-08-19: "can we make
+Community in 3"), which needs a cap of at least 36 — Community is 106.
+
+Two changes: the cap is **36**, and `balancedPages()` splits a tier evenly instead
+of leaving a stub, first pages taking the extra so page 1 is never smaller than
+page 2. What that fixed beyond the ask:
+
+| Tier | Before | After |
+|---|---|---|
+| Core | 30 + **4** | **34** on one wall |
+| Challenger | 30 + 20 | 25 + 25 |
+| Community | 30 + 30 + 30 + **16** | **36 + 35 + 35** |
+
+A wall of 4 logos beside one of 30 read as a mistake rather than a page. 36 also
+reads at 6 columns, which is the column count Community already draws at.
+
+Auri's numbers were 36/36/35, which sums to 107; the tier holds 106, so it is
+36/35/35. Ten walls total now, down from twelve, and the ten sum to 217.
+
+### One fidelity gap left, deliberately not papered over
+
+**Erhvervshus Sjælland's tile is the EU co-funding frieze**: three marks in one
+image at roughly 13:1. The live wall gives it `wide: true` and spans it across a
+full row. `gen-partner-tiers.mjs` emits only `{ label, src }`, so the flag is
+dropped and it renders inside a normal cell, where it is too small to read. The
+sync already records `wide` on the roster entry — the work is carrying it through
+the generator and teaching the thanks-wall layout a full-width band.
+
+### The view is being edited live
+
+While this ran, `Clarma Capital`'s SVG was deleted from its cell, `Royal Danish
+Academy`'s file was replaced, `Copenhagen Fintech` was unticked, and SHE/THEY
+Club's plated export was removed. **Re-run the two commands right before
+exporting the posts** — parity is now structural, so a re-run reproduces the live
+wall, but only as of the moment it runs:
+
+    npm run logos:tiers -- --write
+    npm run logos:tiers:gen
+
+### Still open
+
+1. **AWS Startups** — three `.eps` files and no `Company Link`, so no tier. The
+   live wall does not draw it either.
+2. **Product Therapy**, **Danish-Swedish summit**, **Swedish VIP Reception**,
+   **Copenhagen Fintech** — `Put on web` is off. Repodo is embargoed to 26 August.
+3. The `wide` frieze above.
+4. Nothing is committed. Modified: `sync-partner-tiers.mjs`, `partnerSets.ts`,
+   `partnerSets.test.ts`, `simpleLayout.ts`, `logoLibrary.json`,
+   `partner-tiers-report.json`, `PROGRESS.md`. New: `public/logos/Partners 2026/`
+   (219 files) plus the 18 loose logos from handoff 20.
+
+---
+
+## SESSION HANDOFF · 2026-08-19 (21): the roster now mirrors techbbq.dk exactly
+
+### State: 217 partners, 7 tiers, row-for-row identical to the live wall
+
+`http://localhost:3000/partners` (the `airtable` repo) is the reference, on Auri's
+call: "follow the logic in here, this is the correct tiers." Its `lib/partners.ts`
+feeds techbbq.dk, and this roster now agrees with it on every partner and every
+band. Verified by diffing against `GET /api/partners`:
+
+| Tier | Live wall | Here |
+|---|---|---|
+| Prime | 4 | 4 |
+| Main | 3 | 3 |
+| Conqueror | 9 | 9 |
+| Pioneer | 11 | 11 |
+| Core | 34 | 34 |
+| Challenger | 50 | 50 |
+| Community | 106 | 106 |
+
+0 tier disagreements, 0 partners on one side only, 0 unresolved.
+
+### What was wrong: the tier came from the wrong column
+
+`scripts/sync-partner-tiers.mjs` read `Partnership Type 2026`. `lib/partners.ts`
+**stopped** reading that column on 2026-08-05, because the tier now derives from
+`Deal 2026` through a formula on Partners 2026 — the PRICE places the partner. The
+old column had **58 of 217 partners in the wrong band**, Nordea and Danish Life
+Science Cluster both sitting in Prime.
+
+Now ported verbatim, in this order:
+
+1. **`TIER_EXCEPTIONS`** — replaces a tier the formula DID produce, so the bar is
+   "the deal cannot express the tier", never "somebody disagrees with it".
+   Industriens Fond and Erhvervsfremmebestyrelsen to **Prime** (both fund TechBBQ
+   by GRANT, which never lands in `Deal 2026`), Skytek to Core, Humandone to
+   Challenger, Jyske Bank Growth to Pioneer.
+2. **`Partnership Tier (from Tier)`** — the deal-derived band, the normal path.
+3. **`NO_CONTRACT_TIERS`** — fills a MISSING tier only. Crescita Partners.
+4. No band means the row is skipped and named, never swept into a generic group.
+
+Plus `HIDDEN_UNTIL`: Repodo is embargoed until 26 August and drops out on its own,
+read from the clock every run.
+
+**Investor, Tailored, Academic and Other are gone as bands.** They were values of
+`Partnership Type 2026`; once the price places everyone, an "Investor" partner has
+a deal and therefore a band. Seven tiers ship (International resolves to 0).
+
+`cols` is now Auri's spec from the same file — 4/4/4 for Prime, Main, Conqueror,
+5 for the middle, 6 for Community — replacing the sqrt(3n) guess. The ladder is
+monotonic by construction, so handoff 20's clamp never fires.
+
+### Three artwork bugs, found by comparing against the live wall
+
+**Novo Nordisk Foundation had the wrong logo** (Auri: "Novo nordisk has different
+logo"). Six library files match that name and the sync took the first SVG
+alphabetically, `Novo Nordisk Foundation 2.svg` — the stacked wordmark with no
+mark. The library already HELD the right artwork as
+`Novo Nordisk Foundation Horizontal.svg`, the ring plus wordmark techbbq.dk
+serves. Nothing needed importing; `DEMOTED_FILES` stops the tie-break choosing on
+sort order, the same pattern `lib/logoPick.ts` uses.
+
+**Industriens Fond was GREEN on the Prime wall.** Its only library file was
+`Industriens Fond Colour.png`, luminance 198 (light) and saturation 0.61. The tone
+check passed it and `hasColour()` skipped it for not being an SVG, so a colour
+logo shipped on a #0d0d0d wall. Airtable held a pure white SVG all along, now
+imported as `Industriens Fond White.svg`.
+
+The hole is closed properly: `rasterSaturation()` measures mean ink saturation for
+every raster in the library, and `wallReady` rejects above 0.08. The roster audit
+got the same fix.
+
+**But saturation is a DEMOTION, not a disqualification.** The first version of that
+rule dropped Creative Business Network off the wall: its mark is a multicoloured
+gem, in Airtable as a PNG and nowhere as a vector. Enforcing a knockout rule by
+deleting the partner is enforcing it against the partner. A light-but-coloured file
+now ships as a last resort (`how: "coloured fallback"`) and is reported under
+NOT WHITE KNOCKOUT so the choice stays visible.
+
+### Two more fixes the comparison surfaced
+
+**SHE/THEY Club was missing.** The picker took the first SVG in the cell and gave
+up when it turned out to be a sheet export on an opaque rectangle. The cell's
+SECOND file is clean knockout art. The download now walks the candidates and keeps
+the first plate-free one; only the plate check gets a retry, since it is the one
+rejection where another file in the same cell is routinely fine.
+
+**ProWoc drew twice on the Community wall.** It sits in the view twice under two
+names, and the library holds a file under each — same mark, two paths, so the
+path-only dupe check kept both. It now compares the SILHOUETTE too, at a much
+tighter bar than the library-match threshold (`SAME_MARK_IN_TIER = 0.02` against
+`SAME_LOGO = 0.12`): this check DROPS a partner, and two unrelated wordmarks of
+similar length score close on silhouette alone. ProWoc's two files measure 0.000.
+
+### Verified
+
+- `GET /api/partners` diffed against `partner-tiers-report.json`: 217 vs 217, zero
+  disagreements, zero one-sided partners.
+- `npm test` — 369 passed (8 files). `npx tsc --noEmit` clean. Test count fell
+  385 → 369 across the session because the Investor, Tailored, Academic and Other
+  walls no longer exist and the suite generates two tests per set.
+- Prime and Main rendered on #0d0d0d and looked at: four white knockouts, Novo
+  Nordisk with its ring, Industriens Fond white.
+- 48 name-matched logos rendered side by side against what the live wall serves.
+  Only Novo Nordisk was a different mark; in every other case the library holds
+  the same or better artwork (DanBAN's wordmark against a white blob, Radia Network
+  and ReDI School with their names, tighter crops on INCUBA and PSV).
+
+### Still open
+
+1. **AWS Startups** has no usable logo: Airtable holds three `.eps` files and
+   nothing converts them here. It has no `Company Link` either, so it resolves to
+   no tier and the live wall does not draw it. Needs the SVG from the AWS brand
+   page.
+2. **Product Therapy** has no logo attached and `Put on web` is off.
+3. **Creative Business Network** ships its coloured PNG. A white vector from the
+   partner would remove the only exception on the wall.
+4. Worth flagging upstream: `Beta Heath.svg` is misspelled in the library, and
+   Airtable has `Bio Innovation Institue` and `Medicon Valleyh Alliance` as typos
+   plus `Kalvebod Fælled Skole` twice.
+
+### File pointers
+
+- `scripts/sync-partner-tiers.mjs` — `PARTNER_TIERS`, `TIER_EXCEPTIONS`,
+  `NO_CONTRACT_TIERS`, `HIDDEN_UNTIL`, `rowTier()`, `DEMOTED_FILES`,
+  `rasterSaturation()`, `SAME_MARK_IN_TIER`. Two commands to re-sync:
+  `npm run logos:tiers -- --write` then `npm run logos:tiers:gen`.
+- `Desktop/GITHUB/airtable/lib/partners.ts` — THE REFERENCE. Read its header
+  before changing tier logic here. `lib/logoPick.ts` is the artwork chooser.
+- `src/data/partnerSets.ts` — `TIER_COLS` holds Auri's column spec; the roster
+  lives between the generated markers and must not be hand-edited.
+- Nothing is committed. Modified: `partnerSets.ts`, `partnerSets.test.ts`,
+  `simpleLayout.ts`, `logoLibrary.json`, `sync-partner-tiers.mjs`,
+  `partner-tiers-report.json`, `PROGRESS.md`. New: 20 files in `public/logos`.
+
+---
+
+## SESSION HANDOFF · 2026-08-19 (20): 18 logos imported, roster re-synced, every partner on a real tier
+
+### State: 963 logos · 220 partners on 15 named tier walls, each naming its tier
+
+Two things, both aimed at the 2026 thank-you posts:
+
+1. Every partner in Airtable's **Partner Deliverables 2026** view (228 records)
+   was checked against `public/logos`. 17 were missing. All 17 came out of the
+   record's own `Logo` attachment field, were rendered and eyeballed before
+   install, and are in the library. 945 → 962 files.
+2. The per-tier walls no longer all say "Thank you to our partners". Each one
+   names its tier: "Thank you to our Prime partners".
+
+### What was just done
+
+**Logos added** (all white variants — the Airtable field holds white artwork,
+which is what a dark thank-you wall needs):
+
+| Tier | Added |
+|---|---|
+| Conqueror | Innovation Centre Denmark |
+| Core | BioInnovation Institute · Copenhagen City (København mark) · Creative Business Network |
+| Challenger | Famly · Kromann Reumert · MADE (Future Manufacturers) · Stinto · Eastern Peak |
+| Community | AEPIFD · Career Club DK · Get Volt · IVCA · One Thirty Labs · SIT PORT (Město Plzeň) |
+
+IVCA and MADE also got their colour/black PNG. `npm run logos` regenerated
+`src/data/logoLibrary.json` (962 files, 17 newly measured for brightness).
+
+**Tier headlines** · new `tierHeadline(tier)` in `src/data/partnerSets.ts`
+returns `Thank you to our ${tier} partners`, keeping the roster casing because
+Prime and Core are proper names of the levels, not adjectives. Wired into all 16
+per-tier walls. The Investor and Community sets in the Life Science project
+already named their tier in lowercase and now use the same helper, so a series
+posted together reads consistently. `Other` (the unresolved bucket, 33 logos)
+and "All tiers, one wall" keep the generic line — one shows no tier anyone is
+thanked as, the other shows all of them.
+
+This kills gotcha #1 from handoff 19: **`Fill with <tier>` no longer resets the
+headline to the generic line**, so the six per-tier slides no longer need the
+headline typed by hand after filling.
+
+### Verified
+
+- `npm test` — 385 passed (8 files). `npx tsc --noEmit` clean.
+- Printed every entry of `PARTNER_SETS`: 16 tier walls carry their tier name,
+  `Other 1 / 2` and `Other 2 / 2` plus "All tiers, one wall" stay generic.
+- Every downloaded logo rendered to a contact sheet on a dark ground and looked
+  at before it was copied into `public/logos`. The first sheet was drawn on white
+  and came back blank, which is how it turned out they are all white artwork.
+
+### Two still missing, need a decision
+
+1. **AWS Startups** (Main) · Airtable has only `.eps` files, which nothing in the
+   repo converts. The library's `Amazon WSV.png` is the plain dark Amazon
+   wordmark, not the AWS Startups lockup, and is unusable on dark. Pull the SVG
+   off the AWS brand page.
+2. **Product Therapy** (Community) · no logo attached in Airtable at all.
+
+### Airtable data issues worth fixing at the source
+
+- Typos in `Company`: `Bio Innovation Institue`, `Medicon Valleyh Alliance`.
+- `Kalvebod Fælled Skole` exists as two separate records.
+- `Danish-Swedish summit` and `Swedish VIP Reception` are events, not partners,
+  and have no logo. Both excluded from the comparison.
+- Library file `public/logos/Beta Heath.svg` is misspelled (BETA.HEALTH). Rename
+  it or search will not find it.
+
+### Roster re-synced · 209 → 217 logos
+
+`npm run logos:tiers -- --write` then `npm run logos:tiers:gen` ran against the
+live view. It imported one more logo on its own (`Danske Bank Growth.svg`, whitened
+from the Airtable SVG — the library's existing `Danske Growth.svg` did not match by
+name), so 18 new files in `public/logos` and 963 in the manifest.
+
+Where the numbers come from, in case they look off again:
+
+| | Before | After |
+|---|---|---|
+| Rows in the Airtable view | 220 | **228** |
+| − `Put on web` off | 4 | 4 |
+| − unusable artwork | 3 | **2** |
+| − two rows sharing one logo file | 2 | 2 |
+| Roster rows across the per-tier walls | 211 | **220** |
+| Unique logos on "All tiers, one wall" | 209 | **217** |
+
+Creative Business Network resolved itself: the sync matches by NAME first and
+counts a light raster as wall-ready, so the white PNG added this session was
+picked up. Only **AWS Startups** (EPS only) and **SHE/THEY Club** (SVG carries an
+opaque background plate) are still unresolved.
+
+Tier movements: Conqueror 6→7, Core 11→12, Challenger 24→25, Community 99→100,
+Tailored 7→8, Academic 1→2, Other 33→37, Pioneer 7→6 (Repodo has `Put on web` off).
+
+### Tier source of truth: `Partnership Type 2026`, then the Tier lookup
+
+`scripts/sync-partner-tiers.mjs` read tier from **`Partnership Type 2026`** only,
+and that singleSelect is empty on 38 of the 228 rows. Every one of them landed in
+`Other` — including **Industriens Fond (Prime)** and **NVIDIA (Conqueror)**, so
+the Prime wall was showing 5 partners instead of 6.
+
+Fixed with a new `rowTier()` beside `tierOf()`: the singleSelect still wins where
+it holds a value, and `Partnership Tier (from Tier)` (filled on 225 rows) is the
+fallback. Auri chose this order on 2026-08-19 precisely because the two disagree
+on **NORNORM** (Conqueror against Community) and the singleSelect is the value a
+human set on that row.
+
+`Other` is now empty and the generator drops it, so there is no generic wall left.
+All 220 partners sit on a named tier:
+
+| Tier | Before re-sync | After | After the tier fix |
+|---|---|---|---|
+| Prime | 5 | 5 | **6** |
+| Main | 4 | 4 | 4 |
+| Conqueror | 6 | 7 | **9** |
+| Pioneer | 7 | 6 | 6 |
+| Core | 11 | 12 | **16** |
+| Challenger | 24 | 25 | **40** |
+| Community | 99 | 100 | **115** |
+| Investor / Tailored / International / Academic | 10 / 7 / 4 / 1 | 10 / 8 / 4 / 2 | 10 / 8 / 4 / 2 |
+| Other | 33 | 37 | **0** |
+
+### A hierarchy inversion the re-sync exposed
+
+With Prime at 6 and Main at 4, `ALL_PARTNERS_TIER_BANDS` gave Prime 5 columns and
+Main 4 — and fewer columns means BIGGER cells, so Main's four logos would have
+drawn larger than Prime's six on the one-image poster. It passed before only
+because Prime and Main happened to land on the same column count.
+
+The column count was doing two jobs at once. It now does them separately:
+
+- **Cell size** · a ladder band keeps the widest column count seen above it, even
+  when it holds fewer logos than that (`src/data/partnerSets.ts`,
+  `ALL_PARTNERS_TIER_BANDS`). Off the ladder a band still never exceeds its own
+  count, so Academic at 2 is not a half-empty row.
+- **Row fill** · clamped to the logos actually present
+  (`src/lib/simpleLayout.ts:1705`). Main lays out as one short row of 4, centred
+  by `emitTier`, at Prime's cell size.
+
+Two tests in `src/data/partnerSets.test.ts` encoded the old assumptions and were
+updated with the reasoning: the tier-order test no longer requires `Other` to
+exist, and the band invariant `cols <= count` now applies only off the ladder.
+
+### Verified
+
+- `npm test` — 381 passed (8 files). `npx tsc --noEmit` clean. The count moved
+  385 → 381 because the two `Other` walls no longer exist and the suite generates
+  two tests per set.
+- Printed every `PARTNER_SETS` entry: 15 tier walls, each headline naming its
+  tier, no `Other` wall.
+- `emitTier` centres every row (`simpleLayout.ts:1804`), so a short ladder row is
+  centred rather than left-aligned.
+
+### Next steps
+
+1. Re-export the six per-tier slides from handoff 19. Every tier gained partners
+   (Challenger 24 → 40, Core 11 → 16, Conqueror 6 → 9) and the headline now fills
+   itself in, so the handoff-19 workaround of typing it by hand is obsolete.
+2. Decide on AWS Startups and Product Therapy above.
+3. Consider filling `Partnership Type 2026` on the 38 empty Airtable rows anyway.
+   The fallback covers the walls, but anything else reading that field still sees
+   a blank.
+4. Nothing is committed. `git status`: 18 new files in `public/logos`, plus
+   modified `src/data/logoLibrary.json`, `src/data/partnerSets.ts`,
+   `src/data/partnerSets.test.ts`, `src/lib/simpleLayout.ts`,
+   `scripts/sync-partner-tiers.mjs` and `partner-tiers-report.json`.
+
+### File pointers
+
+- `src/data/partnerSets.ts` — `tierHeadline()` sits just above `PARTNER_SETS`;
+  `ALL_PARTNER_TIERS` / `ALL_PARTNERS_UNRESOLVED` are the generated blocks.
+- `public/logos/` — the 18 new files, all `<Name> White.svg` except `IVCA.png`,
+  `MADE.png` and `Creative Business Network White.png`.
+- `scripts/logo-manifest.mjs` (`npm run logos`) — rebuilds the manifest and
+  measures brightness. Runs automatically on `predev` / `prebuild`.
+- Airtable: base `appgXNjXJqpk9Ebxd`, table `tblTecOBecLQCNIeD`, view
+  `viw7FVbsTb9IRaWF0` (Partner Deliverables 2026). Token in
+  `Desktop/GITHUB/airtable/.env.local`.
+
+---
+
 ## SESSION HANDOFF · 2026-08-18 (19): Six per-tier thank-you slides (1:1)
 
 ### State: six designs in the shared Team library · no code change
