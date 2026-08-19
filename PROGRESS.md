@@ -6,6 +6,140 @@ not required reading.
 
 ---
 
+## SESSION HANDOFF · 2026-08-19 (24): the Community wall is the paying community partners
+
+### State: 113 partners across 7 walls · Community is 16 (should be 17, see below)
+
+Auri, 2026-08-19: "for the community partners we should have only the paying
+community partners", and on scope: "We are talking only about our Visual
+generator, not the Logo wall."
+
+**This is the one place the visual generator deliberately disagrees with
+techbbq.dk.** That site lists every partner and places everyone by deal size. A
+thank-you post thanks the ones who bought a community partnership.
+
+### The rule
+
+A partner belongs on the Community wall when the LINKED company in `Partners 2026`
+(`tbl9V6ZtxEbR4uELC`, via `Company Link`) has a `Partnership Type 2026` naming a
+commercial Community product:
+
+  Community Main · Community Conqueror · Community Core Plus · Community Core
+  Community Challenger · Community Academic · Community Explorer
+
+`Community Partnership (Non-commercial)` is the FREE product and never counts. 93
+rows carry it and none are thanked, whatever else sits on the record — a Barter
+Deal beside the free flag does not buy a place on a paid wall.
+
+**Why the product and not the price.** `Partnership Tier (Based on Deal Size)` —
+the same formula the deliverables row exposes as `Partnership Tier (from Tier)`,
+verified field by field — puts these partners on HIGHER walls, because the money
+is real: Symbion 110,000 is Core, Innovation District Copenhagen 300,000 is
+Conqueror, Clean 250,000 is Pioneer, Beyond Beta 750,000 is Prime. Only The
+Kitchen, at 0, lands in the Community band on price. So the band answers "how
+big" and the product answers "which wall".
+
+A partner is **moved, not copied** — Symbion leaves the Core wall for the Community
+wall, so nobody is thanked twice. Auri on that: "Nonno."
+
+**Beyond Beta is the single exception.** Its product is Community Main but its deal
+is 750,000 and it is one of four Prime partners. Auri: "beyond beta is paying much
+more", and "it is just not beyond beta". `COMMUNITY_TIER_KEEPS_ITS_BAND` holds it.
+
+### What it costs the other walls
+
+| Tier | Before | After |
+|---|---|---|
+| Prime | 4 | 4 |
+| Main | 3 | 3 |
+| Conqueror | 9 | 8 |
+| Pioneer | 11 | 10 |
+| Core | 34 | 29 |
+| Challenger | 52 | 43 |
+| Community | 104 | **16** |
+| **Roster** | 217 | **113** |
+
+On the wall: BETA.HEALTH, BioMedical Design, Business Turku, Clean, CSE, Dansk
+Industri, DTU Entrepreneurship, DTU Science Park, Health Tech Hub Copenhagen,
+INCUBA x KITCHEN, Innovation District Copenhagen, MADE (Future Manufacturers),
+Nordic Women's Health Hub, Odense Robotics, Symbion, TÜV SÜD.
+
+### The 17th is an AIRTABLE fix, not a code fix
+
+**The Kitchen (Aarhus University Startup Hub) is missing**, dropped by the in-tier
+duplicate check. The `INCUBA x KITCHEN` row's logo was swapped in Airtable earlier
+the same day, from `Incuba_logo_AT_center_payoff_hvid.svg` to
+`Kicthen_logo_tag_en_white_rgb.svg`, so both rows now resolve to the same KITCHEN
+mark and a wall cannot show one logo twice. The tile currently reads "KITCHEN
+Aarhus University" under the name INCUBA x KITCHEN.
+
+Put INCUBA's logo, or a combined INCUBA x KITCHEN lockup, back on that row and
+re-run the two commands — both tiles return and the wall is 17. Nothing to change
+here.
+
+### Nine partners dropped off the set entirely
+
+Deal-size band Community, no Community product, only a Barter Deal or an
+Add-on / Tailored: **Brighteye Ventures, Dealroom, Finaman.io, Get Volt,
+Knowledgeboard, Mesh, NORNORM, One Thirty Labs, TechSavvy.** Their band gives them
+no other wall, so they are on techbbq.dk and on no thank-you wall.
+
+That was my call, not Auri's — asked and answered with "what companies do you want
+to put?". The reasoning: none were on Auri's own list of the community partners,
+and a barter arrangement on a wall headed "thank you to our Community partners"
+misrepresents both sides. **If any of them should be thanked, the fix is to give
+them a Community product type in Airtable**, not a special case in this script.
+
+Every excluded row is named in the sync output and in `partner-tiers-report.json`
+under `nonPaying` (108 rows, grouped by reason).
+
+### How this was got wrong twice first, so nobody repeats it
+
+1. **"Any second selection counts as paying"** gave 22, including 13 companies
+   carrying the free flag alongside a barter or project deal (Embassy of India,
+   Talent Garden Denmark, the three NISS and three Projects partners). Wrong: the
+   flag settles it.
+2. **"Band is Community, then check the type"** gave 10 — the barter nine plus The
+   Kitchen. Wrong in the other direction: it never reaches the type check for the
+   17 whose deals put them in a higher band, which is the entire set Auri meant.
+
+The trap in both: `Partnership Type 2026` exists on BOTH tables. On the
+deliverables row it is a stale single-select that decides nothing; the one that
+matters is on the linked company. And "Community" means two unrelated things — a
+price band and a product family — which is why the wall is built from the product
+and the tier from the band.
+
+### Verified
+
+- Community 16 rendered on #0d0d0d as one 6-column wall: all white knockouts,
+  nothing clipped.
+- Prime still reads Beyond Beta, Erhvervsfremmebestyrelsen, Industriens Fond, Novo
+  Nordisk Foundation.
+- `npm test` — 353 passed. `npx tsc --noEmit` clean. `npm run build` clean.
+- The two tier fields compared company by company to confirm they agree, which is
+  what makes "band" and `Partnership Tier (from Tier)` interchangeable.
+
+### Next steps
+
+1. Fix the INCUBA x KITCHEN logo in Airtable, re-run the two commands, confirm 17.
+2. Re-export the tier slides. Every wall changed except Prime and Main.
+3. Decide whether "All tiers, one wall" should stay at 113 or show all 217. It
+   follows the same rule today, so the non-paying community partners are off it.
+4. The Erhvervshus Sjælland frieze still renders in a normal cell rather than
+   spanning a row (`wide` is dropped by the generator). Unchanged from handoff 22.
+
+### File pointers
+
+- `scripts/sync-partner-tiers.mjs` — `COMPANIES_TABLE`, `NON_COMMERCIAL`,
+  `PAYING_TIER`, `COMMUNITY_TIER_KEEPS_ITS_BAND`, `linkedTypes()`,
+  `communityProducts()`, `rowTier()`, the `nonPaying` bucket and its report block.
+- `partner-tiers-report.json` — `nonPaying[]`, every excluded row with its reason.
+- Airtable: deliverables `tblTecOBecLQCNIeD` view `viw7FVbsTb9IRaWF0`; companies
+  `tbl9V6ZtxEbR4uELC` (`Partners 2026`), fields `Partnership Type 2026` and
+  `Partnership Tier (Based on Deal Size)`.
+
+---
+
 ## SESSION HANDOFF · 2026-08-19 (23): the Exceptions column, and export names that say which wall
 
 ### State: 217 partners, 0 disagreements with techbbq.dk, 361 tests green

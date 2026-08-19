@@ -1,5 +1,5 @@
 {
- "fetchedRows": 229,
+ "fetchedRows": 230,
  "write": true,
  "tiers": [
   {
@@ -136,16 +136,6 @@
      "staged": ".logos-tiers\\Innovation Centre Denmark.svg"
     },
     {
-     "company": "Innovation District Copenhagen",
-     "tier": "Conqueror",
-     "partnerId": 2287,
-     "src": "/logos/Partners%202026/Innovation%20District%20Copenhagen.svg",
-     "how": "site artwork",
-     "file": "Innovation District Copenhagen logo.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Innovation District Copenhagen.svg"
-    },
-    {
      "company": "Nebius",
      "tier": "Conqueror",
      "partnerId": 2532,
@@ -199,16 +189,6 @@
      "file": "white-Business Region Göteborg.svg",
      "coloured": false,
      "staged": ".logos-tiers\\Business region Gothenburg AKA Gothenburg.svg"
-    },
-    {
-     "company": "Clean",
-     "tier": "Pioneer",
-     "partnerId": 237,
-     "src": "/logos/Partners%202026/Clean.svg",
-     "how": "site artwork",
-     "file": "white-Clean Cluster.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Clean.svg"
     },
     {
      "company": "DPIIT",
@@ -325,16 +305,6 @@
      "staged": ".logos-tiers\\Business Iceland.svg"
     },
     {
-     "company": "Business Turku",
-     "tier": "Core",
-     "partnerId": 2196,
-     "src": "/logos/Partners%202026/Business%20Turku.svg",
-     "how": "site artwork",
-     "file": "white-Businessturku.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Business Turku.svg"
-    },
-    {
      "company": "Cloudflare",
      "tier": "Core",
      "partnerId": 1673,
@@ -353,16 +323,6 @@
      "file": "white-City.svg",
      "coloured": false,
      "staged": ".logos-tiers\\Copenhagen.svg"
-    },
-    {
-     "company": "Copenhagen School of Entrepreneurship",
-     "tier": "Core",
-     "partnerId": 283,
-     "src": "/logos/Partners%202026/Copenhagen%20School%20of%20Entrepreneurship.svg",
-     "how": "site artwork",
-     "file": "CBSlogo_Copenhagen-School-of-Entrepreneurship.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Copenhagen School of Entrepreneurship.svg"
     },
     {
      "company": "Creative Business Network",
@@ -403,26 +363,6 @@
      "file": "Deloitte Consulting.svg",
      "coloured": false,
      "staged": ".logos-tiers\\Deloitte.svg"
-    },
-    {
-     "company": "DI",
-     "tier": "Core",
-     "partnerId": 312,
-     "src": "/logos/Partners%202026/DI.svg",
-     "how": "site artwork",
-     "file": "white-Dansk Industri.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\DI.svg"
-    },
-    {
-     "company": "DTU Entrepreneurship",
-     "tier": "Core",
-     "partnerId": 379,
-     "src": "/logos/Partners%202026/DTU%20Entrepreneurship.svg",
-     "how": "site artwork",
-     "file": "DTUSchool.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\DTU Entrepreneurship.svg"
     },
     {
      "company": "e-conomic",
@@ -595,16 +535,6 @@
      "staged": ".logos-tiers\\Skytek Nordics ApS.svg"
     },
     {
-     "company": "Symbion",
-     "tier": "Core",
-     "partnerId": 1179,
-     "src": "/logos/Partners%202026/Symbion.svg",
-     "how": "site artwork",
-     "file": "Symbion.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Symbion.svg"
-    },
-    {
      "company": "Teknologisk Institut (Humanoide robotter)",
      "tier": "Core",
      "partnerId": 1620,
@@ -690,26 +620,6 @@
      "staged": ".logos-tiers\\AstraZeneca.svg"
     },
     {
-     "company": "BETA.HEALTH",
-     "tier": "Challenger",
-     "partnerId": 2129,
-     "src": "/logos/Partners%202026/BETA.HEALTH.svg",
-     "how": "site artwork",
-     "file": "Beta-Heath.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\BETA.HEALTH.svg"
-    },
-    {
-     "company": "BioMedical Design",
-     "tier": "Challenger",
-     "partnerId": 2806,
-     "src": "/logos/Partners%202026/BioMedical%20Design.svg",
-     "how": "site artwork",
-     "file": "white-BioMedical Design.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\BioMedical Design.svg"
-    },
-    {
      "company": "Breeze IP",
      "tier": "Challenger",
      "partnerId": 2893,
@@ -780,16 +690,6 @@
      "staged": ".logos-tiers\\DanBAN - Danish Business Angels.svg"
     },
     {
-     "company": "DTU Science Park",
-     "tier": "Challenger",
-     "partnerId": 382,
-     "src": "/logos/Partners%202026/DTU%20Science%20Park.svg",
-     "how": "site artwork",
-     "file": "white-DTU Science Park.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\DTU Science Park.svg"
-    },
-    {
      "company": "Eastern Peak",
      "tier": "Challenger",
      "partnerId": 2908,
@@ -830,16 +730,6 @@
      "staged": ".logos-tiers\\Florent VC.svg"
     },
     {
-     "company": "Health Tech Hub Copenhagen",
-     "tier": "Challenger",
-     "partnerId": 575,
-     "src": "/logos/Partners%202026/Health%20Tech%20Hub%20Copenhagen.svg",
-     "how": "site artwork",
-     "file": "white-Health Tech Hub Copenhagen.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Health Tech Hub Copenhagen.svg"
-    },
-    {
      "company": "Heartcore Capital",
      "tier": "Challenger",
      "partnerId": 576,
@@ -868,16 +758,6 @@
      "file": "Humandone_white.svg",
      "coloured": false,
      "staged": ".logos-tiers\\Humandone.svg"
-    },
-    {
-     "company": "INCUBA x KITCHEN",
-     "tier": "Challenger",
-     "partnerId": 1683,
-     "src": "/logos/Partners%202026/INCUBA%20x%20KITCHEN.svg",
-     "how": "site artwork",
-     "file": "Kicthen_logo_tag_en_white_rgb.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\INCUBA x KITCHEN.svg"
     },
     {
      "company": "KLAK - Icelandic Startups",
@@ -930,16 +810,6 @@
      "staged": ".logos-tiers\\Legora AB.svg"
     },
     {
-     "company": "MADE",
-     "tier": "Challenger",
-     "partnerId": 2282,
-     "src": "/logos/Partners%202026/MADE.svg",
-     "how": "site artwork",
-     "file": "white-Futuremanufacturers.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\MADE.svg"
-    },
-    {
      "company": "Mazanti-Andersen",
      "tier": "Challenger",
      "partnerId": 810,
@@ -968,26 +838,6 @@
      "file": "Nordic Ninja In.svg",
      "coloured": false,
      "staged": ".logos-tiers\\Nordic Ninja.svg"
-    },
-    {
-     "company": "Nordic Women's Health Hub",
-     "tier": "Challenger",
-     "partnerId": 2151,
-     "src": "/logos/Partners%202026/Nordic%20Women's%20Health%20Hub.svg",
-     "how": "site artwork",
-     "file": "white-Nordic Women's Health Hub.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Nordic Women's Health Hub.svg"
-    },
-    {
-     "company": "Odense Robotics",
-     "tier": "Challenger",
-     "partnerId": 929,
-     "src": "/logos/Partners%202026/Odense%20Robotics.svg",
-     "how": "site artwork",
-     "file": "white-Odense Robotics.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Odense Robotics.svg"
     },
     {
      "company": "PROSA",
@@ -1130,16 +980,6 @@
      "staged": ".logos-tiers\\Third Law ApS.svg"
     },
     {
-     "company": "TÜV SÜD Denmark Medical Health Services",
-     "tier": "Challenger",
-     "partnerId": 1833,
-     "src": "/logos/Partners%202026/T%C3%9CV%20S%C3%9CD%20Denmark%20Medical%20Health%20Services.svg",
-     "how": "site artwork",
-     "file": "white-Tuvsud.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\TÜV SÜD Denmark Medical Health Services.svg"
-    },
-    {
      "company": "Vend Marketplaces",
      "tier": "Challenger",
      "partnerId": 1072,
@@ -1169,1046 +1009,180 @@
    "tier": "Community",
    "logos": [
     {
-     "company": "AceON Accelerator",
+     "company": "BETA.HEALTH",
      "tier": "Community",
-     "partnerId": 61,
-     "src": "/logos/Partners%202026/AceON%20Accelerator.svg",
+     "partnerId": 2129,
+     "paysVia": "Community Challenger Partnership",
+     "src": "/logos/Partners%202026/BETA.HEALTH.svg",
      "how": "site artwork",
-     "file": "white-Aceon.svg",
+     "file": "Beta-Heath.svg",
      "coloured": false,
-     "staged": ".logos-tiers\\AceON Accelerator.svg"
+     "staged": ".logos-tiers\\BETA.HEALTH.svg"
     },
     {
-     "company": "AEPIFD",
+     "company": "BioMedical Design",
      "tier": "Community",
-     "partnerId": 2855,
-     "src": "/logos/Partners%202026/AEPIFD.svg",
+     "partnerId": 2806,
+     "paysVia": "Community Core Partnership",
+     "src": "/logos/Partners%202026/BioMedical%20Design.svg",
      "how": "site artwork",
-     "file": "Aepifd.svg",
+     "file": "white-BioMedical Design.svg",
      "coloured": false,
-     "staged": ".logos-tiers\\AEPIFD.svg"
+     "staged": ".logos-tiers\\BioMedical Design.svg"
     },
     {
-     "company": "AI Oresund",
+     "company": "Business Turku",
      "tier": "Community",
-     "partnerId": 2899,
-     "src": "/logos/Partners%202026/AI%20Oresund.svg",
+     "partnerId": 2196,
+     "paysVia": "Community Core Partnership",
+     "src": "/logos/Partners%202026/Business%20Turku.svg",
      "how": "site artwork",
-     "file": "AiOresund.svg",
+     "file": "white-Businessturku.svg",
      "coloured": false,
-     "staged": ".logos-tiers\\AI Oresund.svg"
+     "staged": ".logos-tiers\\Business Turku.svg"
     },
     {
-     "company": "AIESEC in Denmark",
+     "company": "Clean",
      "tier": "Community",
-     "partnerId": 70,
-     "src": "/logos/Partners%202026/AIESEC%20in%20Denmark.svg",
+     "partnerId": 237,
+     "paysVia": "Community Main",
+     "src": "/logos/Partners%202026/Clean.svg",
      "how": "site artwork",
-     "file": "AiesecDenmark.svg",
+     "file": "white-Clean Cluster.svg",
      "coloured": false,
-     "staged": ".logos-tiers\\AIESEC in Denmark.svg"
+     "staged": ".logos-tiers\\Clean.svg"
     },
     {
-     "company": "AISTART Incubator - Business Helsinki",
+     "company": "Copenhagen School of Entrepreneurship",
      "tier": "Community",
-     "partnerId": 1610,
-     "src": "/logos/Partners%202026/AISTART%20Incubator%20-%20Business%20Helsinki.svg",
+     "partnerId": 283,
+     "paysVia": "Community Core Partnership",
+     "src": "/logos/Partners%202026/Copenhagen%20School%20of%20Entrepreneurship.svg",
      "how": "site artwork",
-     "file": "white-AIStart Incubator.svg",
+     "file": "CBSlogo_Copenhagen-School-of-Entrepreneurship.svg",
      "coloured": false,
-     "staged": ".logos-tiers\\AISTART Incubator - Business Helsinki.svg"
+     "staged": ".logos-tiers\\Copenhagen School of Entrepreneurship.svg"
     },
     {
-     "company": "Amela",
+     "company": "DI",
      "tier": "Community",
-     "partnerId": 2851,
-     "src": "/logos/Partners%202026/Amela.svg",
+     "partnerId": 312,
+     "paysVia": "Community Core Plus Partnership",
+     "src": "/logos/Partners%202026/DI.svg",
      "how": "site artwork",
-     "file": "Amela.svg",
+     "file": "white-Dansk Industri.svg",
      "coloured": false,
-     "staged": ".logos-tiers\\Amela.svg"
+     "staged": ".logos-tiers\\DI.svg"
     },
     {
-     "company": "Arctic Startup",
+     "company": "DTU Entrepreneurship",
      "tier": "Community",
-     "partnerId": 104,
-     "src": "/logos/Partners%202026/Arctic%20Startup.svg",
+     "partnerId": 379,
+     "paysVia": "Community Explorer Partnership",
+     "src": "/logos/Partners%202026/DTU%20Entrepreneurship.svg",
      "how": "site artwork",
-     "file": "white-ArcticStartup Mark.svg",
+     "file": "DTUSchool.svg",
      "coloured": false,
-     "staged": ".logos-tiers\\Arctic Startup.svg"
+     "staged": ".logos-tiers\\DTU Entrepreneurship.svg"
     },
     {
-     "company": "Auxxo Management GmbH",
+     "company": "DTU Science Park",
      "tier": "Community",
-     "partnerId": 121,
-     "src": "/logos/Partners%202026/Auxxo%20Management%20GmbH.svg",
+     "partnerId": 382,
+     "paysVia": "Community Core Partnership",
+     "src": "/logos/Partners%202026/DTU%20Science%20Park.svg",
      "how": "site artwork",
-     "file": "white-AUXXO Female Catalyst Fund.svg",
+     "file": "white-DTU Science Park.svg",
      "coloured": false,
-     "staged": ".logos-tiers\\Auxxo Management GmbH.svg"
+     "staged": ".logos-tiers\\DTU Science Park.svg"
     },
     {
-     "company": "Brighteye Ventures",
+     "company": "Health Tech Hub Copenhagen",
      "tier": "Community",
-     "partnerId": 184,
-     "src": "/logos/Partners%202026/Brighteye%20Ventures.svg",
+     "partnerId": 575,
+     "paysVia": "Community Challenger Partnership",
+     "src": "/logos/Partners%202026/Health%20Tech%20Hub%20Copenhagen.svg",
      "how": "site artwork",
-     "file": "BrightEyeVC.svg",
+     "file": "white-Health Tech Hub Copenhagen.svg",
      "coloured": false,
-     "staged": ".logos-tiers\\Brighteye Ventures.svg"
+     "staged": ".logos-tiers\\Health Tech Hub Copenhagen.svg"
     },
     {
-     "company": "Brotherhood for Professionals of Color (BPoC)",
+     "company": "INCUBA x KITCHEN",
      "tier": "Community",
-     "partnerId": 189,
-     "src": "/logos/Partners%202026/Brotherhood%20for%20Professionals%20of%20Color%20(BPoC).svg",
+     "partnerId": 1683,
+     "paysVia": "Community Core Partnership",
+     "src": "/logos/Partners%202026/INCUBA%20x%20KITCHEN.svg",
      "how": "site artwork",
-     "file": "white-BPOC.svg",
+     "file": "Kicthen_logo_tag_en_white_rgb.svg",
      "coloured": false,
-     "staged": ".logos-tiers\\Brotherhood for Professionals of Color (BPoC).svg"
+     "staged": ".logos-tiers\\INCUBA x KITCHEN.svg"
     },
     {
-     "company": "Career Club DK",
+     "company": "Innovation District Copenhagen",
      "tier": "Community",
-     "partnerId": 1450,
-     "src": "/logos/Partners%202026/Career%20Club%20DK.svg",
+     "partnerId": 2287,
+     "paysVia": "Community Conqueror Partnership",
+     "src": "/logos/Partners%202026/Innovation%20District%20Copenhagen.svg",
      "how": "site artwork",
-     "file": "carerclubdk.svg",
+     "file": "Innovation District Copenhagen logo.svg",
      "coloured": false,
-     "staged": ".logos-tiers\\Career Club DK.svg"
+     "staged": ".logos-tiers\\Innovation District Copenhagen.svg"
     },
     {
-     "company": "Clarma Capital",
+     "company": "MADE",
      "tier": "Community",
-     "partnerId": 1844,
-     "src": "/logos/Partners%202026/Clarma%20Capital.svg",
+     "partnerId": 2282,
+     "paysVia": "Community Challenger Partnership",
+     "src": "/logos/Partners%202026/MADE.svg",
      "how": "site artwork",
-     "file": "Clarma Capital.svg",
+     "file": "white-Futuremanufacturers.svg",
      "coloured": false,
-     "staged": ".logos-tiers\\Clarma Capital.svg"
+     "staged": ".logos-tiers\\MADE.svg"
     },
     {
-     "company": "Copenhagen Climate Week",
+     "company": "Nordic Women's Health Hub",
      "tier": "Community",
-     "partnerId": 2821,
-     "src": "/logos/Partners%202026/Copenhagen%20Climate%20Week.svg",
+     "partnerId": 2151,
+     "paysVia": "Community Challenger Partnership",
+     "src": "/logos/Partners%202026/Nordic%20Women's%20Health%20Hub.svg",
      "how": "site artwork",
-     "file": "CopenhagenClimate Week.svg",
+     "file": "white-Nordic Women's Health Hub.svg",
      "coloured": false,
-     "wrapsRaster": true,
-     "staged": ".logos-tiers\\Copenhagen Climate Week.svg"
+     "staged": ".logos-tiers\\Nordic Women's Health Hub.svg"
     },
     {
-     "company": "Copenhagen Institute for Futures Studies",
+     "company": "Odense Robotics",
      "tier": "Community",
-     "partnerId": 1932,
-     "src": "/logos/Partners%202026/Copenhagen%20Institute%20for%20Futures%20Studies.svg",
+     "partnerId": 929,
+     "paysVia": "Community Core Partnership",
+     "src": "/logos/Partners%202026/Odense%20Robotics.svg",
      "how": "site artwork",
-     "file": "CopenhagenInstitute.svg",
+     "file": "white-Odense Robotics.svg",
      "coloured": false,
-     "staged": ".logos-tiers\\Copenhagen Institute for Futures Studies.svg"
+     "staged": ".logos-tiers\\Odense Robotics.svg"
     },
     {
-     "company": "Creative Girls Club",
+     "company": "Symbion",
      "tier": "Community",
-     "partnerId": 2779,
-     "src": "/logos/Partners%202026/Creative%20Girls%20Club.svg",
+     "partnerId": 1179,
+     "paysVia": "Community Core Partnership",
+     "src": "/logos/Partners%202026/Symbion.svg",
      "how": "site artwork",
-     "file": "white-Creative Girls Club.svg",
+     "file": "Symbion.svg",
      "coloured": false,
-     "staged": ".logos-tiers\\Creative Girls Club.svg"
+     "staged": ".logos-tiers\\Symbion.svg"
     },
     {
-     "company": "Crescita Partners",
+     "company": "TÜV SÜD Denmark Medical Health Services",
      "tier": "Community",
-     "partnerId": 0,
-     "src": "/logos/Partners%202026/Crescita%20Partners.svg",
+     "partnerId": 1833,
+     "paysVia": "Community Challenger Partnership",
+     "src": "/logos/Partners%202026/T%C3%9CV%20S%C3%9CD%20Denmark%20Medical%20Health%20Services.svg",
      "how": "site artwork",
-     "file": "Crescita partners.svg",
+     "file": "white-Tuvsud.svg",
      "coloured": false,
-     "staged": ".logos-tiers\\Crescita Partners.svg"
-    },
-    {
-     "company": "Czech Founders z.ú.",
-     "tier": "Community",
-     "partnerId": 1882,
-     "src": "/logos/Partners%202026/Czech%20Founders%20z.%C3%BA.svg",
-     "how": "site artwork",
-     "file": "CZech-Founders.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Czech Founders z.ú.svg"
-    },
-    {
-     "company": "Danish Startup Group",
-     "tier": "Community",
-     "partnerId": 373,
-     "src": "/logos/Partners%202026/Danish%20Startup%20Group.svg",
-     "how": "site artwork",
-     "file": "white-Danish Startup Group.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Danish Startup Group.svg"
-    },
-    {
-     "company": "Daya Ventures",
-     "tier": "Community",
-     "partnerId": 1874,
-     "src": "/logos/Partners%202026/Daya%20Ventures.svg",
-     "how": "site artwork",
-     "file": "DayaVentures.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Daya Ventures.svg"
-    },
-    {
-     "company": "Dealroom",
-     "tier": "Community",
-     "partnerId": 322,
-     "src": "/logos/Partners%202026/Dealroom.svg",
-     "how": "site artwork",
-     "file": "white-Dealroom.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Dealroom.svg"
-    },
-    {
-     "company": "Durana Tech Park",
-     "tier": "Community",
-     "partnerId": 2820,
-     "src": "/logos/Partners%202026/Durana%20Tech%20Park.svg",
-     "how": "site artwork",
-     "file": "Durana Tech Park.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Durana Tech Park.svg"
-    },
-    {
-     "company": "EIT Urban Mobility",
-     "tier": "Community",
-     "partnerId": 1623,
-     "src": "/logos/Partners%202026/EIT%20Urban%20Mobility.svg",
-     "how": "site artwork",
-     "file": "white-UrbanMobility.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\EIT Urban Mobility.svg"
-    },
-    {
-     "company": "Embassy of India",
-     "tier": "Community",
-     "partnerId": 2783,
-     "src": "/logos/Partners%202026/Embassy%20of%20India.svg",
-     "how": "site artwork",
-     "file": "white-Indianembassy.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Embassy of India.svg"
-    },
-    {
-     "company": "EU:CO",
-     "tier": "Community",
-     "partnerId": 2852,
-     "src": "/logos/Partners%202026/EU-CO.svg",
-     "how": "site artwork",
-     "file": "Euco.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\EU-CO.svg"
-    },
-    {
-     "company": "European Investment Fund",
-     "tier": "Community",
-     "partnerId": 1744,
-     "src": "/logos/Partners%202026/European%20Investment%20Fund.svg",
-     "how": "site artwork",
-     "file": "European Investment Fund.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\European Investment Fund.svg"
-    },
-    {
-     "company": "European Space Agency Business Incubation Centre Denmark",
-     "tier": "Community",
-     "partnerId": 456,
-     "src": "/logos/Partners%202026/European%20Space%20Agency%20Business%20Incubation%20Centre%20Denmark.svg",
-     "how": "site artwork",
-     "file": "ESA BIC logo_white.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\European Space Agency Business Incubation Centre Denmark.svg"
-    },
-    {
-     "company": "Even Founders",
-     "tier": "Community",
-     "partnerId": 465,
-     "src": "/logos/Partners%202026/Even%20Founders.svg",
-     "how": "site artwork",
-     "file": "Even Founders.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Even Founders.svg"
-    },
-    {
-     "company": "FailForward by ForwardThinks",
-     "tier": "Community",
-     "partnerId": 471,
-     "src": "/logos/Partners%202026/FailForward%20by%20ForwardThinks.svg",
-     "how": "site artwork",
-     "file": "FailForward.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\FailForward by ForwardThinks.svg"
-    },
-    {
-     "company": "Femtech Studios",
-     "tier": "Community",
-     "partnerId": 478,
-     "src": "/logos/Partners%202026/Femtech%20Studios.svg",
-     "how": "site artwork",
-     "file": "white-Femtechstudios.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Femtech Studios.svg"
-    },
-    {
-     "company": "Finaman.io",
-     "tier": "Community",
-     "partnerId": 483,
-     "src": "/logos/Partners%202026/Finaman.io.svg",
-     "how": "site artwork",
-     "file": "finamanAI.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Finaman.io.svg"
-    },
-    {
-     "company": "Foras Ventures",
-     "tier": "Community",
-     "partnerId": 1569,
-     "src": "/logos/Partners%202026/Foras%20Ventures.svg",
-     "how": "site artwork",
-     "file": "ForasVentures.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Foras Ventures.svg"
-    },
-    {
-     "company": "Founders Running Club",
-     "tier": "Community",
-     "partnerId": 505,
-     "src": "/logos/Partners%202026/Founders%20Running%20Club.svg",
-     "how": "site artwork",
-     "file": "FoundersRunningClub.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Founders Running Club.svg"
-    },
-    {
-     "company": "French Tech Copenhagen",
-     "tier": "Community",
-     "partnerId": 2874,
-     "src": "/logos/Partners%202026/French%20Tech%20Copenhagen.svg",
-     "how": "site artwork",
-     "file": "La French tech Copenhagen.svg",
-     "coloured": true,
-     "wrapsRaster": true,
-     "staged": ".logos-tiers\\French Tech Copenhagen.svg"
-    },
-    {
-     "company": "Futuro Perfecto / Horizon Deep Tech Summit",
-     "tier": "Community",
-     "partnerId": 2861,
-     "src": "/logos/Partners%202026/Futuro%20Perfecto%20-%20Horizon%20Deep%20Tech%20Summit.svg",
-     "how": "site artwork",
-     "file": "HorizonDeepTechSummit.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Futuro Perfecto - Horizon Deep Tech Summit.svg"
-    },
-    {
-     "company": "Futuro Perfecto Innovation",
-     "tier": "Community",
-     "partnerId": 2861,
-     "src": "/logos/Partners%202026/Futuro%20Perfecto%20Innovation.svg",
-     "how": "site artwork",
-     "file": "Futuro Perfect.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Futuro Perfecto Innovation.svg"
-    },
-    {
-     "company": "Get Volt",
-     "tier": "Community",
-     "partnerId": 2963,
-     "src": "/logos/Partners%202026/Get%20Volt.svg",
-     "how": "site artwork",
-     "file": "Getvolt.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Get Volt.svg"
-    },
-    {
-     "company": "Global Startup Awards (XO Group ApS)",
-     "tier": "Community",
-     "partnerId": 1810,
-     "src": "/logos/Partners%202026/Global%20Startup%20Awards%20(XO%20Group%20ApS).svg",
-     "how": "site artwork",
-     "file": "Global Startup Awards.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Global Startup Awards (XO Group ApS).svg"
-    },
-    {
-     "company": "Global Stratalogues",
-     "tier": "Community",
-     "partnerId": 2929,
-     "src": "/logos/Partners%202026/Global%20Stratalogues.svg",
-     "how": "site artwork",
-     "file": "Global Stratologues.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Global Stratalogues.svg"
-    },
-    {
-     "company": "Gothenburg Tech Week",
-     "tier": "Community",
-     "partnerId": 2730,
-     "src": "/logos/Partners%202026/Gothenburg%20Tech%20Week.svg",
-     "how": "site artwork",
-     "file": "white-Gothenburg Tech Week.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Gothenburg Tech Week.svg"
-    },
-    {
-     "company": "Greeks in the Nordics",
-     "tier": "Community",
-     "partnerId": 2925,
-     "src": "/logos/Partners%202026/Greeks%20in%20the%20Nordics.svg",
-     "how": "site artwork",
-     "file": "Greek In The Nordics.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Greeks in the Nordics.svg"
-    },
-    {
-     "company": "HackYourFuture Denmark",
-     "tier": "Community",
-     "partnerId": 567,
-     "src": "/logos/Partners%202026/HackYourFuture%20Denmark.svg",
-     "how": "site artwork",
-     "file": "Hack Your Future.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\HackYourFuture Denmark.svg"
-    },
-    {
-     "company": "Humble AI Limited",
-     "tier": "Community",
-     "partnerId": 2690,
-     "src": "/logos/Partners%202026/Humble%20AI%20Limited.svg",
-     "how": "site artwork",
-     "file": "white-HumbleAI.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Humble AI Limited.svg"
-    },
-    {
-     "company": "IDA",
-     "tier": "Community",
-     "partnerId": 626,
-     "src": "/logos/Partners%202026/IDA.svg",
-     "how": "site artwork",
-     "file": "white-IDA White.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\IDA.svg"
-    },
-    {
-     "company": "Ignite Sweden",
-     "tier": "Community",
-     "partnerId": 635,
-     "src": "/logos/Partners%202026/Ignite%20Sweden.svg",
-     "how": "site artwork",
-     "file": "white-Ignite.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Ignite Sweden.svg"
-    },
-    {
-     "company": "imec vzw",
-     "tier": "Community",
-     "partnerId": 2691,
-     "src": "/logos/Partners%202026/imec%20vzw.svg",
-     "how": "site artwork",
-     "file": "white-Imec.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\imec vzw.svg"
-    },
-    {
-     "company": "Indian Chamber of Commerce",
-     "tier": "Community",
-     "partnerId": 2731,
-     "src": "/logos/Partners%202026/Indian%20Chamber%20of%20Commerce.svg",
-     "how": "site artwork",
-     "file": "Indian Danish Chamber of Commerce.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Indian Chamber of Commerce.svg"
-    },
-    {
-     "company": "Indian Venture & Alternate Capital Association",
-     "tier": "Community",
-     "partnerId": 2064,
-     "src": "/logos/Partners%202026/Indian%20Venture%20%26%20Alternate%20Capital%20Association.svg",
-     "how": "site artwork",
-     "file": "white-IVCA.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Indian Venture & Alternate Capital Association.svg"
-    },
-    {
-     "company": "Innovation Skåne",
-     "tier": "Community",
-     "partnerId": 2875,
-     "src": "/logos/Partners%202026/Innovation%20Sk%C3%A5ne.svg",
-     "how": "site artwork",
-     "file": "Innovation Skane.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Innovation Skåne.svg"
-    },
-    {
-     "company": "INNOVX BUSINESS ACCELERATOR S.R.L.",
-     "tier": "Community",
-     "partnerId": 2686,
-     "src": "/logos/Partners%202026/INNOVX%20BUSINESS%20ACCELERATOR%20S.R.L.svg",
-     "how": "site artwork",
-     "file": "white-Innovx.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\INNOVX BUSINESS ACCELERATOR S.R.L.svg"
-    },
-    {
-     "company": "International Workplace Group",
-     "tier": "Community",
-     "partnerId": 2123,
-     "src": "/logos/Partners%202026/International%20Workplace%20Group.svg",
-     "how": "site artwork",
-     "file": "white-IWG.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\International Workplace Group.svg"
-    },
-    {
-     "company": "Kalvebod Fælled Skole",
-     "tier": "Community",
-     "partnerId": 711,
-     "src": "/logos/Partners%202026/Kalvebod%20F%C3%A6lled%20Skole.svg",
-     "how": "site artwork",
-     "file": "kalvebod  Skole.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Kalvebod Fælled Skole.svg"
-    },
-    {
-     "company": "Knowledgeboard",
-     "tier": "Community",
-     "partnerId": 2881,
-     "src": "/logos/Partners%202026/Knowledgeboard.svg",
-     "how": "site artwork",
-     "file": "Knowledgeboard.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Knowledgeboard.svg"
-    },
-    {
-     "company": "Københavns university",
-     "tier": "Community",
-     "partnerId": 1652,
-     "src": "/logos/Partners%202026/K%C3%B8benhavns%20university.svg",
-     "how": "site artwork",
-     "file": "Kobenhavns Universitet.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Københavns university.svg"
-    },
-    {
-     "company": "LITHUANIABIO",
-     "tier": "Community",
-     "partnerId": 2485,
-     "src": "/logos/Partners%202026/LITHUANIABIO.svg",
-     "how": "site artwork",
-     "file": "white-Lithuania Bio.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\LITHUANIABIO.svg"
-    },
-    {
-     "company": "Lithuanian Professionals in Copenhagen",
-     "tier": "Community",
-     "partnerId": 1860,
-     "src": "/logos/Partners%202026/Lithuanian%20Professionals%20in%20Copenhagen.svg",
-     "how": "site artwork",
-     "file": "LPC.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Lithuanian Professionals in Copenhagen.svg"
-    },
-    {
-     "company": "Lithuanian Youth Society In Denmark",
-     "tier": "Community",
-     "partnerId": 1804,
-     "src": "/logos/Partners%202026/Lithuanian%20Youth%20Society%20In%20Denmark.svg",
-     "how": "site artwork",
-     "file": "LYS Short Logo White.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Lithuanian Youth Society In Denmark.svg"
-    },
-    {
-     "company": "Medicon Valleyh Alliance",
-     "tier": "Community",
-     "partnerId": 1613,
-     "src": "/logos/Partners%202026/Medicon%20Valleyh%20Alliance.svg",
-     "how": "site artwork",
-     "file": "white-Medicon Valley Alliance.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Medicon Valleyh Alliance.svg"
-    },
-    {
-     "company": "Medicon Village",
-     "tier": "Community",
-     "partnerId": 2471,
-     "src": "/logos/Partners%202026/Medicon%20Village.svg",
-     "how": "site artwork",
-     "file": "white-Medicon Village.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Medicon Village.svg"
-    },
-    {
-     "company": "Mentorspace Lithuania, VšĮ",
-     "tier": "Community",
-     "partnerId": 2942,
-     "src": "/logos/Partners%202026/Mentorspace%20Lithuania%2C%20V%C5%A1%C4%AE.svg",
-     "how": "site artwork",
-     "file": "LTBB White.svg",
-     "coloured": true,
-     "staged": ".logos-tiers\\Mentorspace Lithuania, VšĮ.svg"
-    },
-    {
-     "company": "Mesh",
-     "tier": "Community",
-     "partnerId": 820,
-     "src": "/logos/Partners%202026/Mesh.svg",
-     "how": "site artwork",
-     "file": "Mesh_Logo_MeshMatrikel1_RGB_White.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Mesh.svg"
-    },
-    {
-     "company": "Nordic Blockchain Association",
-     "tier": "Community",
-     "partnerId": 886,
-     "src": "/logos/Partners%202026/Nordic%20Blockchain%20Association.svg",
-     "how": "site artwork",
-     "file": "Nordic-BlockchainAssociation.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Nordic Blockchain Association.svg"
-    },
-    {
-     "company": "Nordic Music Tech",
-     "tier": "Community",
-     "partnerId": 895,
-     "src": "/logos/Partners%202026/Nordic%20Music%20Tech.svg",
-     "how": "site artwork",
-     "file": "white-Nordic Music Tech.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Nordic Music Tech.svg"
-    },
-    {
-     "company": "NORNORM",
-     "tier": "Community",
-     "partnerId": 907,
-     "src": "/logos/Partners%202026/NORNORM.svg",
-     "how": "site artwork",
-     "file": "nornorm.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\NORNORM.svg"
-    },
-    {
-     "company": "Norway Health Tech",
-     "tier": "Community",
-     "partnerId": 2715,
-     "src": "/logos/Partners%202026/Norway%20Health%20Tech.svg",
-     "how": "site artwork",
-     "file": "white-Norway Health Tech.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Norway Health Tech.svg"
-    },
-    {
-     "company": "Nova Talent",
-     "tier": "Community",
-     "partnerId": 2680,
-     "src": "/logos/Partners%202026/Nova%20Talent.svg",
-     "how": "site artwork",
-     "file": "white-Nova Talent.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Nova Talent.svg"
-    },
-    {
-     "company": "NTNU Discovery",
-     "tier": "Community",
-     "partnerId": 917,
-     "src": "/logos/Partners%202026/NTNU%20Discovery.svg",
-     "how": "site artwork",
-     "file": "NTNU.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\NTNU Discovery.svg"
-    },
-    {
-     "company": "One Thirty Labs",
-     "tier": "Community",
-     "partnerId": 2961,
-     "src": "/logos/Partners%202026/One%20Thirty%20Labs.svg",
-     "how": "site artwork",
-     "file": "One Thirty Labs.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\One Thirty Labs.svg"
-    },
-    {
-     "company": "Professional Women of Colour Network (ProWoc)",
-     "tier": "Community",
-     "partnerId": 996,
-     "src": "/logos/Partners%202026/Professional%20Women%20of%20Colour%20Network%20(ProWoc).svg",
-     "how": "site artwork",
-     "file": "ProWoc.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Professional Women of Colour Network (ProWoc).svg"
-    },
-    {
-     "company": "PropTech Denmark",
-     "tier": "Community",
-     "partnerId": 993,
-     "src": "/logos/Partners%202026/PropTech%20Denmark.svg",
-     "how": "site artwork",
-     "file": "PropTech Denmark White.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\PropTech Denmark.svg"
-    },
-    {
-     "company": "PWN Copenhagen",
-     "tier": "Community",
-     "partnerId": 2533,
-     "src": "/logos/Partners%202026/PWN%20Copenhagen.svg",
-     "how": "site artwork",
-     "file": "white-PWN Copenhagen.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\PWN Copenhagen.svg"
-    },
-    {
-     "company": "Radia Network",
-     "tier": "Community",
-     "partnerId": 1939,
-     "src": "/logos/Partners%202026/Radia%20Network.svg",
-     "how": "site artwork",
-     "file": "Radia Network.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Radia Network.svg"
-    },
-    {
-     "company": "REBBLS",
-     "tier": "Community",
-     "partnerId": 2884,
-     "src": "/logos/Partners%202026/REBBLS.svg",
-     "how": "site artwork",
-     "file": "rebbls.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\REBBLS.svg"
-    },
-    {
-     "company": "ReDI School of Digital Integration",
-     "tier": "Community",
-     "partnerId": 1018,
-     "src": "/logos/Partners%202026/ReDI%20School%20of%20Digital%20Integration.svg",
-     "how": "site artwork",
-     "file": "Redi School.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\ReDI School of Digital Integration.svg"
-    },
-    {
-     "company": "Royal Danish Academy",
-     "tier": "Community",
-     "partnerId": 1621,
-     "src": "/logos/Partners%202026/Royal%20Danish%20Academy.svg",
-     "how": "site artwork",
-     "file": "white-Royal Danish Academy.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Royal Danish Academy.svg"
-    },
-    {
-     "company": "SDU Startup Station",
-     "tier": "Community",
-     "partnerId": 1077,
-     "src": "/logos/Partners%202026/SDU%20Startup%20Station.svg",
-     "how": "site artwork",
-     "file": "white-SDU Startup Station.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\SDU Startup Station.svg"
-    },
-    {
-     "company": "SHE/THEY Club",
-     "tier": "Community",
-     "partnerId": 1570,
-     "src": "/logos/Partners%202026/SHE-THEY%20Club.svg",
-     "how": "site artwork",
-     "file": "SheyTheylogo.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\SHE-THEY Club.svg"
-    },
-    {
-     "company": "Shine",
-     "tier": "Community",
-     "partnerId": 2837,
-     "src": "/logos/Partners%202026/Shine.svg",
-     "how": "site artwork",
-     "file": "white-IVN Shine.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Shine.svg"
-    },
-    {
-     "company": "SISP Swedish Incubators & Science Parks",
-     "tier": "Community",
-     "partnerId": 2902,
-     "src": "/logos/Partners%202026/SISP%20Swedish%20Incubators%20%26%20Science%20Parks.svg",
-     "how": "site artwork",
-     "file": "Swedish Incubators and science Parks.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\SISP Swedish Incubators & Science Parks.svg"
-    },
-    {
-     "company": "SIT PORT",
-     "tier": "Community",
-     "partnerId": 2912,
-     "src": "/logos/Partners%202026/SIT%20PORT.svg",
-     "how": "site artwork",
-     "file": "Plzen.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\SIT PORT.svg"
-    },
-    {
-     "company": "Space Denmark",
-     "tier": "Community",
-     "partnerId": 1920,
-     "src": "/logos/Partners%202026/Space%20Denmark.svg",
-     "how": "site artwork",
-     "file": "Space Denmark.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Space Denmark.svg"
-    },
-    {
-     "company": "SPACES/REGUS",
-     "tier": "Community",
-     "partnerId": 2123,
-     "src": "/logos/Partners%202026/SPACES-REGUS.svg",
-     "how": "site artwork",
-     "file": "white-Spacesdot.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\SPACES-REGUS.svg"
-    },
-    {
-     "company": "Sri Sathya Sai Institute of Higher Learning",
-     "tier": "Community",
-     "partnerId": 2276,
-     "src": "/logos/Partners%202026/Sri%20Sathya%20Sai%20Institute%20of%20Higher%20Learning.svg",
-     "how": "site artwork",
-     "file": "white-Sri Sathya.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Sri Sathya Sai Institute of Higher Learning.svg"
-    },
-    {
-     "company": "START Paris",
-     "tier": "Community",
-     "partnerId": 1824,
-     "src": "/logos/Partners%202026/START%20Paris.svg",
-     "how": "site artwork",
-     "file": "START_Paris_white_SVG.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\START Paris.svg"
-    },
-    {
-     "company": "STHLM Music City",
-     "tier": "Community",
-     "partnerId": 1160,
-     "src": "/logos/Partners%202026/STHLM%20Music%20City.svg",
-     "how": "site artwork",
-     "file": "STHLM-Music-City (1).svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\STHLM Music City.svg"
-    },
-    {
-     "company": "Sustainary",
-     "tier": "Community",
-     "partnerId": 1175,
-     "src": "/logos/Partners%202026/Sustainary.svg",
-     "how": "site artwork",
-     "file": "Sustainary Svg.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Sustainary.svg"
-    },
-    {
-     "company": "Talent Garden Denmark",
-     "tier": "Community",
-     "partnerId": 1185,
-     "src": "/logos/Partners%202026/Talent%20Garden%20Denmark.svg",
-     "how": "site artwork",
-     "file": "white-TalentGardenW.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Talent Garden Denmark.svg"
-    },
-    {
-     "company": "Tech Arena",
-     "tier": "Community",
-     "partnerId": 1200,
-     "src": "/logos/Partners%202026/Tech%20Arena.svg",
-     "how": "site artwork",
-     "file": "Tech Arena  Sweden.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Tech Arena.svg"
-    },
-    {
-     "company": "TechSavvy",
-     "tier": "Community",
-     "partnerId": 2541,
-     "src": "/logos/Partners%202026/TechSavvy.svg",
-     "how": "site artwork",
-     "file": "white-Techsavvy.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\TechSavvy.svg"
-    },
-    {
-     "company": "TechStation",
-     "tier": "Community",
-     "partnerId": 1210,
-     "src": "/logos/Partners%202026/TechStation.svg",
-     "how": "site artwork",
-     "file": "white-Techstation.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\TechStation.svg"
-    },
-    {
-     "company": "Terkko Health Hub",
-     "tier": "Community",
-     "partnerId": 1872,
-     "src": "/logos/Partners%202026/Terkko%20Health%20Hub.svg",
-     "how": "site artwork",
-     "file": "white-Terkko Health Hub.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Terkko Health Hub.svg"
-    },
-    {
-     "company": "The Energy Consortium, IIT Madras",
-     "tier": "Community",
-     "partnerId": 2954,
-     "src": "/logos/Partners%202026/The%20Energy%20Consortium%2C%20IIT%20Madras.svg",
-     "how": "site artwork",
-     "file": "Indian Institute of Technology Madras.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\The Energy Consortium, IIT Madras.svg"
-    },
-    {
-     "company": "The Kitchen (Aarhus University Startup Hub)",
-     "tier": "Community",
-     "partnerId": 1639,
-     "src": "/logos/Partners%202026/The%20Kitchen%20(Aarhus%20University%20Startup%20Hub).svg",
-     "how": "site artwork",
-     "file": "The Kitchen.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\The Kitchen (Aarhus University Startup Hub).svg"
-    },
-    {
-     "company": "The Residency Vienna",
-     "tier": "Community",
-     "partnerId": 2688,
-     "src": "/logos/Partners%202026/The%20Residency%20Vienna.svg",
-     "how": "site artwork",
-     "file": "white-The Residency Vienna.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\The Residency Vienna.svg"
-    },
-    {
-     "company": "THINGS (The Innovation Growhouse Stockholm AB)",
-     "tier": "Community",
-     "partnerId": 1669,
-     "src": "/logos/Partners%202026/THINGS%20(The%20Innovation%20Growhouse%20Stockholm%20AB).svg",
-     "how": "site artwork",
-     "file": "white-Things.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\THINGS (The Innovation Growhouse Stockholm AB).svg"
-    },
-    {
-     "company": "TiE Bangalore (NISS)",
-     "tier": "Community",
-     "partnerId": 2277,
-     "src": "/logos/Partners%202026/TiE%20Bangalore%20(NISS).svg",
-     "how": "site artwork",
-     "file": "Tie Bangalore.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\TiE Bangalore (NISS).svg"
-    },
-    {
-     "company": "UbuntuBiz",
-     "tier": "Community",
-     "partnerId": 1269,
-     "src": "/logos/Partners%202026/UbuntuBiz.svg",
-     "how": "site artwork",
-     "file": "UbuntuBiz.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\UbuntuBiz.svg"
-    },
-    {
-     "company": "Venture Café Warsaw Foundation",
-     "tier": "Community",
-     "partnerId": 1851,
-     "src": "/logos/Partners%202026/Venture%20Caf%C3%A9%20Warsaw%20Foundation.svg",
-     "how": "site artwork",
-     "file": "Venture Cafe Warsaw.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Venture Café Warsaw Foundation.svg"
-    },
-    {
-     "company": "Voice AI SPace",
-     "tier": "Community",
-     "partnerId": 2545,
-     "src": "/logos/Partners%202026/Voice%20AI%20SPace.svg",
-     "how": "site artwork",
-     "file": "white-Voice AI Space.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Voice AI SPace.svg"
-    },
-    {
-     "company": "Wave by Vento",
-     "tier": "Community",
-     "partnerId": 2901,
-     "src": "/logos/Partners%202026/Wave%20by%20Vento.svg",
-     "how": "site artwork",
-     "file": "Wave Vento.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Wave by Vento.svg"
-    },
-    {
-     "company": "Women in Data Science AI and ML",
-     "tier": "Community",
-     "partnerId": 1352,
-     "src": "/logos/Partners%202026/Women%20in%20Data%20Science%20AI%20and%20ML.svg",
-     "how": "site artwork",
-     "file": "white-WomenInData Science.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Women in Data Science AI and ML.svg"
-    },
-    {
-     "company": "Women in Tech Sweden",
-     "tier": "Community",
-     "partnerId": 1821,
-     "src": "/logos/Partners%202026/Women%20in%20Tech%20Sweden.svg",
-     "how": "site artwork",
-     "file": "WOMENINTECHSW.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Women in Tech Sweden.svg"
-    },
-    {
-     "company": "WomenTech Network",
-     "tier": "Community",
-     "partnerId": 1856,
-     "src": "/logos/Partners%202026/WomenTech%20Network.svg",
-     "how": "site artwork",
-     "file": "Womentechnetwork.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\WomenTech Network.svg"
-    },
-    {
-     "company": "Young AI Leaders Linz",
-     "tier": "Community",
-     "partnerId": 2689,
-     "src": "/logos/Partners%202026/Young%20AI%20Leaders%20Linz.svg",
-     "how": "site artwork",
-     "file": "white-YoungAILeadersCommunity.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\Young AI Leaders Linz.svg"
-    },
-    {
-     "company": "ZOKU Copenhagen",
-     "tier": "Community",
-     "partnerId": 1374,
-     "src": "/logos/Partners%202026/ZOKU%20Copenhagen.svg",
-     "how": "site artwork",
-     "file": "white-Zoku.svg",
-     "coloured": false,
-     "staged": ".logos-tiers\\ZOKU Copenhagen.svg"
+     "staged": ".logos-tiers\\TÜV SÜD Denmark Medical Health Services.svg"
     }
    ]
   }
@@ -2234,6 +1208,12 @@
    "why": "Put on web is off"
   },
   {
+   "company": "Lithuanian Professionals of Copenhagen",
+   "tier": "",
+   "partnerId": 1860,
+   "why": "Put on web is off"
+  },
+  {
    "company": "Product Therapy: Copenhagen product community",
    "tier": "Community",
    "partnerId": 2888,
@@ -2250,6 +1230,656 @@
    "tier": "Core",
    "partnerId": 2194,
    "why": "Put on web is off"
+  }
+ ],
+ "nonPaying": [
+  {
+   "company": "AceON Accelerator",
+   "tier": "Community",
+   "partnerId": 61,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "AEPIFD",
+   "tier": "Community",
+   "partnerId": 2855,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "AI Oresund",
+   "tier": "Community",
+   "partnerId": 2899,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "AIESEC in Denmark",
+   "tier": "Community",
+   "partnerId": 70,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "AISTART Incubator - Business Helsinki",
+   "tier": "Community",
+   "partnerId": 1610,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Amela",
+   "tier": "Community",
+   "partnerId": 2851,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Arctic Startup",
+   "tier": "Community",
+   "partnerId": 104,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Auxxo Management GmbH",
+   "tier": "Community",
+   "partnerId": 121,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Brighteye Ventures",
+   "tier": "Community",
+   "partnerId": 184,
+   "why": "no Community product, only Add-on / Tailored"
+  },
+  {
+   "company": "Brotherhood for Professionals of Color (BPoC)",
+   "tier": "Community",
+   "partnerId": 189,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Business Helsinki",
+   "tier": "Community",
+   "partnerId": 1610,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Career Club DK",
+   "tier": "Community",
+   "partnerId": 1450,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Clarma Capital",
+   "tier": "Community",
+   "partnerId": 1844,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Copenhagen Climate Week",
+   "tier": "Community",
+   "partnerId": 2821,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Copenhagen Institute for Futures Studies",
+   "tier": "Community",
+   "partnerId": 1932,
+   "why": "no Partnership Type 2026 on the linked company"
+  },
+  {
+   "company": "Creative Girls Club",
+   "tier": "Community",
+   "partnerId": 2779,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Crescita Partners",
+   "tier": "Community",
+   "partnerId": 0,
+   "why": "no Partnership Type 2026 on the linked company"
+  },
+  {
+   "company": "Czech Founders z.ú.",
+   "tier": "Community",
+   "partnerId": 1882,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Danish Startup Group",
+   "tier": "Community",
+   "partnerId": 373,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Daya Ventures",
+   "tier": "Community",
+   "partnerId": 1874,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Dealroom",
+   "tier": "Community",
+   "partnerId": 322,
+   "why": "no Community product, only Barter Deal + NID Partnership"
+  },
+  {
+   "company": "Durana Tech Park",
+   "tier": "Community",
+   "partnerId": 2820,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "EIT Urban Mobility",
+   "tier": "Community",
+   "partnerId": 1623,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Embassy of India",
+   "tier": "Community",
+   "partnerId": 2783,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "EU:CO",
+   "tier": "Community",
+   "partnerId": 2852,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "European Investment Fund",
+   "tier": "Community",
+   "partnerId": 1744,
+   "why": "no Partnership Type 2026 on the linked company"
+  },
+  {
+   "company": "European Space Agency Business Incubation Centre Denmark",
+   "tier": "Community",
+   "partnerId": 456,
+   "why": "no Partnership Type 2026 on the linked company"
+  },
+  {
+   "company": "Even Founders",
+   "tier": "Community",
+   "partnerId": 465,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "FailForward by ForwardThinks",
+   "tier": "Community",
+   "partnerId": 471,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Femtech Studios",
+   "tier": "Community",
+   "partnerId": 478,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Finaman.io",
+   "tier": "Community",
+   "partnerId": 483,
+   "why": "no Community product, only Barter Deal"
+  },
+  {
+   "company": "Foras Ventures",
+   "tier": "Community",
+   "partnerId": 1569,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Founders Running Club",
+   "tier": "Community",
+   "partnerId": 505,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "French Tech Copenhagen",
+   "tier": "Community",
+   "partnerId": 2874,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Futuro Perfecto / Horizon Deep Tech Summit",
+   "tier": "Community",
+   "partnerId": 2861,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Futuro Perfecto Innovation",
+   "tier": "Community",
+   "partnerId": 2861,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Get Volt",
+   "tier": "Community",
+   "partnerId": 2963,
+   "why": "no Community product, only Barter Deal"
+  },
+  {
+   "company": "Global Startup Awards (XO Group ApS)",
+   "tier": "Community",
+   "partnerId": 1810,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Global Stratalogues",
+   "tier": "Community",
+   "partnerId": 2929,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Gothenburg Tech Week",
+   "tier": "Community",
+   "partnerId": 2730,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Greeks in the Nordics",
+   "tier": "Community",
+   "partnerId": 2925,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "HackYourFuture Denmark",
+   "tier": "Community",
+   "partnerId": 567,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Humble AI Limited",
+   "tier": "Community",
+   "partnerId": 2690,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "IDA",
+   "tier": "Community",
+   "partnerId": 626,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Ignite Sweden",
+   "tier": "Community",
+   "partnerId": 635,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "imec vzw",
+   "tier": "Community",
+   "partnerId": 2691,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Indian Chamber of Commerce",
+   "tier": "Community",
+   "partnerId": 2731,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Indian Venture & Alternate Capital Association",
+   "tier": "Community",
+   "partnerId": 2064,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Innovation Skåne",
+   "tier": "Community",
+   "partnerId": 2875,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "INNOVX BUSINESS ACCELERATOR S.R.L.",
+   "tier": "Community",
+   "partnerId": 2686,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "International Workplace Group",
+   "tier": "Community",
+   "partnerId": 2123,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Kalvebod Fælled Skole",
+   "tier": "Community",
+   "partnerId": 711,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Kalvebod Fælled Skole",
+   "tier": "Community",
+   "partnerId": 711,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Knowledgeboard",
+   "tier": "Community",
+   "partnerId": 2881,
+   "why": "no Community product, only Barter Deal"
+  },
+  {
+   "company": "Københavns university",
+   "tier": "Community",
+   "partnerId": 1652,
+   "why": "no Partnership Type 2026 on the linked company"
+  },
+  {
+   "company": "LITHUANIABIO",
+   "tier": "Community",
+   "partnerId": 2485,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Lithuanian Professionals in Copenhagen",
+   "tier": "Community",
+   "partnerId": 1860,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Lithuanian Youth Society In Denmark",
+   "tier": "Community",
+   "partnerId": 1804,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Medicon Valleyh Alliance",
+   "tier": "Community",
+   "partnerId": 1613,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Medicon Village",
+   "tier": "Community",
+   "partnerId": 2471,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Mentorspace Lithuania, VšĮ",
+   "tier": "Community",
+   "partnerId": 2942,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Mesh",
+   "tier": "Community",
+   "partnerId": 820,
+   "why": "no Community product, only Barter Deal"
+  },
+  {
+   "company": "Nordic Blockchain Association",
+   "tier": "Community",
+   "partnerId": 886,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Nordic Music Tech",
+   "tier": "Community",
+   "partnerId": 895,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "NORNORM",
+   "tier": "Community",
+   "partnerId": 907,
+   "why": "no Community product, only Barter Deal + Event Room"
+  },
+  {
+   "company": "NORNORM",
+   "tier": "Community",
+   "partnerId": 907,
+   "why": "no Community product, only Barter Deal + Event Room"
+  },
+  {
+   "company": "Norway Health Tech",
+   "tier": "Community",
+   "partnerId": 2715,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Nova Talent",
+   "tier": "Community",
+   "partnerId": 2680,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "NTNU Discovery",
+   "tier": "Community",
+   "partnerId": 917,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "One Thirty Labs",
+   "tier": "Community",
+   "partnerId": 2961,
+   "why": "no Community product, only Barter Deal"
+  },
+  {
+   "company": "Professional Women of Colour Network (ProWoc)",
+   "tier": "Community",
+   "partnerId": 996,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "PropTech Denmark",
+   "tier": "Community",
+   "partnerId": 993,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "ProWoc - Professional Women of Colour",
+   "tier": "Community",
+   "partnerId": 996,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "PWN Copenhagen",
+   "tier": "Community",
+   "partnerId": 2533,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Radia Network",
+   "tier": "Community",
+   "partnerId": 1939,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Radia Network",
+   "tier": "Community",
+   "partnerId": 1939,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "REBBLS",
+   "tier": "Community",
+   "partnerId": 2884,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "ReDI School of Digital Integration",
+   "tier": "Community",
+   "partnerId": 1018,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Royal Danish Academy",
+   "tier": "Community",
+   "partnerId": 1621,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "SDU Startup Station",
+   "tier": "Community",
+   "partnerId": 1077,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "SHE/THEY Club",
+   "tier": "Community",
+   "partnerId": 1570,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Shine",
+   "tier": "Community",
+   "partnerId": 2837,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "SISP Swedish Incubators & Science Parks",
+   "tier": "Community",
+   "partnerId": 2902,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "SIT PORT",
+   "tier": "Community",
+   "partnerId": 2912,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Space Denmark",
+   "tier": "Community",
+   "partnerId": 1920,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "SPACES/REGUS",
+   "tier": "Community",
+   "partnerId": 2123,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Sri Sathya Sai Institute of Higher Learning",
+   "tier": "Community",
+   "partnerId": 2276,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "START Paris",
+   "tier": "Community",
+   "partnerId": 1824,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "STHLM Music City",
+   "tier": "Community",
+   "partnerId": 1160,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Sustainary",
+   "tier": "Community",
+   "partnerId": 1175,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Talent Garden Denmark",
+   "tier": "Community",
+   "partnerId": 1185,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Tech Arena",
+   "tier": "Community",
+   "partnerId": 1200,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "TechSavvy",
+   "tier": "Community",
+   "partnerId": 2541,
+   "why": "no Community product, only Barter Deal + Core Partnership"
+  },
+  {
+   "company": "TechStation",
+   "tier": "Community",
+   "partnerId": 1210,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Terkko Health Hub",
+   "tier": "Community",
+   "partnerId": 1872,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "The Energy Consortium, IIT Madras",
+   "tier": "Community",
+   "partnerId": 2954,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "The Residency Vienna",
+   "tier": "Community",
+   "partnerId": 2688,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "THINGS (The Innovation Growhouse Stockholm AB)",
+   "tier": "Community",
+   "partnerId": 1669,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "TiE Bangalore (NISS)",
+   "tier": "Community",
+   "partnerId": 2277,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "UbuntuBiz",
+   "tier": "Community",
+   "partnerId": 1269,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Venture Café Warsaw Foundation",
+   "tier": "Community",
+   "partnerId": 1851,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Voice AI SPace",
+   "tier": "Community",
+   "partnerId": 2545,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Wave by Vento",
+   "tier": "Community",
+   "partnerId": 2901,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Women in Data Science AI and ML",
+   "tier": "Community",
+   "partnerId": 1352,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Women in Tech Sweden",
+   "tier": "Community",
+   "partnerId": 1821,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "WomenTech Network",
+   "tier": "Community",
+   "partnerId": 1856,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "Young AI Leaders Linz",
+   "tier": "Community",
+   "partnerId": 2689,
+   "why": "Community Partnership (Non-commercial)"
+  },
+  {
+   "company": "ZOKU Copenhagen",
+   "tier": "Community",
+   "partnerId": 1374,
+   "why": "Community Partnership (Non-commercial)"
   }
  ],
  "notWhite": [
@@ -2300,69 +1930,20 @@
    "staged": ".logos-tiers\\eryk.svg",
    "tone": "light",
    "why": "saturated colour in the artwork"
-  },
-  {
-   "company": "French Tech Copenhagen",
-   "tier": "Community",
-   "partnerId": 2874,
-   "src": "/logos/Partners%202026/French%20Tech%20Copenhagen.svg",
-   "how": "site artwork",
-   "file": "La French tech Copenhagen.svg",
-   "coloured": true,
-   "wrapsRaster": true,
-   "staged": ".logos-tiers\\French Tech Copenhagen.svg",
-   "tone": "light",
-   "why": "saturated colour in the artwork"
-  },
-  {
-   "company": "Mentorspace Lithuania, VšĮ",
-   "tier": "Community",
-   "partnerId": 2942,
-   "src": "/logos/Partners%202026/Mentorspace%20Lithuania%2C%20V%C5%A1%C4%AE.svg",
-   "how": "site artwork",
-   "file": "LTBB White.svg",
-   "coloured": true,
-   "staged": ".logos-tiers\\Mentorspace Lithuania, VšĮ.svg",
-   "tone": "light",
-   "why": "saturated colour in the artwork"
   }
  ],
  "dupes": [
   {
-   "tier": "Core",
+   "tier": "Community",
    "src": "/logos/Partners%202026/Copenhagen%20School%20of%20Entrepreneurship.svg",
    "kept": "Copenhagen School of Entrepreneurship",
    "dropped": "Copenhagen School of Entrepreneurship"
   },
   {
    "tier": "Community",
-   "src": "/logos/Partners%202026/Business%20Helsinki.svg",
-   "kept": "AISTART Incubator - Business Helsinki",
-   "dropped": "Business Helsinki"
-  },
-  {
-   "tier": "Community",
-   "src": "/logos/Partners%202026/Kalvebod%20F%C3%A6lled%20Skole.svg",
-   "kept": "Kalvebod Fælled Skole",
-   "dropped": "Kalvebod Fælled Skole"
-  },
-  {
-   "tier": "Community",
-   "src": "/logos/Partners%202026/NORNORM.svg",
-   "kept": "NORNORM",
-   "dropped": "NORNORM"
-  },
-  {
-   "tier": "Community",
-   "src": "/logos/Partners%202026/ProWoc%20-%20Professional%20Women%20of%20Colour.svg",
-   "kept": "Professional Women of Colour Network (ProWoc)",
-   "dropped": "ProWoc - Professional Women of Colour"
-  },
-  {
-   "tier": "Community",
-   "src": "/logos/Partners%202026/Radia%20Network.svg",
-   "kept": "Radia Network",
-   "dropped": "Radia Network"
+   "src": "/logos/Partners%202026/The%20Kitchen%20(Aarhus%20University%20Startup%20Hub).svg",
+   "kept": "INCUBA x KITCHEN",
+   "dropped": "The Kitchen (Aarhus University Startup Hub)"
   }
  ]
 }

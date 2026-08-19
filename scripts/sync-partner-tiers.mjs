@@ -266,9 +266,16 @@ function exceptionTier(raw) {
  *  rather than inventing one. */
 function rowTier(fields) {
   const company = fields["Company"];
+  // A typed instruction in `Exceptions` and the hardcoded floors still win: both
+  // are somebody saying "put this one here" about this specific partner.
+  const told = exceptionTier(fields["Exceptions"]) || TIER_EXCEPTIONS[nameKey(company)] || "";
+  if (told) return TIER_NAMES.has(told) ? told : "";
+  // A commercial Community product moves the partner to the Community wall,
+  // ahead of the deal-size band that would otherwise put it on a paid one.
+  if (communityProducts(fields).length && !COMMUNITY_TIER_KEEPS_ITS_BAND.has(nameKey(company))) {
+    return PAYING_TIER;
+  }
   const tier =
-    exceptionTier(fields["Exceptions"]) ||
-    TIER_EXCEPTIONS[nameKey(company)] ||
     tierOf(fields["Partnership Tier (from Tier)"]) ||
     NO_CONTRACT_TIERS[nameKey(company)] ||
     "";
@@ -295,6 +302,80 @@ do {
   records.push(...page.records);
   offset = page.offset;
 } while (offset);
+
+// ── WHO IS A PAYING COMMUNITY PARTNER ──────────────────────────────────────
+// Auri, 2026-08-19: "for the community partners we should have only the paying
+// community partners", and on scope: "We are talking only about our Visual
+// generator, not the Logo wall."
+//
+// This is the ONE place the visual generator deliberately disagrees with
+// techbbq.dk. That site lists every partner and places everyone by deal size; a
+// thank-you post thanks the ones who bought a community partnership.
+//
+// THE RULE. A partner belongs on the Community wall when the LINKED company in
+// `Partners 2026` (`tbl9V6ZtxEbR4uELC`, via `Company Link`) has a
+// `Partnership Type 2026` naming a commercial Community product:
+//
+//   Community Main · Community Conqueror · Community Core Plus · Community Core
+//   Community Challenger · Community Academic · Community Explorer
+//
+// `Community Partnership (Non-commercial)` is the FREE product and never counts.
+// 93 rows carry it and none of them are thanked, whatever else sits on the
+// record — a Barter Deal beside the free flag does not buy a place on a paid wall.
+//
+// WHY THE PRODUCT AND NOT THE PRICE. `Partnership Tier (Based on Deal Size)` (the
+// same formula the deliverables row exposes as `Partnership Tier (from Tier)`)
+// puts these partners on higher walls, because the money is real: Symbion 110,000
+// is Core, Innovation District Copenhagen 300,000 is Conqueror, Clean 250,000 is
+// Pioneer. Only The Kitchen, at 0, lands in the Community band on price. So the
+// deal-size band answers "how big", and the product answers "which wall".
+//
+// A partner named here is MOVED, not copied: Symbion leaves the Core wall for the
+// Community wall, so nobody is thanked twice. Auri on that: "Nonno."
+//
+// BEYOND BETA IS THE ONE EXCEPTION. Its product is Community Main, but its deal is
+// 750,000 and it is one of four Prime partners. Auri: "beyond beta is paying much
+// more", and "it is just not beyond beta". It keeps its Prime place.
+//
+// NOT ON THIS WALL, and the reason is worth writing down: nine partners whose
+// deal-size band is Community and whose type is a Barter Deal or an
+// Add-on / Tailored, with no Community product at all — Brighteye Ventures,
+// Dealroom, Finaman.io, Get Volt, Knowledgeboard, Mesh, NORNORM, One Thirty Labs,
+// TechSavvy. They are not community partners under this rule and their band gives
+// them no other wall, so they drop off the thank-you set. Every one is named in
+// the report.
+const COMPANIES_TABLE = "tbl9V6ZtxEbR4uELC"; // Partners 2026
+const NON_COMMERCIAL = "community partnership (non-commercial)";
+const PAYING_TIER = "Community";
+// Keyed like every other name table here: lowercased and space-collapsed.
+const COMMUNITY_TIER_KEEPS_ITS_BAND = new Set(["beyond beta"]);
+
+const companyTypes = new Map();
+{
+  let offset;
+  do {
+    const u = new URL(`https://api.airtable.com/v0/${BASE}/${COMPANIES_TABLE}`);
+    u.searchParams.set("pageSize", "100");
+    // Only the field this needs. The table is 2,744 rows with deal history back to
+    // 2019 and none of it is this script's business.
+    u.searchParams.append("fields[]", "Partnership Type 2026");
+    if (offset) u.searchParams.set("offset", offset);
+    const res = await fetch(u, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) throw new Error(`airtable ${res.status} on ${COMPANIES_TABLE}: ${await res.text()}`);
+    const page = await res.json();
+    for (const r of page.records) companyTypes.set(r.id, r.fields["Partnership Type 2026"] ?? []);
+    offset = page.offset;
+  } while (offset);
+}
+
+/** Every `Partnership Type 2026` selection on the companies this row links to. */
+const linkedTypes = (fields) =>
+  [...new Set((fields["Company Link"] ?? []).flatMap((id) => companyTypes.get(id) ?? []))];
+
+/** The commercial Community products on this row, ignoring the free one. Empty
+ *  means "not a paying community partner". */
+const communityProducts = (fields) =>
+  linkedTypes(fields).filter((t) => /^community/i.test(t.trim()) && t.trim().toLowerCase() !== NON_COMMERCIAL);
 
 // ── The library as it stands ────────────────────────────────────────────────
 const LIBRARY = JSON.parse(readFileSync("src/data/logoLibrary.json", "utf8"));
@@ -493,7 +574,7 @@ rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });
 if (WRITE) mkdirSync(PARTNER_DIR, { recursive: true });
 
-const held = [], imported = [], skipped = [], problems = [];
+const held = [], imported = [], skipped = [], problems = [], nonPaying = [];
 // Labels already written this run. A handful of companies sit in the view TWICE
 // (Radia Network, Copenhagen School of Entrepreneurship, NORNORM, ProWoc,
 // Kalvebod Fælled Skole) and both rows name their file after the company, so the
@@ -518,6 +599,26 @@ for (const r of records) {
   // with no `Company Link`, or a linked partner with no `Deal 2026`, is a data
   // gap to fill in Airtable and this is the list that names it.
   if (!tier) { skipped.push({ ...row, why: "no partnership tier (no Company Link, or the linked partner has no Deal 2026)" }); continue; }
+  // Community only: a non-commercial partner is not thanked on a paid-tier wall.
+  // Collected separately from `skipped` so the report can show the whole list at
+  // once — it is 82 partners, and "who dropped off the wall and why" is the
+  // question somebody will ask about this change.
+  if (tier === PAYING_TIER) {
+    const products = communityProducts(r.fields);
+    if (!products.length) {
+      // Either the free non-commercial product, or no community product at all
+      // (a barter or add-on partner the deal-size band dropped into this tier).
+      const types = linkedTypes(r.fields);
+      nonPaying.push({
+        ...row,
+        why: !types.length ? "no Partnership Type 2026 on the linked company"
+          : types.some((t) => t.trim().toLowerCase() === NON_COMMERCIAL) ? "Community Partnership (Non-commercial)"
+            : `no Community product, only ${types.join(" + ")}`,
+      });
+      continue;
+    }
+    row.paysVia = products.join(" + ");
+  }
 
   // ── THE ARTWORK ─────────────────────────────────────────────────────────
   // One source, no matching: the attachment techbbq.dk renders, downloaded and
@@ -680,9 +781,22 @@ console.log(`${records.length} rows in the view · library ${LIBRARY.length} log
 console.log(`already held : ${held.length}`);
 console.log(`${WRITE ? "imported    " : "would import"} : ${imported.length}`);
 console.log(`problems     : ${problems.length}`);
-console.log(`not on web   : ${skipped.length}\n`);
+console.log(`not on web   : ${skipped.length}`);
+console.log(`non-paying   : ${nonPaying.length}  (Community only)\n`);
 console.log("tier              logos");
 for (const t of TIER_ORDER) console.log(`  ${t.padEnd(16)}${String(byTier.get(t).length).padStart(4)}`);
+
+if (nonPaying.length) {
+  // Named in full, because this is the list somebody will ask about: these
+  // partners ARE on techbbq.dk and are NOT on the thank-you wall, by decision.
+  const byWhy = new Map();
+  for (const e of nonPaying) byWhy.set(e.why, [...(byWhy.get(e.why) ?? []), e.company]);
+  console.log(`\nCOMMUNITY, NOT PAYING (${nonPaying.length}) — on techbbq.dk, off the thank-you wall:`);
+  for (const [why, names] of [...byWhy].sort((a, b) => b[1].length - a[1].length)) {
+    console.log(`  ${names.length} × ${why}`);
+    console.log(`      ${names.sort().join(", ")}`);
+  }
+}
 
 if (problems.length) {
   console.log("\nPROBLEMS — each needs a human:");
@@ -715,6 +829,6 @@ writeFileSync("partner-tiers-report.json", JSON.stringify({
   fetchedRows: records.length,
   write: WRITE,
   tiers: TIER_ORDER.map((t) => ({ tier: t, logos: byTier.get(t) })),
-  problems, skipped, notWhite, dupes,
+  problems, skipped, nonPaying, notWhite, dupes,
 }, null, 1));
 console.log(`\nreport -> partner-tiers-report.json${WRITE ? "" : "  (dry run — nothing written to public/logos)"}`);

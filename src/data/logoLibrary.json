@@ -74,16 +74,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/AceON%20Accelerator.svg",
-    "name": "AceON Accelerator",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 4807,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Actnation.svg",
     "name": "Actnation",
     "tags": [],
@@ -178,16 +168,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/AEPIFD.svg",
-    "name": "AEPIFD",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 3046,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/AEPIFD%20White.svg",
     "name": "AEPIFD White",
     "tags": [],
@@ -228,30 +208,10 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/AI%20Oresund.svg",
-    "name": "AI Oresund",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 4395,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Ai2Ai.png",
     "name": "Ai2Ai",
     "tags": [],
     "bytes": 7399,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/AIESEC%20in%20Denmark.svg",
-    "name": "AIESEC in Denmark",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 18333,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -275,16 +235,6 @@
     "src": "/logos/AIStart%20Incubator.svg",
     "name": "AIStart Incubator",
     "tags": [],
-    "bytes": 5002,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/AISTART%20Incubator%20-%20Business%20Helsinki.svg",
-    "name": "AISTART Incubator - Business Helsinki",
-    "tags": [
-      "partners 2026"
-    ],
     "bytes": 5002,
     "toneAlgo": 2,
     "tone": "light"
@@ -405,16 +355,6 @@
     "src": "/logos/Amela.svg",
     "name": "Amela",
     "tags": [],
-    "bytes": 3320,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/Amela.svg",
-    "name": "Amela",
-    "tags": [
-      "partners 2026"
-    ],
     "bytes": 3320,
     "toneAlgo": 2,
     "tone": "light"
@@ -681,16 +621,6 @@
     "src": "/logos/AUXXO%20Female%20Catalyst%20Fund.svg",
     "name": "AUXXO Female Catalyst Fund",
     "tags": [],
-    "bytes": 11159,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/Auxxo%20Management%20GmbH.svg",
-    "name": "Auxxo Management GmbH",
-    "tags": [
-      "partners 2026"
-    ],
     "bytes": 11159,
     "toneAlgo": 2,
     "tone": "light"
@@ -1114,16 +1044,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/Brotherhood%20for%20Professionals%20of%20Color%20(BPoC).svg",
-    "name": "Brotherhood for Professionals of Color (BPoC)",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 11353,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/BSI.svg",
     "name": "BSI",
     "tags": [],
@@ -1162,16 +1082,6 @@
     "name": "Buildtomatter",
     "tags": [],
     "bytes": 9163,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/Business%20Helsinki.svg",
-    "name": "Business Helsinki",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 5002,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -1266,16 +1176,6 @@
     "name": "Camp",
     "tags": [],
     "bytes": 2234,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/Career%20Club%20DK.svg",
-    "name": "Career Club DK",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 4681,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -1416,16 +1316,6 @@
     "name": "City",
     "tags": [],
     "bytes": 3874,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/Clarma%20Capital.svg",
-    "name": "Clarma Capital",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 6411,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -1638,16 +1528,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/Copenhagen%20Climate%20Week.svg",
-    "name": "Copenhagen Climate Week",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 8420,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Copenhagen%20Fintech.svg",
     "name": "Copenhagen Fintech",
     "tags": [],
@@ -1670,16 +1550,6 @@
     "name": "Copenhagen Institute for Futures Studies",
     "tags": [],
     "bytes": 3885,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/Copenhagen%20Institute%20for%20Futures%20Studies.svg",
-    "name": "Copenhagen Institute for Futures Studies",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 7435,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -1808,29 +1678,9 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/Creative%20Girls%20Club.svg",
-    "name": "Creative Girls Club",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 8509,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Crescita%20Partners.svg",
     "name": "Crescita Partners",
     "tags": [],
-    "bytes": 7529,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/Crescita%20Partners.svg",
-    "name": "Crescita Partners",
-    "tags": [
-      "partners 2026"
-    ],
     "bytes": 7529,
     "toneAlgo": 2,
     "tone": "light"
@@ -1926,16 +1776,6 @@
     "name": "CZech Founders",
     "tags": [],
     "bytes": 6257,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/Czech%20Founders%20z.%C3%BA.svg",
-    "name": "Czech Founders z.ú",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 6125,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -2068,16 +1908,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/Danish%20Startup%20Group.svg",
-    "name": "Danish Startup Group",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 11197,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Danishlifecluster.svg",
     "name": "Danishlifecluster",
     "tags": [],
@@ -2179,16 +2009,6 @@
     "src": "/logos/Daya%20Ventures.svg",
     "name": "Daya Ventures",
     "tags": [],
-    "bytes": 6188,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/Daya%20Ventures.svg",
-    "name": "Daya Ventures",
-    "tags": [
-      "partners 2026"
-    ],
     "bytes": 6188,
     "toneAlgo": 2,
     "tone": "light"
@@ -2472,16 +2292,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/Durana%20Tech%20Park.svg",
-    "name": "Durana Tech Park",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 5294,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/E%20Conomic%20Primary%20Pos.svg",
     "name": "E Conomic Primary Pos",
     "tags": [],
@@ -2646,16 +2456,6 @@
     "name": "EIT Digital",
     "tags": [],
     "bytes": 3885,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/EIT%20Urban%20Mobility.svg",
-    "name": "EIT Urban Mobility",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 30270,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -2882,16 +2682,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/EU-CO.svg",
-    "name": "EU-CO",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 3022,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/EUCO.svg",
     "name": "EUCO",
     "tags": [],
@@ -2968,30 +2758,10 @@
     "tone": "dark"
   },
   {
-    "src": "/logos/Partners%202026/European%20Investment%20Fund.svg",
-    "name": "European Investment Fund",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 5424,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/European%20Investment%20Fund%20(EIF).svg",
     "name": "European Investment Fund (EIF)",
     "tags": [],
     "bytes": 5442,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/European%20Space%20Agency%20Business%20Incubation%20Centre%20Denmark.svg",
-    "name": "European Space Agency Business Incubation Centre Denmark",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 25746,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -3026,16 +2796,6 @@
     "bytes": 5819,
     "toneAlgo": 2,
     "tone": "dark"
-  },
-  {
-    "src": "/logos/Partners%202026/Even%20Founders.svg",
-    "name": "Even Founders",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 2256,
-    "toneAlgo": 2,
-    "tone": "light"
   },
   {
     "src": "/logos/Even%20Founders%20White.svg",
@@ -3190,16 +2950,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/Femtech%20Studios.svg",
-    "name": "Femtech Studios",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 3432,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Femtechstudios.svg",
     "name": "Femtechstudios",
     "tags": [],
@@ -3326,16 +3076,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/Foras%20Ventures.svg",
-    "name": "Foras Ventures",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 3567,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Forbes.png",
     "name": "Forbes",
     "tags": [],
@@ -3424,16 +3164,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/Founders%20Running%20Club.svg",
-    "name": "Founders Running Club",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 9622,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Founders%20Running%20Club%20White.svg",
     "name": "Founders Running Club White",
     "tags": [],
@@ -3454,16 +3184,6 @@
     "name": "French Tech Copenhagen",
     "tags": [],
     "bytes": 250993,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/French%20Tech%20Copenhagen.svg",
-    "name": "French Tech Copenhagen",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 250975,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -3516,30 +3236,10 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/Futuro%20Perfecto%20-%20Horizon%20Deep%20Tech%20Summit.svg",
-    "name": "Futuro Perfecto - Horizon Deep Tech Summit",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 1578,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Futuro%20Perfecto%20Innovation.svg",
     "name": "Futuro Perfecto Innovation",
     "tags": [],
     "bytes": 11175,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/Futuro%20Perfecto%20Innovation.svg",
-    "name": "Futuro Perfecto Innovation",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 11160,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -3636,30 +3336,10 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/Global%20Startup%20Awards%20(XO%20Group%20ApS).svg",
-    "name": "Global Startup Awards (XO Group ApS)",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 6601,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Global%20Stratalogues.svg",
     "name": "Global Stratalogues",
     "tags": [],
     "bytes": 8050,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/Global%20Stratalogues.svg",
-    "name": "Global Stratalogues",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 8032,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -3714,16 +3394,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/Gothenburg%20Tech%20Week.svg",
-    "name": "Gothenburg Tech Week",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 7032,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Government%20of%20India.svg",
     "name": "Government of India",
     "tags": [],
@@ -3754,16 +3424,6 @@
     "name": "Greeks in the Nordics",
     "tags": [],
     "bytes": 10326,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/Greeks%20in%20the%20Nordics.svg",
-    "name": "Greeks in the Nordics",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 10308,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -3838,16 +3498,6 @@
     "name": "Hackyourfuture",
     "tags": [],
     "bytes": 8848,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/HackYourFuture%20Denmark.svg",
-    "name": "HackYourFuture Denmark",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 5135,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -4142,16 +3792,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/Humble%20AI%20Limited.svg",
-    "name": "Humble AI Limited",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 1722,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Humble%20AI%20White.svg",
     "name": "Humble AI White",
     "tags": [],
@@ -4208,16 +3848,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/IDA.svg",
-    "name": "IDA",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 1497,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Ida%20Ireland.png",
     "name": "Ida Ireland",
     "tags": [],
@@ -4258,16 +3888,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/Ignite%20Sweden.svg",
-    "name": "Ignite Sweden",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 6532,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Imagineyouknow.svg",
     "name": "Imagineyouknow",
     "tags": [],
@@ -4282,16 +3902,6 @@
     "bytes": 2142,
     "toneAlgo": 2,
     "tone": "dark"
-  },
-  {
-    "src": "/logos/Partners%202026/imec%20vzw.svg",
-    "name": "imec vzw",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 2012,
-    "toneAlgo": 2,
-    "tone": "light"
   },
   {
     "src": "/logos/Imec%20White.svg",
@@ -4420,30 +4030,10 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/Indian%20Chamber%20of%20Commerce.svg",
-    "name": "Indian Chamber of Commerce",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 18253,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Indian%20Danish%20Chamber%20of%20Commerce.svg",
     "name": "Indian Danish Chamber of Commerce",
     "tags": [],
     "bytes": 18253,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/Indian%20Venture%20%26%20Alternate%20Capital%20Association.svg",
-    "name": "Indian Venture & Alternate Capital Association",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 18629,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -4546,16 +4136,6 @@
     "name": "Innovation Skåne",
     "tags": [],
     "bytes": 3122,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/Innovation%20Sk%C3%A5ne.svg",
-    "name": "Innovation Skåne",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 3104,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -4872,16 +4452,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/Kalvebod%20F%C3%A6lled%20Skole.svg",
-    "name": "Kalvebod Fælled Skole",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 6143,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Kalvebod%20Skole.svg",
     "name": "Kalvebod Skole",
     "tags": [],
@@ -5060,16 +4630,6 @@
       "partners 2026"
     ],
     "bytes": 3828,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/K%C3%B8benhavns%20university.svg",
-    "name": "Københavns university",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 39361,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -5308,30 +4868,10 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/Lithuanian%20Professionals%20in%20Copenhagen.svg",
-    "name": "Lithuanian Professionals in Copenhagen",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 1625,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Lithuanian%20Youth%20Society%20In%20Denmark.svg",
     "name": "Lithuanian Youth Society In Denmark",
     "tags": [],
     "bytes": 1924,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/Lithuanian%20Youth%20Society%20In%20Denmark.svg",
-    "name": "Lithuanian Youth Society In Denmark",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 1906,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -5582,16 +5122,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/Medicon%20Valleyh%20Alliance.svg",
-    "name": "Medicon Valleyh Alliance",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 8127,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Medicon%20Village.svg",
     "name": "Medicon Village",
     "tags": [],
@@ -5614,16 +5144,6 @@
     "name": "Mentorspace Lithuania, VšĮ",
     "tags": [],
     "bytes": 4777,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/Mentorspace%20Lithuania%2C%20V%C5%A1%C4%AE.svg",
-    "name": "Mentorspace Lithuania, VšĮ",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 4759,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -5962,16 +5482,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/Nordic%20Blockchain%20Association.svg",
-    "name": "Nordic Blockchain Association",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 8523,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Nordic%20Edge.png",
     "name": "Nordic Edge",
     "tags": [],
@@ -6031,16 +5541,6 @@
     "src": "/logos/Nordic%20Music%20Tech.svg",
     "name": "Nordic Music Tech",
     "tags": [],
-    "bytes": 4308,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/Nordic%20Music%20Tech.svg",
-    "name": "Nordic Music Tech",
-    "tags": [
-      "partners 2026"
-    ],
     "bytes": 4308,
     "toneAlgo": 2,
     "tone": "light"
@@ -6164,16 +5664,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/Norway%20Health%20Tech.svg",
-    "name": "Norway Health Tech",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 5707,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Notion.svg",
     "name": "Notion",
     "tags": [],
@@ -6193,16 +5683,6 @@
     "src": "/logos/Nova%20Talent.svg",
     "name": "Nova Talent",
     "tags": [],
-    "bytes": 1340,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/Nova%20Talent.svg",
-    "name": "Nova Talent",
-    "tags": [
-      "partners 2026"
-    ],
     "bytes": 1340,
     "toneAlgo": 2,
     "tone": "light"
@@ -6270,16 +5750,6 @@
     "name": "NTNU",
     "tags": [],
     "bytes": 10493,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/NTNU%20Discovery.svg",
-    "name": "NTNU Discovery",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 10455,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -6672,30 +6142,10 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/Professional%20Women%20of%20Colour%20Network%20(ProWoc).svg",
-    "name": "Professional Women of Colour Network (ProWoc)",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 15635,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Professional%20Women%20of%20Colour%20Network%20(ProWoc).svg",
     "name": "Professional Women of Colour Network (ProWoc)",
     "tags": [],
     "bytes": 15653,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/PropTech%20Denmark.svg",
-    "name": "PropTech Denmark",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 5175,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -6742,16 +6192,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/ProWoc%20-%20Professional%20Women%20of%20Colour.svg",
-    "name": "ProWoc - Professional Women of Colour",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 15635,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/ProWoc%20-%20Professional%20Women%20of%20Colour.svg",
     "name": "ProWoc - Professional Women of Colour",
     "tags": [],
@@ -6790,16 +6230,6 @@
     "name": "PwC",
     "tags": [],
     "bytes": 2414,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/PWN%20Copenhagen.svg",
-    "name": "PWN Copenhagen",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 5709,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -6844,16 +6274,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/Radia%20Network.svg",
-    "name": "Radia Network",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 4404,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Radia%20Network.svg",
     "name": "Radia Network",
     "tags": [],
@@ -6892,16 +6312,6 @@
     "bytes": 2678,
     "toneAlgo": 2,
     "tone": "dark"
-  },
-  {
-    "src": "/logos/Partners%202026/REBBLS.svg",
-    "name": "REBBLS",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 6448,
-    "toneAlgo": 2,
-    "tone": "light"
   },
   {
     "src": "/logos/REBBLS.svg",
@@ -6968,16 +6378,6 @@
     "name": "Redalpine",
     "tags": [],
     "bytes": 3147,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/ReDI%20School%20of%20Digital%20Integration.svg",
-    "name": "ReDI School of Digital Integration",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 4129,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -7166,16 +6566,6 @@
     "name": "Rostartup",
     "tags": [],
     "bytes": 3538,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/Royal%20Danish%20Academy.svg",
-    "name": "Royal Danish Academy",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 45449,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -7378,16 +6768,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/SDU%20Startup%20Station.svg",
-    "name": "SDU Startup Station",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 6476,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/SDU%20Startup%20Station.svg",
     "name": "SDU Startup Station",
     "tags": [],
@@ -7526,16 +6906,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/SHE-THEY%20Club.svg",
-    "name": "SHE-THEY Club",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 12573,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Shey%20Theylogo.svg",
     "name": "Shey Theylogo",
     "tags": [],
@@ -7578,16 +6948,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/Shine.svg",
-    "name": "Shine",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 6693,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Sie%20Ventures.svg",
     "name": "Sie Ventures",
     "tags": [],
@@ -7626,26 +6986,6 @@
     "bytes": 169933,
     "toneAlgo": 2,
     "tone": "dark"
-  },
-  {
-    "src": "/logos/Partners%202026/SISP%20Swedish%20Incubators%20%26%20Science%20Parks.svg",
-    "name": "SISP Swedish Incubators & Science Parks",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 9116,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/SIT%20PORT.svg",
-    "name": "SIT PORT",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 2759,
-    "toneAlgo": 2,
-    "tone": "light"
   },
   {
     "src": "/logos/SIT%20PORT%20White.svg",
@@ -7838,16 +7178,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/Space%20Denmark.svg",
-    "name": "Space Denmark",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 5842,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Space%20Denmark.svg",
     "name": "Space Denmark",
     "tags": [],
@@ -7956,16 +7286,6 @@
     "bytes": 13216,
     "toneAlgo": 2,
     "tone": "dark"
-  },
-  {
-    "src": "/logos/Partners%202026/START%20Paris.svg",
-    "name": "START Paris",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 4067,
-    "toneAlgo": 2,
-    "tone": "light"
   },
   {
     "src": "/logos/START%20Paris%20White.svg",
@@ -8136,16 +7456,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/STHLM%20Music%20City.svg",
-    "name": "STHLM Music City",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 9872,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/STHLM%20Music%20City.svg",
     "name": "STHLM Music City",
     "tags": [],
@@ -8234,16 +7544,6 @@
     "name": "Surveygauge",
     "tags": [],
     "bytes": 3684,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/Sustainary.svg",
-    "name": "Sustainary",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 8774,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -8454,16 +7754,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/Tech%20Arena.svg",
-    "name": "Tech Arena",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 1524,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Tech%20Arena%20Sweden.svg",
     "name": "Tech Arena Sweden",
     "tags": [],
@@ -8650,16 +7940,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/TechStation.svg",
-    "name": "TechStation",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 4207,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/TechWomen%20Cph.png",
     "name": "TechWomen Cph",
     "tags": [],
@@ -8692,16 +7972,6 @@
     "bytes": 34546,
     "toneAlgo": 2,
     "tone": "mixed"
-  },
-  {
-    "src": "/logos/Partners%202026/Terkko%20Health%20Hub.svg",
-    "name": "Terkko Health Hub",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 10571,
-    "toneAlgo": 2,
-    "tone": "light"
   },
   {
     "src": "/logos/Terkko%20Health%20Hub.svg",
@@ -8828,16 +8098,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/The%20Residency%20Vienna.svg",
-    "name": "The Residency Vienna",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 7019,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/The%20Residency%20Vienna.svg",
     "name": "The Residency Vienna",
     "tags": [],
@@ -8937,16 +8197,6 @@
     "src": "/logos/Things.svg",
     "name": "Things",
     "tags": [],
-    "bytes": 6271,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/THINGS%20(The%20Innovation%20Growhouse%20Stockholm%20AB).svg",
-    "name": "THINGS (The Innovation Growhouse Stockholm AB)",
-    "tags": [
-      "partners 2026"
-    ],
     "bytes": 6271,
     "toneAlgo": 2,
     "tone": "light"
@@ -9124,16 +8374,6 @@
     "name": "Ubuntubiz",
     "tags": [],
     "bytes": 3021,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/UbuntuBiz.svg",
-    "name": "UbuntuBiz",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 3927,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -9350,16 +8590,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/Venture%20Caf%C3%A9%20Warsaw%20Foundation.svg",
-    "name": "Venture Café Warsaw Foundation",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 3936,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Venture%20Cafe%20Warsaw%20Horiz.svg",
     "name": "Venture Cafe Warsaw Horiz",
     "tags": [],
@@ -9524,16 +8754,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/Voice%20AI%20SPace.svg",
-    "name": "Voice AI SPace",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 3520,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Voltagreentech.svg",
     "name": "Voltagreentech",
     "tags": [],
@@ -9546,16 +8766,6 @@
     "name": "Walther Therapeutics White",
     "tags": [],
     "bytes": 11302,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/Wave%20by%20Vento.svg",
-    "name": "Wave by Vento",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 2853,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -9666,16 +8876,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/Women%20in%20Data%20Science%20AI%20and%20ML.svg",
-    "name": "Women in Data Science AI and ML",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 8940,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Women%20in%20Tech.svg",
     "name": "Women in Tech",
     "tags": [],
@@ -9718,16 +8918,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/Women%20in%20Tech%20Sweden.svg",
-    "name": "Women in Tech Sweden",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 3850,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Women%20TechEU.svg",
     "name": "Women TechEU",
     "tags": [],
@@ -9748,16 +8938,6 @@
     "name": "WOMENINTECHSW",
     "tags": [],
     "bytes": 3874,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/WomenTech%20Network.svg",
-    "name": "WomenTech Network",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 4146,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -9884,16 +9064,6 @@
     "tone": "light"
   },
   {
-    "src": "/logos/Partners%202026/Young%20AI%20Leaders%20Linz.svg",
-    "name": "Young AI Leaders Linz",
-    "tags": [
-      "partners 2026"
-    ],
-    "bytes": 9768,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
     "src": "/logos/Zendesk.svg",
     "name": "Zendesk",
     "tags": [],
@@ -9921,16 +9091,6 @@
     "src": "/logos/Zoku.svg",
     "name": "Zoku",
     "tags": [],
-    "bytes": 1926,
-    "toneAlgo": 2,
-    "tone": "light"
-  },
-  {
-    "src": "/logos/Partners%202026/ZOKU%20Copenhagen.svg",
-    "name": "ZOKU Copenhagen",
-    "tags": [
-      "partners 2026"
-    ],
     "bytes": 1926,
     "toneAlgo": 2,
     "tone": "light"
