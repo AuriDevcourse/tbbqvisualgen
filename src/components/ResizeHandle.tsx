@@ -1,5 +1,7 @@
 "use client";
 
+import { SELECTION_COLOR, SELECTION_STROKE_PX } from "@/lib/selectionStyle";
+
 /**
  * The one corner handle used by every canvas overlay.
  *
@@ -17,10 +19,11 @@
  * display, not about the document. The snap guide lines in the same tree
  * already do exactly this.
  *
- * WHY WHITE WITH AN ACCENT BORDER: a solid orange handle vanishes against
- * orange artwork, and this app's canvases are frequently orange. A white body
- * with a coloured edge stays visible on any background — the reason Figma,
- * Sketch and Illustrator all draw handles that way.
+ * WHY WHITE WITH AN ACCENT BORDER: a solid handle in the brand orange vanishes
+ * against orange artwork, and this app's canvases are frequently orange. A
+ * white body with a cool-blue edge stays visible on any background — the reason
+ * Figma, Sketch and Illustrator all draw handles that way. The colour comes
+ * from `selectionStyle` so the handle and the outline can never drift apart.
  *
  * WHY THE HIT AREA IS BIGGER THAN THE SQUARE: Figma's handle looks ~8 px but
  * catches the pointer well outside that. The visible square is a target you
@@ -28,7 +31,7 @@
  */
 
 /** Visible square, in SCREEN px, at any zoom. */
-export const HANDLE_VISUAL_PX = 9;
+export const HANDLE_VISUAL_PX = 8;
 /** Invisible pointer target, in SCREEN px. Comfortably larger than the square. */
 export const HANDLE_HIT_PX = 20;
 
@@ -70,7 +73,7 @@ export function ResizeHandle({ cx, cy, cursor, scale, onMouseDown }: ResizeHandl
           width: visual,
           height: visual,
           background: "#FFFFFF",
-          border: `${1.5 / s}px solid #FF6B00`,
+          border: `${SELECTION_STROKE_PX / s}px solid ${SELECTION_COLOR}`,
           borderRadius: 2 / s,
           boxShadow: `0 ${1 / s}px ${2 / s}px rgba(0,0,0,0.35)`,
           // The wrapper owns the pointer, so the square never splits the

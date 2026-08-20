@@ -12,6 +12,7 @@ import { ImageDragOverlay } from "@/components/ImageDragOverlay";
 import { ShapeDragOverlay } from "@/components/ShapeDragOverlay";
 import { LogoDragOverlay } from "@/components/LogoDragOverlay";
 import { cleanGuides, type Bbox } from "@/lib/snap";
+import { SELECTION_COLOR } from "@/lib/selectionStyle";
 import { DynamicTemplate } from "@/components/templates/DynamicTemplate";
 import { useExport, VIDEO_MAX_SECONDS, VIDEO_MIN_SECONDS, type ExportFormat } from "@/hooks/useExport";
 import { isAnimatedBackground } from "@/components/CanvasBackground";
@@ -1969,7 +1970,13 @@ export default function Home() {
     setCurrentStep(Math.max(1, Math.min(STEPS.length, next)));
   }, []);
 
-  const canvasIsEmpty = design.texts.length === 0 && canvasImages.length === 0;
+  // Shapes count as content. They did not, so drawing a rectangle with the new
+  // R tool left the start-from-a-template gallery sitting on top of the thing
+  // you had just drawn, with no way to see it but to pick a template or press
+  // Start blank.
+  const canvasIsEmpty = design.texts.length === 0
+    && canvasImages.length === 0
+    && (design.shapes ?? []).length === 0;
   const photoBackground = canvasImages.find((ci) => ci.isBackdrop) ?? null;
 
   // Compute the effective canvas-layer stack so the ImageDragOverlay's
@@ -2201,6 +2208,34 @@ export default function Home() {
                 <div className="flex items-center gap-2 text-[10px] font-medium text-muted uppercase tracking-[0.18em]">
                   <span className="inline-block size-1.5 rounded-full bg-red" />
                   <span className="hidden 2xl:inline">{dims.label}</span>
+                </div>
+                {/* Format is a per-post decision that gets made and re-made —
+                    the same wall goes out as a 16:9 slide and a 9:16 story —
+                    so it belongs in the canvas strip, not three clicks deep in
+                    the Canvas panel. Switching refits the zoom (see the effect
+                    on dims) so the new shape is fully in view. */}
+                <div role="radiogroup" aria-label="Canvas format" className="flex items-center rounded-lg bg-card-2 p-0.5">
+                  {([
+                    { id: "presentation" as const, label: "16:9" },
+                    { id: "square" as const, label: "1:1" },
+                    { id: "story" as const, label: "9:16" },
+                  ]).map(({ id, label }) => {
+                    const active = format === id;
+                    return (
+                      <button
+                        key={id}
+                        role="radio"
+                        aria-checked={active}
+                        onClick={() => setFormat(id)}
+                        title={FORMAT_DIMENSIONS[id].label}
+                        className={`px-2 h-7 rounded-md text-[10px] font-semibold tabular-nums transition-colors ${
+                          active ? "bg-surface text-ink" : "text-muted hover:bg-white/10 hover:text-foreground"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
                 </div>
                 {/* Zoom cluster. The gestures (z-drag, Ctrl+wheel) are faster
                     once you know them, but nobody discovers a gesture — so
@@ -2666,6 +2701,7 @@ export default function Home() {
                     // the overlay captures all clicks.
                     selectedIds={selectedIds}
                     cropEditingId={cropEditingId}
+                    previewScale={scale}
                     onCropChange={(imageId, crop) => {
                       setCanvasImages((prev) =>
                         prev.map((ci) => (ci.id === imageId ? { ...ci, crop } : ci)),
@@ -2875,8 +2911,8 @@ export default function Home() {
                         top: `${y * 100}%`,
                         width: `${w * 100}%`,
                         height: `${h * 100}%`,
-                        border: `${Math.max(1, Math.round(1 / scale))}px solid #fa7000`,
-                        background: "rgba(250, 112, 0, 0.08)",
+                        border: `${1 / (scale > 0 ? scale : 1)}px solid ${SELECTION_COLOR}`,
+                        background: "rgba(44, 123, 229, 0.10)",
                         pointerEvents: "none",
                         zIndex: 150,
                       }}

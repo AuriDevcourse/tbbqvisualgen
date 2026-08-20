@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { DesignConfig } from "@/types/template";
 import { computeSnapTargets, snapBbox, type Bbox } from "@/lib/snap";
 import { ResizeHandle } from "./ResizeHandle";
+import { selectionOutline } from "@/lib/selectionStyle";
 
 type DragMode = "move" | "nw" | "ne" | "sw" | "se" | null;
 
@@ -349,7 +350,7 @@ export function LogoDragOverlay({
           cursor: selected ? (dragging === "move" ? "grabbing" : "grab") : "pointer",
           pointerEvents: "auto",
           boxSizing: "border-box",
-          outline: selected ? "2px solid #FF6B00" : "none",
+          outline: selected ? selectionOutline(scale) : "none",
           outlineOffset: 2,
         }}
       />

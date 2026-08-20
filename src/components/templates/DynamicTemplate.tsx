@@ -9,6 +9,7 @@ import { isAccentShape } from "@/lib/accents";
 import type { CanvasImage } from "@/components/ImagePlacer";
 import { computeSnapTargets, snapBbox } from "@/lib/snap";
 import type { Bbox } from "@/lib/snap";
+import { SELECTION_COLOR, SELECTION_STROKE_PX } from "@/lib/selectionStyle";
 
 interface DynamicTemplateProps {
   design: DesignConfig;
@@ -38,6 +39,8 @@ interface DynamicTemplateProps {
    *  When set, that image renders its full source extending beyond the frame
    *  (dimmed) so the user can drag inside the frame to pan. */
   cropEditingId?: string | null;
+  /** Preview scale, so selection hairlines stay 1px on screen at any zoom. */
+  previewScale?: number;
   /** Crop update from inline pan. */
   onCropChange?: (imageId: string, crop: { x: number; y: number; width: number; height: number }) => void;
   /** Called on drag-start of a text element so the host can snapshot pre-drag
@@ -63,17 +66,22 @@ interface DynamicTemplateProps {
 // The base state has a transparent outline (no visible mark) so PNG exports
 // stay clean — the orange ring only appears on hover or while editing.
 const textEditableHoverClass =
-  "rounded transition-[outline-color] outline outline-2 outline-offset-0 outline-transparent hover:outline-[#FF6B00]/70";
+  "rounded transition-[outline-color] outline outline-1 outline-offset-0 outline-transparent hover:outline-[#2C7BE5]/70";
+// Editing keeps a slightly heavier line, so being in the caret reads as a
+// stronger state than merely being selected.
 const editingActiveClass =
-  "outline-[#FF6B00] outline-2 outline-offset-0";
-// Multi-select highlight is applied as an INLINE style so it overrides the
-// Tailwind utility outline width/style. Kept identical to the image overlay's
-// selected style for visual consistency.
-const SELECTED_INLINE_OUTLINE: React.CSSProperties = {
-  outline: "2px dashed #FF6B00",
+  "outline-[#2C7BE5] outline-2 outline-offset-0";
+// Selection highlight is applied as an INLINE style so it overrides the
+// Tailwind utility outline width/style. One thin solid hairline, matching the
+// image and shape overlays — see src/lib/selectionStyle.ts for why it is a
+// cool blue and why it is not dashed.
+const selectedInlineOutline = (previewScale: number): React.CSSProperties => ({
+  // Divided by the preview scale so the hairline is 1px ON SCREEN at any zoom.
+  // Left in canvas units it would be a quarter of a pixel at 25% and four
+  // pixels at 400% — the same mistake the resize handles used to make.
+  outline: `${SELECTION_STROKE_PX / (previewScale > 0 ? previewScale : 1)}px solid ${SELECTION_COLOR}`,
   outlineOffset: 0,
-  boxShadow: "0 0 0 1px rgba(255, 107, 0, 0.25)",
-};
+});
 
 // ── Shape rendering ─────────────────────────────────────────────────────────
 // Standalone helper so the canvas template can render every shape with the
@@ -110,6 +118,7 @@ function renderShapeElement(
   dims: { width: number; height: number },
   zOf: (id: string) => number,
   selectedIds: Set<string> | undefined,
+  previewScale: number,
 ): React.JSX.Element | null {
   if (s.hidden) return null;
   const isLine = s.type === "line";
@@ -140,7 +149,7 @@ function renderShapeElement(
     transform: s.rotation ? `rotate(${s.rotation}deg)` : undefined,
     transformOrigin: "center center",
     pointerEvents: "none",
-    ...(isSelected ? SELECTED_INLINE_OUTLINE : {}),
+    ...(isSelected ? selectedInlineOutline(previewScale) : {}),
   };
 
   const dataAttr: Record<string, string> = { "data-canvas-element": `shape:${s.id}` };
@@ -252,6 +261,7 @@ export function DynamicTemplate({
   onEditEnd,
   selectedIds,
   cropEditingId,
+  previewScale = 1,
   onCropChange,
   onBeginDrag,
   onMoveBy,
@@ -616,7 +626,7 @@ export function DynamicTemplate({
             : { color: text.color ?? COLORS.text }),
           // Inline style for the multi-select highlight — applied AFTER the
           // utility-driven base outline so it wins regardless of class order.
-          ...(isSelected && !isEditing ? SELECTED_INLINE_OUTLINE : {}),
+          ...(isSelected && !isEditing ? selectedInlineOutline(previewScale) : {}),
         }}
       >
         {text.content}
@@ -837,7 +847,7 @@ export function DynamicTemplate({
                   top: `${oTop}%`,
                   width: `${oW}%`,
                   height: `${oH}%`,
-                  outline: "2px solid #FF6B00",
+                  outline: `2px solid ${SELECTION_COLOR}`,
                   outlineOffset: -1,
                   borderRadius: radius,
                   boxSizing: "border-box",
@@ -856,7 +866,7 @@ export function DynamicTemplate({
                     width: handleSize,
                     height: handleSize,
                     transform: "translate(-50%, -50%)",
-                    background: "#FF6B00",
+                    background: SELECTION_COLOR,
                     border: "2px solid white",
                     borderRadius: 2,
                     cursor: c.cursor,
@@ -998,7 +1008,7 @@ export function DynamicTemplate({
       })}
 
       {/* Shape elements (rectangle / circle / line / star). */}
-      {design.shapes?.map((s) => renderShapeElement(s, dims, zOf, selectedIds))}
+      {design.shapes?.map((s) => renderShapeElement(s, dims, zOf, selectedIds, previewScale))}
 
       {/* Text elements — each independently positioned, sized and styled. */}
       {design.texts.map(renderTextElement)}

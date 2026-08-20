@@ -4,6 +4,7 @@ import { useCallback, useRef, useState, useEffect } from "react";
 import type { CanvasImage } from "./ImagePlacer";
 import { computeSnapTargets, snapBbox, snapValue, snapSize, type Bbox } from "@/lib/snap";
 import { HANDLE_HIT_PX, ResizeHandle } from "./ResizeHandle";
+import { SELECTION_COLOR, selectionOutline } from "@/lib/selectionStyle";
 
 /** Corner handles resize both axes; edge handles resize ONE. Eight handles
  *  is the Illustrator / Figma standard, and the edges are what you reach for
@@ -462,16 +463,14 @@ export function ImageDragOverlay({
           width: imgW,
           height: imgH,
           cursor: image.locked ? "default" : selected ? (dragging === "move" ? "grabbing" : "grab") : "pointer",
-          // Outline (not border) — outline doesn't affect layout, sits OUTSIDE
-          // the box, and accepts dashed style. Solid for single-select (the
-          // resize-handle case), dashed for multi-select to match text.
-          outline: selected
-            ? resizable
-              ? "2px solid #FF6B00"
-              : "2px dashed #FF6B00"
-            : "none",
+          // Outline (not border) — outline doesn't affect layout and sits
+          // OUTSIDE the box. One thin solid hairline whether this is a single
+          // or a multi selection: dashes read as artwork and hid thin shapes
+          // underneath. A multi-selection is distinguished by having no
+          // handles, which is how Illustrator does it too.
+          outline: selected ? selectionOutline(scale) : "none",
           outlineOffset: 0,
-          boxShadow: selected && !resizable ? "0 0 0 1px rgba(255, 107, 0, 0.25)" : "none",
+          boxShadow: "none",
           borderRadius: `${((image.cornerRadius ?? (image.shape === "circle" ? 50 : 10)) / 100) * Math.min(imgW, imgH)}px`,
           pointerEvents: "auto",
           boxSizing: "border-box",
