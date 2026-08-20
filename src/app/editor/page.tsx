@@ -165,7 +165,33 @@ export default function Home() {
   const { exportRef, isExporting, isExportingVideo, videoProgress, exportImage, exportMp4 } = useExport();
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const canvasWrapRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(0.4);
+  // ---- Zoom & pan ----
+  // `fitScale` is the automatic "make it fit the container" scale, recomputed
+  // on resize. `userZoom` overrides it once the user zooms; null means "follow
+  // the fit". Keeping the EFFECTIVE value named `scale` means everything that
+  // already divides by it — the resize handles, the snap guide lines — keeps
+  // working with no change.
+  const [fitScale, setFitScale] = useState(0.4);
+  /**
+   * Zoom and pan are ONE piece of state, deliberately.
+   *
+   * They were two, and every zoom read the current zoom to work out how far to
+   * shift the pan. During a `z`-drag that fires several times a frame, the
+   * captured zoom went stale while the pan kept accumulating, so the
+   * correction compounded: a single scrub sent the pan to 133,842px and the
+   * canvas vanished off screen. One functional updater sees the true latest
+   * value of both, so the arithmetic cannot drift no matter how fast the
+   * updates arrive.
+   *
+   * `zoom: null` means "follow fitScale" — the state the editor opens in.
+   */
+  const [view, setView] = useState<{ zoom: number | null; pan: { x: number; y: number } }>({
+    zoom: null,
+    pan: { x: 0, y: 0 },
+  });
+  const scale = view.zoom ?? fitScale;
+  const pan = view.pan;
+  const isZoomed = view.zoom !== null;
 
   // Marquee selection — rectangle in canvas-fractional coords (0–1).
   const [marquee, setMarquee] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
@@ -659,6 +685,8 @@ export default function Home() {
     // If the click landed on a canvas element (text/image bbox) or a
     // resize-handle inside an image overlay, let that element handle it.
     // Marquee only starts when the user clicks empty canvas.
+    // A zoom/pan gesture is in progress — it owns the pointer, not the marquee.
+    if (zoomKeyRef.current || panKeyRef.current || e.button === 1) return;
     const target = e.target as HTMLElement;
     if (target.closest("[data-canvas-element], [data-canvas-overlay]")) return;
     const wrap = canvasWrapRef.current;
@@ -837,6 +865,242 @@ export default function Home() {
     toast.success("Photo added");
   }, [setDoc]);
 
+  const ZOOM_MIN = 0.05;
+  const ZOOM_MAX = 8;
+  /** Keep at least this much of the canvas inside the viewport, in screen px.
+   *  Without a tether you can pan the artwork clean out of the window and the
+   *  only way back is the Fit button. */
+  const PAN_KEEP_VISIBLE = 80;
+
+  /** Stop the canvas being panned entirely out of the container. */
+  const clampPan = useCallback((p: { x: number; y: number }, s: number) => {
+    const container = previewContainerRef.current;
+    if (!container) return p;
+    const cw = container.clientWidth;
+    const ch = container.clientHeight;
+    // Canvas is centred, so its half-extent plus half the container is the
+    // furthest the centre can travel before the far edge leaves the viewport.
+    const maxX = Math.max(0, (dims.width * s) / 2 + cw / 2 - PAN_KEEP_VISIBLE);
+    const maxY = Math.max(0, (dims.height * s) / 2 + ch / 2 - PAN_KEEP_VISIBLE);
+    return {
+      x: Math.max(-maxX, Math.min(maxX, p.x)),
+      y: Math.max(-maxY, Math.min(maxY, p.y)),
+    };
+  }, [dims.width, dims.height]);
+
+  /**
+   * Zoom to `next`, keeping the point under `anchor` pinned.
+   *
+   * The canvas is drawn as `translate(pan) scale(s)` about the container's
+   * CENTRE, so a naive scale change makes the artwork run away from the
+   * pointer. Solving for "the same canvas point stays under the same screen
+   * point": a point sits at `C + pan + s*d`, so `d = (A - C - pan) / s`, and
+   * holding it still at the new scale gives
+   *   pan' = (A - C) - (s'/s) * ((A - C) - pan)
+   * Anchoring on the pointer is what makes wheel-zoom feel like a lens rather
+   * than a slider.
+   */
+  const zoomTo = useCallback((next: number, anchor?: { x: number; y: number }) => {
+    const container = previewContainerRef.current;
+    if (!container) return;
+    const r = container.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    const ax = anchor?.x ?? cx;
+    const ay = anchor?.y ?? cy;
+    setView((v) => {
+      const from = v.zoom ?? fitScale;
+      const to = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, next));
+      if (!Number.isFinite(to) || to <= 0 || !Number.isFinite(from) || from <= 0) return v;
+      const k = to / from;
+      return {
+        zoom: to,
+        pan: clampPan({
+          x: (ax - cx) - k * ((ax - cx) - v.pan.x),
+          y: (ay - cy) - k * ((ay - cy) - v.pan.y),
+        }, to),
+      };
+    });
+  }, [fitScale, clampPan]);
+
+  /** Back to "fill the container", the state the editor opens in. */
+  const zoomToFit = useCallback(() => {
+    setView({ zoom: null, pan: { x: 0, y: 0 } });
+  }, []);
+
+  const zoomBy = useCallback((factor: number, anchor?: { x: number; y: number }) => {
+    const container = previewContainerRef.current;
+    if (!container) return;
+    const r = container.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    const ax = anchor?.x ?? cx;
+    const ay = anchor?.y ?? cy;
+    setView((v) => {
+      const from = v.zoom ?? fitScale;
+      const to = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, from * factor));
+      const k = to / from;
+      return {
+        zoom: to,
+        pan: clampPan({
+          x: (ax - cx) - k * ((ax - cx) - v.pan.x),
+          y: (ay - cy) - k * ((ay - cy) - v.pan.y),
+        }, to),
+      };
+    });
+  }, [fitScale, clampPan]);
+
+  const panBy = useCallback((dx: number, dy: number) => {
+    setView((v) => ({
+      zoom: v.zoom,
+      pan: clampPan({ x: v.pan.x + dx, y: v.pan.y + dy }, v.zoom ?? fitScale),
+    }));
+  }, [clampPan, fitScale]);
+
+  // Switching format changes the canvas dimensions, so any manual zoom/pan is
+  // about a canvas that no longer exists. Refit instead of leaving the user
+  // looking at the corner of a differently-shaped board.
+  useEffect(() => {
+    setView({ zoom: null, pan: { x: 0, y: 0 } });
+  }, [dims.width, dims.height]);
+
+  // ---- Zoom / pan gestures ----
+  // `z` scrubs the zoom by dragging, `space` drags the canvas. Both are held
+  // MODIFIERS, so they are tracked as refs read by the pointer handlers rather
+  // than state: a re-render per keypress would be wasted, and the pointer
+  // handler needs the value at the instant of the press.
+  const zoomKeyRef = useRef(false);
+  const panKeyRef = useRef(false);
+  // Mirrored into state only to drive the cursor, which has to re-render.
+  const [gestureCursor, setGestureCursor] = useState<null | "zoom" | "pan">(null);
+
+  useEffect(() => {
+    const isTyping = (t: EventTarget | null) => {
+      const el = t as HTMLElement | null;
+      return !!el && (el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName));
+    };
+    const down = (e: KeyboardEvent) => {
+      if (isTyping(e.target)) return;
+      // Bare key only: Ctrl+Z must stay undo, and Cmd+Z on a Mac too.
+      if (e.key === "z" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        zoomKeyRef.current = true;
+        setGestureCursor((c) => (c === "pan" ? c : "zoom"));
+      }
+      if (e.code === "Space") {
+        panKeyRef.current = true;
+        setGestureCursor("pan");
+        // Space would otherwise scroll the panel underneath.
+        e.preventDefault();
+      }
+    };
+    const up = (e: KeyboardEvent) => {
+      if (e.key === "z" || e.key === "Z") zoomKeyRef.current = false;
+      if (e.code === "Space") panKeyRef.current = false;
+      setGestureCursor(panKeyRef.current ? "pan" : zoomKeyRef.current ? "zoom" : null);
+    };
+    // A key held while the tab loses focus never fires keyup, and the canvas
+    // would be stuck in scrub mode on return.
+    const clear = () => {
+      zoomKeyRef.current = false;
+      panKeyRef.current = false;
+      setGestureCursor(null);
+    };
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    window.addEventListener("blur", clear);
+    return () => {
+      window.removeEventListener("keydown", down);
+      window.removeEventListener("keyup", up);
+      window.removeEventListener("blur", clear);
+    };
+  }, []);
+
+  /**
+   * Wheel over the canvas. Ctrl/Cmd + wheel zooms at the pointer; a plain
+   * wheel pans, but only once zoomed in past the fit — at fit there is nothing
+   * to pan to, and sliding the artwork out of a container it exactly fills
+   * would just look broken.
+   *
+   * Registered natively with `passive: false` because the handler calls
+   * preventDefault, and React attaches wheel listeners passively.
+   */
+  useEffect(() => {
+    const container = previewContainerRef.current;
+    if (!container) return;
+    const onWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        // Exponential so each notch is a constant RATIO. Linear steps crawl
+        // when zoomed out and leap when zoomed in.
+        zoomBy(Math.exp(-e.deltaY * 0.0015), { x: e.clientX, y: e.clientY });
+        return;
+      }
+      if (view.zoom !== null && view.zoom > fitScale) {
+        e.preventDefault();
+        panBy(-e.deltaX, -e.deltaY);
+      }
+    };
+    container.addEventListener("wheel", onWheel, { passive: false });
+    return () => container.removeEventListener("wheel", onWheel);
+  }, [zoomBy, panBy, view.zoom, fitScale]);
+
+  /**
+   * Pointer-down on the canvas area while `z` or `space` is held.
+   *
+   * z + drag RIGHT zooms in, LEFT zooms out, anchored on where the drag began
+   * so the thing under the pointer is what you zoom into. Exponential again,
+   * so a given distance is always the same zoom ratio.
+   *
+   * Runs in the CAPTURE phase and stops propagation, so the gesture never
+   * reaches the marquee or an element drag underneath.
+   */
+  //
+  // Registered as a NATIVE capture listener rather than React's
+  // `onPointerDownCapture`. React delegates events at the root and simulates
+  // the capture phase, which did not reliably beat a canvas element's own
+  // pointerdown handler: with `z` held, a drag starting on a text layer did
+  // nothing at all (verified — the cursor armed, the zoom never moved). A
+  // native capture listener on the container runs before React sees the event
+  // at all, which is what "this gesture owns the pointer" requires. Same
+  // reasoning as the wheel listener above.
+  useEffect(() => {
+    const container = previewContainerRef.current;
+    if (!container) return;
+    const onDown = (e: PointerEvent) => {
+      const zooming = zoomKeyRef.current;
+      const panning = panKeyRef.current || e.button === 1; // middle-drag pans too
+      if (!zooming && !panning) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const startScale = view.zoom ?? fitScale;
+      const anchor = { x: startX, y: startY };
+      let last = { x: startX, y: startY };
+      const move = (m: PointerEvent) => {
+        if (panning) {
+          panBy(m.clientX - last.x, m.clientY - last.y);
+          last = { x: m.clientX, y: m.clientY };
+        } else {
+          // Drag RIGHT zooms in, LEFT zooms out. Exponential, so a given
+          // distance is always the same zoom RATIO rather than the same
+          // number of percentage points. The target is ABSOLUTE, computed from
+          // where the drag began, so the zoom tracks the pointer exactly and
+          // nothing accumulates across the frames of one drag.
+          zoomTo(startScale * Math.exp((m.clientX - startX) * 0.006), anchor);
+        }
+      };
+      const up = () => {
+        document.removeEventListener("pointermove", move);
+        document.removeEventListener("pointerup", up);
+      };
+      document.addEventListener("pointermove", move);
+      document.addEventListener("pointerup", up);
+    };
+    container.addEventListener("pointerdown", onDown, true);
+    return () => container.removeEventListener("pointerdown", onDown, true);
+  }, [view.zoom, fitScale, zoomTo, panBy]);
+
   const calculateScale = useCallback(() => {
     if (!previewContainerRef.current) return;
     const container = previewContainerRef.current;
@@ -845,7 +1109,7 @@ export default function Home() {
     const availH = container.clientHeight - padding * 2;
     const scaleX = availW / dims.width;
     const scaleY = availH / dims.height;
-    setScale(Math.min(scaleX, scaleY, 1));
+    setFitScale(Math.min(scaleX, scaleY, 1));
   }, [dims.width, dims.height]);
 
   useEffect(() => {
@@ -1435,6 +1699,25 @@ export default function Home() {
           nudgeSelectionBy((dx * step) / dims.width, (dy * step) / dims.height);
         }
       }
+      // Zoom shortcuts. Ctrl/Cmd+0 = 100%, Shift+1 = fit, Ctrl/Cmd +/- steps.
+      // Everything here is guarded on !isEditableTarget so typing "0" or "1"
+      // into a field never moves the canvas.
+      if (!isEditableTarget) {
+        const mod = e.metaKey || e.ctrlKey;
+        if (mod && e.key === "0") {
+          e.preventDefault();
+          zoomTo(1);
+        } else if (e.shiftKey && e.key === "1") {
+          e.preventDefault();
+          zoomToFit();
+        } else if (mod && (e.key === "=" || e.key === "+")) {
+          e.preventDefault();
+          zoomBy(1.25);
+        } else if (mod && (e.key === "-" || e.key === "_")) {
+          e.preventDefault();
+          zoomBy(1 / 1.25);
+        }
+      }
       // Enter opens the caret on the one selected text layer — the keyboard
       // half of the click/double-click split. Without it, moving the caret off
       // a single click would leave no way to start typing except the mouse.
@@ -1483,7 +1766,7 @@ export default function Home() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [isExporting, isExportingVideo, handleExport, undo, redo, selectedIds, cropEditingId, setDoc, copySelection, pasteFromClipboard, duplicateSelection, nudgeSelectionBy, dims.width, dims.height, groupSelection, ungroupSelection, reorderSelection, design.texts]);
+  }, [isExporting, isExportingVideo, handleExport, undo, redo, selectedIds, cropEditingId, setDoc, copySelection, pasteFromClipboard, duplicateSelection, nudgeSelectionBy, dims.width, dims.height, groupSelection, ungroupSelection, reorderSelection, design.texts, zoomTo, zoomToFit, zoomBy]);
 
   const goToStep = useCallback((next: number) => {
     setCurrentStep(Math.max(1, Math.min(STEPS.length, next)));
@@ -1716,6 +1999,16 @@ export default function Home() {
               <div className="flex items-center gap-2 text-[10px] font-medium text-muted uppercase tracking-[0.18em]">
                 <span className="inline-block size-1.5 rounded-full bg-red" />
                 {dims.label} · {Math.round(scale * 100)}%
+                {isZoomed && (
+                  <button
+                    onClick={zoomToFit}
+                    title="Fit the canvas to the window (Shift+1)"
+                    aria-label="Fit canvas to window"
+                    className="ml-1 px-2 py-0.5 rounded-full border border-surface/40 text-[9px] tracking-[0.14em] text-foreground hover:bg-white/5 transition-colors"
+                  >
+                    Fit
+                  </button>
+                )}
               </div>
               {showEditTip && !editingTextId && !canvasIsEmpty && (
                 <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-orange/10 border border-orange/30 text-[11px] text-amber">
@@ -1883,6 +2176,9 @@ export default function Home() {
           <div
             ref={previewContainerRef}
             className="flex-1 min-h-0 min-w-0 flex items-center justify-center overflow-hidden rounded-2xl bg-card relative"
+            style={{
+              cursor: gestureCursor === "pan" ? "grab" : gestureCursor === "zoom" ? "ew-resize" : undefined,
+            }}
           >
             <input
               ref={photoBackgroundInputRef}
@@ -1994,7 +2290,9 @@ export default function Home() {
             )}
             <div
               style={{
-                transform: `scale(${scale})`,
+                // translate BEFORE scale: pan is in screen px, so it must not
+                // be multiplied by the zoom.
+                transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
                 transformOrigin: "center center",
               }}
             >
