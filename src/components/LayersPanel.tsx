@@ -16,7 +16,9 @@ interface LayersPanelProps {
   setSelectedImageId: (id: string | null) => void;
   removeCanvasImage: (id: string) => void;
   /** Optional callback to open the text editor for a given text-element id. */
-  onEditText?: (textId: string) => void;
+  /** Clicking a text row SELECTS it. It used to open the inline caret, which
+   *  put the panel and the canvas on different rules for the same click. */
+  onSelectText?: (textId: string) => void;
   /** Optional callback fired when the user clicks a shape row — host sets
    *  selection to that shape so its handles + editor panel surface. */
   onSelectShape?: (shapeId: string) => void;
@@ -41,7 +43,7 @@ export function LayersPanel({
   design, setDesign,
   canvasImages, setCanvasImages,
   selectedImageId, setSelectedImageId,
-  removeCanvasImage, onEditText, onSelectShape, onDuplicateRow,
+  removeCanvasImage, onSelectText, onSelectShape, onDuplicateRow,
 }: LayersPanelProps) {
 
   // Compute the effective layer stack (bottom → top).
@@ -181,15 +183,15 @@ export function LayersPanel({
       onSelectShape(row.id);
       return;
     }
-    if (row.type === "text" && onEditText) {
-      // Auto-unhide on edit so typing isn't invisible.
+    if (row.type === "text" && onSelectText) {
+      // Auto-unhide on select so the user sees what they just picked.
       if (row.hidden) {
         setDesign((d) => ({
           ...d,
           texts: d.texts.map((t) => (t.id === row.id ? { ...t, hidden: false } : t)),
         }));
       }
-      onEditText(row.id);
+      onSelectText(row.id);
     }
   };
 

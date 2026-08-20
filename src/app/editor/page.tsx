@@ -320,7 +320,7 @@ export default function Home() {
     ? { width: customSize.width, height: customSize.height, label: `Custom (${customSize.width}×${customSize.height})` }
     : FORMAT_DIMENSIONS[format] || FORMAT_DIMENSIONS.square;
 
-  // ---- One-time "click any text to edit" tip ----
+  // ---- One-time "double-click any text to edit" tip ----
   useEffect(() => {
     try {
       const dismissed = localStorage.getItem("tbbqvisualgen.editTipDismissed");
@@ -860,6 +860,25 @@ export default function Home() {
     router.push("/simple");
   }, [router, writeSession]);
 
+  /**
+   * Select a text layer WITHOUT opening its caret.
+   *
+   * A single click used to call `onEditText`, so it selected AND started an
+   * edit session in one go. That made the canvas lie in two directions: the
+   * cursor read `cursor-move`, promising a drag, and Backspace — the key a
+   * Figma user presses to delete the selected layer — deleted a CHARACTER of
+   * the copy instead. Selection and editing are now two separate acts.
+   *
+   * A group still selects as a group, and a locked layer still just selects;
+   * those two rules already lived in `onEditText` and are unchanged.
+   */
+  const selectTextOnly = useCallback((textId: string) => {
+    const t = design.texts.find((tt) => tt.id === textId);
+    const gid = t?.groupId;
+    setSelectedIdsRaw(gid ? new Set(getAllInGroup(gid)) : new Set([`text:${textId}`]));
+    setCropEditingId(null);
+  }, [design.texts, getAllInGroup]);
+
   const handleReset = useCallback(() => {
     if (canvasImages.length === 0 && design.texts.length === 0) return;
     const ok = window.confirm("Start over? This clears the design, text, and images.");
@@ -1362,6 +1381,22 @@ export default function Home() {
           nudgeSelectionBy((dx * step) / dims.width, (dy * step) / dims.height);
         }
       }
+      // Enter opens the caret on the one selected text layer — the keyboard
+      // half of the click/double-click split. Without it, moving the caret off
+      // a single click would leave no way to start typing except the mouse.
+      // Esc (below) is the way back out, so the pair is symmetrical.
+      if (!isEditableTarget && e.key === "Enter" && selectedIds.size === 1) {
+        const only = selectedIds.values().next().value;
+        if (typeof only === "string" && only.startsWith("text:")) {
+          const t = design.texts.find((tt) => `text:${tt.id}` === only);
+          // Locked and grouped text never enter the caret, same as a
+          // double-click on them.
+          if (t && !t.locked && !t.groupId) {
+            e.preventDefault();
+            setEditingTextId(t.id);
+          }
+        }
+      }
       // Esc clears canvas selection (or exits crop-edit mode if active).
       if (!isEditableTarget && e.key === "Escape") {
         if (cropEditingId) {
@@ -1394,7 +1429,7 @@ export default function Home() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [isExporting, isExportingVideo, handleExport, undo, redo, selectedIds, cropEditingId, setDoc, copySelection, pasteFromClipboard, duplicateSelection, nudgeSelectionBy, dims.width, dims.height, groupSelection, ungroupSelection, reorderSelection]);
+  }, [isExporting, isExportingVideo, handleExport, undo, redo, selectedIds, cropEditingId, setDoc, copySelection, pasteFromClipboard, duplicateSelection, nudgeSelectionBy, dims.width, dims.height, groupSelection, ungroupSelection, reorderSelection, design.texts]);
 
   const goToStep = useCallback((next: number) => {
     setCurrentStep(Math.max(1, Math.min(STEPS.length, next)));
@@ -1630,7 +1665,7 @@ export default function Home() {
               </div>
               {showEditTip && !editingTextId && !canvasIsEmpty && (
                 <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-orange/10 border border-orange/30 text-[11px] text-amber">
-                  <span>Tip: click any text on the canvas to edit it</span>
+                  <span>Tip: double-click any text on the canvas to edit it</span>
                   <button
                     onClick={dismissEditTip}
                     aria-label="Dismiss tip"
@@ -1924,6 +1959,7 @@ export default function Home() {
                     canvasImages={canvasImages}
                     paused={bgPaused || interacting}
                     snapEnabled={snapEnabled}
+                    onSelectText={selectTextOnly}
                     onEditText={(textId) => {
                       const t = design.texts.find((tt) => tt.id === textId);
                       if (t?.locked) {
@@ -2398,10 +2434,7 @@ export default function Home() {
                   selectedImageId={selectedImageId}
                   setSelectedImageId={setSelectedImageId}
                   removeCanvasImage={removeCanvasImage}
-                  onEditText={(textId) => {
-                    setEditingTextId(textId);
-                    setSelectedIdsRaw(new Set([`text:${textId}`]));
-                  }}
+                  onSelectText={selectTextOnly}
                   onSelectShape={(shapeId) => setSelectedIds(new Set([`shape:${shapeId}`]))}
                   onDuplicateRow={(layerId) => {
                     const src: NonNullable<typeof clipboardRef.current> = { texts: [], shapes: [], images: [] };

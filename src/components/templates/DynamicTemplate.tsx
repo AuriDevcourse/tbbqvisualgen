@@ -20,7 +20,13 @@ interface DynamicTemplateProps {
   /** When false, dragging text/logo places freeform (no snap-to-guides). */
   snapEnabled?: boolean;
   /** Click-to-edit a text element — flips it into inline edit mode. */
+  /** Enter the inline caret on a text layer. Reached by DOUBLE-click (or Enter
+   *  from the host's keyboard handler) — never by a single click. */
   onEditText?: (textId: string) => void;
+  /** Single click on a text layer: select it, nothing more. Split out from
+   *  `onEditText` because one click used to open the caret, which made
+   *  Backspace edit the copy instead of deleting the layer. */
+  onSelectText?: (textId: string) => void;
   /** Inline-edit commits the new content for a text element. */
   onTextContentChange?: (textId: string, content: string) => void;
   /** Drag updates the TechBBQ logo's manual position (fractional center coords). */
@@ -235,6 +241,7 @@ export function DynamicTemplate({
   paused,
   snapEnabled = true,
   onEditText,
+  onSelectText,
   onTextContentChange,
   onLogoPositionChange,
   editingTextId,
@@ -340,7 +347,7 @@ export function DynamicTemplate({
     const elementEl = e.currentTarget;
     const canvasEl = canvasRootRef.current;
     if (!canvasEl) {
-      onEditText(textId);
+      onSelectText?.(textId);
       return;
     }
     const canvasRect = canvasEl.getBoundingClientRect();
@@ -408,7 +415,10 @@ export function DynamicTemplate({
         onEditEnd?.();
         onEndDrag?.();
       }
-      if (!dragging) onEditText(textId);
+      // A click that did not turn into a drag SELECTS. Entering the caret is
+      // the double-click gesture below, matching both Figma and the way an
+      // image on this same canvas opens its positioning mode on double-click.
+      if (!dragging) onSelectText?.(textId);
     };
     document.addEventListener("pointermove", handleMove);
     document.addEventListener("pointerup", handleUp);
@@ -517,6 +527,13 @@ export function DynamicTemplate({
         suppressContentEditableWarning
         spellCheck={isEditing}
         onPointerDown={onEditText && !isEditing ? makeTextPointerHandler(text.id) : undefined}
+        onDoubleClick={onEditText && !isEditing
+          ? (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onEditText(text.id);
+            }
+          : undefined}
         onBlur={isEditing
           ? (e) => commitEdit(e.currentTarget as HTMLDivElement)
           : undefined}
