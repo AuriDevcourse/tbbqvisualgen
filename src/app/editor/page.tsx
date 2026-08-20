@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Pause, Play, X, RotateCcw, Layers as LayersIcon, Download, Film, LayoutTemplate, Type, Image as ImageIcon, Shapes, Undo2, Redo2, Lock, Unlock, Trash2, Copy, LibraryBig, AlignStartVertical, AlignCenterVertical, AlignEndVertical, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignHorizontalDistributeCenter, AlignVerticalDistributeCenter, Grid3x3, Magnet, Group, Ungroup, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Loader2, Users, Save, ZoomIn, ZoomOut, Maximize2, ChevronDown as ChevronDownIcon } from "lucide-react";
+import { Pause, Play, X, RotateCcw, Layers as LayersIcon, Download, Film, LayoutTemplate, Type, Image as ImageIcon, Shapes, Undo2, Redo2, Lock, Unlock, Trash2, Copy, LibraryBig, AlignStartVertical, AlignCenterVertical, AlignEndVertical, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignHorizontalDistributeCenter, AlignVerticalDistributeCenter, Grid3x3, Magnet, Group, Ungroup, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Loader2, Users, Save, ZoomIn, ZoomOut, Maximize2, ChevronDown as ChevronDownIcon, MousePointer2, Square, Circle, Minus, Star, ImagePlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as Popover from "@radix-ui/react-popover";
 import { toast } from "sonner";
@@ -16,7 +16,7 @@ import { DynamicTemplate } from "@/components/templates/DynamicTemplate";
 import { useExport, VIDEO_MAX_SECONDS, VIDEO_MIN_SECONDS, type ExportFormat } from "@/hooks/useExport";
 import { isAnimatedBackground } from "@/components/CanvasBackground";
 import { useUndoableDoc } from "@/hooks/useUndoableDoc";
-import { FORMAT_DIMENSIONS, DEFAULT_DESIGN, reconcileLayerOrder, splitImageLayerIds } from "@/types/template";
+import { FORMAT_DIMENSIONS, DEFAULT_DESIGN, reconcileLayerOrder, splitImageLayerIds, newTextElement, newShapeElement, newImagePlaceholder } from "@/types/template";
 import type { PlatformFormat, DesignConfig } from "@/types/template";
 import { FeedbackButton } from "@/components/FeedbackButton";
 import { Stepper } from "@/components/Stepper";
@@ -63,6 +63,20 @@ function AlignBtn({ icon: Icon, label, onClick }: { icon: typeof AlignStartVerti
     </button>
   );
 }
+
+/** Canvas tools. "select" is the default arrow; the rest arm the canvas to
+ *  CREATE the named thing where you draw it. */
+type ActiveTool = "select" | "text" | "rectangle" | "circle" | "line" | "star" | "photo";
+
+const TOOLS: { id: ActiveTool; label: string; key: string; icon: React.ComponentType<{ className?: string; strokeWidth?: number }> }[] = [
+  { id: "select", label: "Select", key: "V", icon: MousePointer2 },
+  { id: "text", label: "Text", key: "T", icon: Type },
+  { id: "rectangle", label: "Rectangle", key: "R", icon: Square },
+  { id: "circle", label: "Circle", key: "O", icon: Circle },
+  { id: "line", label: "Line", key: "L", icon: Minus },
+  { id: "star", label: "Star", key: "S", icon: Star },
+  { id: "photo", label: "Photo slot", key: "P", icon: ImagePlus },
+];
 
 const STEPS: StepDef[] = [
   { id: 1, label: "Canvas", icon: LayoutTemplate },
@@ -192,6 +206,21 @@ export default function Home() {
   const scale = view.zoom ?? fitScale;
   const pan = view.pan;
   const isZoomed = view.zoom !== null;
+
+  // ---- Active tool ----
+  // The left sidebar's CANVAS / TEXT / IMAGES / ELEMENTS are PANELS: they show
+  // you a list and give you an "Add" button that drops the thing at canvas
+  // centre. That is not a tool. A tool is a mode where the canvas itself
+  // becomes the input: pick it, draw where you want the thing, and it appears
+  // there at that size. Everything below exists to make that true.
+  const activeToolRef = useRef<ActiveTool>("select");
+  const [activeTool, setActiveToolState] = useState<ActiveTool>("select");
+  const setActiveTool = useCallback((t: ActiveTool) => {
+    activeToolRef.current = t;
+    setActiveToolState(t);
+  }, []);
+  /** Live rect while drawing, in canvas fractions. */
+  const [drawPreview, setDrawPreview] = useState<null | { x1: number; y1: number; x2: number; y2: number }>(null);
 
   // Marquee selection — rectangle in canvas-fractional coords (0–1).
   const [marquee, setMarquee] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
@@ -865,6 +894,51 @@ export default function Home() {
     toast.success("Photo added");
   }, [setDoc]);
 
+  /**
+   * Create the active tool's element at a given canvas rect and go back to
+   * Select.
+   *
+   * Reverting is deliberate: Figma drops back to the Move tool after you draw
+   * one shape, because the overwhelmingly common next act is to adjust what you
+   * just made, not to draw a second one. Staying armed means your next click
+   * silently creates another rectangle on top.
+   */
+  const createWithTool = useCallback((
+    tool: ActiveTool,
+    rect: { x: number; y: number; width: number; height: number },
+  ) => {
+    // A click without a drag gets a sensible default size rather than a
+    // zero-size element that renders as nothing and looks like a broken click.
+    const MIN = 0.01;
+    const drawn = rect.width > MIN && rect.height > MIN;
+    if (tool === "text") {
+      const t = newTextElement("YOUR TEXT");
+      t.position = { x: rect.x, y: rect.y };
+      setDesign((d) => ({ ...d, texts: [...d.texts, t] }));
+      setSelectedIdsRaw(new Set([`text:${t.id}`]));
+      // Straight into the caret: you picked the text tool to write something.
+      setEditingTextId(t.id);
+      setActiveTool("select");
+      return;
+    }
+    const shape = tool === "photo"
+      ? newImagePlaceholder()
+      : newShapeElement(tool as Exclude<ActiveTool, "select" | "text" | "photo">);
+    if (drawn) {
+      shape.x = rect.x;
+      shape.y = rect.y;
+      shape.width = rect.width;
+      // A line is a bar: dragging sets its length, not its thickness.
+      shape.height = tool === "line" ? (shape.height ?? 0.006) : rect.height;
+    } else {
+      shape.x = rect.x;
+      shape.y = rect.y;
+    }
+    setDesign((d) => ({ ...d, shapes: [...(d.shapes ?? []), shape] }));
+    setSelectedIdsRaw(new Set([`shape:${shape.id}`]));
+    setActiveTool("select");
+  }, [setDesign, setActiveTool]);
+
   const ZOOM_MIN = 0.05;
   const ZOOM_MAX = 8;
   /** Keep at least this much of the canvas inside the viewport, in screen px.
@@ -1069,6 +1143,43 @@ export default function Home() {
     const onDown = (e: PointerEvent) => {
       const zooming = zoomKeyRef.current;
       const panning = panKeyRef.current || e.button === 1; // middle-drag pans too
+
+      // A drawing tool owns the canvas: it must beat the element underneath,
+      // because in Figma you draw OVER things all the time. Same capture-phase
+      // reasoning as the zoom gesture.
+      const tool = activeToolRef.current;
+      if (!zooming && !panning && tool !== "select" && e.button === 0) {
+        const wrap = canvasWrapRef.current;
+        if (!wrap) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const rect = wrap.getBoundingClientRect();
+        const toFrac = (cx: number, cy: number) => ({
+          x: Math.max(0, Math.min(1, (cx - rect.left) / rect.width)),
+          y: Math.max(0, Math.min(1, (cy - rect.top) / rect.height)),
+        });
+        const start = toFrac(e.clientX, e.clientY);
+        let last = start;
+        setDrawPreview({ x1: start.x, y1: start.y, x2: start.x, y2: start.y });
+        const move = (m: PointerEvent) => {
+          last = toFrac(m.clientX, m.clientY);
+          setDrawPreview({ x1: start.x, y1: start.y, x2: last.x, y2: last.y });
+        };
+        const up = () => {
+          document.removeEventListener("pointermove", move);
+          document.removeEventListener("pointerup", up);
+          setDrawPreview(null);
+          const x1 = Math.min(start.x, last.x);
+          const y1 = Math.min(start.y, last.y);
+          const w = Math.abs(last.x - start.x);
+          const h = Math.abs(last.y - start.y);
+          createWithTool(tool, { x: x1 + w / 2, y: y1 + h / 2, width: w, height: h });
+        };
+        document.addEventListener("pointermove", move);
+        document.addEventListener("pointerup", up);
+        return;
+      }
+
       if (!zooming && !panning) return;
       e.preventDefault();
       e.stopPropagation();
@@ -1099,7 +1210,7 @@ export default function Home() {
     };
     container.addEventListener("pointerdown", onDown, true);
     return () => container.removeEventListener("pointerdown", onDown, true);
-  }, [view.zoom, fitScale, zoomTo, panBy]);
+  }, [view.zoom, fitScale, zoomTo, panBy, createWithTool]);
 
   const calculateScale = useCallback(() => {
     if (!previewContainerRef.current) return;
@@ -1699,6 +1810,16 @@ export default function Home() {
           nudgeSelectionBy((dx * step) / dims.width, (dy * step) / dims.height);
         }
       }
+      // Tool shortcuts — single bare letters, the way every canvas app does it.
+      // Guarded on no modifier so ⌘R (reload), ⌘T, ⌘L etc. are untouched, and
+      // on !isEditableTarget so typing "r" in a text stays typing.
+      if (!isEditableTarget && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        const hit = TOOLS.find((t) => t.key.toLowerCase() === e.key.toLowerCase());
+        if (hit) {
+          e.preventDefault();
+          setActiveTool(hit.id);
+        }
+      }
       // Zoom shortcuts. Ctrl/Cmd+0 = 100%, Shift+1 = fit, Ctrl/Cmd +/- steps.
       // Everything here is guarded on !isEditableTarget so typing "0" or "1"
       // into a field never moves the canvas.
@@ -1735,6 +1856,13 @@ export default function Home() {
         }
       }
       // Esc clears canvas selection (or exits crop-edit mode if active).
+      // A held tool is disarmed FIRST: Escape means "get me out of this mode",
+      // and losing your selection as well would be two undos in one keypress.
+      if (!isEditableTarget && e.key === "Escape" && activeToolRef.current !== "select") {
+        e.preventDefault();
+        setActiveTool("select");
+        return;
+      }
       if (!isEditableTarget && e.key === "Escape") {
         if (cropEditingId) {
           e.preventDefault();
@@ -1766,7 +1894,7 @@ export default function Home() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [isExporting, isExportingVideo, handleExport, undo, redo, selectedIds, cropEditingId, setDoc, copySelection, pasteFromClipboard, duplicateSelection, nudgeSelectionBy, dims.width, dims.height, groupSelection, ungroupSelection, reorderSelection, design.texts, zoomTo, zoomToFit, zoomBy]);
+  }, [isExporting, isExportingVideo, handleExport, undo, redo, selectedIds, cropEditingId, setDoc, copySelection, pasteFromClipboard, duplicateSelection, nudgeSelectionBy, dims.width, dims.height, groupSelection, ungroupSelection, reorderSelection, design.texts, zoomTo, zoomToFit, zoomBy, setActiveTool]);
 
   const goToStep = useCallback((next: number) => {
     setCurrentStep(Math.max(1, Math.min(STEPS.length, next)));
@@ -1995,11 +2123,14 @@ export default function Home() {
           {/* Center: Controls bar + Preview */}
           <main className="flex-1 flex flex-col min-h-0 min-w-0 gap-3">
             {/* Canvas controls strip — sits above the preview */}
-            <div className="shrink-0 flex items-center justify-between gap-2">
+            {/* flex-wrap, because this row now carries dimensions, zoom, seven
+                tools and nine toggles. Without it the last controls were
+                pushed outside the strip and clipped at 1280px wide. */}
+            <div className="shrink-0 flex flex-wrap items-center justify-between gap-y-2 gap-x-2">
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-2 text-[10px] font-medium text-muted uppercase tracking-[0.18em]">
                   <span className="inline-block size-1.5 rounded-full bg-red" />
-                  {dims.label}
+                  <span className="hidden 2xl:inline">{dims.label}</span>
                 </div>
                 {/* Zoom cluster. The gestures (z-drag, Ctrl+wheel) are faster
                     once you know them, but nobody discovers a gesture — so
@@ -2080,6 +2211,29 @@ export default function Home() {
                     <Maximize2 className="w-3.5 h-3.5" strokeWidth={1.5} />
                   </button>
                 )}
+                {/* Tools. Pick one, then draw on the canvas where you want the
+                    thing — as opposed to the sidebar's Add buttons, which drop
+                    it at canvas centre and leave you to move it. */}
+                <div role="radiogroup" aria-label="Canvas tool" className="flex items-center rounded-lg bg-card-2 p-0.5">
+                  {TOOLS.map(({ id, label, key, icon: Icon }) => {
+                    const active = activeTool === id;
+                    return (
+                      <button
+                        key={id}
+                        role="radio"
+                        aria-checked={active}
+                        aria-label={label}
+                        onClick={() => setActiveTool(id)}
+                        title={`${label} (${key})${id === "select" ? "" : " · click or drag on the canvas"}`}
+                        className={`flex items-center justify-center w-7 h-7 rounded-md transition-colors ${
+                          active ? "bg-surface text-ink" : "text-muted hover:bg-white/10 hover:text-foreground"
+                        }`}
+                      >
+                        <Icon className="w-3.5 h-3.5" strokeWidth={1.5} />
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
               {showEditTip && !editingTextId && !canvasIsEmpty && (
                 <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-orange/10 border border-orange/30 text-[11px] text-amber">
@@ -2248,7 +2402,15 @@ export default function Home() {
             ref={previewContainerRef}
             className="flex-1 min-h-0 min-w-0 flex items-center justify-center overflow-hidden rounded-2xl bg-card relative"
             style={{
-              cursor: gestureCursor === "pan" ? "grab" : gestureCursor === "zoom" ? "ew-resize" : undefined,
+              cursor: gestureCursor === "pan"
+                ? "grab"
+                : gestureCursor === "zoom"
+                  ? "ew-resize"
+                  : activeTool !== "select"
+                    // Crosshair is the universal "you are about to place
+                    // something" cursor; an arrow here would promise selection.
+                    ? "crosshair"
+                    : undefined,
             }}
           >
             <input
@@ -2543,6 +2705,29 @@ export default function Home() {
                 {/* Marquee selection rectangle — rendered while user drags an
                     empty-canvas area. Sits OUTSIDE exportRef so it never appears
                     in PNG output. */}
+                {drawPreview && (() => {
+                  const x = Math.min(drawPreview.x1, drawPreview.x2);
+                  const y = Math.min(drawPreview.y1, drawPreview.y2);
+                  const w = Math.abs(drawPreview.x2 - drawPreview.x1);
+                  const h = Math.abs(drawPreview.y2 - drawPreview.y1);
+                  return (
+                    <div
+                      style={{
+                        position: "absolute",
+                        left: `${x * 100}%`,
+                        top: `${y * 100}%`,
+                        width: `${w * 100}%`,
+                        height: `${h * 100}%`,
+                        // Dashed, to read as "not placed yet" against the solid
+                        // outline a real selection gets.
+                        border: `${Math.max(1, Math.round(1 / scale))}px dashed #fa7000`,
+                        background: "rgba(250, 112, 0, 0.10)",
+                        pointerEvents: "none",
+                        zIndex: 150,
+                      }}
+                    />
+                  );
+                })()}
                 {marquee && (() => {
                   const x = Math.min(marquee.x1, marquee.x2);
                   const y = Math.min(marquee.y1, marquee.y2);
