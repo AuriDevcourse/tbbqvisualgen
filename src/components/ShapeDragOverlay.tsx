@@ -5,11 +5,17 @@ import { Upload } from "lucide-react";
 import type { ShapeElement } from "@/types/template";
 import { computeSnapTargets, snapBbox, snapValue, snapSize, type Bbox } from "@/lib/snap";
 import { ResizeHandle } from "./ResizeHandle";
+import { pointerAngle, rotationFromDrag } from "@/lib/rotate";
 
 /** Corner handles resize both axes; edge handles resize ONE. Eight handles
  *  is the Illustrator / Figma standard, and the edges are what you reach for
  *  far more often — widening a banner should not also make it taller. */
-type DragMode = "move" | "nw" | "ne" | "sw" | "se" | "n" | "s" | "e" | "w" | null;
+/** Diameter of the rotation ring around each corner, in SCREEN px. Bigger
+ *  than the resize handle it surrounds, so the ring is reachable, and divided
+ *  by the zoom at use so it stays a constant size on screen. */
+const ROTATE_ZONE_PX = 34;
+
+type DragMode = "move" | "nw" | "ne" | "sw" | "se" | "n" | "s" | "e" | "w" | "rotate" | null;
 
 interface ShapeDragOverlayProps {
   shape: ShapeElement;
@@ -58,7 +64,7 @@ export function ShapeDragOverlay({
   const [dragging, setDragging] = useState<DragMode>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const startRef = useRef({ mx: 0, my: 0, x: 0, y: 0, w: 0, h: 0 });
+  const startRef = useRef({ mx: 0, my: 0, x: 0, y: 0, w: 0, h: 0, rotation: 0, pointerAngle: 0 });
 
   const handlePlaceholderFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -104,8 +110,21 @@ export function ShapeDragOverlay({
       y: shape.y,
       w: shape.width,
       h: shape.height,
+      rotation: shape.rotation || 0,
+      // Where the pointer sat relative to the centre when the drag began. The
+      // rotation applied is the CHANGE in pointer angle since then, so the
+      // shape does not jump to wherever the pointer happens to be on grab.
+      pointerAngle: 0,
     };
-  }, [shape.id, shape.x, shape.y, shape.width, shape.height, shape.locked, onEditStart, onBeginDrag]);
+    if (mode === "rotate") {
+      const rect = overlayRef.current?.getBoundingClientRect();
+      if (rect) {
+        const cx = rect.left + shape.x * rect.width;
+        const cy = rect.top + shape.y * rect.height;
+        startRef.current.pointerAngle = pointerAngle(cx, cy, e.clientX, e.clientY);
+      }
+    }
+  }, [shape.id, shape.x, shape.y, shape.width, shape.height, shape.rotation, shape.locked, onEditStart, onBeginDrag]);
 
   useEffect(() => {
     if (!dragging) return;
@@ -165,6 +184,23 @@ export function ShapeDragOverlay({
           y: newY + shape.height / 2,
         });
         onMoveBy?.(newX - startRef.current.x, newY - startRef.current.y);
+        return;
+      }
+
+      if (dragging === "rotate") {
+        const rect = overlayRef.current?.getBoundingClientRect();
+        if (!rect || rect.width === 0) return;
+        const cx = rect.left + shape.x * rect.width;
+        const cy = rect.top + shape.y * rect.height;
+        const rounded = rotationFromDrag({
+          startRotation: startRef.current.rotation,
+          startPointerAngle: startRef.current.pointerAngle,
+          currentPointerAngle: pointerAngle(cx, cy, clientX, clientY),
+          snap: shiftHeld,
+        });
+        onGuidesChange?.({ x: null, y: null });
+        onDragInfo?.({ text: `${rounded}°`, x: shape.x, y: shape.y + shape.height / 2 });
+        onChange({ ...shape, rotation: rounded });
         return;
       }
 
@@ -369,9 +405,16 @@ export function ShapeDragOverlay({
         inset: 0,
         pointerEvents: "none",
         zIndex: (zIndex ?? 10) + (selected ? 1 : 0),
-        ...rotateStyle,
       }}
     >
+      {/* The rotation lives on an INNER wrapper, not on the root above.
+       *  Rotating the root made its getBoundingClientRect return the
+       *  axis-aligned box of a rotated element — bigger than the canvas — and
+       *  the rotate maths reads that rect to find the shape's centre. The
+       *  centre therefore drifted as the shape turned, so a 30-degree drag
+       *  produced 3 degrees. Keeping the measured root square fixes it at the
+       *  source instead of correcting for it at each use. */}
+      <div style={{ position: "absolute", inset: 0, pointerEvents: "none", ...rotateStyle }}>
       {/* Clickable bbox. For filled shapes the whole rect catches clicks; for
        *  outline-only rect/circle we use an SVG with `pointer-events: stroke`
        *  so the hollow interior is click-through to whatever's underneath. */}
@@ -535,6 +578,34 @@ export function ShapeDragOverlay({
           `}</style>
         </>
       )}
+      {/* Rotation grab zones, just OUTSIDE each corner.
+       *  Figma and Illustrator both put rotation here rather than on a
+       *  dedicated handle: the corner is where your pointer already is after a
+       *  resize, and an extra visible handle would crowd a small shape. They
+       *  sit UNDER the resize handles in the DOM order below, so the inner
+       *  corner still resizes and only the ring around it rotates. */}
+      {resizable && corners.filter((c) => c.key === "nw" || c.key === "ne" || c.key === "sw" || c.key === "se").map(({ key, cx, cy }) => {
+        const zone = ROTATE_ZONE_PX / (scale > 0 ? scale : 1);
+        return (
+          <div
+            key={`rot-${key}`}
+            onMouseDown={(e) => startDrag("rotate", e)}
+            title="Drag to rotate · hold Shift for 15° steps"
+            style={{
+              position: "absolute",
+              left: cx - zone / 2,
+              top: cy - zone / 2,
+              width: zone,
+              height: zone,
+              borderRadius: "50%",
+              cursor: "grab",
+              pointerEvents: "auto",
+              // Below the resize handles, above the bbox.
+              zIndex: 10,
+            }}
+          />
+        );
+      })}
       {resizable && corners.map(({ key, cx, cy, cursor }) => (
         <ResizeHandle
           key={key}
@@ -545,6 +616,7 @@ export function ShapeDragOverlay({
           onMouseDown={(e) => startDrag(key, e)}
         />
       ))}
+      </div>
     </div>
   );
 }
