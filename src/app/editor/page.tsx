@@ -601,12 +601,40 @@ export default function Home() {
     return result;
   }, [getGroupId, getAllInGroup]);
 
+  /**
+   * Leave text-edit mode, committing whatever was typed.
+   *
+   * MUST be called by every path that changes the selection. Selecting
+   * something else used to leave the previous text `contentEditable` AND
+   * holding DOM focus, because the overlays `preventDefault()` on mousedown —
+   * which is what stops the browser moving focus. Two things went wrong from
+   * that one stuck focus:
+   *
+   *  1. `isEditableTarget` in the keyboard handler stayed true, so EVERY
+   *     shortcut guarded by it silently died: nudge, Delete, copy, paste,
+   *     duplicate, group, undo, z-order. The shortcuts were never broken; they
+   *     were being skipped.
+   *  2. Nothing committed. `commitEdit` only runs on blur, so characters typed
+   *     before clicking away lived in the DOM and not in the document, and the
+   *     next render from state could drop them.
+   *
+   * Blurring fixes both at once: the existing `onBlur` commits the content and
+   * `onTextContentChange` clears `editingTextId`. The explicit clear after it
+   * covers the case where the id lingers with nothing focused.
+   */
+  const stopTextEditing = useCallback(() => {
+    const active = document.activeElement as HTMLElement | null;
+    if (active?.isContentEditable) active.blur();
+    setEditingTextId(null);
+  }, []);
+
   // Click an element → expand to its whole group if it has one.
   const selectWithGroup = useCallback((layerId: string) => {
+    stopTextEditing();
     const gid = getGroupId(layerId);
     if (gid) setSelectedIdsRaw(new Set(getAllInGroup(gid)));
     else setSelectedIdsRaw(new Set([layerId]));
-  }, [getGroupId, getAllInGroup]);
+  }, [getGroupId, getAllInGroup, stopTextEditing]);
 
   const handleCanvasPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     // If the click landed on a canvas element (text/image bbox) or a
@@ -624,7 +652,8 @@ export default function Home() {
     const start = toFrac(e.clientX, e.clientY);
     setMarquee({ x1: start.x, y1: start.y, x2: start.x, y2: start.y });
     // Clear any existing selection on a fresh marquee; also exits crop-edit
-    // mode (Google Slides parity).
+    // mode (Google Slides parity) and text-edit mode.
+    stopTextEditing();
     setSelectedIdsRaw(new Set());
     setCropEditingId(null);
 
@@ -664,7 +693,7 @@ export default function Home() {
     };
     document.addEventListener("pointermove", handleMove);
     document.addEventListener("pointerup", handleUp);
-  }, [expandToGroups]);
+  }, [expandToGroups, stopTextEditing]);
 
   // Canvas image helpers
   const addCanvasImage = useCallback((img: CanvasImage) => {
@@ -873,11 +902,12 @@ export default function Home() {
    * those two rules already lived in `onEditText` and are unchanged.
    */
   const selectTextOnly = useCallback((textId: string) => {
+    stopTextEditing();
     const t = design.texts.find((tt) => tt.id === textId);
     const gid = t?.groupId;
     setSelectedIdsRaw(gid ? new Set(getAllInGroup(gid)) : new Set([`text:${textId}`]));
     setCropEditingId(null);
-  }, [design.texts, getAllInGroup]);
+  }, [design.texts, getAllInGroup, stopTextEditing]);
 
   const handleReset = useCallback(() => {
     if (canvasImages.length === 0 && design.texts.length === 0) return;
@@ -2374,7 +2404,7 @@ export default function Home() {
                     selected={selectedIds.has("tbbqLogo")}
                     snapEnabled={snapEnabled}
                     zIndex={layerZ("tbbqLogo")}
-                    onSelect={() => setSelectedIds(new Set(["tbbqLogo"]))}
+                    onSelect={() => { stopTextEditing(); setSelectedIds(new Set(["tbbqLogo"])); }}
                     onChange={(patch) =>
                       setDesign((prev) => {
                         const next = { ...prev } as DesignConfig;
