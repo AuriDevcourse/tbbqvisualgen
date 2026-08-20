@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Pause, Play, X, RotateCcw, Layers as LayersIcon, Download, Film, LayoutTemplate, Type, Image as ImageIcon, Shapes, Undo2, Redo2, Lock, Unlock, Trash2, Copy, LibraryBig, AlignStartVertical, AlignCenterVertical, AlignEndVertical, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignHorizontalDistributeCenter, AlignVerticalDistributeCenter, Grid3x3, Magnet, Group, Ungroup, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Loader2, Users, Save } from "lucide-react";
+import { Pause, Play, X, RotateCcw, Layers as LayersIcon, Download, Film, LayoutTemplate, Type, Image as ImageIcon, Shapes, Undo2, Redo2, Lock, Unlock, Trash2, Copy, LibraryBig, AlignStartVertical, AlignCenterVertical, AlignEndVertical, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignHorizontalDistributeCenter, AlignVerticalDistributeCenter, Grid3x3, Magnet, Group, Ungroup, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Loader2, Users, Save, ZoomIn, ZoomOut, Maximize2, ChevronDown as ChevronDownIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as Popover from "@radix-ui/react-popover";
 import { toast } from "sonner";
@@ -1996,17 +1996,88 @@ export default function Home() {
           <main className="flex-1 flex flex-col min-h-0 min-w-0 gap-3">
             {/* Canvas controls strip — sits above the preview */}
             <div className="shrink-0 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 text-[10px] font-medium text-muted uppercase tracking-[0.18em]">
-                <span className="inline-block size-1.5 rounded-full bg-red" />
-                {dims.label} · {Math.round(scale * 100)}%
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 text-[10px] font-medium text-muted uppercase tracking-[0.18em]">
+                  <span className="inline-block size-1.5 rounded-full bg-red" />
+                  {dims.label}
+                </div>
+                {/* Zoom cluster. The gestures (z-drag, Ctrl+wheel) are faster
+                    once you know them, but nobody discovers a gesture — so
+                    every one of them is also a button here, with the shortcut
+                    named in the tooltip. */}
+                <div className="flex items-center rounded-lg bg-card-2 p-0.5">
+                  <button
+                    onClick={() => zoomBy(1 / 1.25)}
+                    disabled={scale <= ZOOM_MIN + 1e-6}
+                    aria-label="Zoom out"
+                    title="Zoom out (⌘−) · or hold Z and drag left"
+                    className="flex items-center justify-center w-7 h-7 rounded-md text-muted hover:bg-white/10 hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                  >
+                    <ZoomOut className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  </button>
+                  <Popover.Root>
+                    <Popover.Trigger asChild>
+                      <button
+                        aria-label="Zoom level"
+                        title="Zoom presets · hold Z and drag to scrub, ⌘+wheel to zoom at the pointer, Space+drag to pan"
+                        className="flex items-center gap-0.5 px-2 h-7 rounded-md text-[10px] font-semibold tabular-nums text-foreground hover:bg-white/10 transition-colors"
+                      >
+                        {Math.round(scale * 100)}%
+                        <ChevronDownIcon className="w-3 h-3 text-muted" strokeWidth={1.5} />
+                      </button>
+                    </Popover.Trigger>
+                    <Popover.Portal>
+                      <Popover.Content
+                        side="bottom"
+                        align="start"
+                        sideOffset={6}
+                        className="z-50 rounded-lg bg-card-2 shadow-2xl p-1.5 min-w-[176px]"
+                      >
+                        <Popover.Close asChild>
+                          <button
+                            onClick={zoomToFit}
+                            className="w-full flex items-center justify-between gap-3 px-2 py-1.5 rounded-md text-[11px] text-foreground hover:bg-white/10 transition-colors"
+                          >
+                            <span className="flex items-center gap-1.5">
+                              <Maximize2 className="w-3 h-3 text-muted" strokeWidth={1.5} />
+                              Fit to window
+                            </span>
+                            <span className="text-[9px] text-muted tracking-wider">⇧1</span>
+                          </button>
+                        </Popover.Close>
+                        <div className="my-1 h-px bg-white/10" />
+                        {([["50%", 0.5, ""], ["100%", 1, "⌘0"], ["200%", 2, ""], ["400%", 4, ""]] as const).map(([label, value, hint]) => (
+                          <Popover.Close asChild key={label}>
+                            <button
+                              onClick={() => zoomTo(value)}
+                              className="w-full flex items-center justify-between gap-3 px-2 py-1.5 rounded-md text-[11px] text-foreground hover:bg-white/10 transition-colors"
+                            >
+                              <span className="tabular-nums">{label}</span>
+                              {hint && <span className="text-[9px] text-muted tracking-wider">{hint}</span>}
+                            </button>
+                          </Popover.Close>
+                        ))}
+                      </Popover.Content>
+                    </Popover.Portal>
+                  </Popover.Root>
+                  <button
+                    onClick={() => zoomBy(1.25)}
+                    disabled={scale >= ZOOM_MAX - 1e-6}
+                    aria-label="Zoom in"
+                    title="Zoom in (⌘+) · or hold Z and drag right"
+                    className="flex items-center justify-center w-7 h-7 rounded-md text-muted hover:bg-white/10 hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                  >
+                    <ZoomIn className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  </button>
+                </div>
                 {isZoomed && (
                   <button
                     onClick={zoomToFit}
                     title="Fit the canvas to the window (Shift+1)"
                     aria-label="Fit canvas to window"
-                    className="ml-1 px-2 py-0.5 rounded-full border border-surface/40 text-[9px] tracking-[0.14em] text-foreground hover:bg-white/5 transition-colors"
+                    className="flex items-center justify-center w-8 h-8 rounded-lg border border-surface/40 bg-transparent text-muted hover:bg-white/5 hover:text-foreground transition-colors"
                   >
-                    Fit
+                    <Maximize2 className="w-3.5 h-3.5" strokeWidth={1.5} />
                   </button>
                 )}
               </div>
