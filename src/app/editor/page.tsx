@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Pause, Play, X, RotateCcw, Layers as LayersIcon, Download, Film, LayoutTemplate, Type, Image as ImageIcon, Shapes, Undo2, Redo2, Lock, Unlock, Trash2, Copy, LibraryBig, AlignStartVertical, AlignCenterVertical, AlignEndVertical, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignHorizontalDistributeCenter, AlignVerticalDistributeCenter, Grid3x3, Magnet, Group, Ungroup, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Loader2, Users, Save, ZoomIn, ZoomOut, Maximize2, ChevronDown as ChevronDownIcon, MousePointer2, Square, Circle, Minus, Star, ImagePlus } from "lucide-react";
+import { Pause, Play, X, RotateCcw, Layers as LayersIcon, Download, Film, LayoutTemplate, Type, Image as ImageIcon, Shapes, Undo2, Redo2, Lock, Unlock, Trash2, Copy, LibraryBig, AlignStartVertical, AlignCenterVertical, AlignEndVertical, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignHorizontalDistributeCenter, AlignVerticalDistributeCenter, Grid3x3, Magnet, Group, Ungroup, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Loader2, Users, Save, ZoomIn, ZoomOut, Maximize2, ChevronDown as ChevronDownIcon, MousePointer2, Square, Circle, Minus, Star, ImagePlus, Ruler } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as Popover from "@radix-ui/react-popover";
 import { toast } from "sonner";
@@ -19,6 +19,7 @@ import { useUndoableDoc } from "@/hooks/useUndoableDoc";
 import { FORMAT_DIMENSIONS, DEFAULT_DESIGN, reconcileLayerOrder, splitImageLayerIds, newTextElement, newShapeElement, newImagePlaceholder } from "@/types/template";
 import type { PlatformFormat, DesignConfig } from "@/types/template";
 import { FeedbackButton } from "@/components/FeedbackButton";
+import { CanvasRulers } from "@/components/CanvasRulers";
 import { Stepper } from "@/components/Stepper";
 import type { StepDef } from "@/components/Stepper";
 import { StepCanvas } from "@/components/steps/StepCanvas";
@@ -224,6 +225,7 @@ export default function Home() {
   /** True when the text tool is armed and the pointer is over existing text,
    *  so the cursor can promise "edit this" instead of "draw a new one". */
   const [textToolOverText, setTextToolOverText] = useState(false);
+  const [showRulers, setShowRulers] = useState(false);
 
   // Marquee selection — rectangle in canvas-fractional coords (0–1).
   const [marquee, setMarquee] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
@@ -2337,6 +2339,19 @@ export default function Home() {
                   <Grid3x3 className="w-3.5 h-3.5" />
                 </button>
                 <button
+                  onClick={() => setShowRulers((r) => !r)}
+                  aria-label="Toggle rulers"
+                  aria-pressed={showRulers}
+                  title={showRulers ? "Rulers: on — measured in export pixels" : "Rulers: off"}
+                  className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${
+                    showRulers
+                      ? "bg-red/20 text-orange border border-red/40"
+                      : "border border-surface/40 bg-transparent text-muted hover:bg-white/5 hover:text-foreground"
+                  }`}
+                >
+                  <Ruler className="w-3.5 h-3.5" />
+                </button>
+                <button
                   onClick={() => setSnapEnabled((s) => !s)}
                   aria-label="Toggle snap to guides"
                   aria-pressed={snapEnabled}
@@ -2487,6 +2502,9 @@ export default function Home() {
                 }
               }}
             />
+            {showRulers && (
+              <CanvasRulers width={dims.width} height={dims.height} scale={scale} pan={pan} />
+            )}
             {canvasIsEmpty && galleryDismissed && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
                 <div className="text-center rounded-2xl bg-black/60 backdrop-blur-sm px-7 py-6 shadow-xl">

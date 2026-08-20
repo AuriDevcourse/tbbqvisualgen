@@ -6,7 +6,10 @@ import type { ShapeElement } from "@/types/template";
 import { computeSnapTargets, snapBbox, type Bbox } from "@/lib/snap";
 import { ResizeHandle } from "./ResizeHandle";
 
-type DragMode = "move" | "nw" | "ne" | "sw" | "se" | null;
+/** Corner handles resize both axes; edge handles resize ONE. Eight handles
+ *  is the Illustrator / Figma standard, and the edges are what you reach for
+ *  far more often — widening a banner should not also make it taller. */
+type DragMode = "move" | "nw" | "ne" | "sw" | "se" | "n" | "s" | "e" | "w" | null;
 
 interface ShapeDragOverlayProps {
   shape: ShapeElement;
@@ -159,8 +162,14 @@ export function ShapeDragOverlay({
 
       // Resize — Shift locks aspect, Alt scales from center.
       const { x: sx, y: sy, w: sw, h: sh } = startRef.current;
-      const isW = dragging === "nw" || dragging === "sw";
-      const isN = dragging === "nw" || dragging === "ne";
+      const isW = dragging === "nw" || dragging === "sw" || dragging === "w";
+      const isN = dragging === "nw" || dragging === "ne" || dragging === "n";
+      // An edge handle moves one edge only, so the other axis gets NO delta.
+      // Zeroing it here rather than patching the result afterwards means the
+      // dragged edge simply stays where it started, and every clamp and
+      // from-centre case below keeps working untouched.
+      const affectsX = dragging !== "n" && dragging !== "s";
+      const affectsY = dragging !== "e" && dragging !== "w";
       const fromCenter = altHeld;
       const lockAspect = shiftHeld;
       const fixedX = fromCenter ? sx : (isW ? sx + sw / 2 : sx - sw / 2);
@@ -168,8 +177,11 @@ export function ShapeDragOverlay({
       const draggedStartX = isW ? sx - sw / 2 : sx + sw / 2;
       const draggedStartY = isN ? sy - sh / 2 : sy + sh / 2;
 
-      let newDraggedX = draggedStartX + dx;
-      let newDraggedY = draggedStartY + dy;
+      // With Shift held the aspect block below deliberately reads the zeroed
+      // axis, which is how an edge drag scales proportionally — the same as
+      // Shift-dragging an edge in Illustrator.
+      let newDraggedX = draggedStartX + (affectsX ? dx : 0);
+      let newDraggedY = draggedStartY + (affectsY ? dy : 0);
 
       if (lockAspect) {
         const aspect = sw / sh;
@@ -253,11 +265,17 @@ export function ShapeDragOverlay({
     };
   }, [dragging, shape, onChange, otherBboxes, onGuidesChange, onEditEnd, onMoveBy, onEndDrag]);
 
+  // Eight handles: four corners (resize both axes) and four edge midpoints
+  // (resize one). Named `corners` still, so the render loop below is untouched.
   const corners: { key: DragMode; cx: number; cy: number; cursor: string }[] = [
-    { key: "nw", cx: shapeLeft,         cy: shapeTop,         cursor: "nwse-resize" },
-    { key: "ne", cx: shapeLeft + shapeW, cy: shapeTop,         cursor: "nesw-resize" },
-    { key: "sw", cx: shapeLeft,         cy: shapeTop + bboxH, cursor: "nesw-resize" },
-    { key: "se", cx: shapeLeft + shapeW, cy: shapeTop + bboxH, cursor: "nwse-resize" },
+    { key: "nw", cx: shapeLeft,          cy: shapeTop,          cursor: "nwse-resize" },
+    { key: "n",  cx: shapeLeft + shapeW / 2, cy: shapeTop,          cursor: "ns-resize" },
+    { key: "ne", cx: shapeLeft + shapeW,     cy: shapeTop,          cursor: "nesw-resize" },
+    { key: "e",  cx: shapeLeft + shapeW,     cy: shapeTop + bboxH / 2, cursor: "ew-resize" },
+    { key: "se", cx: shapeLeft + shapeW,     cy: shapeTop + bboxH,     cursor: "nwse-resize" },
+    { key: "s",  cx: shapeLeft + shapeW / 2, cy: shapeTop + bboxH,     cursor: "ns-resize" },
+    { key: "sw", cx: shapeLeft,          cy: shapeTop + bboxH,     cursor: "nesw-resize" },
+    { key: "w",  cx: shapeLeft,          cy: shapeTop + bboxH / 2, cursor: "ew-resize" },
   ];
 
   // The shape RENDERS rotated (DynamicTemplate applies the transform) but this
