@@ -3,7 +3,7 @@
 import { useCallback, useRef, useState, useEffect } from "react";
 import { Upload } from "lucide-react";
 import type { ShapeElement } from "@/types/template";
-import { computeSnapTargets, snapBbox, snapValue, type Bbox } from "@/lib/snap";
+import { computeSnapTargets, snapBbox, snapValue, snapSize, type Bbox } from "@/lib/snap";
 import { ResizeHandle } from "./ResizeHandle";
 
 /** Corner handles resize both axes; edge handles resize ONE. Eight handles
@@ -197,7 +197,12 @@ export function ShapeDragOverlay({
       // one you meant to place.
       let resizeGuideX: number | null = null;
       let resizeGuideY: number | null = null;
+      const sizeCandidates: { widths: number[]; heights: number[] } = { widths: [], heights: [] };
       if (snapEnabled) {
+        for (const b of otherBboxes || []) {
+          sizeCandidates.widths.push(b.width);
+          sizeCandidates.heights.push(b.height);
+        }
         const targets = computeSnapTargets(otherBboxes || []);
         if (affectsX) {
           const snapped = snapValue(newDraggedX, targets.x);
@@ -243,14 +248,44 @@ export function ShapeDragOverlay({
         newBottom = Math.max(fixedY, newDraggedY);
       }
 
-      const newW = newRight - newLeft;
-      const newH = newBottom - newTop;
+      let newW = newRight - newLeft;
+      let newH = newBottom - newTop;
+
+      // Match a neighbour's WIDTH or HEIGHT. Edge snapping cannot do this: two
+      // cards you want the same width may be nowhere near each other, so no
+      // edge ever comes into range. Applied by moving the dragged edge and
+      // leaving the fixed one, which is what the user is holding.
+      let matchedW: number | null = null;
+      let matchedH: number | null = null;
+      if (snapEnabled) {
+        if (affectsX) {
+          const m = snapSize(newW, sizeCandidates.widths);
+          if (m.matched !== null) { newW = m.size; matchedW = m.size; }
+        }
+        if (affectsY) {
+          const m = snapSize(newH, sizeCandidates.heights);
+          if (m.matched !== null) { newH = m.size; matchedH = m.size; }
+        }
+      }
+
+      // Rebuild the box around whichever edge stayed put.
+      if (fromCenter) {
+        newLeft = sx - newW / 2; newRight = sx + newW / 2;
+        newTop = sy - newH / 2;  newBottom = sy + newH / 2;
+      } else {
+        if (isW) { newLeft = newRight - newW; } else { newRight = newLeft + newW; }
+        if (isN) { newTop = newBottom - newH; } else { newBottom = newTop + newH; }
+      }
+
       const newX = (newLeft + newRight) / 2;
       const newY = (newTop + newBottom) / 2;
 
       onGuidesChange?.({ x: resizeGuideX, y: resizeGuideY });
+      // A size match has no line to draw, so the pill is the only signal it
+      // happened. "=" marks the axis that locked onto a neighbour.
       onDragInfo?.({
-        text: `${Math.round(newW * canvasWidth)} × ${Math.round(newH * canvasHeight)}`,
+        text: `${matchedW !== null ? "= " : ""}${Math.round(newW * canvasWidth)}`
+          + ` × ${matchedH !== null ? "= " : ""}${Math.round(newH * canvasHeight)}`,
         x: newX,
         y: newBottom,
       });

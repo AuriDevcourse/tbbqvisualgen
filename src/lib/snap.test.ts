@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cleanGuides, snapValue } from "@/lib/snap";
+import { cleanGuides, snapValue, snapSize } from "@/lib/snap";
 
 describe("cleanGuides", () => {
   it("passes real positions through untouched", () => {
@@ -49,5 +49,30 @@ describe("snapValue", () => {
     const r = snapValue(0.42, []);
     expect(r.value).toBe(0.42);
     expect(r.guide).toBeNull();
+  });
+});
+
+describe("snapSize", () => {
+  it("snaps a nearly-equal width onto the exact one", () => {
+    const r = snapSize(0.253, [0.25, 0.5]);
+    expect(r.size).toBe(0.25);
+    expect(r.matched).toBe(0.25);
+  });
+
+  it("leaves a clearly different width alone", () => {
+    const r = snapSize(0.4, [0.25, 0.5]);
+    expect(r.size).toBe(0.4);
+    expect(r.matched).toBeNull();
+  });
+
+  it("ignores zero-size candidates", () => {
+    const r = snapSize(0.004, [0]);
+    expect(r.size).toBe(0.004);
+    expect(r.matched).toBeNull();
+  });
+
+  it("takes the closest of several candidates", () => {
+    const r = snapSize(0.252, [0.25, 0.2555]);
+    expect(r.size).toBe(0.25);
   });
 });

@@ -145,3 +145,32 @@ export function snapValue(value: number, targets: number[]): { value: number; gu
   }
   return { value: best, guide };
 }
+
+/**
+ * Snap a DIMENSION to one another element already has.
+ *
+ * Edge snapping (`snapValue`) answers "line this edge up with that edge".
+ * It cannot answer "make this the same width as that", which is a different
+ * question and the one you ask when building a row of cards: the two boxes may
+ * be nowhere near each other, so no edge ever comes into range.
+ *
+ * Returns the matched dimension so the caller can report it — a size snap has
+ * no line to draw, unlike an edge snap, so the only way the user knows it
+ * happened is to be told.
+ */
+export function snapSize(size: number, candidates: number[]): { size: number; matched: number | null } {
+  let best = size;
+  let matched: number | null = null;
+  let bestDist = SNAP_THRESHOLD;
+  for (const c of candidates) {
+    // A zero-size candidate is not a dimension anyone meant to match.
+    if (c <= 0) continue;
+    const dist = Math.abs(size - c);
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = c;
+      matched = c;
+    }
+  }
+  return { size: best, matched };
+}
