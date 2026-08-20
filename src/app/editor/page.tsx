@@ -2491,8 +2491,11 @@ export default function Home() {
                   selectedImageId={selectedImageId}
                   setSelectedImageId={setSelectedImageId}
                   removeCanvasImage={removeCanvasImage}
+                  selectedIds={selectedIds}
                   onSelectText={selectTextOnly}
-                  onSelectShape={(shapeId) => setSelectedIds(new Set([`shape:${shapeId}`]))}
+                  // Through selectWithGroup like every other selection path, so
+                  // a grouped shape selects its group and text-editing exits.
+                  onSelectShape={(shapeId) => selectWithGroup(`shape:${shapeId}`)}
                   onDuplicateRow={(layerId) => {
                     const src: NonNullable<typeof clipboardRef.current> = { texts: [], shapes: [], images: [] };
                     if (layerId.startsWith("text:")) {
