@@ -5,7 +5,7 @@ import { Upload } from "lucide-react";
 import type { ShapeElement } from "@/types/template";
 import { computeSnapTargets, snapBbox, snapValue, snapSize, type Bbox } from "@/lib/snap";
 import { ResizeHandle } from "./ResizeHandle";
-import { pointerAngle, rotationFromDrag } from "@/lib/rotate";
+import { pointerAngle, rotationFromDrag, ROTATE_CURSOR } from "@/lib/rotate";
 
 /** Corner handles resize both axes; edge handles resize ONE. Eight handles
  *  is the Illustrator / Figma standard, and the edges are what you reach for
@@ -598,7 +598,7 @@ export function ShapeDragOverlay({
               width: zone,
               height: zone,
               borderRadius: "50%",
-              cursor: "grab",
+              cursor: ROTATE_CURSOR,
               pointerEvents: "auto",
               // Below the resize handles, above the bbox.
               zIndex: 10,
