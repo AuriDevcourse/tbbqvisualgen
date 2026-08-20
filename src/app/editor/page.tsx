@@ -226,6 +226,18 @@ export default function Home() {
    *  so the cursor can promise "edit this" instead of "draw a new one". */
   const [textToolOverText, setTextToolOverText] = useState(false);
   const [showRulers, setShowRulers] = useState(false);
+  /** Live "640 × 360" / "X 902 Y 540" pill during a drag, in canvas fractions.
+   *  Set by the overlays, cleared on release. */
+  const [dragInfo, setDragInfo] = useState<null | { text: string; x: number; y: number }>(null);
+  const setDragInfoIfChanged = useCallback((next: { text: string; x: number; y: number } | null) => {
+    // Same reasoning as setGuidesIfChanged: this fires every frame of a drag,
+    // and re-rendering the editor for an identical value is pure waste.
+    setDragInfo((prev) => {
+      if (prev === next) return prev;
+      if (prev && next && prev.text === next.text && prev.x === next.x && prev.y === next.y) return prev;
+      return next;
+    });
+  }, []);
 
   // Marquee selection — rectangle in canvas-fractional coords (0–1).
   const [marquee, setMarquee] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
@@ -2782,6 +2794,39 @@ export default function Home() {
                 {/* Marquee selection rectangle — rendered while user drags an
                     empty-canvas area. Sits OUTSIDE exportRef so it never appears
                     in PNG output. */}
+                {dragInfo && (() => {
+                  // Text has to stay a fixed size on screen, so every
+                  // dimension divides by the zoom — the same rule as the
+                  // handles, the guide lines and the rulers.
+                  const s = scale > 0 ? scale : 1;
+                  return (
+                    <div
+                      data-drag-readout="true"
+                      style={{
+                        position: "absolute",
+                        left: `${dragInfo.x * 100}%`,
+                        top: `${dragInfo.y * 100}%`,
+                        // Just below the box and centred on it, so it never
+                        // covers the edge being dragged.
+                        transform: `translate(-50%, ${10 / s}px)`,
+                        padding: `${3 / s}px ${7 / s}px`,
+                        borderRadius: 4 / s,
+                        background: "#fa7000",
+                        color: "#fff",
+                        fontSize: 11 / s,
+                        lineHeight: 1.4,
+                        fontWeight: 600,
+                        fontVariantNumeric: "tabular-nums",
+                        whiteSpace: "nowrap",
+                        pointerEvents: "none",
+                        zIndex: 160,
+                        boxShadow: `0 ${1 / s}px ${3 / s}px rgba(0,0,0,0.4)`,
+                      }}
+                    >
+                      {dragInfo.text}
+                    </div>
+                  );
+                })()}
                 {drawPreview && (() => {
                   const x = Math.min(drawPreview.x1, drawPreview.x2);
                   const y = Math.min(drawPreview.y1, drawPreview.y2);
@@ -2910,6 +2955,7 @@ export default function Home() {
                       prev.map((ci) => (ci.id === updated.id ? updated : ci))
                     )}
                     onGuidesChange={setGuidesIfChanged}
+                    onDragInfo={setDragInfoIfChanged}
                     onEditStart={beginTransaction}
                     onEditEnd={endTransaction}
                     onBeginDrag={beginGroupDrag}
@@ -3052,6 +3098,7 @@ export default function Home() {
                         }))
                       }
                       onGuidesChange={setGuidesIfChanged}
+                      onDragInfo={setDragInfoIfChanged}
                       onEditStart={beginTransaction}
                       onEditEnd={endTransaction}
                       onBeginDrag={beginGroupDrag}

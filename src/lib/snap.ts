@@ -115,3 +115,33 @@ export function cleanGuides(next: { x: number | null; y: number | null }): { x: 
     y: typeof next.y === "number" && Number.isFinite(next.y) ? next.y : null,
   };
 }
+
+/**
+ * Snap ONE coordinate — a single moving edge — to the nearest target.
+ *
+ * `snapBbox` above snaps a whole box while it is being MOVED: it tests the
+ * box's left, centre and right against every target and slides the whole thing.
+ * A resize is a different question. Only one edge is moving, the opposite edge
+ * must not budge, and the answer is a single number.
+ *
+ * Resizing had no snapping at all — every resize branch explicitly cleared the
+ * guides — so you could align two boxes' centres by dragging them but could not
+ * line up an edge you were dragging with the edge right next to it.
+ *
+ * Uses the same SNAP_THRESHOLD as the move path, so a snap feels identical
+ * whichever gesture produced it.
+ */
+export function snapValue(value: number, targets: number[]): { value: number; guide: number | null } {
+  let best = value;
+  let guide: number | null = null;
+  let bestDist = SNAP_THRESHOLD;
+  for (const t of targets) {
+    const dist = Math.abs(value - t);
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = t;
+      guide = t;
+    }
+  }
+  return { value: best, guide };
+}

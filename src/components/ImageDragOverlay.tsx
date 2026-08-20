@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState, useEffect } from "react";
 import type { CanvasImage } from "./ImagePlacer";
-import { computeSnapTargets, snapBbox, type Bbox } from "@/lib/snap";
+import { computeSnapTargets, snapBbox, snapValue, type Bbox } from "@/lib/snap";
 import { HANDLE_HIT_PX, ResizeHandle } from "./ResizeHandle";
 
 /** Corner handles resize both axes; edge handles resize ONE. Eight handles
@@ -38,6 +38,9 @@ interface ImageDragOverlayProps {
   /** Report active snap-guide positions (fractional) to the parent so the
    *  parent can render unified orange guide lines outside the export root. */
   onGuidesChange?: (guides: { x: number | null; y: number | null }) => void;
+  /** Live readout while dragging: the size being made, or the position being
+   *  moved to, in canvas px. Cleared with null on release. */
+  onDragInfo?: (info: { text: string; x: number; y: number } | null) => void;
   /** Called on drag-start so the host can open a history transaction. */
   onEditStart?: () => void;
   /** Called on drag-end so the host can close the history transaction. */
@@ -61,7 +64,7 @@ interface ImageDragOverlayProps {
 }
 
 export function ImageDragOverlay({
-  image, otherImages, extraSnapBboxes, canvasWidth, canvasHeight, selected, snapEnabled, resizable = selected, zIndex, scale = 1, onSelect, onDeselect, onChange, onGuidesChange, onEditStart, onEditEnd, onBeginDrag, onMoveBy, onEndDrag, onEnterCrop, onDelete, onDuplicate,
+  image, otherImages, extraSnapBboxes, canvasWidth, canvasHeight, selected, snapEnabled, resizable = selected, zIndex, scale = 1, onSelect, onDeselect, onChange, onGuidesChange, onDragInfo, onEditStart, onEditEnd, onBeginDrag, onMoveBy, onEndDrag, onEnterCrop, onDelete, onDuplicate,
 }: ImageDragOverlayProps) {
   const [dragging, setDragging] = useState<DragMode>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -192,6 +195,11 @@ export function ImageDragOverlay({
           newX = Math.max(0, Math.min(1, rawX));
           newY = Math.max(0, Math.min(1, rawY));
         }
+        onDragInfo?.({
+          text: `X ${Math.round(newX * canvasWidth)}  Y ${Math.round(newY * canvasHeight)}`,
+          x: newX,
+          y: newY + image.height / 2,
+        });
         // Emit delta from the pre-drag position; host applies it to all
         // selected elements (so group-drag works).
         onMoveBy?.(newX - startRef.current.x, newY - startRef.current.y);
@@ -227,6 +235,28 @@ export function ImageDragOverlay({
       // Shift-dragging an edge in Illustrator.
       let newDraggedX = draggedStartX + (affectsX ? dx : 0);
       let newDraggedY = draggedStartY + (affectsY ? dy : 0);
+
+      // Snap the moving EDGE to its neighbours — see ShapeDragOverlay for why
+      // this runs before the aspect-lock block.
+      let resizeGuideX: number | null = null;
+      let resizeGuideY: number | null = null;
+      if (snapEnabled) {
+        const snapBoxes: Bbox[] = [
+          ...(otherImages || []).map((o) => ({ x: o.x, y: o.y, width: o.width, height: o.height })),
+          ...(extraSnapBboxes || []),
+        ];
+        const targets = computeSnapTargets(snapBoxes);
+        if (affectsX) {
+          const snapped = snapValue(newDraggedX, targets.x);
+          newDraggedX = snapped.value;
+          resizeGuideX = snapped.guide;
+        }
+        if (affectsY) {
+          const snapped = snapValue(newDraggedY, targets.y);
+          newDraggedY = snapped.value;
+          resizeGuideY = snapped.guide;
+        }
+      }
 
       if (lockAspect) {
         // Pick the dominant axis (largest proportional change) and project
@@ -273,7 +303,12 @@ export function ImageDragOverlay({
       const newX = (newLeft + newRight) / 2;
       const newY = (newTop + newBottom) / 2;
 
-      onGuidesChange?.({ x: null, y: null });
+      onGuidesChange?.({ x: resizeGuideX, y: resizeGuideY });
+      onDragInfo?.({
+        text: `${Math.round(newW * canvasWidth)} × ${Math.round(newH * canvasHeight)}`,
+        x: newX,
+        y: newBottom,
+      });
 
       onChange({
         ...image,
@@ -298,6 +333,7 @@ export function ImageDragOverlay({
     };
 
     const handleMouseUp = () => {
+      onDragInfo?.(null);
       // Flush the queued frame so the drag lands exactly where the pointer
       // was let go, rather than up to one frame behind it.
       if (frame) {

@@ -3,7 +3,7 @@
 import { useCallback, useRef, useState, useEffect } from "react";
 import { Upload } from "lucide-react";
 import type { ShapeElement } from "@/types/template";
-import { computeSnapTargets, snapBbox, type Bbox } from "@/lib/snap";
+import { computeSnapTargets, snapBbox, snapValue, type Bbox } from "@/lib/snap";
 import { ResizeHandle } from "./ResizeHandle";
 
 /** Corner handles resize both axes; edge handles resize ONE. Eight handles
@@ -30,6 +30,9 @@ interface ShapeDragOverlayProps {
   onSelect: (additive?: boolean) => void;
   onChange: (next: ShapeElement) => void;
   onGuidesChange?: (guides: { x: number | null; y: number | null }) => void;
+  /** Live readout while dragging: the size being made, or the position being
+   *  moved to, in canvas px. Cleared with null on release. */
+  onDragInfo?: (info: { text: string; x: number; y: number } | null) => void;
   onEditStart?: () => void;
   onEditEnd?: () => void;
   onBeginDrag?: (id: string) => void;
@@ -48,7 +51,7 @@ interface ShapeDragOverlayProps {
 
 export function ShapeDragOverlay({
   shape, otherBboxes, canvasWidth, canvasHeight, selected, snapEnabled, resizable = selected,
-  zIndex, scale = 1, onSelect, onChange, onGuidesChange,
+  zIndex, scale = 1, onSelect, onChange, onGuidesChange, onDragInfo,
   onEditStart, onEditEnd, onBeginDrag, onMoveBy, onEndDrag,
   onPlaceholderUpload,
 }: ShapeDragOverlayProps) {
@@ -156,6 +159,11 @@ export function ShapeDragOverlay({
           newX = Math.max(0, Math.min(1, rawX));
           newY = Math.max(0, Math.min(1, rawY));
         }
+        onDragInfo?.({
+          text: `X ${Math.round(newX * canvasWidth)}  Y ${Math.round(newY * canvasHeight)}`,
+          x: newX,
+          y: newY + shape.height / 2,
+        });
         onMoveBy?.(newX - startRef.current.x, newY - startRef.current.y);
         return;
       }
@@ -182,6 +190,26 @@ export function ShapeDragOverlay({
       // Shift-dragging an edge in Illustrator.
       let newDraggedX = draggedStartX + (affectsX ? dx : 0);
       let newDraggedY = draggedStartY + (affectsY ? dy : 0);
+
+      // Snap the MOVING EDGE to its neighbours. Done before the aspect-lock
+      // block below so that with Shift held the snapped edge stays snapped and
+      // the other axis is derived from it — the edge you are dragging is the
+      // one you meant to place.
+      let resizeGuideX: number | null = null;
+      let resizeGuideY: number | null = null;
+      if (snapEnabled) {
+        const targets = computeSnapTargets(otherBboxes || []);
+        if (affectsX) {
+          const snapped = snapValue(newDraggedX, targets.x);
+          newDraggedX = snapped.value;
+          resizeGuideX = snapped.guide;
+        }
+        if (affectsY) {
+          const snapped = snapValue(newDraggedY, targets.y);
+          newDraggedY = snapped.value;
+          resizeGuideY = snapped.guide;
+        }
+      }
 
       if (lockAspect) {
         const aspect = sw / sh;
@@ -220,7 +248,12 @@ export function ShapeDragOverlay({
       const newX = (newLeft + newRight) / 2;
       const newY = (newTop + newBottom) / 2;
 
-      onGuidesChange?.({ x: null, y: null });
+      onGuidesChange?.({ x: resizeGuideX, y: resizeGuideY });
+      onDragInfo?.({
+        text: `${Math.round(newW * canvasWidth)} × ${Math.round(newH * canvasHeight)}`,
+        x: newX,
+        y: newBottom,
+      });
 
       onChange({
         ...shape,
@@ -241,6 +274,7 @@ export function ShapeDragOverlay({
     };
 
     const handleMouseUp = () => {
+      onDragInfo?.(null);
       // Flush the queued frame so the drag lands where the pointer was let go.
       if (frame) {
         cancelAnimationFrame(frame);
