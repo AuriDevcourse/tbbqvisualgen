@@ -27,7 +27,7 @@ export function StepElements({ design, setDesign, selectedShapeId, onSelectShape
   const selected = shapes.find((s) => s.id === selectedShapeId) ?? null;
   const rowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
-  // Auto-expand + scroll the row matching the canvas single-selection.
+  // Auto-expand the row matching the canvas single-selection.
   useEffect(() => {
     if (!selectedShapeId) return;
     setExpandedIds((prev) => {
@@ -36,9 +36,18 @@ export function StepElements({ design, setDesign, selectedShapeId, onSelectShape
       next.add(selectedShapeId);
       return next;
     });
-    const el = rowRefs.current.get(selectedShapeId);
-    if (el) el.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [selectedShapeId]);
+
+  // Scroll in a second pass, after the expanded card has laid out — see the
+  // same split in StepText for why one effect got the wrong position.
+  const focusedIsExpanded = selectedShapeId ? expandedIds.has(selectedShapeId) : false;
+  useEffect(() => {
+    if (!selectedShapeId || !focusedIsExpanded) return;
+    const el = rowRefs.current.get(selectedShapeId);
+    if (!el) return;
+    const raf = requestAnimationFrame(() => el.scrollIntoView({ block: "start", behavior: "smooth" }));
+    return () => cancelAnimationFrame(raf);
+  }, [selectedShapeId, focusedIsExpanded]);
 
   const addShape = (type: ShapeType) => {
     const next = newShapeElement(type);

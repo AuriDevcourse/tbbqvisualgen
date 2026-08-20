@@ -1,11 +1,13 @@
 "use client";
 
-import { Upload, X, Crop as CropIcon } from "lucide-react";
+import { Upload, X, Crop as CropIcon, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState, useRef } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { CropDialog } from "./CropDialog";
 import { ColorPicker } from "./ColorPicker";
+import { readImageFile } from "@/lib/photoBackground";
+import { replaceSourcePatch } from "@/lib/canvasImageSource";
 
 export interface CanvasImage {
   id: string;     // unique identifier
@@ -82,20 +84,42 @@ interface ImagePlacerProps {
   onUpdate: (id: string, patch: Partial<CanvasImage>) => void;
   onRemove: (id: string) => void;
   onSelect: (id: string | null) => void;
+  /** Canvas pixel size. Needed because `CanvasImage.width` / `.height` are
+   *  fractions of two DIFFERENT lengths, so a frame's real aspect is
+   *  `(width * canvasW) / (height * canvasH)`. Without it the zoom maths is
+   *  off by the canvas aspect (1.78x on 16:9). Defaults to 16:9 so an older
+   *  caller still gets the common case right. */
+  canvasSize?: { width: number; height: number };
 }
 
-export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onSelect }: ImagePlacerProps) {
+export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onSelect, canvasSize = { width: 16, height: 9 } }: ImagePlacerProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [cropDialogFor, setCropDialogFor] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  // Swap the picture inside a box the user already positioned and styled.
+  // Double-clicking the CARD does it, and each card says so in words — the
+  // canvas double-click stays on enter-crop, which is what positions the
+  // subject inside its frame. The refresh button is the same action for anyone
+  // who does not try the double-click.
+  const replaceInputRef = useRef<HTMLInputElement>(null);
+  const replaceTargetIdRef = useRef<string | null>(null);
+  const openReplacePicker = useCallback((id: string) => {
+    replaceTargetIdRef.current = id;
+    replaceInputRef.current?.click();
+  }, []);
 
   // When canvas-side single-selection picks an image, scroll its card into
-  // view so the user can immediately reach its controls.
+  // view so the user can immediately reach its controls. `block: "start"` puts
+  // the card at the top of the panel with the controls below it; "nearest"
+  // refused to move at all whenever a sliver of the card was already visible,
+  // which on a long list left the controls off screen.
   useEffect(() => {
     if (!selectedId) return;
     const el = cardRefs.current.get(selectedId);
-    if (el) el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    if (!el) return;
+    const raf = requestAnimationFrame(() => el.scrollIntoView({ block: "start", behavior: "smooth" }));
+    return () => cancelAnimationFrame(raf);
   }, [selectedId]);
 
   const selectedImage = images.find((img) => img.id === selectedId) ?? null;
@@ -194,7 +218,9 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
   const zoomInfo = (() => {
     if (!selectedImage) return null;
     if ((selectedImage.fit ?? "cover") !== "cover") return null; // N/A for "Fit"
-    const frameAspect = selectedImage.width / selectedImage.height;
+    // Pixels, not fractions — see `canvasSize`.
+    const frameAspect = (selectedImage.width * canvasSize.width)
+      / (selectedImage.height * canvasSize.height);
     const srcAspect = selectedImage.naturalWidth && selectedImage.naturalHeight
       ? selectedImage.naturalWidth / selectedImage.naturalHeight
       : frameAspect;
@@ -233,6 +259,12 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
             else cardRefs.current.delete(img.id);
           }}
           onClick={() => onSelect(img.id === selectedId ? null : img.id)}
+          onDoubleClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            openReplacePicker(img.id);
+          }}
+          title="Click to edit this image · double-click to change the picture, keeping this box"
           className={cn(
             "flex items-center gap-3 p-1.5 rounded-lg cursor-pointer transition-all duration-150",
             img.id === selectedId
@@ -249,21 +281,61 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
             className="w-10 h-10 object-cover shrink-0"
           />
           <div className="flex-1 min-w-0">
-            <span className="text-xs text-white/50">
+            <span className="block text-xs text-white/50">
               {img.id === selectedId ? "Selected" : "Click to edit"}
+            </span>
+            {/* Spelled out rather than left as a discoverable gesture — nobody
+                guesses a double-click, and the alternative was delete-and-
+                re-add, which threw the whole frame away. */}
+            <span className="block text-[10px] text-white/40 truncate">
+              Double click to change picture
             </span>
           </div>
           <button
             onClick={(e) => {
               e.stopPropagation();
+              openReplacePicker(img.id);
+            }}
+            aria-label="Change this picture"
+            title="Change the picture, keeping this box — its position, size, border and fit. Double-clicking the card does the same."
+            className="p-1 rounded-lg hover:bg-white/10 transition-colors shrink-0"
+          >
+            <RefreshCw className="w-3.5 h-3.5 text-white/50" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
               onRemove(img.id);
             }}
+            aria-label="Remove this image"
             className="p-1 rounded-lg hover:bg-white/10 transition-colors shrink-0"
           >
             <X className="w-3.5 h-3.5 text-white/50" />
           </button>
         </div>
       ))}
+
+      {/* One input for every card — the target id is held in a ref so the
+          picker does not need one input per image. */}
+      <input
+        ref={replaceInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        className="hidden"
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          const targetId = replaceTargetIdRef.current;
+          replaceTargetIdRef.current = null;
+          if (replaceInputRef.current) replaceInputRef.current.value = "";
+          if (!file || !targetId) return;
+          try {
+            onUpdate(targetId, replaceSourcePatch(await readImageFile(file)));
+            toast.success("Picture changed — frame kept");
+          } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Could not use that image");
+          }
+        }}
+      />
 
       {/* Upload zone — hidden when the 10-image cap is reached */}
       {images.length < MAX_IMAGES && (

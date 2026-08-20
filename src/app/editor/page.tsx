@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Pause, Play, X, RotateCcw, Layers as LayersIcon, Download, Film, LayoutTemplate, Type, Image as ImageIcon, Shapes, Undo2, Redo2, Lock, Unlock, Trash2, Copy, LibraryBig, AlignStartVertical, AlignCenterVertical, AlignEndVertical, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignHorizontalDistributeCenter, AlignVerticalDistributeCenter, Grid3x3, Magnet, Group, Ungroup, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Loader2, Users, Save } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as Popover from "@radix-ui/react-popover";
 import { toast } from "sonner";
@@ -12,7 +11,7 @@ import type { CanvasImage } from "@/components/ImagePlacer";
 import { ImageDragOverlay } from "@/components/ImageDragOverlay";
 import { ShapeDragOverlay } from "@/components/ShapeDragOverlay";
 import { LogoDragOverlay } from "@/components/LogoDragOverlay";
-import type { Bbox } from "@/lib/snap";
+import { cleanGuides, type Bbox } from "@/lib/snap";
 import { DynamicTemplate } from "@/components/templates/DynamicTemplate";
 import { useExport, VIDEO_MAX_SECONDS, VIDEO_MIN_SECONDS, type ExportFormat } from "@/hooks/useExport";
 import { isAnimatedBackground } from "@/components/CanvasBackground";
@@ -138,8 +137,15 @@ export default function Home() {
   // every mousemove even when the guides were unchanged (usually null/null).
   // Collapsing the no-op updates cuts that churn and removes the state-update
   // cascade that React's "maximum update depth" guard trips on mid-drag.
+  //
+  // Two hardenings on top of that. `===` is not enough: NaN !== NaN, so a
+  // single non-finite guide made every call look like a change and the editor
+  // re-rendered without end. And a non-finite guide is never a real one — it
+  // means the geometry upstream divided by a zero-size rect — so it is
+  // normalised to null rather than stored and drawn.
   const setGuidesIfChanged = useCallback((next: { x: number | null; y: number | null }) => {
-    setGuides((prev) => (prev.x === next.x && prev.y === next.y ? prev : next));
+    const clean = cleanGuides(next);
+    setGuides((prev) => (prev.x === clean.x && prev.y === clean.y ? prev : clean));
   }, []);
   const [showEditTip, setShowEditTip] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
@@ -676,6 +682,7 @@ export default function Home() {
   // find the same card in the Canvas step.
   const photoBackgroundInputRef = useRef<HTMLInputElement>(null);
 
+
   const addPhotoBackground = useCallback((img: CanvasImage) => {
     setDoc((prev) => {
       const kept = prev.canvasImages.filter((ci) => !ci.isBackdrop);
@@ -722,6 +729,16 @@ export default function Home() {
       if (shapeIndex === -1) return prev;
       const shape = shapes[shapeIndex];
       const newImageId = `img-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      // A slot drawn as an OUTLINE is a frame the user styled on purpose — the
+      // white hairline on the Sessions on Stage speaker boards is the whole
+      // look. This used to hardcode `border: false`, so uploading into a slot
+      // with a 1px white stroke silently threw the stroke away and the photo
+      // landed bare in a row of framed neighbours. Carry the stroke across.
+      //
+      // Only OUTLINE slots. A "fill" slot's `color1` is the faint drop-zone
+      // wash (rgba(255,255,255,0.08)) plus a dashed border the renderer adds
+      // for the empty state; neither is a frame anyone asked to keep.
+      const framed = shape.fillType === "outline" && shape.strokeWidth > 0;
       const newImage: CanvasImage = {
         id: newImageId,
         src: dataUrl,
@@ -729,7 +746,12 @@ export default function Home() {
         y: shape.y,
         width: shape.width,
         height: shape.height,
-        border: false,
+        border: framed,
+        ...(framed ? { borderColor: shape.color1, borderWidth: shape.strokeWidth } : {}),
+        // The slot's own opacity and lock are properties of the frame the user
+        // set up, so they survive the swap too.
+        ...(shape.opacity !== 1 ? { opacity: shape.opacity } : {}),
+        ...(shape.locked ? { locked: true } : {}),
         cornerRadius: shape.type === "circle"
           ? 50
           : typeof shape.borderRadius === "number"
@@ -825,6 +847,16 @@ export default function Home() {
     if (persistTimerRef.current) clearTimeout(persistTimerRef.current);
     writeSession(latestDocRef.current);
     toast.success("Fine-tuning saved — back to Quick Templates");
+    router.push("/simple");
+  }, [router, writeSession]);
+
+  /** Header hop to /simple. Same synchronous flush as the button above — the
+   *  destination adopts the doc from the session, so skipping the flush would
+   *  silently drop up to 350ms of edits and, on a fast click, the whole
+   *  fine-tune. */
+  const handleOpenSimpleEditor = useCallback(() => {
+    if (persistTimerRef.current) clearTimeout(persistTimerRef.current);
+    writeSession(latestDocRef.current);
     router.push("/simple");
   }, [router, writeSession]);
 
@@ -1415,17 +1447,23 @@ export default function Home() {
                 <Save className="w-3.5 h-3.5" strokeWidth={1.5} />
                 Save &amp; back to Quick Templates
               </button>
-            ) : (
-              <Link
-                href="/simple"
-                aria-label="Open Quick Templates"
-                title="Quick Templates — build a visual from a simple form"
-                className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium border border-surface/40 bg-transparent text-foreground hover:border-surface hover:bg-white/5 transition-colors"
-              >
-                <Users className="w-3.5 h-3.5" strokeWidth={1.5} />
-                Quick Templates
-              </Link>
-            )}
+            ) : null}
+            {/* Always available, whichever way the user arrived. It used to
+                render only when they had NOT come from Quick Templates, so
+                anyone who fine-tuned a quick design had exactly one way out
+                and no way to hop over to the form without taking the
+                save-and-return path. It flushes the doc through the same
+                handler as that button, so navigating here never loses
+                fine-tuning either. */}
+            <button
+              onClick={handleOpenSimpleEditor}
+              aria-label="Open the Simple Editor"
+              title="Simple Editor — build a visual from a form. Fine-tuning is saved on the way."
+              className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium border border-surface/40 bg-transparent text-foreground hover:border-surface hover:bg-white/5 transition-colors"
+            >
+              <Users className="w-3.5 h-3.5" strokeWidth={1.5} />
+              Simple Editor
+            </button>
             <button
               onClick={() => setTemplatesOpen(true)}
               aria-label="Templates"
@@ -1564,6 +1602,7 @@ export default function Home() {
                   addCanvasImage={addCanvasImage}
                   updateCanvasImage={updateCanvasImage}
                   removeCanvasImage={removeCanvasImage}
+                  canvasSize={dims}
                 />
               )}
               {currentStep === 4 && (
@@ -2143,6 +2182,10 @@ export default function Home() {
                     onMoveBy={groupDragMoveBy}
                     onEndDrag={endGroupDrag}
                     onEnterCrop={async () => {
+                      // Captured up here because the natural-size probe below
+                      // declares its own `dims`, and the aspect maths needs the
+                      // CANVAS one.
+                      const canvasAspectDims = { width: dims.width, height: dims.height };
                       // Make sure we know the source's natural dimensions —
                       // load them on demand for legacy images that don't
                       // have them stored yet.
@@ -2176,7 +2219,16 @@ export default function Home() {
                         // that makes the crop window's RENDERED pixels match
                         // the frame's aspect — without it the inline crop
                         // editor (which assumes uniform scale) squishes.
-                        const frameAspect = ci.width / ci.height;
+                        //
+                        // The frame aspect has to be in PIXELS. `ci.width` and
+                        // `ci.height` are fractions of the canvas's width and
+                        // HEIGHT — two different lengths — so `width / height`
+                        // is only the real aspect on a square canvas. On 16:9
+                        // it came out 1.78x too wide, and the crop editor
+                        // stretched every photo horizontally by exactly that
+                        // (reported 2026-08-20 on a portrait headshot).
+                        const frameAspect = (ci.width * canvasAspectDims.width)
+                          / (ci.height * canvasAspectDims.height);
                         const sourceAspect = nW / nH;
                         const targetFracAspect = frameAspect / sourceAspect;
                         let cw = cur.width;

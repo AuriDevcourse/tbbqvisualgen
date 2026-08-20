@@ -25,7 +25,7 @@ export function StepText({ design, setDesign, focusedId }: StepTextProps) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const rowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
-  // Expand + scroll the focused row whenever the canvas single-selection changes.
+  // Expand the focused row whenever the canvas single-selection changes.
   useEffect(() => {
     if (!focusedId) return;
     setExpandedIds((prev) => {
@@ -34,9 +34,22 @@ export function StepText({ design, setDesign, focusedId }: StepTextProps) {
       next.add(focusedId);
       return next;
     });
-    const el = rowRefs.current.get(focusedId);
-    if (el) el.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [focusedId]);
+
+  // …then scroll to it, in a SEPARATE pass once the expanded card has laid out.
+  // Expanding and scrolling in one effect measured the row while it was still
+  // collapsed, so on a board with nine layers the fields the user came for
+  // landed below the fold and it was guesswork which layer was selected.
+  // `block: "start"` rather than "nearest" for the same reason: "nearest" does
+  // nothing at all once any sliver of a tall card is already on screen.
+  const focusedIsExpanded = focusedId ? expandedIds.has(focusedId) : false;
+  useEffect(() => {
+    if (!focusedId || !focusedIsExpanded) return;
+    const el = rowRefs.current.get(focusedId);
+    if (!el) return;
+    const raf = requestAnimationFrame(() => el.scrollIntoView({ block: "start", behavior: "smooth" }));
+    return () => cancelAnimationFrame(raf);
+  }, [focusedId, focusedIsExpanded]);
 
   const addText = () => {
     const next = newTextElement("YOUR TEXT");

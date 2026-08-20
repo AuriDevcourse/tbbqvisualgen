@@ -1480,7 +1480,7 @@ export default function SimplePage() {
             </button>
             <Link href="/editor" onClick={handleOpenAdvanced} title="Open this panel in the full editor to drag & fine-tune, then save" className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium border border-surface/40 text-foreground hover:bg-white/5 transition-colors">
               <PencilRuler className="w-3.5 h-3.5" strokeWidth={1.5} />
-              Edit &amp; fine-tune
+              Fine Tune Editor
             </Link>
             {/* Save split-button: the main half exports with the current
                 format; the chevron opens the PNG/JPG choice. The always-on
@@ -1491,7 +1491,7 @@ export default function SimplePage() {
                 disabled={isExporting || isExportingVideo}
                 aria-label={isVideoFormat(effectiveFormat) ? "Save video" : "Save image"}
                 title={isEmpty
-                  ? `Nothing filled in — this saves the background (plus the TechBBQ mark) as ${saveLabel(effectiveFormat, videoSeconds)}. For a completely bare background use Edit & fine-tune and untick the logo.`
+                  ? `Nothing filled in — this saves the background (plus the TechBBQ mark) as ${saveLabel(effectiveFormat, videoSeconds)}. For a completely bare background use the Fine Tune Editor and untick the logo.`
                   : `Save as ${saveLabel(effectiveFormat, videoSeconds)}`}
                 className="flex items-center gap-1.5 pl-5 pr-3.5 py-2 text-xs font-semibold tracking-wide hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >

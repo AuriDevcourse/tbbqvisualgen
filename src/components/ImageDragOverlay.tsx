@@ -41,7 +41,11 @@ interface ImageDragOverlayProps {
   onMoveBy?: (dx: number, dy: number) => void;
   /** Called on move-drag end. */
   onEndDrag?: () => void;
-  /** Double-click on the image bbox — Google Slides–style enter-crop. */
+  /** Double-click on the image bbox — Google Slides–style enter-crop, for
+   *  nudging the subject inside its frame. This gesture briefly opened the
+   *  replace-picture picker instead; Auri asked for the crop back
+   *  (2026-08-20), so swapping the picture lives on the Images panel card and
+   *  the canvas keeps positioning. Do not move it here again. */
   onEnterCrop?: () => void;
   onDelete?: () => void;
   onDuplicate?: () => void;
@@ -122,12 +126,29 @@ export function ImageDragOverlay({
   useEffect(() => {
     if (!dragging) return;
 
-    const handleMouseMove = (e: MouseEvent) => {
-      const rect = overlayRef.current?.getBoundingClientRect();
-      if (!rect) return;
+    // ---- One state update per FRAME, not per mousemove ----
+    // Every tick of this handler pushes at least one setState (the snap guides,
+    // plus the image itself). A mousemove stream is faster than paint on a busy
+    // board, so those updates pile up inside a single commit and React trips
+    // "Maximum update depth exceeded" — reported 2026-08-20 mid-drag, pointing
+    // at `setGuidesIfChanged`. Coalescing to one frame caps the chain at one
+    // update per paint, so the nested-update counter can never climb, and
+    // dragging gets smoother as a side effect.
+    // The resize branch reads Alt/Shift off the event, so the queued tick has
+    // to carry them too — not just the coordinates.
+    let pending: { mx: number; my: number; alt: boolean; shift: boolean } | null = null;
+    let frame = 0;
 
-      const dx = (e.clientX - startRef.current.mx) / rect.width;
-      const dy = (e.clientY - startRef.current.my) / rect.height;
+    const applyMove = (clientX: number, clientY: number, altHeld: boolean, shiftHeld: boolean) => {
+      const rect = overlayRef.current?.getBoundingClientRect();
+      // A zero-size rect divides to Infinity and writes NaN into x/y/width,
+      // which then renders as nothing and poisons every later measurement. It
+      // happens while the canvas is still laying out, so bail rather than
+      // clamp.
+      if (!rect || rect.width === 0 || rect.height === 0) return;
+
+      const dx = (clientX - startRef.current.mx) / rect.width;
+      const dy = (clientY - startRef.current.my) / rect.height;
 
       if (dragging === "move") {
         const rawX = startRef.current.x + dx;
@@ -173,8 +194,8 @@ export function ImageDragOverlay({
       const isW = dragging === "nw" || dragging === "sw";
       const isN = dragging === "nw" || dragging === "ne";
 
-      const fromCenter = e.altKey;
-      const lockAspect = e.shiftKey;
+      const fromCenter = altHeld;
+      const lockAspect = shiftHeld;
 
       // Fixed point is the OPPOSITE corner (default) or the CENTER (Alt).
       const fixedX = fromCenter ? sx : (isW ? sx + sw / 2 : sx - sw / 2);
@@ -238,7 +259,23 @@ export function ImageDragOverlay({
       });
     };
 
+    const handleMouseMove = (e: MouseEvent) => {
+      pending = { mx: e.clientX, my: e.clientY, alt: e.altKey, shift: e.shiftKey };
+      if (frame) return;                  // already queued for this frame
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        if (pending) applyMove(pending.mx, pending.my, pending.alt, pending.shift);
+      });
+    };
+
     const handleMouseUp = () => {
+      // Flush the queued frame so the drag lands exactly where the pointer
+      // was let go, rather than up to one frame behind it.
+      if (frame) {
+        cancelAnimationFrame(frame);
+        frame = 0;
+        if (pending) applyMove(pending.mx, pending.my, pending.alt, pending.shift);
+      }
       const wasMove = dragging === "move";
       setDragging(null);
       onEditEnd?.();
@@ -251,6 +288,7 @@ export function ImageDragOverlay({
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
     return () => {
+      if (frame) cancelAnimationFrame(frame);
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };

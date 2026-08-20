@@ -10,11 +10,13 @@ interface StepImagesProps {
   addCanvasImage: (img: CanvasImage) => void;
   updateCanvasImage: (id: string, patch: Partial<CanvasImage>) => void;
   removeCanvasImage: (id: string) => void;
+  /** Canvas pixel size, forwarded to ImagePlacer for its aspect maths. */
+  canvasSize?: { width: number; height: number };
 }
 
 export function StepImages({
   canvasImages, selectedImageId, setSelectedImageId,
-  addCanvasImage, updateCanvasImage, removeCanvasImage,
+  addCanvasImage, updateCanvasImage, removeCanvasImage, canvasSize,
 }: StepImagesProps) {
   // The photo background is managed in the Canvas step. Listing it here too
   // would offer radius / border / size controls that break its full-bleed fit.
@@ -35,6 +37,7 @@ export function StepImages({
           onUpdate={updateCanvasImage}
           onRemove={removeCanvasImage}
           onSelect={setSelectedImageId}
+          canvasSize={canvasSize}
         />
       </section>
     </div>
