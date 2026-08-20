@@ -6,6 +6,342 @@ not required reading.
 
 ---
 
+## SESSION HANDOFF · 2026-08-20 (27): the crop editor stretched every photo · drag-loop hardening
+
+### State: the stretch is FIXED and measured. The update-depth error is HARDENED, not proven fixed.
+
+### 1. Double-click stretched the picture — a fraction-vs-pixel aspect bug
+
+Auri, 2026-08-20, with before/after screenshots: a portrait headshot rendered
+correctly in its frame, then went wide the moment he double-clicked into
+positioning.
+
+**Root cause.** `CanvasImage.width` and `.height` are fractions of the canvas's
+WIDTH and HEIGHT — two different lengths. So `ci.width / ci.height` is only the
+frame's real aspect on a SQUARE canvas. Three places treated it as the aspect:
+
+- `onEnterCrop` in `src/app/editor/page.tsx`, seeding the crop rect
+- `zoomInfo` in `src/components/ImagePlacer.tsx`, the Zoom slider
+- (the crop editor itself derives its box from that rect, so it inherited it)
+
+On 16:9 the value came out 1.7778x too wide, and the crop editor — which sizes
+the whole source to `frameW / cropW × frameH / cropH` with no `object-fit` —
+stretched every photo horizontally by exactly that. The normal render was never
+affected: it uses `object-view-box` plus `object-fit: cover`, which crops rather
+than distorts. That is why the frame looked right until you double-clicked.
+
+**Fix.** Compute it in pixels: `(width * canvasW) / (height * canvasH)`.
+`ImagePlacer` and `StepImages` gained a `canvasSize` prop (defaulting to 16:9)
+to get the canvas dims down to the zoom maths.
+
+**Measured, on a 600x900 portrait in a 0.130 x 0.257 frame at 1920x1080:**
+
+| | crop seeded | rendered / natural aspect |
+|---|---|---|
+| before | 0.759 x 1 | 1.78 (stretched) |
+| after | 1 x 0.741 | **0.9992** |
+
+A 900x300 landscape in the same frame: crop 0.30 x 1, ratio 0.9992. The residual
+0.08% is the `Math.round` on the frame's pixel size, not distortion.
+
+### 2. "Maximum update depth exceeded" mid-drag — READ THIS BEFORE BELIEVING IT IS FIXED
+
+Auri's console error pointed at `setGuidesIfChanged`, called from
+`ImageDragOverlay`'s `handleMouseMove`.
+
+**I could not reproduce it.** I drove 300 synthetic mousemoves per drag, in
+bursts of 25 with no paint between them, and in one single-frame burst of 300 —
+against the UNMODIFIED code as well as the new code. Zero errors either way. So
+my first theory (updates outrunning paints until React's 50-deep nested counter
+trips) is NOT demonstrated, and I am not claiming it as the cause.
+
+What I did instead was fix the two real defects that sit on exactly that code
+path, either of which produces this error:
+
+1. **The equality guard could not collapse NaN.** `setGuidesIfChanged` compared
+   `prev.x === next.x`. `NaN !== NaN`, so ONE non-finite guide makes every
+   later call look like a change, and the editor re-renders without end. Now
+   normalised through `cleanGuides()` in `src/lib/snap.ts` (4 unit tests),
+   which turns any non-finite guide into `null` — a guide is a position or it
+   is nothing.
+2. **A zero-size rect divided by zero.** Both `ImageDragOverlay` and
+   `ShapeDragOverlay` did `(clientX - startX) / rect.width` after checking only
+   that the rect EXISTS. A zero-width rect — which happens while the canvas is
+   still laying out — yields Infinity, then writes NaN into `x`/`y`/`width`.
+   That is where a NaN guide would come from. Both now bail on a zero-size
+   rect. `LogoDragOverlay` already guarded with `width > 0`.
+
+Also, and independently useful: all three overlays now coalesce a drag to **one
+state update per animation frame** instead of one per mousemove, flushing the
+queued frame on mouseup so the drag still lands exactly where the pointer was
+released. That caps the update volume whatever the trigger turns out to be.
+
+**If it recurs, this is what to capture** — the fix above is a narrowing, not a
+diagnosis: how many images/texts were on the canvas, whether snapping was on,
+whether it was a move or a corner-resize, whether anything was grouped or
+multi-selected, and whether any element had rendered away to nothing just
+before. A NaN in `x`/`y`/`width` in the session doc at the moment it happens
+would confirm cause 2 outright.
+
+### Verified
+
+- 300-move drag across 12 frames: 0 console errors, the image moved, and every
+  one of `x`/`y`/`width`/`height` stayed finite.
+- Crop editor stretch ratio 0.9992 on both a portrait and a landscape source,
+  re-checked after all the overlay edits.
+- `npm test` 363 passed (10 files, 4 new). `npx tsc --noEmit` clean.
+- `npx eslint src`: 4 errors, the SAME 4 as on HEAD (2 rules-of-hooks in
+  `LogoDragOverlay`, 2 set-state-in-effect in StepText/StepElements). None added.
+
+### Next steps
+
+1. Auri to re-test dragging on the real board that produced the error. If it is
+   gone, cause 2 was it. If not, capture the list above.
+2. The `× 1000` vs `× 1500` stroke-label mismatch is still open from handoff 26.
+3. Handoff 26's other open decision (two return buttons in the /editor header).
+4. Handoff 25's re-exports and the Life Science re-verify are still open.
+
+### File pointers
+
+- `src/app/editor/page.tsx` — `canvasAspectDims` + the pixel `frameAspect` in
+  `onEnterCrop`; `setGuidesIfChanged` now calling `cleanGuides`.
+- `src/lib/snap.ts` + `snap.test.ts` — `cleanGuides` and why NaN is the
+  dangerous case.
+- `src/components/ImageDragOverlay.tsx`, `ShapeDragOverlay.tsx`,
+  `LogoDragOverlay.tsx` — `applyMove` + the `pending`/`frame` rAF coalescing,
+  the mouseup flush, and the zero-size rect guards.
+- `src/components/ImagePlacer.tsx`, `steps/StepImages.tsx` — the `canvasSize`
+  prop and the corrected zoom `frameAspect`.
+
+---
+
+## SESSION HANDOFF · 2026-08-20 (26): five page-feedback items — replace-a-picture, slot strokes, scroll-to-layer
+
+### State: all five shipped and checked in the browser. Nothing committed.
+
+Auri's Agentation feedback on /simple and /editor, in his numbering.
+
+*Items 3 and 5 below were revised the same day after a second round of Auri's
+feedback — the canvas double-click went back to positioning. What is written
+here is what shipped.*
+
+### 1 + 2. Two header renames / additions
+
+`Edit & fine-tune` on /simple is now **Fine Tune Editor**. The empty-state hint
+that names the button was reworded with it, so the two still agree.
+
+/editor gained a **Simple Editor** button. It replaces the old `Quick Templates`
+link, which rendered ONLY when the user had not arrived from Quick Templates —
+so anyone who fine-tuned a quick design had one way out and no way to hop to the
+form. It flushes the doc through the same synchronous `writeSession` as
+`Save & back to Quick Templates`, so navigating from it never drops fine-tuning
+(a bare link doing exactly that is what handoff 19 fixed; do not turn this back
+into a `<Link>`).
+
+When the user came from Quick Templates the header now shows BOTH buttons. Both
+save. The loud orange one is still the signposted return trip; the new one is the
+plain hop. If that reads as redundant, delete the orange one, not this.
+
+### 3. Double-click the CARD to change the picture, keeping the frame
+
+`src/lib/canvasImageSource.ts` · `replaceSourcePatch()` returns a PATCH naming
+only `src`, `naturalWidth`, `naturalHeight` and `crop`. Everything else — x, y,
+width, height, cornerRadius, border + colour + stroke, fit, padding, backdrop,
+blur, opacity, scrim, groupId, simpleRole, locked, and the id — is whatever the
+box already had, because the patch never mentions it. 6 unit tests pin that.
+
+`crop` is the one field deliberately CLEARED. A crop rect is stored in fractions
+of the source image, so carrying it to a different photo crops an arbitrary
+window of it — and the zoom slider is built on the same rect, so a stale one
+shows the new photo at a random magnification.
+
+The gesture lives on the **Images panel card**, in two forms:
+- **Double-click the card.** Each card spells it out in a second line reading
+  "Double click to change picture", because nobody guesses a double-click.
+- **A refresh-arrow button** on the same card, same action.
+
+**It is deliberately NOT on the canvas.** It was there for one round on
+2026-08-20 and Auri asked for it off: a canvas double-click adjusts the
+POSITIONING of the subject inside its frame (enter-crop) and always has. Both
+gestures are now double-clicks on different surfaces — canvas positions, card
+changes the file. Do not move the file picker back onto the canvas.
+
+### 4. An image slot's stroke now survives the upload
+
+`replacePlaceholderWithImage` in `src/app/editor/page.tsx` hardcoded
+`border: false`, so a photo slot styled as a 1px white outline produced a bare
+photo. It now carries the frame when the slot is an OUTLINE with a non-zero
+stroke: `border: true`, `borderColor: shape.color1`,
+`borderWidth: shape.strokeWidth`, plus the slot's `opacity` and `locked`.
+
+Only outline slots. A "fill" slot's `color1` is the faint drop-zone wash
+(`rgba(255,255,255,0.08)`) and its border is the dashed empty-state the renderer
+adds — neither is a frame anyone asked to keep.
+
+### 5. Clicking an element now really scrolls to its layer
+
+The expand-and-scroll already existed in StepText, StepElements and ImagePlacer
+and still felt broken, for two reasons, both fixed in all three:
+
+1. **One effect did both.** It called `setExpandedIds` and `scrollIntoView` in
+   the same pass, so the scroll measured the row while it was still COLLAPSED;
+   the expansion then pushed the fields below the fold. Now expansion is one
+   effect and the scroll is a second one gated on the row actually being
+   expanded, fired inside a `requestAnimationFrame` so it measures the laid-out
+   card.
+2. **`block: "nearest"` does nothing** once any sliver of a tall card is on
+   screen. All three now use `block: "start"`, which puts the layer's header at
+   the top of the panel with its controls below it.
+
+### Gotcha: the two stroke panels disagree about what "1" means
+
+The shape panel labels `strokeWidth` as `× 1000`; the image panel labels
+`borderWidth` as `× 1500`. Same stored fraction, two different numbers. So a
+slot set to "1" reads "2" in the Images panel after upload. **The stroke is
+retained exactly — identical fraction, identical render** (both are
+fraction × canvas width); only the two labels disagree, and neither is real px
+anyway: at 1920 wide, 0.001 renders 1.92px. Left alone on purpose — picking a
+reference changes what every existing saved border DISPLAYS as. Auri's call.
+
+### Gotcha: `set-state-in-effect` lint errors in StepText / StepElements
+
+Two eslint errors on the expand effect. **They pre-date this session** —
+verified by linting the stashed tree. Fixing them properly means deriving
+"expanded" instead of syncing it into state, which needs a collapse-override so
+the user can still close the focused row. Not attempted here.
+
+### Verified
+
+- /simple header reads `Fine Tune Editor`; /editor header shows both
+  `Save & back to Quick Templates` and `Simple Editor`.
+- Photo slot → Outline → stroke 1 → upload: the resulting image came out
+  `border: true`, `borderColor: "rgba(255,255,255,0.08)"`,
+  `borderWidth: 0.001`, frame `[0.5, 0.5, 0.18, 0.26]` unchanged.
+- Same again on the real board: Sessions on Stage · moderator + 4 speakers,
+  whose slots are a `#FFFFFF` hairline (`borderWidth` 0.00052 ≈ 1px at 1920).
+  Uploading kept `border: true`, `#FFFFFF`, 0.00052, and the panel read
+  `STROKE 1 px`.
+- Double-clicked that CARD, uploaded a 900×300 over a 400×600: same id, same
+  frame, same white hairline, `naturalWidth/Height` updated, `crop` null.
+- Double-clicked the same image ON CANVAS: it entered crop and seeded a rect
+  (`{x: 0.4156, y: 0, width: 0.1688, height: 1}`), i.e. positioning is back.
+- Sessions on Stage · moderator + 4 speakers (15 text layers) at 1280×720 with
+  the panel scrolled to 0: clicking layer 14 on canvas switched to the Text tab,
+  expanded that row, and scrolled the panel 0 → 554 so the card sits exactly at
+  the panel's top edge, controls fully visible.
+- `npm test` 359 passed (9 files, 6 new). `npx tsc --noEmit` clean. 0 console
+  errors during the whole browser run.
+
+### Next steps
+
+1. Decide the stroke-label reference (see the gotcha). Labelling both against
+   the ACTUAL canvas width would make "1 px" mean 1 px in the export.
+2. Decide whether the /editor header keeps both return buttons or just one.
+3. Tell the team: double-click on the CANVAS positions the subject (unchanged),
+   double-click the CARD in the Images panel changes the file.
+4. Consider the same replace-in-place gesture for Quick Templates' logo slots on
+   /simple — it only exists in the editor.
+5. Handoff 25's next steps are still open (re-export the two walls, re-verify the
+   24 Life Science partners), and handoff 24's INCUBA x KITCHEN Airtable fix.
+
+### File pointers
+
+- `src/lib/canvasImageSource.ts` + `.test.ts` — `replaceSourcePatch`,
+  `replaceSourceIn`, and why `crop` is cleared.
+- `src/app/editor/page.tsx` — `handleOpenSimpleEditor`, the `Simple Editor`
+  button, and the `framed` block in `replacePlaceholderWithImage`.
+- `src/components/ImageDragOverlay.tsx` — `onDoubleClick` → `onEnterCrop`, with
+  a comment recording that the replace picker was tried here and removed.
+- `src/components/ImagePlacer.tsx` — `openReplacePicker`, the card
+  `onDoubleClick`, the "Double click to change picture" line, the refresh
+  button, the one shared hidden input, and the `block: "start"` card scroll.
+- `src/components/steps/StepText.tsx`, `StepElements.tsx` — the split
+  expand-then-scroll effects.
+
+---
+
+## SESSION HANDOFF · 2026-08-20 (25): CPH.LABS off the Life Science wall, exhibitors re-synced 44 → 45
+
+### State: Life Science 24 · LS x DT Exhibiting 45 · Participating 55 · project header 79
+
+Two roster edits, both from Auri, 2026-08-20: "1 CPH labs is no longer a partner,
+so delte it. 2 - for exhibiting startups there should be now all confirmed
+startups".
+
+### 1. CPH.LABS is out of LIFE_SCIENCE_PARTNERS
+
+25 → 24. Removed on Auri's word, NOT from a page re-read, so the other 24 are
+still only verified to 2026-08-13. `CPH Labs.svg` stays in the library in case the
+partnership returns, and the file's history note about it being replaced in place
+on 2026-08-04 stays too — that note is about the artwork, not the partnership.
+
+It was the only CPH reference in any set. The tiered All Partners walls come from
+`.logos-tiers` / Airtable, not from this array, and carry no CPH row, so nothing
+else moved.
+
+### 2. LS_DT_EXHIBITORS is the full confirmed 45
+
+`npm run logos:ls-feed`: **feed 45 · committed 44 · arrived 1 · dropped 0 ·
+artwork changed 0.** The one arrival is **Catalyst Reactivate**, imported from the
+feed to `public/logos/Catalyst Reactivate.svg` — white-ink SVG (`fill: #fff` in a
+single `.st0` style block), and `logos:tighten --check` reports its artwork already
+filling 100% of the viewBox, so it needed no crop. Listed alphabetically after
+Blue2.
+
+The local connector on `localhost:3001` and the deployed
+`airtable-woad.vercel.app/api/ls-startups` returned byte-identical rosters, both
+45, so the deployed feed already has the change and the script's own FEED constant
+needed no override.
+
+`LS_DT_PARTICIPANTS` is derived, so it moved 54 → 55 on its own (45 + 16 finalists
+− 6 overlap). The pitch finalists are untouched at 16.
+
+### Gotcha: AUSCORA always reports `compare failed: blank`
+
+Every `logos:ls-feed` run logs it under UNREADABLE. It is the white-CARD artwork
+(artwork knocked out of a white plate, same shape as AMMISORB) defeating the
+silhouette probe, not a changed logo. Do not chase it, and do not read it as an
+arrival. Noted in `partnerSets.ts` beside the set so the next re-sync sees it.
+
+### Gotcha: the roster churns right up to the summit
+
+44 on 2026-08-14, 45 today. Earlier it went 31 → 37 → 44 with 17 companies falling
+off in one three-day window. Any count written down is a date-stamped observation.
+Re-run the sync rather than trusting this number.
+
+### Verified
+
+- Both walls rendered at 1:1 in the running app: Life Science 24 (no CPH.LABS),
+  Exhibiting 45 with Catalyst Reactivate in row 2 after Blue2, white and at grid
+  size among its neighbours.
+- Sidebar counts read 24 / 45 / 16 / 55 and the project header 79 logos.
+- `npm test` — 353 passed, 8 files. `npx tsc --noEmit` clean.
+- `npm run logos` — manifest 1099 → 1100 files, 1 newly measured for brightness.
+- `Catalyst Reactivate.svg` served 200 (2207 bytes) and present in
+  `logoLibrary.json`.
+
+### Next steps
+
+1. Re-export the two slides. Both changed.
+2. Re-read techbbq.dk/life-science to re-verify the remaining 24 partners, since
+   this edit did not. Read it in a browser: the wall is inline `<svg>` plus one
+   `<img>`, and identity comes from each logo's parent link href.
+3. Re-run `npm run logos:ls-feed` again close to the summit. Expect more churn.
+4. Nothing is committed — `src/data/partnerSets.ts`, `src/data/logoLibrary.json`
+   and the new logo are dirty on `master`. Branch before committing.
+5. Handoff 24's four next steps are all still open, INCUBA x KITCHEN included.
+
+### File pointers
+
+- `src/data/partnerSets.ts` — `LIFE_SCIENCE_PARTNERS` (24) and `LS_DT_EXHIBITORS`
+  (45); both doc comments carry the 2026-08-20 entry.
+- `scripts/sync-ls-feed.mjs` — the `FEED` constant, `ALIASES`, `SHAPE_CHANGED`.
+- `ls-feed-sync-report.json` — this run's arrived / changed / dropped / unreadable.
+- `.logos-feed/catalystreactivate.svg` — the staged download the library copy came
+  from. The directory is wiped on every sync run.
+
+---
+
 ## SESSION HANDOFF · 2026-08-19 (24): the Community wall is the paying community partners
 
 ### State: 113 partners across 7 walls · Community is 16 (should be 17, see below)

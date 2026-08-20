@@ -97,3 +97,21 @@ export function snapBbox(bbox: Bbox, targets: SnapTargets): SnapResult {
 
   return { cx: bestCx, cy: bestCy, guideX: bestGuideX, guideY: bestGuideY };
 }
+
+/**
+ * Normalise a snap-guide pair before it goes into state.
+ *
+ * A guide is a position or it is nothing. A non-finite one means the geometry
+ * upstream divided by a zero-size rect, and it has to become `null` here for
+ * two reasons: drawing at NaN paints nothing useful, and — the expensive one —
+ * a NaN guide defeats the `prev.x === next.x` equality check that stops the
+ * editor re-rendering on every mousemove, because `NaN !== NaN`. That turns one
+ * bad measurement into an unbounded render loop and React's
+ * "Maximum update depth exceeded".
+ */
+export function cleanGuides(next: { x: number | null; y: number | null }): { x: number | null; y: number | null } {
+  return {
+    x: typeof next.x === "number" && Number.isFinite(next.x) ? next.x : null,
+    y: typeof next.y === "number" && Number.isFinite(next.y) ? next.y : null,
+  };
+}

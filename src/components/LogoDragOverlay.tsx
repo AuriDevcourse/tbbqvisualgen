@@ -173,15 +173,21 @@ export function LogoDragOverlay({
   useEffect(() => {
     if (!dragging) return;
 
-    const handleMouseMove = (e: MouseEvent) => {
+    // One state update per FRAME, not per mousemove — see the same guard in
+    // ImageDragOverlay for why (React "Maximum update depth exceeded" mid-drag).
+    // No modifier keys are read here, so the queued tick is coords only.
+    let pending: { mx: number; my: number } | null = null;
+    let frame = 0;
+
+    const applyMove = (clientX: number, clientY: number) => {
       // Convert SCREEN-pixel mouse delta into CANVAS-pixel delta using the
       // overlay's actual on-screen rect. Without this, dragging is off by
       // the preview-area scale factor (the canvas is shrunk to fit the
       // viewport so 1 screen px != 1 design px).
       const screenRect = overlayRef.current?.getBoundingClientRect();
       const screenScale = screenRect && screenRect.width > 0 ? screenRect.width / canvasWidth : 1;
-      const dx = (e.clientX - startRef.current.mx) / screenScale;
-      const dy = (e.clientY - startRef.current.my) / screenScale;
+      const dx = (clientX - startRef.current.mx) / screenScale;
+      const dy = (clientY - startRef.current.my) / screenScale;
 
       if (dragging === "move") {
         const dxFrac = dx / canvasWidth;
@@ -264,7 +270,22 @@ export function LogoDragOverlay({
       });
     };
 
+    const handleMouseMove = (e: MouseEvent) => {
+      pending = { mx: e.clientX, my: e.clientY };
+      if (frame) return;                  // already queued for this frame
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        if (pending) applyMove(pending.mx, pending.my);
+      });
+    };
+
     const handleMouseUp = () => {
+      // Flush the queued frame so the drag lands where the pointer was let go.
+      if (frame) {
+        cancelAnimationFrame(frame);
+        frame = 0;
+        if (pending) applyMove(pending.mx, pending.my);
+      }
       const wasMove = dragging === "move";
       setDragging(null);
       onEditEnd?.();
@@ -275,6 +296,7 @@ export function LogoDragOverlay({
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
     return () => {
+      if (frame) cancelAnimationFrame(frame);
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };

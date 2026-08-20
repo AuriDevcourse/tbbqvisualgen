@@ -99,11 +99,17 @@ export function ShapeDragOverlay({
   useEffect(() => {
     if (!dragging) return;
 
-    const handleMouseMove = (e: MouseEvent) => {
+    // One state update per FRAME, not per mousemove — see the same guard in
+    // ImageDragOverlay for why (React "Maximum update depth exceeded" mid-drag).
+    let pending: { mx: number; my: number; alt: boolean; shift: boolean } | null = null;
+    let frame = 0;
+
+    const applyMove = (clientX: number, clientY: number, altHeld: boolean, shiftHeld: boolean) => {
       const rect = overlayRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      const dx = (e.clientX - startRef.current.mx) / rect.width;
-      const dy = (e.clientY - startRef.current.my) / rect.height;
+      // See ImageDragOverlay: a zero-size rect yields NaN geometry.
+      if (!rect || rect.width === 0 || rect.height === 0) return;
+      const dx = (clientX - startRef.current.mx) / rect.width;
+      const dy = (clientY - startRef.current.my) / rect.height;
 
       if (dragging === "move") {
         const rawX = startRef.current.x + dx;
@@ -131,8 +137,8 @@ export function ShapeDragOverlay({
       const { x: sx, y: sy, w: sw, h: sh } = startRef.current;
       const isW = dragging === "nw" || dragging === "sw";
       const isN = dragging === "nw" || dragging === "ne";
-      const fromCenter = e.altKey;
-      const lockAspect = e.shiftKey;
+      const fromCenter = altHeld;
+      const lockAspect = shiftHeld;
       const fixedX = fromCenter ? sx : (isW ? sx + sw / 2 : sx - sw / 2);
       const fixedY = fromCenter ? sy : (isN ? sy + sh / 2 : sy - sh / 2);
       const draggedStartX = isW ? sx - sw / 2 : sx + sw / 2;
@@ -189,7 +195,22 @@ export function ShapeDragOverlay({
       });
     };
 
+    const handleMouseMove = (e: MouseEvent) => {
+      pending = { mx: e.clientX, my: e.clientY, alt: e.altKey, shift: e.shiftKey };
+      if (frame) return;                  // already queued for this frame
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        if (pending) applyMove(pending.mx, pending.my, pending.alt, pending.shift);
+      });
+    };
+
     const handleMouseUp = () => {
+      // Flush the queued frame so the drag lands where the pointer was let go.
+      if (frame) {
+        cancelAnimationFrame(frame);
+        frame = 0;
+        if (pending) applyMove(pending.mx, pending.my, pending.alt, pending.shift);
+      }
       const wasMove = dragging === "move";
       setDragging(null);
       onEditEnd?.();
@@ -202,6 +223,7 @@ export function ShapeDragOverlay({
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
     return () => {
+      if (frame) cancelAnimationFrame(frame);
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
