@@ -22,7 +22,9 @@ interface ShapeDragOverlayProps {
   /** Preview scale (canvas px -> screen px). Handles divide by it so they stay
    *  a constant size on screen at any zoom. Defaults to 1. */
   scale?: number;
-  onSelect: () => void;
+  /** Select this element. `additive` is true when Shift was held: the host
+   *  TOGGLES the element in the current selection instead of replacing it. */
+  onSelect: (additive?: boolean) => void;
   onChange: (next: ShapeElement) => void;
   onGuidesChange?: (guides: { x: number | null; y: number | null }) => void;
   onEditStart?: () => void;
@@ -260,6 +262,11 @@ export function ShapeDragOverlay({
           if ((e as React.MouseEvent).button === 2) return;
           e.preventDefault();
           e.stopPropagation();
+          // Shift-click toggles instead of replacing, and never drags.
+          if ((e as React.MouseEvent).shiftKey) {
+            onSelect(true);
+            return;
+          }
           if (shape.locked) {
             if (!selected) onSelect();
             return;

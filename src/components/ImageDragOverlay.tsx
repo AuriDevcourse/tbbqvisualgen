@@ -27,7 +27,9 @@ interface ImageDragOverlayProps {
   /** Preview scale (canvas px -> screen px). Handles divide by it so they stay
    *  a constant size on screen at any zoom. Defaults to 1. */
   scale?: number;
-  onSelect: () => void;
+  /** Select this element. `additive` is true when Shift was held: the host
+   *  TOGGLES the element in the current selection instead of replacing it. */
+  onSelect: (additive?: boolean) => void;
   onDeselect: () => void;
   onChange: (image: CanvasImage) => void;
   /** Report active snap-guide positions (fractional) to the parent so the
@@ -129,6 +131,7 @@ export function ImageDragOverlay({
   const handleContextMenu = useCallback((_e: React.MouseEvent) => {
     if (!selected) onSelect();
   }, [selected, onSelect]);
+
 
   useEffect(() => {
     if (!dragging) return;
@@ -335,6 +338,13 @@ export function ImageDragOverlay({
           if (e.button === 2) return; // let contextmenu handle right-click
           e.preventDefault();
           e.stopPropagation();
+          // Shift-click asks to TOGGLE, so it fires whether or not this image
+          // is already selected — removing it is as valid as adding it — and it
+          // never starts a drag, because the gesture was about the selection.
+          if (e.shiftKey) {
+            onSelect(true);
+            return;
+          }
           // Locked images are still selectable on click — just no drag.
           if (image.locked) {
             if (!selected) onSelect();

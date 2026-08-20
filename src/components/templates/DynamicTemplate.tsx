@@ -25,8 +25,9 @@ interface DynamicTemplateProps {
   onEditText?: (textId: string) => void;
   /** Single click on a text layer: select it, nothing more. Split out from
    *  `onEditText` because one click used to open the caret, which made
-   *  Backspace edit the copy instead of deleting the layer. */
-  onSelectText?: (textId: string) => void;
+   *  Backspace edit the copy instead of deleting the layer. `additive` is
+   *  true when Shift was held, so the host toggles instead of replacing. */
+  onSelectText?: (textId: string, additive?: boolean) => void;
   /** Inline-edit commits the new content for a text element. */
   onTextContentChange?: (textId: string, content: string) => void;
   /** Drag updates the TechBBQ logo's manual position (fractional center coords). */
@@ -358,6 +359,9 @@ export function DynamicTemplate({
     const startFracY = (elementRect.top + elementRect.height / 2 - canvasRect.top) / canvasRect.height;
     const startClientX = e.clientX;
     const startClientY = e.clientY;
+    // Read Shift at pointer-DOWN. Reading it on the up event would let a
+    // modifier pressed or released mid-click change what the gesture meant.
+    const additive = e.shiftKey;
     let dragging = false;
 
     // Build snap targets from every OTHER visible element on the canvas.
@@ -383,6 +387,7 @@ export function DynamicTemplate({
       const dx = moveE.clientX - startClientX;
       const dy = moveE.clientY - startClientY;
       if (!dragging && Math.hypot(dx, dy) > 4) {
+        if (additive) return; // shift-click is a selection gesture, never a drag
         if (isLocked) return; // locked text: select-only, no drag
         dragging = true;
         document.body.style.cursor = "grabbing";
@@ -418,7 +423,7 @@ export function DynamicTemplate({
       // A click that did not turn into a drag SELECTS. Entering the caret is
       // the double-click gesture below, matching both Figma and the way an
       // image on this same canvas opens its positioning mode on double-click.
-      if (!dragging) onSelectText?.(textId);
+      if (!dragging) onSelectText?.(textId, additive);
     };
     document.addEventListener("pointermove", handleMove);
     document.addEventListener("pointerup", handleUp);

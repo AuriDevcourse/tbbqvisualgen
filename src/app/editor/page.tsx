@@ -628,12 +628,31 @@ export default function Home() {
     setEditingTextId(null);
   }, []);
 
-  // Click an element → expand to its whole group if it has one.
-  const selectWithGroup = useCallback((layerId: string) => {
+  /**
+   * Click an element → expand to its whole group if it has one.
+   *
+   * `additive` (Shift held) TOGGLES rather than adds. Removing is half of what
+   * shift-click is for: getting one item wrong in a six-item selection should
+   * cost one click, not a restart. A whole group toggles together, so a group
+   * never ends up half-selected — if any member is in, the group comes out.
+   */
+  const selectWithGroup = useCallback((layerId: string, additive?: boolean) => {
     stopTextEditing();
     const gid = getGroupId(layerId);
-    if (gid) setSelectedIdsRaw(new Set(getAllInGroup(gid)));
-    else setSelectedIdsRaw(new Set([layerId]));
+    const ids = gid ? getAllInGroup(gid) : [layerId];
+    if (!additive) {
+      setSelectedIdsRaw(new Set(ids));
+      return;
+    }
+    setSelectedIdsRaw((prev) => {
+      const next = new Set(prev);
+      const alreadyIn = ids.some((id) => next.has(id));
+      for (const id of ids) {
+        if (alreadyIn) next.delete(id);
+        else next.add(id);
+      }
+      return next;
+    });
   }, [getGroupId, getAllInGroup, stopTextEditing]);
 
   const handleCanvasPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
@@ -650,11 +669,16 @@ export default function Home() {
       y: Math.max(0, Math.min(1, (clientY - rect.top) / rect.height)),
     });
     const start = toFrac(e.clientX, e.clientY);
+    // Shift-marquee ADDS to what is already selected. Without this the box
+    // wiped the selection the moment it started, so Shift could not extend a
+    // marquee any more than it could extend a click.
+    const additive = e.shiftKey;
+    const base: Set<string> = additive ? new Set(selectedIds) : new Set();
     setMarquee({ x1: start.x, y1: start.y, x2: start.x, y2: start.y });
-    // Clear any existing selection on a fresh marquee; also exits crop-edit
-    // mode (Google Slides parity) and text-edit mode.
+    // A fresh (non-Shift) marquee clears the selection; both kinds exit
+    // crop-edit mode (Google Slides parity) and text-edit mode.
     stopTextEditing();
-    setSelectedIdsRaw(new Set());
+    if (!additive) setSelectedIdsRaw(new Set());
     setCropEditingId(null);
 
     const handleMove = (moveE: PointerEvent) => {
@@ -669,10 +693,13 @@ export default function Home() {
       const y1 = Math.min(start.y, p.y);
       const x2 = Math.max(start.x, p.x);
       const y2 = Math.max(start.y, p.y);
-      // Compute intersection against every element on the canvas.
-      const next = new Set<string>();
+      // Compute intersection against every element on the canvas, on top of
+      // whatever a Shift-marquee started from.
+      const next = new Set<string>(base);
       // Tiny marquee (just a click on empty area) clears selection without
       // searching — useful when the user clicks somewhere empty to deselect.
+      // With Shift it keeps `base`, so a stray shift-click on empty canvas
+      // does not throw away a selection the user is still building.
       if (x2 - x1 > 0.005 || y2 - y1 > 0.005) {
         document.querySelectorAll<HTMLElement>("[data-canvas-element]").forEach((el) => {
           const id = el.dataset.canvasElement;
@@ -693,7 +720,7 @@ export default function Home() {
     };
     document.addEventListener("pointermove", handleMove);
     document.addEventListener("pointerup", handleUp);
-  }, [expandToGroups, stopTextEditing]);
+  }, [expandToGroups, stopTextEditing, selectedIds]);
 
   // Canvas image helpers
   const addCanvasImage = useCallback((img: CanvasImage) => {
@@ -901,13 +928,10 @@ export default function Home() {
    * A group still selects as a group, and a locked layer still just selects;
    * those two rules already lived in `onEditText` and are unchanged.
    */
-  const selectTextOnly = useCallback((textId: string) => {
-    stopTextEditing();
-    const t = design.texts.find((tt) => tt.id === textId);
-    const gid = t?.groupId;
-    setSelectedIdsRaw(gid ? new Set(getAllInGroup(gid)) : new Set([`text:${textId}`]));
+  const selectTextOnly = useCallback((textId: string, additive?: boolean) => {
+    selectWithGroup(`text:${textId}`, additive);
     setCropEditingId(null);
-  }, [design.texts, getAllInGroup, stopTextEditing]);
+  }, [selectWithGroup]);
 
   const handleReset = useCallback(() => {
     if (canvasImages.length === 0 && design.texts.length === 0) return;
@@ -2237,7 +2261,7 @@ export default function Home() {
                     resizable={selectedImageId === img.id}
                     zIndex={layerZ(`image:${img.id}`)}
                     scale={scale}
-                    onSelect={() => selectWithGroup(`image:${img.id}`)}
+                    onSelect={(additive) => selectWithGroup(`image:${img.id}`, additive)}
                     onDeselect={() => setSelectedImageId(null)}
                     onChange={(updated) => setCanvasImages((prev) =>
                       prev.map((ci) => (ci.id === updated.id ? updated : ci))
@@ -2377,7 +2401,7 @@ export default function Home() {
                       resizable={selectedIds.size === 1 && selectedIds.has(`shape:${sh.id}`)}
                       zIndex={layerZ(`shape:${sh.id}`)}
                       scale={scale}
-                      onSelect={() => selectWithGroup(`shape:${sh.id}`)}
+                      onSelect={(additive) => selectWithGroup(`shape:${sh.id}`, additive)}
                       onChange={(updated) =>
                         setDesign((prev) => ({
                           ...prev,
@@ -2407,7 +2431,7 @@ export default function Home() {
                     snapEnabled={snapEnabled}
                     zIndex={layerZ("tbbqLogo")}
                     scale={scale}
-                    onSelect={() => { stopTextEditing(); setSelectedIds(new Set(["tbbqLogo"])); }}
+                    onSelect={(additive) => selectWithGroup("tbbqLogo", additive)}
                     onChange={(patch) =>
                       setDesign((prev) => {
                         const next = { ...prev } as DesignConfig;
