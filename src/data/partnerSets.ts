@@ -435,7 +435,13 @@ export const COMMUNITY_PAGES: PartnerSetEntry[][] = Array.from(
  * run — that is the white-card artwork below defeating the silhouette probe, not
  * a change.
  *
- * **This set is the FULL 45 — nothing is held back for missing artwork**, which
+ * **Re-synced again later the same day: 45 → 46. One arrived, nothing fell off.**
+ * New: **BIOMIC**, also a white-ink SVG filling its viewBox. Not to be confused
+ * with **Biomimica**, which is a different company already on the wall — they
+ * sit next to each other alphabetically, so check the artwork and not just the
+ * first six letters before "fixing" either one.
+ *
+ * **This set is the FULL 46 — nothing is held back for missing artwork**, which
  * is new. The feed carries each company's logo attachment, so every company that
  * had no library file was imported straight from it (43 of the 44 are white-ink
  * SVG; Ai2Ai is the one PNG). Two arrived padded and were run through
@@ -466,6 +472,7 @@ export const LS_DT_EXHIBITORS: PartnerSetEntry[] = [
   { label: "AUSCORA", src: "/logos/AUSCORA.svg" },
   { label: "AVENTIX", src: "/logos/AVENTIX.svg" },
   { label: "Bioelectrix", src: "/logos/Life%20Science%20Pitch%20Finalists%202026/Bioelectrix.svg" },
+  { label: "BIOMIC", src: "/logos/BIOMIC.svg" },
   { label: "Biomimica", src: "/logos/Biomimica.svg" },
   { label: "Blue2", src: "/logos/Blue2%20White.svg" },
   { label: "Catalyst Reactivate", src: "/logos/Catalyst%20Reactivate.svg" },
@@ -504,7 +511,9 @@ export const LS_DT_EXHIBITORS: PartnerSetEntry[] = [
 
 /**
  * The 16 pitch competition finalists — 8 from the Life Science Pitch
- * Competition, 8 from the Deep Tech Pitch Competition. Auri supplied all 16 as
+ * Competition, 8 from the Deep Tech Pitch Competition, now held as TWO arrays
+ * with a fill button each (see `LS_PITCH_FINALISTS` / `DT_PITCH_FINALISTS`
+ * below). They were one combined set until 2026-08-20. Auri supplied all 16 as
  * white SVGs on 2026-08-10; they live in their own two folders under
  * `public/logos` so the pitch cohort stays findable as a group (a folder name
  * is a search tag, so typing "finalists" returns exactly these).
@@ -536,12 +545,13 @@ export const LS_DT_EXHIBITORS: PartnerSetEntry[] = [
  * company has no website — the page links its LinkedIn. Rendered and checked
  * against the page before being listed.
  *
- * This list got its own fill button ("LS x DT Pitch Finalists") the same day.
- * Until then it existed only to feed the participating wall, so a roster that
- * was correct for months had never actually been rendered on its own.
+ * This list got its own fill button on 2026-08-14. Until then it existed only to
+ * feed the participating wall, so a roster that was correct for months had never
+ * actually been rendered on its own. On 2026-08-20 that one button became two,
+ * one per competition.
  */
-export const LS_DT_PITCH_FINALISTS: PartnerSetEntry[] = [
-  // ── Life Science Pitch Competition ──
+/** The 8 Life Science Pitch Competition finalists. */
+export const LS_PITCH_FINALISTS: PartnerSetEntry[] = [
   { label: "3sonic", src: "/logos/Life%20Science%20Pitch%20Finalists%202026/3sonic.svg" },
   { label: "AnalgesiaAI", src: "/logos/Life%20Science%20Pitch%20Finalists%202026/AnalgesiaAI.svg" },
   { label: "Bioelectrix", src: "/logos/Life%20Science%20Pitch%20Finalists%202026/Bioelectrix.svg" },
@@ -550,7 +560,10 @@ export const LS_DT_PITCH_FINALISTS: PartnerSetEntry[] = [
   { label: "Immunordic", src: "/logos/Life%20Science%20Pitch%20Finalists%202026/Immunordic.svg" },
   { label: "Monix", src: "/logos/Life%20Science%20Pitch%20Finalists%202026/Monix.svg" },
   { label: "Oasicare", src: "/logos/Life%20Science%20Pitch%20Finalists%202026/Oasicare.svg" },
-  // ── Deep Tech Pitch Competition ──
+];
+
+/** The 8 Deep Tech Pitch Competition finalists. */
+export const DT_PITCH_FINALISTS: PartnerSetEntry[] = [
   { label: "AnyoLabs", src: "/logos/Deep%20Tech%20Pitch%20Finalists%202026/AnyoLabs.svg" },
   { label: "DigeHealth", src: "/logos/Deep%20Tech%20Pitch%20Finalists%202026/DigeHealth.svg" },
   { label: "insellar", src: "/logos/Deep%20Tech%20Pitch%20Finalists%202026/Insellar.svg" },
@@ -559,6 +572,19 @@ export const LS_DT_PITCH_FINALISTS: PartnerSetEntry[] = [
   { label: "Rilemo", src: "/logos/Deep%20Tech%20Pitch%20Finalists%202026/Rilemo.svg" },
   { label: "Scientek", src: "/logos/Deep%20Tech%20Pitch%20Finalists%202026/Scientek.svg" },
   { label: "Videm", src: "/logos/Deep%20Tech%20Pitch%20Finalists%202026/Videm.svg" },
+];
+
+/**
+ * Both cohorts as one list. DERIVED, not hand-kept — the two competitions are
+ * the source of truth now, so a finalist can never be in the combined wall and
+ * missing from its own competition's.
+ *
+ * Kept because the participating wall below de-duplicates against it. There is
+ * no fill button for it any more: the walls that go out are per-competition.
+ */
+export const LS_DT_PITCH_FINALISTS: PartnerSetEntry[] = [
+  ...LS_PITCH_FINALISTS,
+  ...DT_PITCH_FINALISTS,
 ];
 
 /**
@@ -933,16 +959,29 @@ export const PARTNER_SETS: PartnerSet[] = [
     featuredCount: 0,
     logos: LS_DT_EXHIBITORS,
   },
+  // Not thank-yous: these walls announce a cohort BEFORE they pitch, which is
+  // why they are the sets in this folder whose headline does not start
+  // "Thank you".
+  //
+  // One combined 16-logo button used to stand here, on the reasoning that 16
+  // fits one wall and the pages announce them as one cohort. Auri asked for
+  // them split on 2026-08-20: they are two separate competitions with separate
+  // juries, and a post announcing "the Life Science finalists" cannot carry
+  // eight Deep Tech companies. The combined list still exists as a derived
+  // array because the participating wall de-duplicates against it.
   {
-    id: "ls-dt-pitch-finalists",
-    name: "LS x DT Pitch Finalists",
-    // Not a thank-you: this wall announces the cohort BEFORE they pitch, which
-    // is why it is the one set in this folder whose headline does not start
-    // "Thank you". The two competitions are deliberately not split into two
-    // buttons — 16 fits one wall, and the pages announce them as one cohort.
-    headline: "Meet our pitch finalists",
+    id: "ls-pitch-finalists",
+    name: "LS Pitch Finalists",
+    headline: "Meet our Life Science pitch finalists",
     featuredCount: 0,
-    logos: LS_DT_PITCH_FINALISTS,
+    logos: LS_PITCH_FINALISTS,
+  },
+  {
+    id: "dt-pitch-finalists",
+    name: "DT Pitch Finalists",
+    headline: "Meet our Deep Tech pitch finalists",
+    featuredCount: 0,
+    logos: DT_PITCH_FINALISTS,
   },
   {
     id: "ls-dt-participants",
@@ -1037,7 +1076,8 @@ export const PARTNER_PROJECTS: PartnerProject[] = [
     sets: [
       setById("life-science"),
       setById("ls-dt-exhibitors"),
-      setById("ls-dt-pitch-finalists"),
+      setById("ls-pitch-finalists"),
+      setById("dt-pitch-finalists"),
       setById("ls-dt-participants"),
     ],
   },

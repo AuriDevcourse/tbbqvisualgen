@@ -844,6 +844,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/BIOMIC.svg",
+    "name": "BIOMIC",
+    "tags": [],
+    "bytes": 3135,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Biomimica.svg",
     "name": "Biomimica",
     "tags": [],

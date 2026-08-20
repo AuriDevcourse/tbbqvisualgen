@@ -13,7 +13,7 @@ import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync } from "node
 import { join } from "node:path";
 import { fetchTo, signature, compare } from "./lib/logo-web.mjs";
 
-const FEED = "https://airtable-woad.vercel.app/api/ls-startups";
+const FEED = process.env.LS_FEED ?? "https://airtable-woad.vercel.app/api/ls-startups";
 const OUT = ".logos-feed";
 // Above this silhouette difference the feed's artwork is a different mark from
 // the file we hold, i.e. the company re-branded or supplied a new file. Same
@@ -60,7 +60,11 @@ for (const s of startups) {
   if (!s.logo) { unreadable.push({ company: s.company, why: "feed carries no logo attachment" }); continue; }
 
   const tmp = join(OUT, `${key(s.company)}.download`);
-  if (!(await fetchTo(s.logo, tmp))) { unreadable.push({ company: s.company, why: "download failed" }); continue; }
+  // The deployed connector returns absolute logo URLs; a connector running on
+  // localhost returns them relative ("/api/photo/..."), which fetch cannot
+  // resolve on its own. Resolve against the feed so either one works.
+  const logoUrl = new URL(s.logo, FEED).toString();
+  if (!(await fetchTo(logoUrl, tmp))) { unreadable.push({ company: s.company, why: "download failed" }); continue; }
   const head = readFileSync(tmp).subarray(0, 400).toString("latin1");
   const ext = /<svg/i.test(head) ? "svg" : /^\x89PNG/.test(head) ? "png" : /^\xff\xd8/.test(head) ? "jpg" : null;
   if (!ext) { unreadable.push({ company: s.company, why: `unknown file type (${head.slice(0, 24)})` }); continue; }
