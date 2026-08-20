@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState, useEffect } from "react";
 import type { CanvasImage } from "./ImagePlacer";
 import { computeSnapTargets, snapBbox, type Bbox } from "@/lib/snap";
+import { HANDLE_HIT_PX, ResizeHandle } from "./ResizeHandle";
 
 type DragMode = "move" | "nw" | "ne" | "sw" | "se" | null;
 
@@ -23,6 +24,9 @@ interface ImageDragOverlayProps {
   /** z-index for the overlay — should match the image's layer z so clicks
    *  land on the bbox correctly relative to other layered elements. */
   zIndex?: number;
+  /** Preview scale (canvas px -> screen px). Handles divide by it so they stay
+   *  a constant size on screen at any zoom. Defaults to 1. */
+  scale?: number;
   onSelect: () => void;
   onDeselect: () => void;
   onChange: (image: CanvasImage) => void;
@@ -52,7 +56,7 @@ interface ImageDragOverlayProps {
 }
 
 export function ImageDragOverlay({
-  image, otherImages, extraSnapBboxes, canvasWidth, canvasHeight, selected, snapEnabled, resizable = selected, zIndex, onSelect, onDeselect, onChange, onGuidesChange, onEditStart, onEditEnd, onBeginDrag, onMoveBy, onEndDrag, onEnterCrop, onDelete, onDuplicate,
+  image, otherImages, extraSnapBboxes, canvasWidth, canvasHeight, selected, snapEnabled, resizable = selected, zIndex, scale = 1, onSelect, onDeselect, onChange, onGuidesChange, onEditStart, onEditEnd, onBeginDrag, onMoveBy, onEndDrag, onEnterCrop, onDelete, onDuplicate,
 }: ImageDragOverlayProps) {
   const [dragging, setDragging] = useState<DragMode>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -63,7 +67,10 @@ export function ImageDragOverlay({
   const imgLeft = image.x * canvasWidth - imgW / 2;
   const imgTop = image.y * canvasHeight - imgH / 2;
 
-  const handleSize = 24;
+  // Deselect tolerance around the bbox: the handles stick out past the edge,
+  // so a click on one must not read as "outside". Screen px converted back to
+  // canvas px, matching the handles themselves.
+  const handleMargin = HANDLE_HIT_PX / (scale > 0 ? scale : 1);
 
   // Clear guides when not dragging
   useEffect(() => {
@@ -106,7 +113,7 @@ export function ImageDragOverlay({
       // Outside canvas entirely — leave selection alone (user clicked sidebar)
       if (px < 0 || py < 0 || px > rect.width || py > rect.height) return;
       // Inside canvas: deselect if outside the image bbox + handle margin
-      const margin = handleSize;
+      const margin = handleMargin;
       const insideBbox =
         px >= imgLeft - margin && px <= imgLeft + imgW + margin &&
         py >= imgTop - margin && py <= imgTop + imgH + margin;
@@ -114,7 +121,7 @@ export function ImageDragOverlay({
     };
     window.addEventListener("mousedown", handleWindowMouseDown);
     return () => window.removeEventListener("mousedown", handleWindowMouseDown);
-  }, [selected, imgLeft, imgTop, imgW, imgH, handleSize, onDeselect]);
+  }, [selected, imgLeft, imgTop, imgW, imgH, handleMargin, onDeselect]);
 
   // Right-click on the image selects it (if not already) and then lets the
   // event bubble up to the page-level context menu. We don't prevent default
@@ -368,22 +375,13 @@ export function ImageDragOverlay({
 
       {/* Corner resize handles — only when this image is the sole selection */}
       {resizable && corners.map(({ key, cx, cy, cursor }) => (
-        <div
+        <ResizeHandle
           key={key}
+          cx={cx}
+          cy={cy}
+          cursor={cursor}
+          scale={scale}
           onMouseDown={(e) => startDrag(key, e)}
-          style={{
-            position: "absolute",
-            left: cx - handleSize / 2,
-            top: cy - handleSize / 2,
-            width: handleSize,
-            height: handleSize,
-            background: "#FF0028",
-            border: "2px solid rgba(255, 255, 255, 0.9)",
-            borderRadius: 3,
-            cursor,
-            pointerEvents: "auto",
-            zIndex: 11,
-          }}
         />
       ))}
 

@@ -4,6 +4,7 @@ import { useCallback, useRef, useState, useEffect } from "react";
 import { Upload } from "lucide-react";
 import type { ShapeElement } from "@/types/template";
 import { computeSnapTargets, snapBbox, type Bbox } from "@/lib/snap";
+import { ResizeHandle } from "./ResizeHandle";
 
 type DragMode = "move" | "nw" | "ne" | "sw" | "se" | null;
 
@@ -18,6 +19,9 @@ interface ShapeDragOverlayProps {
   snapEnabled: boolean;
   resizable?: boolean;
   zIndex?: number;
+  /** Preview scale (canvas px -> screen px). Handles divide by it so they stay
+   *  a constant size on screen at any zoom. Defaults to 1. */
+  scale?: number;
   onSelect: () => void;
   onChange: (next: ShapeElement) => void;
   onGuidesChange?: (guides: { x: number | null; y: number | null }) => void;
@@ -39,7 +43,7 @@ interface ShapeDragOverlayProps {
 
 export function ShapeDragOverlay({
   shape, otherBboxes, canvasWidth, canvasHeight, selected, snapEnabled, resizable = selected,
-  zIndex, onSelect, onChange, onGuidesChange,
+  zIndex, scale = 1, onSelect, onChange, onGuidesChange,
   onEditStart, onEditEnd, onBeginDrag, onMoveBy, onEndDrag,
   onPlaceholderUpload,
 }: ShapeDragOverlayProps) {
@@ -77,7 +81,6 @@ export function ShapeDragOverlay({
   const shapeW = Math.round(canvasWidth * shape.width);
   const shapeLeft = Math.round(shape.x * canvasWidth - shapeW / 2);
   const shapeTop = Math.round(shape.y * canvasHeight - bboxH / 2);
-  const handleSize = 14;
 
   const startDrag = useCallback((mode: DragMode, e: React.MouseEvent) => {
     if (shape.locked) return;
@@ -406,23 +409,13 @@ export function ShapeDragOverlay({
         </>
       )}
       {resizable && corners.map(({ key, cx, cy, cursor }) => (
-        <div
+        <ResizeHandle
           key={key}
+          cx={cx}
+          cy={cy}
+          cursor={cursor}
+          scale={scale}
           onMouseDown={(e) => startDrag(key, e)}
-          style={{
-            position: "absolute",
-            left: cx - handleSize / 2,
-            top: cy - handleSize / 2,
-            width: handleSize,
-            height: handleSize,
-            background: "#FF6B00",
-            border: "2px solid white",
-            borderRadius: 2,
-            cursor,
-            pointerEvents: "auto",
-            zIndex: 11,
-            boxShadow: "0 0 4px rgba(0,0,0,0.5)",
-          }}
         />
       ))}
     </div>

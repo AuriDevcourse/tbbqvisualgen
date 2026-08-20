@@ -2236,6 +2236,7 @@ export default function Home() {
                     snapEnabled={snapEnabled}
                     resizable={selectedImageId === img.id}
                     zIndex={layerZ(`image:${img.id}`)}
+                    scale={scale}
                     onSelect={() => selectWithGroup(`image:${img.id}`)}
                     onDeselect={() => setSelectedImageId(null)}
                     onChange={(updated) => setCanvasImages((prev) =>
@@ -2375,6 +2376,7 @@ export default function Home() {
                       snapEnabled={snapEnabled}
                       resizable={selectedIds.size === 1 && selectedIds.has(`shape:${sh.id}`)}
                       zIndex={layerZ(`shape:${sh.id}`)}
+                      scale={scale}
                       onSelect={() => selectWithGroup(`shape:${sh.id}`)}
                       onChange={(updated) =>
                         setDesign((prev) => ({
@@ -2404,6 +2406,7 @@ export default function Home() {
                     selected={selectedIds.has("tbbqLogo")}
                     snapEnabled={snapEnabled}
                     zIndex={layerZ("tbbqLogo")}
+                    scale={scale}
                     onSelect={() => { stopTextEditing(); setSelectedIds(new Set(["tbbqLogo"])); }}
                     onChange={(patch) =>
                       setDesign((prev) => {
