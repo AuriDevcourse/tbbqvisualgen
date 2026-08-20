@@ -1230,6 +1230,14 @@
     "tone": "light"
   },
   {
+    "src": "/logos/Catalyst%20Reactivate.svg",
+    "name": "Catalyst Reactivate",
+    "tags": [],
+    "bytes": 2227,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/CBS.svg",
     "name": "CBS",
     "tags": [],

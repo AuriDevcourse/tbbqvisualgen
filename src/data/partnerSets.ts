@@ -3,10 +3,15 @@
  * thank-you wall — so nobody has to search the library 20 times to rebuild the
  * same post.
  *
- * **This is exactly the 25 on the official Partners page, in its order**
- * (top-left to bottom-right) — checked against it logo by logo on 2026-08-04.
+ * **This is the official Partners page order** (top-left to bottom-right) —
+ * checked against it logo by logo on 2026-08-04, when it was 25.
  *
  * **Re-verified 2026-08-13: still 25, same companies, same order, no edit.**
+ *
+ * **2026-08-20: 25 → 24. CPH.LABS is no longer a Life Science partner and was
+ * removed on Auri's word, not from a page re-read, so the rest of this set is
+ * still only verified to 2026-08-13.** `CPH Labs.svg` stays in the library in
+ * case the partnership returns.
  * Done properly this time, so it does not need re-doing by eye: the wall on
  * techbbq.dk/life-science is 24 INLINE `<svg>` elements plus one `<img>` (Ruff &
  * Co, position 19). Inline SVG is why a text scrape of the page under-reports it
@@ -97,7 +102,6 @@ export const LIFE_SCIENCE_PARTNERS: PartnerSetEntry[] = [
   { label: "Nebius", src: "/logos/Nebius.svg" },
   { label: "Sweden Bio", src: "/logos/Sweden%20Bio.svg" },
   { label: "Symbion", src: "/logos/Symbion.svg" },
-  { label: "CPH.LABS", src: "/logos/CPH%20Labs.svg" },
   { label: "Novo Nordisk Foundation", src: "/logos/Novo%20Nordisk%20Foundation%20Horizontal.svg" },
   { label: "BioInnovation Institute", src: "/logos/BioInnovation%20Institute.svg" },
   { label: "Medicon Valley Alliance", src: "/logos/Medicon%20Valley%20Alliance.svg" },
@@ -424,7 +428,14 @@ export const COMMUNITY_PAGES: PartnerSetEntry[][] = Array.from(
  * Nordic, Nordiq Products, Nyctea, PERPLANT, Sea Growth, Sveppa, Sylvia Health,
  * Uman Sense, UVision, Visibuilt, Yngvi Bio.
  *
- * **This set is the FULL 44 — nothing is held back for missing artwork**, which
+ * **Re-synced 2026-08-20 against the connector feed: 44 → 45. One arrived,
+ * nothing fell off, and no held logo's artwork changed.** New: Catalyst
+ * Reactivate, imported from the feed as a white-ink SVG already filling 100% of
+ * its viewBox. AUSCORA reports `compare failed: blank` in the sync report every
+ * run — that is the white-card artwork below defeating the silhouette probe, not
+ * a change.
+ *
+ * **This set is the FULL 45 — nothing is held back for missing artwork**, which
  * is new. The feed carries each company's logo attachment, so every company that
  * had no library file was imported straight from it (43 of the 44 are white-ink
  * SVG; Ai2Ai is the one PNG). Two arrived padded and were run through
@@ -457,6 +468,7 @@ export const LS_DT_EXHIBITORS: PartnerSetEntry[] = [
   { label: "Bioelectrix", src: "/logos/Life%20Science%20Pitch%20Finalists%202026/Bioelectrix.svg" },
   { label: "Biomimica", src: "/logos/Biomimica.svg" },
   { label: "Blue2", src: "/logos/Blue2%20White.svg" },
+  { label: "Catalyst Reactivate", src: "/logos/Catalyst%20Reactivate.svg" },
   { label: "CYTO365", src: "/logos/CYTO365.svg" },
   { label: "Dalea", src: "/logos/Dalea.svg" },
   { label: "DiaDesign Technologies", src: "/logos/DiaDesign%20Technologie.svg" },
