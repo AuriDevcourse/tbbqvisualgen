@@ -270,11 +270,24 @@ function rowTier(fields) {
   // are somebody saying "put this one here" about this specific partner.
   const told = exceptionTier(fields["Exceptions"]) || TIER_EXCEPTIONS[nameKey(company)] || "";
   if (told) return TIER_NAMES.has(told) ? told : "";
-  // A commercial Community product moves the partner to the Community wall,
-  // ahead of the deal-size band that would otherwise put it on a paid one.
-  if (communityProducts(fields).length && !COMMUNITY_TIER_KEEPS_ITS_BAND.has(nameKey(company))) {
-    return PAYING_TIER;
-  }
+  // THE DEAL-SIZE BAND DECIDES THE WALL. It used to be the other way round: a
+  // commercial Community product moved the partner to the Community wall ahead
+  // of its band, so a partner on "Community Conqueror Partnership" was thanked
+  // as Community even though its deal was 300,000.
+  //
+  // Auri, 2026-08-20: "Innovation District Copenhagen is Conqueror. What is it
+  // doing in community?" He is right, and the website agrees with him: the
+  // connector feed lists it as Conqueror, and it listed fourteen more the same
+  // way. The product name is the PROGRAMME the partner bought into
+  // ("Community Conqueror Partnership"), not the tier they are thanked at. The
+  // band is the money, and the money is what sets the tier.
+  //
+  // The product still decides ONE thing, below: whether a partner whose BAND is
+  // Community earns a place on the community wall at all (pay or barter).
+  //
+  // This also retires COMMUNITY_TIER_KEEPS_ITS_BAND. Beyond Beta needed that
+  // exception only because the old rule would have dragged it off Prime; with
+  // the band deciding, its 750,000 keeps it there on the ordinary path.
   const tier =
     tierOf(fields["Partnership Tier (from Tier)"]) ||
     NO_CONTRACT_TIERS[nameKey(company)] ||
