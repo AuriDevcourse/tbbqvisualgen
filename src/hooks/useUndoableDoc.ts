@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 /**
  * Document-state hook with explicit undo/redo history.
@@ -24,6 +24,25 @@ import { useCallback, useState } from "react";
  */
 
 const HISTORY_LIMIT = 10;
+
+/**
+ * Consecutive `set()` calls closer together than this collapse into ONE undo
+ * entry.
+ *
+ * WHY: transactions cover the canvas gestures that open one explicitly (drag,
+ * resize, crop), but nothing in the side panels does. So a slider was pushing
+ * an entry per tick — dragging Radius from 0 to 20 spent twenty of the ten
+ * available entries, evicting everything the user had done before it, and
+ * undoing that one adjustment took twenty presses that each moved it a single
+ * step. The result read as "undo doesn't work", which is exactly what it was
+ * reported as.
+ *
+ * A human cannot perform two deliberate, separate actions 400ms apart through
+ * a mouse, so anything faster than this is one continuous act: a drag, a held
+ * arrow key, a burst of typing. This keeps the 10 entries meaning ten ACTIONS
+ * rather than ten frames.
+ */
+const COALESCE_MS = 400;
 
 interface History<T> {
   past: T[];
@@ -61,13 +80,28 @@ export function useUndoableDoc<T>(initial: T): UndoableHandle<T> {
     txPushed: false,
   });
 
+  // When the previous `set()` happened. A ref, not history state, so the
+  // reducer stays a pure function of (prev, updater) — the decision to
+  // coalesce is taken out here, before the reducer runs.
+  const lastSetAt = useRef(0);
+
   const set = useCallback((updater: Updater<T>) => {
+    const now = performance.now();
+    const coalesce = now - lastSetAt.current < COALESCE_MS;
+    lastSetAt.current = now;
     setHistory((h) => {
       const next = typeof updater === "function" ? (updater as (prev: T) => T)(h.present) : updater;
       if (Object.is(next, h.present)) return h;
       const inTx = h.txDepth > 0;
       if (inTx && h.txPushed) {
         // Subsequent in-tx set — update present only.
+        return { ...h, present: next, future: [] };
+      }
+      // Continuation of a rapid stream outside a transaction (a slider drag,
+      // held arrow key, run of typing): fold into the entry already pushed
+      // instead of adding another. Requires an existing entry to fold INTO,
+      // so the first edit of a session still creates one.
+      if (!inTx && coalesce && h.past.length > 0) {
         return { ...h, present: next, future: [] };
       }
       // First in-tx set OR non-tx set — push pre-state to past, advance present.
@@ -104,6 +138,9 @@ export function useUndoableDoc<T>(initial: T): UndoableHandle<T> {
   }, []);
 
   const undo = useCallback(() => {
+    // Break the coalescing chain: the next edit after an undo is a new action,
+    // never a continuation of whatever was happening before it.
+    lastSetAt.current = 0;
     setHistory((h) => {
       if (!h.past.length) return h;
       const newPresent = h.past[h.past.length - 1];
@@ -117,6 +154,7 @@ export function useUndoableDoc<T>(initial: T): UndoableHandle<T> {
   }, []);
 
   const redo = useCallback(() => {
+    lastSetAt.current = 0;
     setHistory((h) => {
       if (!h.future.length) return h;
       const [next, ...rest] = h.future;
