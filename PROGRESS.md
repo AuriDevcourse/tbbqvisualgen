@@ -6,6 +6,157 @@ not required reading.
 
 ---
 
+## SESSION HANDOFF · 2026-08-20 (28): the Layers panel audit · 10 ranked fixes, none built yet
+
+### State: this is a PLAN, not a shipped change. Nothing in `LayersPanel.tsx` moved.
+
+Auri: "ours is all over the place." He is right, and the panel is now measured
+rather than guessed at, so the next session can start at item 1 instead of
+re-deciding what is wrong.
+
+### How it was measured (repeat this before touching the panel)
+
+An empty canvas hides every one of these problems, so the panel was loaded with
+a realistic document by seeding session storage directly and reloading:
+
+```js
+// In the browser console on /editor, then reload.
+sessionStorage.setItem('tbbqvisualgen.session.v4', JSON.stringify(doc));
+```
+
+The `doc` used: an `isBackdrop` photo, a colour overlay, 3 ordinary photos (one
+cropped, one locked), 5 shapes (two sharing a `groupId`, two with `accent.N.*`
+simple roles), 7 texts (three with identical content, one hidden, one locked),
+logo on. That is 19 rows, which is an ordinary partner-wall document, not a
+stress test.
+
+### What the measurement found
+
+| | |
+|---|---|
+| Rows | 19, scrolling (1126px of content in a 256px column) |
+| Always-visible buttons | **63** |
+| Always-armed Delete buttons | **17** |
+| Smallest button hit box | **16px** (WCAG 2.2 AA 2.5.8 floor is 24px) |
+| Row height | 30.5px |
+| Rows with `role` / `tabindex` / `aria-selected` | **0 / 0 / 0** |
+| Per-row chrome | own background + 1px border + 8px radius, always |
+
+Row labels as rendered: `Thank you to our Communi`, `Head of Something Very L`,
+`Name Surname`, `Name Surname`, `Name Surname`, `Rectangle · pe-1`,
+`Circle · pe-2`, `Photo · a1b2`, `Photo · c3d4 (cropped)`.
+
+### Three root causes, not nineteen problems
+
+1. **Every row is a card.** Nineteen bordered boxes in a narrow column. Figma,
+   Illustrator and Photoshop all draw layer rows flat and borderless and paint
+   only on hover and selection. Borders separate UNLIKE things; a layer list is
+   nineteen alike things, so the borders compete with the one signal that
+   matters, which row is selected.
+2. **Every control is always on.** Four buttons per row, including a live
+   Delete at 16px sitting 12px from Lock, on a row you click in order to
+   select. Figma reveals visibility and lock on hover and keeps them shown only
+   while ACTIVE, and does not put Delete in the row at all.
+3. **Nothing identifies a row.** No rename anywhere (no element type in the
+   model has a `name` field), no thumbnails, and no group nesting even though
+   `groupId` already exists on text, shapes AND images and already drives
+   canvas selection. Three rows read `Name Surname`. `Circle · pe-2` names the
+   code, not the artwork.
+
+### The 10 improvements, in the order to build them
+
+Ranked by value per unit of diff. Items 1-3 fix the "all over the place"
+feeling on their own and are the cheapest.
+
+1. **Flatten the rows.** Drop the per-row border, background and radius; paint
+   hover and selection only; 28px rows, no gaps. Removes 19 competing
+   rectangles so selection becomes the only thing the eye catches.
+2. **Hover-reveal the controls, and take Delete out of the row.** Lock and Eye
+   appear on hover and stay visible while active (locked / hidden). Delete
+   moves to the Delete key plus the right-click menu. 63 buttons become ~6 on
+   the hovered row, and a mis-click stops meaning destroyed work.
+3. **24px hit targets, 32px rows.** We are at 16px. WCAG 2.2 AA 2.5.8 sets 24
+   as the floor and CLAUDE.md r9 makes that a defect, not a preference. Same
+   reasoning already applied on canvas via `HANDLE_HIT_PX = 20`.
+4. **Renameable layers.** Add `name?: string` to `TextElement`, `ShapeElement`
+   and `CanvasImage`; double-click the label to edit; fall back to today's
+   derived label when unset. The layer name is the primary way anyone navigates
+   in Figma and Illustrator, and three identical rows make the list useless for
+   the panel's whole job.
+5. **Thumbnails.** A 20x20 per-row preview, Illustrator-style. Highest-value
+   identification fix that needs nobody to type anything, and the only thing
+   that separates three `Photo · xxxx` rows.
+6. **Group nesting.** A group row with a disclosure triangle and indented
+   children. The data is already there; the panel just ignores `groupId` and
+   renders siblings, so grouped shapes look unrelated.
+7. **Keyboard and a11y.** `role="listbox"`, `aria-selected`, roving `tabIndex`,
+   arrows to walk, Enter to rename, Delete to delete. The panel is currently
+   unreachable by keyboard while dumping ~63 tab stops into the page's tab
+   order. Doing this with item 2 fixes both halves at once.
+8. **One set of rules for every row type.** Images gain `hidden` (the only type
+   that cannot be hidden today, because `CanvasImage` has no such field, so the
+   eye button is suppressed for image rows). The backdrop loses its Duplicate
+   button. Image rows stop toggling selection OFF on a second click when text
+   and shape rows do not. Panel selection moves from `#FF0028` to the canvas's
+   `SELECTION_COLOR` `#2C7BE5`. Shift-click selects a range, Ctrl-click adds.
+9. **Reorder without dragging.** `Ctrl+]` / `Ctrl+[` forward and backward,
+   `Ctrl+Shift+]` / `Ctrl+Shift+[` to front and back, plus the right-click
+   menu. Drag is the only path today, and dragging one row past eighteen in a
+   scrolling column is the slow path for the most common operation.
+10. **A working panel header.** Layer count, a filter box, and move the dead
+    `Background · Soft Ember` row (zero buttons, not clickable, not a real
+    layer) into a fixed footer strip so it stops scrolling away with the layers.
+
+### Is Figma the right target?
+
+For the tree and its interactions, yes: flat rows, hover-reveal, rename in
+place, nesting, arrow-key navigation. Those are the conventions people already
+know. Two deliberate divergences:
+
+- **Take Illustrator's thumbnail over Figma's icon-only row.** Figma gets away
+  with icons because Figma users name their layers. Ours are generated from
+  presets, so a preview does the identifying instead.
+- **Skip most of Figma's tree.** No components, auto-layout badges,
+  constraints, page list or nested frames. One canvas, six layer types: a flat
+  list with one level of grouping covers everything the model can express, and
+  depth we cannot fill would make it worse.
+
+### Also shipped since handoff 27, not yet written down anywhere
+
+- `a79b2df` LS roster: BIOMIC added to exhibiting startups (24 after CPH.LABS
+  was removed), and the pitch finalists split into `LS_PITCH_FINALISTS` and
+  `DT_PITCH_FINALISTS` with `LS_DT_PITCH_FINALISTS` as the combined set.
+- `9b24fdd` + `0965805` Partner roster re-synced: barter counts toward the
+  community wall, and the DEAL BAND decides the tier rather than the community
+  product name. Fifteen tier disagreements against the website feed all had
+  that one cause; after the fix the diff across 129 partners is clean, and
+  **that diff is the reusable test for this data**. Tiers: Prime 4, Main 4,
+  Conqueror 9, Pioneer 11, Core 34, Challenger 53, Community 14.
+- `2b52df3` Rotate cursor: a circular-arrow SVG data URI (`ROTATE_CURSOR` in
+  `src/lib/rotate.ts`), hotspot `13 13`, `grab` as fallback. Drawn twice, dark
+  halo under white body, so it reads on both light and dark artwork. It was
+  rendered to PNG with sharp and LOOKED AT at 160px and 26px; the first two
+  attempts were wrong in ways the path data alone would never have shown.
+
+### Still open, unchanged from 27
+
+1. **Auri's call:** the community wall is now 14 partners and every one is
+   barter, because every paid Community product has a band above Community.
+   Options: leave it; treat the wall as the community PROGRAMME (which puts
+   Innovation District Copenhagen on two walls, contradicting "nobody is
+   thanked twice"); or rename the wall.
+2. Four partners need usable artwork for a dark wall: Adeo Web, Creative
+   Business Network, Erhvervshus Sjælland, eryk.
+3. Four Airtable Community rows have no Partnership Type 2026: Copenhagen
+   Institute for Futures Studies, Crescita Partners, ESA BIC Denmark,
+   Københavns Universitet.
+4. `.gitattributes` with `*.svg text eol=lf` is still unwritten. `npm run build`
+   regenerates `logoLibrary.json` a few bytes different under
+   `core.autocrlf=true`, and desktop vs MacBook will keep flipping those
+   numbers until this lands. Do it before the next MacBook session.
+
+---
+
 ## SESSION HANDOFF · 2026-08-20 (27): the crop editor stretched every photo · drag-loop hardening
 
 ### State: the stretch is FIXED and measured. The update-depth error is HARDENED, not proven fixed.
