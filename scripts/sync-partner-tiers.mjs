@@ -373,9 +373,24 @@ const linkedTypes = (fields) =>
   [...new Set((fields["Company Link"] ?? []).flatMap((id) => companyTypes.get(id) ?? []))];
 
 /** The commercial Community products on this row, ignoring the free one. Empty
- *  means "not a paying community partner". */
+ *  means "no paid community product". */
 const communityProducts = (fields) =>
   linkedTypes(fields).filter((t) => /^community/i.test(t.trim()) && t.trim().toLowerCase() !== NON_COMMERCIAL);
+
+/** A barter arrangement — goods or services instead of cash.
+ *
+ *  It now EARNS a place on the community wall. It did not until 2026-08-20, on
+ *  my reasoning that thanking a barter partner alongside paying ones
+ *  misrepresented both. Auri overruled that: "all the community partners that
+ *  pay or have barter deal should be on Thank you to our community partners".
+ *  He is right on the substance — a barter partner gave TechBBQ something of
+ *  value, which is what the wall is thanking people for, and cash is not the
+ *  only way to contribute. */
+const hasBarter = (fields) =>
+  linkedTypes(fields).some((t) => /barter/i.test(t.trim()));
+
+/** Does this Community-band row belong on the thank-you wall? */
+const earnsCommunityWall = (fields) => communityProducts(fields).length > 0 || hasBarter(fields);
 
 // ── The library as it stands ────────────────────────────────────────────────
 const LIBRARY = JSON.parse(readFileSync("src/data/logoLibrary.json", "utf8"));
@@ -605,19 +620,23 @@ for (const r of records) {
   // question somebody will ask about this change.
   if (tier === PAYING_TIER) {
     const products = communityProducts(r.fields);
-    if (!products.length) {
-      // Either the free non-commercial product, or no community product at all
-      // (a barter or add-on partner the deal-size band dropped into this tier).
+    const barter = hasBarter(r.fields);
+    if (!earnsCommunityWall(r.fields)) {
+      // The free non-commercial product, or no qualifying arrangement at all
+      // (an add-on partner the deal-size band dropped into this tier).
       const types = linkedTypes(r.fields);
       nonPaying.push({
         ...row,
         why: !types.length ? "no Partnership Type 2026 on the linked company"
           : types.some((t) => t.trim().toLowerCase() === NON_COMMERCIAL) ? "Community Partnership (Non-commercial)"
-            : `no Community product, only ${types.join(" + ")}`,
+            : `no Community product and no barter, only ${types.join(" + ")}`,
       });
       continue;
     }
-    row.paysVia = products.join(" + ");
+    // Record WHICH arrangement earned the place, so the report can be audited
+    // without going back to Airtable.
+    row.paysVia = products.length ? products.join(" + ") : "Barter Deal";
+    if (products.length && barter) row.paysVia += " + Barter Deal";
   }
 
   // ── THE ARTWORK ─────────────────────────────────────────────────────────

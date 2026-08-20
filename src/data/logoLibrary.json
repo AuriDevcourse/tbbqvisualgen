@@ -634,6 +634,16 @@
     "tone": "light"
   },
   {
+    "src": "/logos/Partners%202026/AWS%20Startups.svg",
+    "name": "AWS Startups",
+    "tags": [
+      "partners 2026"
+    ],
+    "bytes": 2928,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Axios.svg",
     "name": "Axios",
     "tags": [],
@@ -2774,6 +2784,16 @@
     "tone": "dark"
   },
   {
+    "src": "/logos/Partners%202026/European%20Investment%20Fund.svg",
+    "name": "European Investment Fund",
+    "tags": [
+      "partners 2026"
+    ],
+    "bytes": 5424,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/European%20Investment%20Fund%20(EIF).svg",
     "name": "European Investment Fund (EIF)",
     "tags": [],
@@ -3356,6 +3376,16 @@
     "name": "Global Stratalogues",
     "tags": [],
     "bytes": 8050,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Partners%202026/Go%20Globie.svg",
+    "name": "Go Globie",
+    "tags": [
+      "partners 2026"
+    ],
+    "bytes": 3701,
     "toneAlgo": 2,
     "tone": "light"
   },
@@ -4790,6 +4820,16 @@
     "tone": "light"
   },
   {
+    "src": "/logos/Partners%202026/Legora.svg",
+    "name": "Legora",
+    "tags": [
+      "partners 2026"
+    ],
+    "bytes": 1658,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
     "src": "/logos/Legora%20AB.svg",
     "name": "Legora AB",
     "tags": [],
@@ -5236,6 +5276,16 @@
     "name": "Mimbly",
     "tags": [],
     "bytes": 3158,
+    "toneAlgo": 2,
+    "tone": "light"
+  },
+  {
+    "src": "/logos/Partners%202026/MinnieMe.svg",
+    "name": "MinnieMe",
+    "tags": [
+      "partners 2026"
+    ],
+    "bytes": 6294,
     "toneAlgo": 2,
     "tone": "light"
   },

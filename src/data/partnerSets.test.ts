@@ -207,6 +207,29 @@ describe("partner sets", () => {
     });
 
     /**
+     * The LIVE community wall is the tier roster, not the frozen archive above.
+     * Two "Community" lists that disagreed about who counts is what this pins
+     * against: the button must be the pay-or-barter set the sync produces, so
+     * nobody exports a thank-you wall carrying non-paying partners.
+     */
+    it("the community BUTTON is the paying tier roster, not the archive", () => {
+      const set = PARTNER_SETS.find((x) => x.id === "community-paying");
+      expect(set).toBeDefined();
+      const tier = ALL_PARTNER_TIERS.find((t) => t.tier === "Community");
+      expect(tier).toBeDefined();
+      expect(set!.logos).toEqual(tier!.logos);
+      expect(set!.logos.length).toBeGreaterThan(0);
+      // Not the archive — if these ever coincide by accident the assertion
+      // above still holds, but the counts differing is the normal case.
+      expect(set!.logos).not.toEqual(COMMUNITY_PARTNERS);
+    });
+
+    it("says Community Partners in its headline", () => {
+      const set = PARTNER_SETS.find((x) => x.id === "community-paying");
+      expect(set!.headline).toBe("Thank you to our Community Partners");
+    });
+
+    /**
      * This used to assert equality with `THANKS_MAX_LOGOS`, back when the cap
      * WAS 30 and "one page = a full wall" was the same statement as "a page
      * cannot overflow". Raising the cap to 48 split those two ideas apart.
