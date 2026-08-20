@@ -243,7 +243,10 @@ export function ImageDragOverlay({
         }
       }
 
-      const MIN = 0.05;
+      // 0.02 of the canvas, matching ShapeDragOverlay. It was 0.05, which is
+      // 96px at 1920 — you could not draw a small badge or a thin rule as an
+      // image, for no reason a shape did not share.
+      const MIN = 0.02;
       if (isW) newDraggedX = Math.max(0, Math.min(fixedX - MIN, newDraggedX));
       else     newDraggedX = Math.min(1, Math.max(fixedX + MIN, newDraggedX));
       if (isN) newDraggedY = Math.max(0, Math.min(fixedY - MIN, newDraggedY));
@@ -276,8 +279,12 @@ export function ImageDragOverlay({
         ...image,
         x: Math.round(newX * 1000) / 1000,
         y: Math.round(newY * 1000) / 1000,
-        width: Math.round(newW * 100) / 100,
-        height: Math.round(newH * 100) / 100,
+        // 1/1000 of the canvas, matching x/y above and the shape overlay.
+        // Rounding to 1/100 quantised every image resize to 1% of the canvas —
+        // 19px at 1920 wide — so the box jumped in visible steps and a small
+        // correction was impossible to make.
+        width: Math.round(newW * 1000) / 1000,
+        height: Math.round(newH * 1000) / 1000,
       });
     };
 

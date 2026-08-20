@@ -8,6 +8,7 @@ import { CropDialog } from "./CropDialog";
 import { ColorPicker } from "./ColorPicker";
 import { readImageFile } from "@/lib/photoBackground";
 import { replaceSourcePatch } from "@/lib/canvasImageSource";
+import { GeometryFields } from "./GeometryFields";
 
 export interface CanvasImage {
   id: string;     // unique identifier
@@ -374,18 +375,29 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
       {selectedImage && (() => {
         const currentRadius = selectedImage.cornerRadius ?? (selectedImage.shape === "circle" ? 50 : 10);
         return (<>
+          <GeometryFields
+            value={{ x: selectedImage.x, y: selectedImage.y, width: selectedImage.width, height: selectedImage.height }}
+            canvasWidth={canvasSize.width}
+            canvasHeight={canvasSize.height}
+            onChange={(patch) => update(patch)}
+          />
+
           {/* Width slider */}
           <div className="flex items-center gap-3">
             <span className="text-[10px] text-white/65 uppercase tracking-wider w-10 shrink-0">W</span>
             <input
               type="range"
-              min={5}
-              max={95}
-              value={Math.round(selectedImage.width * 100)}
-              onChange={(e) => update({ width: parseInt(e.target.value) / 100 })}
+              min={2}
+              max={100}
+              step={0.1}
+              // Tenths of a percent. A whole-percent step is 19px at 1920
+              // wide, which made fine adjustment impossible; parseInt also
+              // threw away the precision a drag had just set.
+              value={Math.round(selectedImage.width * 1000) / 10}
+              onChange={(e) => update({ width: Number(e.target.value) / 100 })}
               className="flex-1 accent-[#FF0028] h-1"
             />
-            <span className="text-[10px] text-white/65 w-8 text-right">{Math.round(selectedImage.width * 100)}%</span>
+            <span className="text-[10px] text-white/65 w-8 text-right tabular-nums">{(Math.round(selectedImage.width * 1000) / 10).toFixed(1)}%</span>
           </div>
 
           {/* Height slider */}
@@ -393,13 +405,17 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
             <span className="text-[10px] text-white/65 uppercase tracking-wider w-10 shrink-0">H</span>
             <input
               type="range"
-              min={5}
-              max={95}
-              value={Math.round(selectedImage.height * 100)}
-              onChange={(e) => update({ height: parseInt(e.target.value) / 100 })}
+              min={2}
+              max={100}
+              step={0.1}
+              // Tenths of a percent. A whole-percent step is 19px at 1920
+              // wide, which made fine adjustment impossible; parseInt also
+              // threw away the precision a drag had just set.
+              value={Math.round(selectedImage.height * 1000) / 10}
+              onChange={(e) => update({ height: Number(e.target.value) / 100 })}
               className="flex-1 accent-[#FF0028] h-1"
             />
-            <span className="text-[10px] text-white/65 w-8 text-right">{Math.round(selectedImage.height * 100)}%</span>
+            <span className="text-[10px] text-white/65 w-8 text-right tabular-nums">{(Math.round(selectedImage.height * 1000) / 10).toFixed(1)}%</span>
           </div>
 
           {/* Corner radius slider — 0 = sharp, 50 = circle */}

@@ -2149,7 +2149,7 @@ export default function Home() {
                 />
               )}
               {currentStep === 2 && (
-                <StepText design={design} setDesign={setDesign} focusedId={focusedTextId} />
+                <StepText design={design} setDesign={setDesign} focusedId={focusedTextId} canvasSize={dims} />
               )}
               {currentStep === 3 && (
                 <StepImages
@@ -2172,6 +2172,7 @@ export default function Home() {
                     return typeof only === "string" && only.startsWith("shape:") ? only.slice(6) : null;
                   })()}
                   onSelectShape={(id) => setSelectedIds(id ? new Set([`shape:${id}`]) : new Set())}
+                  canvasSize={dims}
                 />
               )}
             </GlassCard>

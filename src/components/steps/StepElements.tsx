@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Square, Circle, Minus, Star, Trash2, Eye, EyeOff, ChevronDown, ChevronRight, Plus, Link2, Unlink, ImagePlus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { GeometryFields } from "@/components/GeometryFields";
 import { ColorPicker } from "@/components/ColorPicker";
 import { newShapeElement, newImagePlaceholder } from "@/types/template";
 import type { DesignConfig, ShapeElement, ShapeType, ShapeBorderRadii } from "@/types/template";
@@ -12,6 +13,8 @@ interface StepElementsProps {
   setDesign: (next: DesignConfig | ((prev: DesignConfig) => DesignConfig)) => void;
   selectedShapeId: string | null;
   onSelectShape: (id: string | null) => void;
+  /** Canvas pixel size, so the numeric fields can read in export pixels. */
+  canvasSize?: { width: number; height: number };
 }
 
 const SHAPE_BUTTONS: { type: ShapeType; label: string; Icon: typeof Square }[] = [
@@ -21,7 +24,7 @@ const SHAPE_BUTTONS: { type: ShapeType; label: string; Icon: typeof Square }[] =
   { type: "star", label: "Star", Icon: Star },
 ];
 
-export function StepElements({ design, setDesign, selectedShapeId, onSelectShape }: StepElementsProps) {
+export function StepElements({ design, setDesign, selectedShapeId, onSelectShape, canvasSize = { width: 1920, height: 1080 } }: StepElementsProps) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const shapes = design.shapes ?? [];
   const selected = shapes.find((s) => s.id === selectedShapeId) ?? null;
@@ -194,6 +197,7 @@ export function StepElements({ design, setDesign, selectedShapeId, onSelectShape
                 {expanded && (
                   <ShapeEditor
                     shape={s}
+                    canvasSize={canvasSize}
                     onChange={(patch) => updateShape(s.id, patch)}
                   />
                 )}
@@ -220,7 +224,7 @@ interface ShapeEditorProps {
   onChange: (patch: Partial<ShapeElement>) => void;
 }
 
-function ShapeEditor({ shape, onChange }: ShapeEditorProps) {
+function ShapeEditor({ shape, onChange, canvasSize }: ShapeEditorProps & { canvasSize: { width: number; height: number } }) {
   const isLine = shape.type === "line";
   const isPlaceholder = !!shape.imagePlaceholder;
   const [showMore, setShowMore] = useState(false);
@@ -392,7 +396,14 @@ function ShapeEditor({ shape, onChange }: ShapeEditorProps) {
         </div>
       )}
 
-      <p className="text-[10px] text-white/60 pt-1">Drag the shape on canvas to reposition.</p>
+      <div className="pt-1 border-t border-white/5">
+        <GeometryFields
+          value={{ x: shape.x, y: shape.y, width: shape.width, height: shape.height }}
+          canvasWidth={canvasSize.width}
+          canvasHeight={canvasSize.height}
+          onChange={(patch) => onChange(patch)}
+        />
+      </div>
     </div>
   );
 }
