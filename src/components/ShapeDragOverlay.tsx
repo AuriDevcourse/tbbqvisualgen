@@ -110,11 +110,30 @@ export function ShapeDragOverlay({
     let frame = 0;
 
     const applyMove = (clientX: number, clientY: number, altHeld: boolean, shiftHeld: boolean) => {
-      const rect = overlayRef.current?.getBoundingClientRect();
-      // See ImageDragOverlay: a zero-size rect yields NaN geometry.
-      if (!rect || rect.width === 0 || rect.height === 0) return;
-      const dx = (clientX - startRef.current.mx) / rect.width;
-      const dy = (clientY - startRef.current.my) / rect.height;
+      // Normalise against the canvas size times the preview scale, NOT the
+      // overlay's bounding rect. Once the overlay is rotated with its shape,
+      // getBoundingClientRect returns the axis-aligned box of the ROTATED
+      // element, which is bigger than the canvas — so a rect-based divisor
+      // silently shrank every drag on a rotated shape.
+      const s = scale > 0 ? scale : 1;
+      const spanX = canvasWidth * s;
+      const spanY = canvasHeight * s;
+      if (spanX === 0 || spanY === 0) return;
+      const screenDX = clientX - startRef.current.mx;
+      const screenDY = clientY - startRef.current.my;
+
+      // MOVE follows the pointer in screen space. RESIZE happens in the
+      // shape's OWN frame: dragging the corner of a shape rotated 30 degrees
+      // should lengthen it along its own edge, not along the screen's x-axis.
+      const theta = ((shape.rotation || 0) * Math.PI) / 180;
+      const cos = Math.cos(theta);
+      const sin = Math.sin(theta);
+      const dx = dragging === "move"
+        ? screenDX / spanX
+        : (screenDX * cos + screenDY * sin) / spanX;
+      const dy = dragging === "move"
+        ? screenDY / spanY
+        : (-screenDX * sin + screenDY * cos) / spanY;
 
       if (dragging === "move") {
         const rawX = startRef.current.x + dx;
@@ -241,6 +260,19 @@ export function ShapeDragOverlay({
     { key: "se", cx: shapeLeft + shapeW, cy: shapeTop + bboxH, cursor: "nwse-resize" },
   ];
 
+  // The shape RENDERS rotated (DynamicTemplate applies the transform) but this
+  // overlay never knew about `rotation`, so on a rotated shape the outline and
+  // all four handles sat on the un-rotated box — pointing the wrong way and
+  // detached from the thing they belong to. Rotating the whole overlay about
+  // the shape's centre carries the bbox and every handle with it in one go,
+  // because the children are already positioned in canvas coordinates.
+  const rotateStyle: React.CSSProperties = shape.rotation
+    ? {
+        transform: `rotate(${shape.rotation}deg)`,
+        transformOrigin: `${shape.x * canvasWidth}px ${shape.y * canvasHeight}px`,
+      }
+    : {};
+
   return (
     <div
       ref={overlayRef}
@@ -250,6 +282,7 @@ export function ShapeDragOverlay({
         inset: 0,
         pointerEvents: "none",
         zIndex: (zIndex ?? 10) + (selected ? 1 : 0),
+        ...rotateStyle,
       }}
     >
       {/* Clickable bbox. For filled shapes the whole rect catches clicks; for

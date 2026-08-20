@@ -221,6 +221,9 @@ export default function Home() {
   }, []);
   /** Live rect while drawing, in canvas fractions. */
   const [drawPreview, setDrawPreview] = useState<null | { x1: number; y1: number; x2: number; y2: number }>(null);
+  /** True when the text tool is armed and the pointer is over existing text,
+   *  so the cursor can promise "edit this" instead of "draw a new one". */
+  const [textToolOverText, setTextToolOverText] = useState(false);
 
   // Marquee selection — rectangle in canvas-fractional coords (0–1).
   const [marquee, setMarquee] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
@@ -914,6 +917,13 @@ export default function Home() {
     if (tool === "text") {
       const t = newTextElement("YOUR TEXT");
       t.position = { x: rect.x, y: rect.y };
+      // Dragging a box sets the SIZE. This model has no text-box width — a
+      // text is a position plus a font size — so the drag's height is the only
+      // honest thing to map onto, and it is the one people reach for anyway:
+      // drag a tall box, get big type.
+      if (rect.height > 0.01) {
+        t.fontSize = Math.max(12, Math.min(400, Math.round(rect.height * dims.height)));
+      }
       setDesign((d) => ({ ...d, texts: [...d.texts, t] }));
       setSelectedIdsRaw(new Set([`text:${t.id}`]));
       // Straight into the caret: you picked the text tool to write something.
@@ -937,7 +947,7 @@ export default function Home() {
     setDesign((d) => ({ ...d, shapes: [...(d.shapes ?? []), shape] }));
     setSelectedIdsRaw(new Set([`shape:${shape.id}`]));
     setActiveTool("select");
-  }, [setDesign, setActiveTool]);
+  }, [setDesign, setActiveTool, dims.height]);
 
   const ZOOM_MIN = 0.05;
   const ZOOM_MAX = 8;
@@ -1148,6 +1158,28 @@ export default function Home() {
       // because in Figma you draw OVER things all the time. Same capture-phase
       // reasoning as the zoom gesture.
       const tool = activeToolRef.current;
+
+      // The text tool over EXISTING text edits that text instead of dropping a
+      // new layer on top of it. Creating a second "YOUR TEXT" across the
+      // headline you were aiming at is never what was meant, and it is the one
+      // case where the tool should defer to what is already there.
+      if (!zooming && !panning && tool === "text" && e.button === 0) {
+        const overText = (e.target as HTMLElement | null)
+          ?.closest('[data-canvas-element^="text:"]') as HTMLElement | null;
+        const textId = overText?.dataset.canvasElement?.slice(5);
+        if (textId) {
+          const t = design.texts.find((tt) => tt.id === textId);
+          if (t && !t.locked && !t.groupId) {
+            e.preventDefault();
+            e.stopPropagation();
+            setSelectedIdsRaw(new Set([`text:${textId}`]));
+            setEditingTextId(textId);
+            setActiveTool("select");
+            return;
+          }
+        }
+      }
+
       if (!zooming && !panning && tool !== "select" && e.button === 0) {
         const wrap = canvasWrapRef.current;
         if (!wrap) return;
@@ -1210,7 +1242,30 @@ export default function Home() {
     };
     container.addEventListener("pointerdown", onDown, true);
     return () => container.removeEventListener("pointerdown", onDown, true);
-  }, [view.zoom, fitScale, zoomTo, panBy, createWithTool]);
+  }, [view.zoom, fitScale, zoomTo, panBy, createWithTool, design.texts, setActiveTool]);
+
+  // Hover feedback for the text tool. Which of its two meanings a click will
+  // have depends entirely on what is under the pointer, so the cursor has to
+  // say which one you are about to get: I-beam over existing text, crosshair
+  // over empty canvas.
+  useEffect(() => {
+    const container = previewContainerRef.current;
+    if (!container || activeTool !== "text") {
+      setTextToolOverText(false);
+      return;
+    }
+    const onMove = (e: PointerEvent) => {
+      const el = (e.target as HTMLElement | null)?.closest('[data-canvas-element^="text:"]');
+      setTextToolOverText(!!el);
+    };
+    const onLeave = () => setTextToolOverText(false);
+    container.addEventListener("pointermove", onMove);
+    container.addEventListener("pointerleave", onLeave);
+    return () => {
+      container.removeEventListener("pointermove", onMove);
+      container.removeEventListener("pointerleave", onLeave);
+    };
+  }, [activeTool]);
 
   const calculateScale = useCallback(() => {
     if (!previewContainerRef.current) return;
@@ -2406,11 +2461,14 @@ export default function Home() {
                 ? "grab"
                 : gestureCursor === "zoom"
                   ? "ew-resize"
-                  : activeTool !== "select"
-                    // Crosshair is the universal "you are about to place
-                    // something" cursor; an arrow here would promise selection.
-                    ? "crosshair"
-                    : undefined,
+                  : activeTool === "text" && textToolOverText
+                    // Over existing text the click EDITS it, so promise a caret.
+                    ? "text"
+                    : activeTool !== "select"
+                      // Crosshair is the universal "you are about to place
+                      // something" cursor; an arrow would promise selection.
+                      ? "crosshair"
+                      : undefined,
             }}
           >
             <input
@@ -2710,18 +2768,30 @@ export default function Home() {
                   const y = Math.min(drawPreview.y1, drawPreview.y2);
                   const w = Math.abs(drawPreview.x2 - drawPreview.x1);
                   const h = Math.abs(drawPreview.y2 - drawPreview.y1);
+                  const stroke = Math.max(1, Math.round(1 / scale));
+                  // The preview has to look like the thing you are drawing. A
+                  // rectangle outline for every tool made the circle tool feel
+                  // like it drew a square and the line tool like it drew a box.
+                  const isCircle = activeTool === "circle";
+                  const isLine = activeTool === "line";
+                  const lineThickness = Math.max(2, Math.round(dims.width * 0.006));
                   return (
                     <div
                       style={{
                         position: "absolute",
                         left: `${x * 100}%`,
-                        top: `${y * 100}%`,
+                        // A line has no height: it draws as a bar on the drag's
+                        // own centre line, which is where it will land.
+                        top: isLine ? `${(y + h / 2) * 100}%` : `${y * 100}%`,
                         width: `${w * 100}%`,
-                        height: `${h * 100}%`,
+                        height: isLine ? lineThickness : `${h * 100}%`,
+                        marginTop: isLine ? -lineThickness / 2 : undefined,
                         // Dashed, to read as "not placed yet" against the solid
                         // outline a real selection gets.
-                        border: `${Math.max(1, Math.round(1 / scale))}px dashed #fa7000`,
-                        background: "rgba(250, 112, 0, 0.10)",
+                        border: isLine ? "none" : `${stroke}px dashed #fa7000`,
+                        borderRadius: isCircle ? "50%" : undefined,
+                        background: isLine ? "#fa7000" : "rgba(250, 112, 0, 0.10)",
+                        opacity: isLine ? 0.65 : 1,
                         pointerEvents: "none",
                         zIndex: 150,
                       }}
