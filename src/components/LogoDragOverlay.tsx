@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { DesignConfig } from "@/types/template";
 import { computeSnapTargets, snapBbox, type Bbox } from "@/lib/snap";
+import { ResizeHandle } from "./ResizeHandle";
+import { selectionOutline } from "@/lib/selectionStyle";
 
 type DragMode = "move" | "nw" | "ne" | "sw" | "se" | null;
 
@@ -14,7 +16,9 @@ interface LogoDragOverlayProps {
   selected: boolean;
   /** When false, dragging places freeform (no snap-to-guides). */
   snapEnabled: boolean;
-  onSelect: () => void;
+  /** Select this element. `additive` is true when Shift was held: the host
+   *  TOGGLES the element in the current selection instead of replacing it. */
+  onSelect: (additive?: boolean) => void;
   onChange: (patch: { logoScale?: number; logoCustomPosition?: { x: number; y: number } | null }) => void;
   onGuidesChange?: (guides: { x: number | null; y: number | null }) => void;
   onEditStart?: () => void;
@@ -22,6 +26,9 @@ interface LogoDragOverlayProps {
   /** Other element bboxes to snap against when moving the logo. */
   otherBboxes?: Bbox[];
   zIndex?: number;
+  /** Preview scale (canvas px -> screen px). Handles divide by it so they stay
+   *  a constant size on screen at any zoom. Defaults to 1. */
+  scale?: number;
   /** Group-drag protocol — same as image/shape overlays. When the logo is
    *  part of a multi-selection, page.tsx tracks origins and applies the
    *  delta to every selected element including the logo. */
@@ -95,7 +102,7 @@ function computeLogoRect(
 
 export function LogoDragOverlay({
   design, canvasWidth, canvasHeight, isPortrait, selected, snapEnabled,
-  onSelect, onChange, onGuidesChange, onEditStart, onEditEnd, otherBboxes, zIndex,
+  onSelect, onChange, onGuidesChange, onEditStart, onEditEnd, otherBboxes, zIndex, scale = 1,
   onBeginDrag, onMoveBy, onEndDrag,
 }: LogoDragOverlayProps) {
   const [aspectRatio, setAspectRatio] = useState<number>(4);
@@ -123,13 +130,17 @@ export function LogoDragOverlay({
   const rect = computeLogoRect(design, canvasWidth, canvasHeight, isPortrait, aspectRatio);
   if (!rect) return null;
 
-  const handleSize = 12;
 
   const startDrag = useCallback((mode: DragMode, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     // Only replace the selection if the logo isn't already part of it —
     // otherwise we'd wipe out a multi-selection on click-to-drag.
+    // Shift-click toggles the logo in the selection rather than replacing it.
+    if (e.shiftKey) {
+      onSelect(true);
+      return;
+    }
     if (!selected) onSelect();
     onEditStart?.();
     setDragging(mode);
@@ -339,28 +350,18 @@ export function LogoDragOverlay({
           cursor: selected ? (dragging === "move" ? "grabbing" : "grab") : "pointer",
           pointerEvents: "auto",
           boxSizing: "border-box",
-          outline: selected ? "2px solid #FF6B00" : "none",
+          outline: selected ? selectionOutline(scale) : "none",
           outlineOffset: 2,
         }}
       />
       {selected && corners.map(({ key, cx, cy, cursor }) => (
-        <div
+        <ResizeHandle
           key={key}
+          cx={cx}
+          cy={cy}
+          cursor={cursor}
+          scale={scale}
           onMouseDown={(e) => startDrag(key, e)}
-          style={{
-            position: "absolute",
-            left: cx - handleSize / 2,
-            top: cy - handleSize / 2,
-            width: handleSize,
-            height: handleSize,
-            background: "#FF6B00",
-            border: "2px solid white",
-            borderRadius: 2,
-            cursor,
-            pointerEvents: "auto",
-            zIndex: 11,
-            boxShadow: "0 0 4px rgba(0,0,0,0.5)",
-          }}
         />
       ))}
     </div>

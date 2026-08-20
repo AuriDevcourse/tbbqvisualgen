@@ -16,7 +16,20 @@ interface LayersPanelProps {
   setSelectedImageId: (id: string | null) => void;
   removeCanvasImage: (id: string) => void;
   /** Optional callback to open the text editor for a given text-element id. */
-  onEditText?: (textId: string) => void;
+  /** Clicking a text row SELECTS it. It used to open the inline caret, which
+   *  put the panel and the canvas on different rules for the same click. */
+  onSelectText?: (textId: string) => void;
+  /**
+   * The whole canvas selection, so a row can show that it is selected.
+   *
+   * The panel used to receive only `selectedImageId` — a compat shim that
+   * returns an id ONLY when exactly one image is selected — and highlighted
+   * with `isImage && row.id === selectedImageId`. So selecting a text or a
+   * shape lit nothing, and a multi-selection was invisible: the list and the
+   * canvas disagreed about what was selected, on a stack where five rows can
+   * read "Name Surname". Every row already carries the `layerId` this needs.
+   */
+  selectedIds?: Set<string>;
   /** Optional callback fired when the user clicks a shape row — host sets
    *  selection to that shape so its handles + editor panel surface. */
   onSelectShape?: (shapeId: string) => void;
@@ -41,7 +54,7 @@ export function LayersPanel({
   design, setDesign,
   canvasImages, setCanvasImages,
   selectedImageId, setSelectedImageId,
-  removeCanvasImage, onEditText, onSelectShape, onDuplicateRow,
+  removeCanvasImage, onSelectText, onSelectShape, onDuplicateRow, selectedIds,
 }: LayersPanelProps) {
 
   // Compute the effective layer stack (bottom → top).
@@ -181,15 +194,15 @@ export function LayersPanel({
       onSelectShape(row.id);
       return;
     }
-    if (row.type === "text" && onEditText) {
-      // Auto-unhide on edit so typing isn't invisible.
+    if (row.type === "text" && onSelectText) {
+      // Auto-unhide on select so the user sees what they just picked.
       if (row.hidden) {
         setDesign((d) => ({
           ...d,
           texts: d.texts.map((t) => (t.id === row.id ? { ...t, hidden: false } : t)),
         }));
       }
-      onEditText(row.id);
+      onSelectText(row.id);
     }
   };
 
@@ -222,16 +235,15 @@ export function LayersPanel({
     <div className="flex flex-col gap-1.5">
       {rows.map((row) => {
         const Icon = iconFor(row.type);
-        const isImage = row.type === "image";
-        const isSelected = isImage && row.id === selectedImageId;
+        // Highlight from the real selection set, for every row type, including
+        // each member of a multi-selection.
+        const isSelected = row.layerId ? (selectedIds?.has(row.layerId) ?? false) : false;
         const visuallyHidden = row.hidden ?? false;
 
-        const clickable = row.type === "image" || row.type === "text";
-        const titleHint = row.type === "image"
-          ? "Click to select on canvas · drag to reorder"
-          : row.type === "text"
-            ? "Click to edit text · drag to reorder"
-            : undefined;
+        const clickable = row.type === "image" || row.type === "text" || row.type === "shape";
+        // "Click to edit text" was true until a click on a text row opened the
+        // caret. It selects now, so the hint says so.
+        const titleHint = clickable ? "Click to select on canvas · drag to reorder" : undefined;
 
         const draggable = !!row.layerId && row.hasContent;
         const isBeingDragged = draggable && draggingLayerId === row.layerId;

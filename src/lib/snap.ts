@@ -115,3 +115,62 @@ export function cleanGuides(next: { x: number | null; y: number | null }): { x: 
     y: typeof next.y === "number" && Number.isFinite(next.y) ? next.y : null,
   };
 }
+
+/**
+ * Snap ONE coordinate — a single moving edge — to the nearest target.
+ *
+ * `snapBbox` above snaps a whole box while it is being MOVED: it tests the
+ * box's left, centre and right against every target and slides the whole thing.
+ * A resize is a different question. Only one edge is moving, the opposite edge
+ * must not budge, and the answer is a single number.
+ *
+ * Resizing had no snapping at all — every resize branch explicitly cleared the
+ * guides — so you could align two boxes' centres by dragging them but could not
+ * line up an edge you were dragging with the edge right next to it.
+ *
+ * Uses the same SNAP_THRESHOLD as the move path, so a snap feels identical
+ * whichever gesture produced it.
+ */
+export function snapValue(value: number, targets: number[]): { value: number; guide: number | null } {
+  let best = value;
+  let guide: number | null = null;
+  let bestDist = SNAP_THRESHOLD;
+  for (const t of targets) {
+    const dist = Math.abs(value - t);
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = t;
+      guide = t;
+    }
+  }
+  return { value: best, guide };
+}
+
+/**
+ * Snap a DIMENSION to one another element already has.
+ *
+ * Edge snapping (`snapValue`) answers "line this edge up with that edge".
+ * It cannot answer "make this the same width as that", which is a different
+ * question and the one you ask when building a row of cards: the two boxes may
+ * be nowhere near each other, so no edge ever comes into range.
+ *
+ * Returns the matched dimension so the caller can report it — a size snap has
+ * no line to draw, unlike an edge snap, so the only way the user knows it
+ * happened is to be told.
+ */
+export function snapSize(size: number, candidates: number[]): { size: number; matched: number | null } {
+  let best = size;
+  let matched: number | null = null;
+  let bestDist = SNAP_THRESHOLD;
+  for (const c of candidates) {
+    // A zero-size candidate is not a dimension anyone meant to match.
+    if (c <= 0) continue;
+    const dist = Math.abs(size - c);
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = c;
+      matched = c;
+    }
+  }
+  return { size: best, matched };
+}

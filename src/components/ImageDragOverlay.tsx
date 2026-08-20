@@ -2,9 +2,14 @@
 
 import { useCallback, useRef, useState, useEffect } from "react";
 import type { CanvasImage } from "./ImagePlacer";
-import { computeSnapTargets, snapBbox, type Bbox } from "@/lib/snap";
+import { computeSnapTargets, snapBbox, snapValue, snapSize, type Bbox } from "@/lib/snap";
+import { HANDLE_HIT_PX, ResizeHandle } from "./ResizeHandle";
+import { SELECTION_COLOR, selectionOutline } from "@/lib/selectionStyle";
 
-type DragMode = "move" | "nw" | "ne" | "sw" | "se" | null;
+/** Corner handles resize both axes; edge handles resize ONE. Eight handles
+ *  is the Illustrator / Figma standard, and the edges are what you reach for
+ *  far more often — widening a banner should not also make it taller. */
+type DragMode = "move" | "nw" | "ne" | "sw" | "se" | "n" | "s" | "e" | "w" | null;
 
 interface ImageDragOverlayProps {
   image: CanvasImage;
@@ -23,12 +28,20 @@ interface ImageDragOverlayProps {
   /** z-index for the overlay — should match the image's layer z so clicks
    *  land on the bbox correctly relative to other layered elements. */
   zIndex?: number;
-  onSelect: () => void;
+  /** Preview scale (canvas px -> screen px). Handles divide by it so they stay
+   *  a constant size on screen at any zoom. Defaults to 1. */
+  scale?: number;
+  /** Select this element. `additive` is true when Shift was held: the host
+   *  TOGGLES the element in the current selection instead of replacing it. */
+  onSelect: (additive?: boolean) => void;
   onDeselect: () => void;
   onChange: (image: CanvasImage) => void;
   /** Report active snap-guide positions (fractional) to the parent so the
    *  parent can render unified orange guide lines outside the export root. */
   onGuidesChange?: (guides: { x: number | null; y: number | null }) => void;
+  /** Live readout while dragging: the size being made, or the position being
+   *  moved to, in canvas px. Cleared with null on release. */
+  onDragInfo?: (info: { text: string; x: number; y: number } | null) => void;
   /** Called on drag-start so the host can open a history transaction. */
   onEditStart?: () => void;
   /** Called on drag-end so the host can close the history transaction. */
@@ -52,7 +65,7 @@ interface ImageDragOverlayProps {
 }
 
 export function ImageDragOverlay({
-  image, otherImages, extraSnapBboxes, canvasWidth, canvasHeight, selected, snapEnabled, resizable = selected, zIndex, onSelect, onDeselect, onChange, onGuidesChange, onEditStart, onEditEnd, onBeginDrag, onMoveBy, onEndDrag, onEnterCrop, onDelete, onDuplicate,
+  image, otherImages, extraSnapBboxes, canvasWidth, canvasHeight, selected, snapEnabled, resizable = selected, zIndex, scale = 1, onSelect, onDeselect, onChange, onGuidesChange, onDragInfo, onEditStart, onEditEnd, onBeginDrag, onMoveBy, onEndDrag, onEnterCrop, onDelete, onDuplicate,
 }: ImageDragOverlayProps) {
   const [dragging, setDragging] = useState<DragMode>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -63,7 +76,10 @@ export function ImageDragOverlay({
   const imgLeft = image.x * canvasWidth - imgW / 2;
   const imgTop = image.y * canvasHeight - imgH / 2;
 
-  const handleSize = 24;
+  // Deselect tolerance around the bbox: the handles stick out past the edge,
+  // so a click on one must not read as "outside". Screen px converted back to
+  // canvas px, matching the handles themselves.
+  const handleMargin = HANDLE_HIT_PX / (scale > 0 ? scale : 1);
 
   // Clear guides when not dragging
   useEffect(() => {
@@ -106,7 +122,7 @@ export function ImageDragOverlay({
       // Outside canvas entirely — leave selection alone (user clicked sidebar)
       if (px < 0 || py < 0 || px > rect.width || py > rect.height) return;
       // Inside canvas: deselect if outside the image bbox + handle margin
-      const margin = handleSize;
+      const margin = handleMargin;
       const insideBbox =
         px >= imgLeft - margin && px <= imgLeft + imgW + margin &&
         py >= imgTop - margin && py <= imgTop + imgH + margin;
@@ -114,7 +130,7 @@ export function ImageDragOverlay({
     };
     window.addEventListener("mousedown", handleWindowMouseDown);
     return () => window.removeEventListener("mousedown", handleWindowMouseDown);
-  }, [selected, imgLeft, imgTop, imgW, imgH, handleSize, onDeselect]);
+  }, [selected, imgLeft, imgTop, imgW, imgH, handleMargin, onDeselect]);
 
   // Right-click on the image selects it (if not already) and then lets the
   // event bubble up to the page-level context menu. We don't prevent default
@@ -122,6 +138,7 @@ export function ImageDragOverlay({
   const handleContextMenu = useCallback((_e: React.MouseEvent) => {
     if (!selected) onSelect();
   }, [selected, onSelect]);
+
 
   useEffect(() => {
     if (!dragging) return;
@@ -179,6 +196,11 @@ export function ImageDragOverlay({
           newX = Math.max(0, Math.min(1, rawX));
           newY = Math.max(0, Math.min(1, rawY));
         }
+        onDragInfo?.({
+          text: `X ${Math.round(newX * canvasWidth)}  Y ${Math.round(newY * canvasHeight)}`,
+          x: newX,
+          y: newY + image.height / 2,
+        });
         // Emit delta from the pre-drag position; host applies it to all
         // selected elements (so group-drag works).
         onMoveBy?.(newX - startRef.current.x, newY - startRef.current.y);
@@ -191,8 +213,14 @@ export function ImageDragOverlay({
       //      Alt   → scale from CENTER instead of opposite corner
       //      Shift + Alt → both
       const { x: sx, y: sy, w: sw, h: sh } = startRef.current;
-      const isW = dragging === "nw" || dragging === "sw";
-      const isN = dragging === "nw" || dragging === "ne";
+      const isW = dragging === "nw" || dragging === "sw" || dragging === "w";
+      const isN = dragging === "nw" || dragging === "ne" || dragging === "n";
+      // An edge handle moves one edge only, so the other axis gets NO delta.
+      // Zeroing it here rather than patching the result afterwards means the
+      // dragged edge simply stays where it started, and every clamp and
+      // from-centre case below keeps working untouched.
+      const affectsX = dragging !== "n" && dragging !== "s";
+      const affectsY = dragging !== "e" && dragging !== "w";
 
       const fromCenter = altHeld;
       const lockAspect = shiftHeld;
@@ -203,8 +231,38 @@ export function ImageDragOverlay({
       const draggedStartX = isW ? sx - sw / 2 : sx + sw / 2;
       const draggedStartY = isN ? sy - sh / 2 : sy + sh / 2;
 
-      let newDraggedX = draggedStartX + dx;
-      let newDraggedY = draggedStartY + dy;
+      // With Shift held the aspect block below deliberately reads the zeroed
+      // axis, which is how an edge drag scales proportionally — the same as
+      // Shift-dragging an edge in Illustrator.
+      let newDraggedX = draggedStartX + (affectsX ? dx : 0);
+      let newDraggedY = draggedStartY + (affectsY ? dy : 0);
+
+      // Snap the moving EDGE to its neighbours — see ShapeDragOverlay for why
+      // this runs before the aspect-lock block.
+      let resizeGuideX: number | null = null;
+      let resizeGuideY: number | null = null;
+      const sizeCandidates: { widths: number[]; heights: number[] } = { widths: [], heights: [] };
+      if (snapEnabled) {
+        const snapBoxes: Bbox[] = [
+          ...(otherImages || []).map((o) => ({ x: o.x, y: o.y, width: o.width, height: o.height })),
+          ...(extraSnapBboxes || []),
+        ];
+        for (const b of snapBoxes) {
+          sizeCandidates.widths.push(b.width);
+          sizeCandidates.heights.push(b.height);
+        }
+        const targets = computeSnapTargets(snapBoxes);
+        if (affectsX) {
+          const snapped = snapValue(newDraggedX, targets.x);
+          newDraggedX = snapped.value;
+          resizeGuideX = snapped.guide;
+        }
+        if (affectsY) {
+          const snapped = snapValue(newDraggedY, targets.y);
+          newDraggedY = snapped.value;
+          resizeGuideY = snapped.guide;
+        }
+      }
 
       if (lockAspect) {
         // Pick the dominant axis (largest proportional change) and project
@@ -221,7 +279,10 @@ export function ImageDragOverlay({
         }
       }
 
-      const MIN = 0.05;
+      // 0.02 of the canvas, matching ShapeDragOverlay. It was 0.05, which is
+      // 96px at 1920 — you could not draw a small badge or a thin rule as an
+      // image, for no reason a shape did not share.
+      const MIN = 0.02;
       if (isW) newDraggedX = Math.max(0, Math.min(fixedX - MIN, newDraggedX));
       else     newDraggedX = Math.min(1, Math.max(fixedX + MIN, newDraggedX));
       if (isN) newDraggedY = Math.max(0, Math.min(fixedY - MIN, newDraggedY));
@@ -243,19 +304,58 @@ export function ImageDragOverlay({
         newBottom = Math.max(fixedY, newDraggedY);
       }
 
-      const newW = newRight - newLeft;
-      const newH = newBottom - newTop;
+      let newW = newRight - newLeft;
+      let newH = newBottom - newTop;
+
+      // Match a neighbour's WIDTH or HEIGHT. Edge snapping cannot do this: two
+      // cards you want the same width may be nowhere near each other, so no
+      // edge ever comes into range. Applied by moving the dragged edge and
+      // leaving the fixed one, which is what the user is holding.
+      let matchedW: number | null = null;
+      let matchedH: number | null = null;
+      if (snapEnabled) {
+        if (affectsX) {
+          const m = snapSize(newW, sizeCandidates.widths);
+          if (m.matched !== null) { newW = m.size; matchedW = m.size; }
+        }
+        if (affectsY) {
+          const m = snapSize(newH, sizeCandidates.heights);
+          if (m.matched !== null) { newH = m.size; matchedH = m.size; }
+        }
+      }
+
+      // Rebuild the box around whichever edge stayed put.
+      if (fromCenter) {
+        newLeft = sx - newW / 2; newRight = sx + newW / 2;
+        newTop = sy - newH / 2;  newBottom = sy + newH / 2;
+      } else {
+        if (isW) { newLeft = newRight - newW; } else { newRight = newLeft + newW; }
+        if (isN) { newTop = newBottom - newH; } else { newBottom = newTop + newH; }
+      }
+
       const newX = (newLeft + newRight) / 2;
       const newY = (newTop + newBottom) / 2;
 
-      onGuidesChange?.({ x: null, y: null });
+      onGuidesChange?.({ x: resizeGuideX, y: resizeGuideY });
+      // See ShapeDragOverlay: "=" marks an axis that matched a neighbour's
+      // dimension, which is otherwise invisible.
+      onDragInfo?.({
+        text: `${matchedW !== null ? "= " : ""}${Math.round(newW * canvasWidth)}`
+          + ` × ${matchedH !== null ? "= " : ""}${Math.round(newH * canvasHeight)}`,
+        x: newX,
+        y: newBottom,
+      });
 
       onChange({
         ...image,
         x: Math.round(newX * 1000) / 1000,
         y: Math.round(newY * 1000) / 1000,
-        width: Math.round(newW * 100) / 100,
-        height: Math.round(newH * 100) / 100,
+        // 1/1000 of the canvas, matching x/y above and the shape overlay.
+        // Rounding to 1/100 quantised every image resize to 1% of the canvas —
+        // 19px at 1920 wide — so the box jumped in visible steps and a small
+        // correction was impossible to make.
+        width: Math.round(newW * 1000) / 1000,
+        height: Math.round(newH * 1000) / 1000,
       });
     };
 
@@ -269,6 +369,7 @@ export function ImageDragOverlay({
     };
 
     const handleMouseUp = () => {
+      onDragInfo?.(null);
       // Flush the queued frame so the drag lands exactly where the pointer
       // was let go, rather than up to one frame behind it.
       if (frame) {
@@ -294,11 +395,17 @@ export function ImageDragOverlay({
     };
   }, [dragging, image, onChange, otherImages, extraSnapBboxes, onGuidesChange, onEditEnd, onMoveBy, onEndDrag]);
 
+  // Eight handles: four corners (resize both axes) and four edge midpoints
+  // (resize one). Named `corners` still, so the render loop below is untouched.
   const corners: { key: DragMode; cx: number; cy: number; cursor: string }[] = [
-    { key: "nw", cx: imgLeft, cy: imgTop, cursor: "nwse-resize" },
-    { key: "ne", cx: imgLeft + imgW, cy: imgTop, cursor: "nesw-resize" },
-    { key: "sw", cx: imgLeft, cy: imgTop + imgH, cursor: "nesw-resize" },
-    { key: "se", cx: imgLeft + imgW, cy: imgTop + imgH, cursor: "nwse-resize" },
+    { key: "nw", cx: imgLeft,          cy: imgTop,          cursor: "nwse-resize" },
+    { key: "n",  cx: imgLeft + imgW / 2, cy: imgTop,          cursor: "ns-resize" },
+    { key: "ne", cx: imgLeft + imgW,     cy: imgTop,          cursor: "nesw-resize" },
+    { key: "e",  cx: imgLeft + imgW,     cy: imgTop + imgH / 2, cursor: "ew-resize" },
+    { key: "se", cx: imgLeft + imgW,     cy: imgTop + imgH,     cursor: "nwse-resize" },
+    { key: "s",  cx: imgLeft + imgW / 2, cy: imgTop + imgH,     cursor: "ns-resize" },
+    { key: "sw", cx: imgLeft,          cy: imgTop + imgH,     cursor: "nesw-resize" },
+    { key: "w",  cx: imgLeft,          cy: imgTop + imgH / 2, cursor: "ew-resize" },
   ];
 
   return (
@@ -328,6 +435,13 @@ export function ImageDragOverlay({
           if (e.button === 2) return; // let contextmenu handle right-click
           e.preventDefault();
           e.stopPropagation();
+          // Shift-click asks to TOGGLE, so it fires whether or not this image
+          // is already selected — removing it is as valid as adding it — and it
+          // never starts a drag, because the gesture was about the selection.
+          if (e.shiftKey) {
+            onSelect(true);
+            return;
+          }
           // Locked images are still selectable on click — just no drag.
           if (image.locked) {
             if (!selected) onSelect();
@@ -349,16 +463,14 @@ export function ImageDragOverlay({
           width: imgW,
           height: imgH,
           cursor: image.locked ? "default" : selected ? (dragging === "move" ? "grabbing" : "grab") : "pointer",
-          // Outline (not border) — outline doesn't affect layout, sits OUTSIDE
-          // the box, and accepts dashed style. Solid for single-select (the
-          // resize-handle case), dashed for multi-select to match text.
-          outline: selected
-            ? resizable
-              ? "2px solid #FF6B00"
-              : "2px dashed #FF6B00"
-            : "none",
+          // Outline (not border) — outline doesn't affect layout and sits
+          // OUTSIDE the box. One thin solid hairline whether this is a single
+          // or a multi selection: dashes read as artwork and hid thin shapes
+          // underneath. A multi-selection is distinguished by having no
+          // handles, which is how Illustrator does it too.
+          outline: selected ? selectionOutline(scale) : "none",
           outlineOffset: 0,
-          boxShadow: selected && !resizable ? "0 0 0 1px rgba(255, 107, 0, 0.25)" : "none",
+          boxShadow: "none",
           borderRadius: `${((image.cornerRadius ?? (image.shape === "circle" ? 50 : 10)) / 100) * Math.min(imgW, imgH)}px`,
           pointerEvents: "auto",
           boxSizing: "border-box",
@@ -368,22 +480,13 @@ export function ImageDragOverlay({
 
       {/* Corner resize handles — only when this image is the sole selection */}
       {resizable && corners.map(({ key, cx, cy, cursor }) => (
-        <div
+        <ResizeHandle
           key={key}
+          cx={cx}
+          cy={cy}
+          cursor={cursor}
+          scale={scale}
           onMouseDown={(e) => startDrag(key, e)}
-          style={{
-            position: "absolute",
-            left: cx - handleSize / 2,
-            top: cy - handleSize / 2,
-            width: handleSize,
-            height: handleSize,
-            background: "#FF0028",
-            border: "2px solid rgba(255, 255, 255, 0.9)",
-            borderRadius: 3,
-            cursor,
-            pointerEvents: "auto",
-            zIndex: 11,
-          }}
         />
       ))}
 

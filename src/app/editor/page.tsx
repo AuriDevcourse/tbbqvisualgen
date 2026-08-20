@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Pause, Play, X, RotateCcw, Layers as LayersIcon, Download, Film, LayoutTemplate, Type, Image as ImageIcon, Shapes, Undo2, Redo2, Lock, Unlock, Trash2, Copy, LibraryBig, AlignStartVertical, AlignCenterVertical, AlignEndVertical, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignHorizontalDistributeCenter, AlignVerticalDistributeCenter, Grid3x3, Magnet, Group, Ungroup, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Loader2, Users, Save } from "lucide-react";
+import { Pause, Play, X, RotateCcw, Layers as LayersIcon, Download, Film, LayoutTemplate, Type, Image as ImageIcon, Shapes, Undo2, Redo2, Lock, Unlock, Trash2, Copy, LibraryBig, AlignStartVertical, AlignCenterVertical, AlignEndVertical, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignHorizontalDistributeCenter, AlignVerticalDistributeCenter, Grid3x3, Magnet, Group, Ungroup, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Loader2, Users, Save, ZoomIn, ZoomOut, Maximize2, ChevronDown as ChevronDownIcon, MousePointer2, Square, Circle, Minus, Star, ImagePlus, Ruler } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as Popover from "@radix-ui/react-popover";
 import { toast } from "sonner";
@@ -12,13 +12,15 @@ import { ImageDragOverlay } from "@/components/ImageDragOverlay";
 import { ShapeDragOverlay } from "@/components/ShapeDragOverlay";
 import { LogoDragOverlay } from "@/components/LogoDragOverlay";
 import { cleanGuides, type Bbox } from "@/lib/snap";
+import { SELECTION_COLOR } from "@/lib/selectionStyle";
 import { DynamicTemplate } from "@/components/templates/DynamicTemplate";
 import { useExport, VIDEO_MAX_SECONDS, VIDEO_MIN_SECONDS, type ExportFormat } from "@/hooks/useExport";
 import { isAnimatedBackground } from "@/components/CanvasBackground";
 import { useUndoableDoc } from "@/hooks/useUndoableDoc";
-import { FORMAT_DIMENSIONS, DEFAULT_DESIGN, reconcileLayerOrder, splitImageLayerIds } from "@/types/template";
+import { FORMAT_DIMENSIONS, DEFAULT_DESIGN, reconcileLayerOrder, splitImageLayerIds, newTextElement, newShapeElement, newImagePlaceholder } from "@/types/template";
 import type { PlatformFormat, DesignConfig } from "@/types/template";
 import { FeedbackButton } from "@/components/FeedbackButton";
+import { CanvasRulers } from "@/components/CanvasRulers";
 import { Stepper } from "@/components/Stepper";
 import type { StepDef } from "@/components/Stepper";
 import { StepCanvas } from "@/components/steps/StepCanvas";
@@ -63,6 +65,20 @@ function AlignBtn({ icon: Icon, label, onClick }: { icon: typeof AlignStartVerti
     </button>
   );
 }
+
+/** Canvas tools. "select" is the default arrow; the rest arm the canvas to
+ *  CREATE the named thing where you draw it. */
+type ActiveTool = "select" | "text" | "rectangle" | "circle" | "line" | "star" | "photo";
+
+const TOOLS: { id: ActiveTool; label: string; key: string; icon: React.ComponentType<{ className?: string; strokeWidth?: number }> }[] = [
+  { id: "select", label: "Select", key: "V", icon: MousePointer2 },
+  { id: "text", label: "Text", key: "T", icon: Type },
+  { id: "rectangle", label: "Rectangle", key: "R", icon: Square },
+  { id: "circle", label: "Circle", key: "O", icon: Circle },
+  { id: "line", label: "Line", key: "L", icon: Minus },
+  { id: "star", label: "Star", key: "S", icon: Star },
+  { id: "photo", label: "Photo slot", key: "P", icon: ImagePlus },
+];
 
 const STEPS: StepDef[] = [
   { id: 1, label: "Canvas", icon: LayoutTemplate },
@@ -165,7 +181,64 @@ export default function Home() {
   const { exportRef, isExporting, isExportingVideo, videoProgress, exportImage, exportMp4 } = useExport();
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const canvasWrapRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(0.4);
+  // ---- Zoom & pan ----
+  // `fitScale` is the automatic "make it fit the container" scale, recomputed
+  // on resize. `userZoom` overrides it once the user zooms; null means "follow
+  // the fit". Keeping the EFFECTIVE value named `scale` means everything that
+  // already divides by it — the resize handles, the snap guide lines — keeps
+  // working with no change.
+  const [fitScale, setFitScale] = useState(0.4);
+  /**
+   * Zoom and pan are ONE piece of state, deliberately.
+   *
+   * They were two, and every zoom read the current zoom to work out how far to
+   * shift the pan. During a `z`-drag that fires several times a frame, the
+   * captured zoom went stale while the pan kept accumulating, so the
+   * correction compounded: a single scrub sent the pan to 133,842px and the
+   * canvas vanished off screen. One functional updater sees the true latest
+   * value of both, so the arithmetic cannot drift no matter how fast the
+   * updates arrive.
+   *
+   * `zoom: null` means "follow fitScale" — the state the editor opens in.
+   */
+  const [view, setView] = useState<{ zoom: number | null; pan: { x: number; y: number } }>({
+    zoom: null,
+    pan: { x: 0, y: 0 },
+  });
+  const scale = view.zoom ?? fitScale;
+  const pan = view.pan;
+  const isZoomed = view.zoom !== null;
+
+  // ---- Active tool ----
+  // The left sidebar's CANVAS / TEXT / IMAGES / ELEMENTS are PANELS: they show
+  // you a list and give you an "Add" button that drops the thing at canvas
+  // centre. That is not a tool. A tool is a mode where the canvas itself
+  // becomes the input: pick it, draw where you want the thing, and it appears
+  // there at that size. Everything below exists to make that true.
+  const activeToolRef = useRef<ActiveTool>("select");
+  const [activeTool, setActiveToolState] = useState<ActiveTool>("select");
+  const setActiveTool = useCallback((t: ActiveTool) => {
+    activeToolRef.current = t;
+    setActiveToolState(t);
+  }, []);
+  /** Live rect while drawing, in canvas fractions. */
+  const [drawPreview, setDrawPreview] = useState<null | { x1: number; y1: number; x2: number; y2: number }>(null);
+  /** True when the text tool is armed and the pointer is over existing text,
+   *  so the cursor can promise "edit this" instead of "draw a new one". */
+  const [textToolOverText, setTextToolOverText] = useState(false);
+  const [showRulers, setShowRulers] = useState(false);
+  /** Live "640 × 360" / "X 902 Y 540" pill during a drag, in canvas fractions.
+   *  Set by the overlays, cleared on release. */
+  const [dragInfo, setDragInfo] = useState<null | { text: string; x: number; y: number }>(null);
+  const setDragInfoIfChanged = useCallback((next: { text: string; x: number; y: number } | null) => {
+    // Same reasoning as setGuidesIfChanged: this fires every frame of a drag,
+    // and re-rendering the editor for an identical value is pure waste.
+    setDragInfo((prev) => {
+      if (prev === next) return prev;
+      if (prev && next && prev.text === next.text && prev.x === next.x && prev.y === next.y) return prev;
+      return next;
+    });
+  }, []);
 
   // Marquee selection — rectangle in canvas-fractional coords (0–1).
   const [marquee, setMarquee] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
@@ -320,7 +393,7 @@ export default function Home() {
     ? { width: customSize.width, height: customSize.height, label: `Custom (${customSize.width}×${customSize.height})` }
     : FORMAT_DIMENSIONS[format] || FORMAT_DIMENSIONS.square;
 
-  // ---- One-time "click any text to edit" tip ----
+  // ---- One-time "double-click any text to edit" tip ----
   useEffect(() => {
     try {
       const dismissed = localStorage.getItem("tbbqvisualgen.editTipDismissed");
@@ -601,17 +674,66 @@ export default function Home() {
     return result;
   }, [getGroupId, getAllInGroup]);
 
-  // Click an element → expand to its whole group if it has one.
-  const selectWithGroup = useCallback((layerId: string) => {
+  /**
+   * Leave text-edit mode, committing whatever was typed.
+   *
+   * MUST be called by every path that changes the selection. Selecting
+   * something else used to leave the previous text `contentEditable` AND
+   * holding DOM focus, because the overlays `preventDefault()` on mousedown —
+   * which is what stops the browser moving focus. Two things went wrong from
+   * that one stuck focus:
+   *
+   *  1. `isEditableTarget` in the keyboard handler stayed true, so EVERY
+   *     shortcut guarded by it silently died: nudge, Delete, copy, paste,
+   *     duplicate, group, undo, z-order. The shortcuts were never broken; they
+   *     were being skipped.
+   *  2. Nothing committed. `commitEdit` only runs on blur, so characters typed
+   *     before clicking away lived in the DOM and not in the document, and the
+   *     next render from state could drop them.
+   *
+   * Blurring fixes both at once: the existing `onBlur` commits the content and
+   * `onTextContentChange` clears `editingTextId`. The explicit clear after it
+   * covers the case where the id lingers with nothing focused.
+   */
+  const stopTextEditing = useCallback(() => {
+    const active = document.activeElement as HTMLElement | null;
+    if (active?.isContentEditable) active.blur();
+    setEditingTextId(null);
+  }, []);
+
+  /**
+   * Click an element → expand to its whole group if it has one.
+   *
+   * `additive` (Shift held) TOGGLES rather than adds. Removing is half of what
+   * shift-click is for: getting one item wrong in a six-item selection should
+   * cost one click, not a restart. A whole group toggles together, so a group
+   * never ends up half-selected — if any member is in, the group comes out.
+   */
+  const selectWithGroup = useCallback((layerId: string, additive?: boolean) => {
+    stopTextEditing();
     const gid = getGroupId(layerId);
-    if (gid) setSelectedIdsRaw(new Set(getAllInGroup(gid)));
-    else setSelectedIdsRaw(new Set([layerId]));
-  }, [getGroupId, getAllInGroup]);
+    const ids = gid ? getAllInGroup(gid) : [layerId];
+    if (!additive) {
+      setSelectedIdsRaw(new Set(ids));
+      return;
+    }
+    setSelectedIdsRaw((prev) => {
+      const next = new Set(prev);
+      const alreadyIn = ids.some((id) => next.has(id));
+      for (const id of ids) {
+        if (alreadyIn) next.delete(id);
+        else next.add(id);
+      }
+      return next;
+    });
+  }, [getGroupId, getAllInGroup, stopTextEditing]);
 
   const handleCanvasPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     // If the click landed on a canvas element (text/image bbox) or a
     // resize-handle inside an image overlay, let that element handle it.
     // Marquee only starts when the user clicks empty canvas.
+    // A zoom/pan gesture is in progress — it owns the pointer, not the marquee.
+    if (zoomKeyRef.current || panKeyRef.current || e.button === 1) return;
     const target = e.target as HTMLElement;
     if (target.closest("[data-canvas-element], [data-canvas-overlay]")) return;
     const wrap = canvasWrapRef.current;
@@ -622,10 +744,16 @@ export default function Home() {
       y: Math.max(0, Math.min(1, (clientY - rect.top) / rect.height)),
     });
     const start = toFrac(e.clientX, e.clientY);
+    // Shift-marquee ADDS to what is already selected. Without this the box
+    // wiped the selection the moment it started, so Shift could not extend a
+    // marquee any more than it could extend a click.
+    const additive = e.shiftKey;
+    const base: Set<string> = additive ? new Set(selectedIds) : new Set();
     setMarquee({ x1: start.x, y1: start.y, x2: start.x, y2: start.y });
-    // Clear any existing selection on a fresh marquee; also exits crop-edit
-    // mode (Google Slides parity).
-    setSelectedIdsRaw(new Set());
+    // A fresh (non-Shift) marquee clears the selection; both kinds exit
+    // crop-edit mode (Google Slides parity) and text-edit mode.
+    stopTextEditing();
+    if (!additive) setSelectedIdsRaw(new Set());
     setCropEditingId(null);
 
     const handleMove = (moveE: PointerEvent) => {
@@ -640,10 +768,13 @@ export default function Home() {
       const y1 = Math.min(start.y, p.y);
       const x2 = Math.max(start.x, p.x);
       const y2 = Math.max(start.y, p.y);
-      // Compute intersection against every element on the canvas.
-      const next = new Set<string>();
+      // Compute intersection against every element on the canvas, on top of
+      // whatever a Shift-marquee started from.
+      const next = new Set<string>(base);
       // Tiny marquee (just a click on empty area) clears selection without
       // searching — useful when the user clicks somewhere empty to deselect.
+      // With Shift it keeps `base`, so a stray shift-click on empty canvas
+      // does not throw away a selection the user is still building.
       if (x2 - x1 > 0.005 || y2 - y1 > 0.005) {
         document.querySelectorAll<HTMLElement>("[data-canvas-element]").forEach((el) => {
           const id = el.dataset.canvasElement;
@@ -664,7 +795,7 @@ export default function Home() {
     };
     document.addEventListener("pointermove", handleMove);
     document.addEventListener("pointerup", handleUp);
-  }, [expandToGroups]);
+  }, [expandToGroups, stopTextEditing, selectedIds]);
 
   // Canvas image helpers
   const addCanvasImage = useCallback((img: CanvasImage) => {
@@ -781,6 +912,376 @@ export default function Home() {
     toast.success("Photo added");
   }, [setDoc]);
 
+  /**
+   * Create the active tool's element at a given canvas rect and go back to
+   * Select.
+   *
+   * Reverting is deliberate: Figma drops back to the Move tool after you draw
+   * one shape, because the overwhelmingly common next act is to adjust what you
+   * just made, not to draw a second one. Staying armed means your next click
+   * silently creates another rectangle on top.
+   */
+  const createWithTool = useCallback((
+    tool: ActiveTool,
+    rect: { x: number; y: number; width: number; height: number },
+  ) => {
+    // A click without a drag gets a sensible default size rather than a
+    // zero-size element that renders as nothing and looks like a broken click.
+    const MIN = 0.01;
+    const drawn = rect.width > MIN && rect.height > MIN;
+    if (tool === "text") {
+      const t = newTextElement("YOUR TEXT");
+      t.position = { x: rect.x, y: rect.y };
+      // Dragging a box sets the SIZE. This model has no text-box width — a
+      // text is a position plus a font size — so the drag's height is the only
+      // honest thing to map onto, and it is the one people reach for anyway:
+      // drag a tall box, get big type.
+      if (rect.height > 0.01) {
+        t.fontSize = Math.max(12, Math.min(400, Math.round(rect.height * dims.height)));
+      }
+      setDesign((d) => ({ ...d, texts: [...d.texts, t] }));
+      setSelectedIdsRaw(new Set([`text:${t.id}`]));
+      // Straight into the caret: you picked the text tool to write something.
+      setEditingTextId(t.id);
+      setActiveTool("select");
+      return;
+    }
+    const shape = tool === "photo"
+      ? newImagePlaceholder()
+      : newShapeElement(tool as Exclude<ActiveTool, "select" | "text" | "photo">);
+    if (drawn) {
+      shape.x = rect.x;
+      shape.y = rect.y;
+      shape.width = rect.width;
+      // A line is a bar: dragging sets its length, not its thickness.
+      shape.height = tool === "line" ? (shape.height ?? 0.006) : rect.height;
+    } else {
+      shape.x = rect.x;
+      shape.y = rect.y;
+    }
+    setDesign((d) => ({ ...d, shapes: [...(d.shapes ?? []), shape] }));
+    setSelectedIdsRaw(new Set([`shape:${shape.id}`]));
+    setActiveTool("select");
+  }, [setDesign, setActiveTool, dims.height]);
+
+  const ZOOM_MIN = 0.05;
+  const ZOOM_MAX = 8;
+  /** Keep at least this much of the canvas inside the viewport, in screen px.
+   *  Without a tether you can pan the artwork clean out of the window and the
+   *  only way back is the Fit button. */
+  const PAN_KEEP_VISIBLE = 80;
+
+  /** Stop the canvas being panned entirely out of the container. */
+  const clampPan = useCallback((p: { x: number; y: number }, s: number) => {
+    const container = previewContainerRef.current;
+    if (!container) return p;
+    const cw = container.clientWidth;
+    const ch = container.clientHeight;
+    // Canvas is centred, so its half-extent plus half the container is the
+    // furthest the centre can travel before the far edge leaves the viewport.
+    const maxX = Math.max(0, (dims.width * s) / 2 + cw / 2 - PAN_KEEP_VISIBLE);
+    const maxY = Math.max(0, (dims.height * s) / 2 + ch / 2 - PAN_KEEP_VISIBLE);
+    return {
+      x: Math.max(-maxX, Math.min(maxX, p.x)),
+      y: Math.max(-maxY, Math.min(maxY, p.y)),
+    };
+  }, [dims.width, dims.height]);
+
+  /**
+   * Zoom to `next`, keeping the point under `anchor` pinned.
+   *
+   * The canvas is drawn as `translate(pan) scale(s)` about the container's
+   * CENTRE, so a naive scale change makes the artwork run away from the
+   * pointer. Solving for "the same canvas point stays under the same screen
+   * point": a point sits at `C + pan + s*d`, so `d = (A - C - pan) / s`, and
+   * holding it still at the new scale gives
+   *   pan' = (A - C) - (s'/s) * ((A - C) - pan)
+   * Anchoring on the pointer is what makes wheel-zoom feel like a lens rather
+   * than a slider.
+   */
+  const zoomTo = useCallback((next: number, anchor?: { x: number; y: number }) => {
+    const container = previewContainerRef.current;
+    if (!container) return;
+    const r = container.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    const ax = anchor?.x ?? cx;
+    const ay = anchor?.y ?? cy;
+    setView((v) => {
+      const from = v.zoom ?? fitScale;
+      const to = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, next));
+      if (!Number.isFinite(to) || to <= 0 || !Number.isFinite(from) || from <= 0) return v;
+      const k = to / from;
+      return {
+        zoom: to,
+        pan: clampPan({
+          x: (ax - cx) - k * ((ax - cx) - v.pan.x),
+          y: (ay - cy) - k * ((ay - cy) - v.pan.y),
+        }, to),
+      };
+    });
+  }, [fitScale, clampPan]);
+
+  /** Back to "fill the container", the state the editor opens in. */
+  const zoomToFit = useCallback(() => {
+    setView({ zoom: null, pan: { x: 0, y: 0 } });
+  }, []);
+
+  const zoomBy = useCallback((factor: number, anchor?: { x: number; y: number }) => {
+    const container = previewContainerRef.current;
+    if (!container) return;
+    const r = container.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    const ax = anchor?.x ?? cx;
+    const ay = anchor?.y ?? cy;
+    setView((v) => {
+      const from = v.zoom ?? fitScale;
+      const to = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, from * factor));
+      const k = to / from;
+      return {
+        zoom: to,
+        pan: clampPan({
+          x: (ax - cx) - k * ((ax - cx) - v.pan.x),
+          y: (ay - cy) - k * ((ay - cy) - v.pan.y),
+        }, to),
+      };
+    });
+  }, [fitScale, clampPan]);
+
+  const panBy = useCallback((dx: number, dy: number) => {
+    setView((v) => ({
+      zoom: v.zoom,
+      pan: clampPan({ x: v.pan.x + dx, y: v.pan.y + dy }, v.zoom ?? fitScale),
+    }));
+  }, [clampPan, fitScale]);
+
+  // Switching format changes the canvas dimensions, so any manual zoom/pan is
+  // about a canvas that no longer exists. Refit instead of leaving the user
+  // looking at the corner of a differently-shaped board.
+  useEffect(() => {
+    setView({ zoom: null, pan: { x: 0, y: 0 } });
+  }, [dims.width, dims.height]);
+
+  // ---- Zoom / pan gestures ----
+  // `z` scrubs the zoom by dragging, `space` drags the canvas. Both are held
+  // MODIFIERS, so they are tracked as refs read by the pointer handlers rather
+  // than state: a re-render per keypress would be wasted, and the pointer
+  // handler needs the value at the instant of the press.
+  const zoomKeyRef = useRef(false);
+  const panKeyRef = useRef(false);
+  // Mirrored into state only to drive the cursor, which has to re-render.
+  const [gestureCursor, setGestureCursor] = useState<null | "zoom" | "pan">(null);
+
+  useEffect(() => {
+    const isTyping = (t: EventTarget | null) => {
+      const el = t as HTMLElement | null;
+      return !!el && (el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName));
+    };
+    const down = (e: KeyboardEvent) => {
+      if (isTyping(e.target)) return;
+      // Bare key only: Ctrl+Z must stay undo, and Cmd+Z on a Mac too.
+      if (e.key === "z" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        zoomKeyRef.current = true;
+        setGestureCursor((c) => (c === "pan" ? c : "zoom"));
+      }
+      if (e.code === "Space") {
+        panKeyRef.current = true;
+        setGestureCursor("pan");
+        // Space would otherwise scroll the panel underneath.
+        e.preventDefault();
+      }
+    };
+    const up = (e: KeyboardEvent) => {
+      if (e.key === "z" || e.key === "Z") zoomKeyRef.current = false;
+      if (e.code === "Space") panKeyRef.current = false;
+      setGestureCursor(panKeyRef.current ? "pan" : zoomKeyRef.current ? "zoom" : null);
+    };
+    // A key held while the tab loses focus never fires keyup, and the canvas
+    // would be stuck in scrub mode on return.
+    const clear = () => {
+      zoomKeyRef.current = false;
+      panKeyRef.current = false;
+      setGestureCursor(null);
+    };
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    window.addEventListener("blur", clear);
+    return () => {
+      window.removeEventListener("keydown", down);
+      window.removeEventListener("keyup", up);
+      window.removeEventListener("blur", clear);
+    };
+  }, []);
+
+  /**
+   * Wheel over the canvas. Ctrl/Cmd + wheel zooms at the pointer; a plain
+   * wheel pans, but only once zoomed in past the fit — at fit there is nothing
+   * to pan to, and sliding the artwork out of a container it exactly fills
+   * would just look broken.
+   *
+   * Registered natively with `passive: false` because the handler calls
+   * preventDefault, and React attaches wheel listeners passively.
+   */
+  useEffect(() => {
+    const container = previewContainerRef.current;
+    if (!container) return;
+    const onWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        // Exponential so each notch is a constant RATIO. Linear steps crawl
+        // when zoomed out and leap when zoomed in.
+        zoomBy(Math.exp(-e.deltaY * 0.0015), { x: e.clientX, y: e.clientY });
+        return;
+      }
+      if (view.zoom !== null && view.zoom > fitScale) {
+        e.preventDefault();
+        panBy(-e.deltaX, -e.deltaY);
+      }
+    };
+    container.addEventListener("wheel", onWheel, { passive: false });
+    return () => container.removeEventListener("wheel", onWheel);
+  }, [zoomBy, panBy, view.zoom, fitScale]);
+
+  /**
+   * Pointer-down on the canvas area while `z` or `space` is held.
+   *
+   * z + drag RIGHT zooms in, LEFT zooms out, anchored on where the drag began
+   * so the thing under the pointer is what you zoom into. Exponential again,
+   * so a given distance is always the same zoom ratio.
+   *
+   * Runs in the CAPTURE phase and stops propagation, so the gesture never
+   * reaches the marquee or an element drag underneath.
+   */
+  //
+  // Registered as a NATIVE capture listener rather than React's
+  // `onPointerDownCapture`. React delegates events at the root and simulates
+  // the capture phase, which did not reliably beat a canvas element's own
+  // pointerdown handler: with `z` held, a drag starting on a text layer did
+  // nothing at all (verified — the cursor armed, the zoom never moved). A
+  // native capture listener on the container runs before React sees the event
+  // at all, which is what "this gesture owns the pointer" requires. Same
+  // reasoning as the wheel listener above.
+  useEffect(() => {
+    const container = previewContainerRef.current;
+    if (!container) return;
+    const onDown = (e: PointerEvent) => {
+      const zooming = zoomKeyRef.current;
+      const panning = panKeyRef.current || e.button === 1; // middle-drag pans too
+
+      // A drawing tool owns the canvas: it must beat the element underneath,
+      // because in Figma you draw OVER things all the time. Same capture-phase
+      // reasoning as the zoom gesture.
+      const tool = activeToolRef.current;
+
+      // The text tool over EXISTING text edits that text instead of dropping a
+      // new layer on top of it. Creating a second "YOUR TEXT" across the
+      // headline you were aiming at is never what was meant, and it is the one
+      // case where the tool should defer to what is already there.
+      if (!zooming && !panning && tool === "text" && e.button === 0) {
+        const overText = (e.target as HTMLElement | null)
+          ?.closest('[data-canvas-element^="text:"]') as HTMLElement | null;
+        const textId = overText?.dataset.canvasElement?.slice(5);
+        if (textId) {
+          const t = design.texts.find((tt) => tt.id === textId);
+          if (t && !t.locked && !t.groupId) {
+            e.preventDefault();
+            e.stopPropagation();
+            setSelectedIdsRaw(new Set([`text:${textId}`]));
+            setEditingTextId(textId);
+            setActiveTool("select");
+            return;
+          }
+        }
+      }
+
+      if (!zooming && !panning && tool !== "select" && e.button === 0) {
+        const wrap = canvasWrapRef.current;
+        if (!wrap) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const rect = wrap.getBoundingClientRect();
+        const toFrac = (cx: number, cy: number) => ({
+          x: Math.max(0, Math.min(1, (cx - rect.left) / rect.width)),
+          y: Math.max(0, Math.min(1, (cy - rect.top) / rect.height)),
+        });
+        const start = toFrac(e.clientX, e.clientY);
+        let last = start;
+        setDrawPreview({ x1: start.x, y1: start.y, x2: start.x, y2: start.y });
+        const move = (m: PointerEvent) => {
+          last = toFrac(m.clientX, m.clientY);
+          setDrawPreview({ x1: start.x, y1: start.y, x2: last.x, y2: last.y });
+        };
+        const up = () => {
+          document.removeEventListener("pointermove", move);
+          document.removeEventListener("pointerup", up);
+          setDrawPreview(null);
+          const x1 = Math.min(start.x, last.x);
+          const y1 = Math.min(start.y, last.y);
+          const w = Math.abs(last.x - start.x);
+          const h = Math.abs(last.y - start.y);
+          createWithTool(tool, { x: x1 + w / 2, y: y1 + h / 2, width: w, height: h });
+        };
+        document.addEventListener("pointermove", move);
+        document.addEventListener("pointerup", up);
+        return;
+      }
+
+      if (!zooming && !panning) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const startScale = view.zoom ?? fitScale;
+      const anchor = { x: startX, y: startY };
+      let last = { x: startX, y: startY };
+      const move = (m: PointerEvent) => {
+        if (panning) {
+          panBy(m.clientX - last.x, m.clientY - last.y);
+          last = { x: m.clientX, y: m.clientY };
+        } else {
+          // Drag RIGHT zooms in, LEFT zooms out. Exponential, so a given
+          // distance is always the same zoom RATIO rather than the same
+          // number of percentage points. The target is ABSOLUTE, computed from
+          // where the drag began, so the zoom tracks the pointer exactly and
+          // nothing accumulates across the frames of one drag.
+          zoomTo(startScale * Math.exp((m.clientX - startX) * 0.006), anchor);
+        }
+      };
+      const up = () => {
+        document.removeEventListener("pointermove", move);
+        document.removeEventListener("pointerup", up);
+      };
+      document.addEventListener("pointermove", move);
+      document.addEventListener("pointerup", up);
+    };
+    container.addEventListener("pointerdown", onDown, true);
+    return () => container.removeEventListener("pointerdown", onDown, true);
+  }, [view.zoom, fitScale, zoomTo, panBy, createWithTool, design.texts, setActiveTool]);
+
+  // Hover feedback for the text tool. Which of its two meanings a click will
+  // have depends entirely on what is under the pointer, so the cursor has to
+  // say which one you are about to get: I-beam over existing text, crosshair
+  // over empty canvas.
+  useEffect(() => {
+    const container = previewContainerRef.current;
+    if (!container || activeTool !== "text") {
+      setTextToolOverText(false);
+      return;
+    }
+    const onMove = (e: PointerEvent) => {
+      const el = (e.target as HTMLElement | null)?.closest('[data-canvas-element^="text:"]');
+      setTextToolOverText(!!el);
+    };
+    const onLeave = () => setTextToolOverText(false);
+    container.addEventListener("pointermove", onMove);
+    container.addEventListener("pointerleave", onLeave);
+    return () => {
+      container.removeEventListener("pointermove", onMove);
+      container.removeEventListener("pointerleave", onLeave);
+    };
+  }, [activeTool]);
+
   const calculateScale = useCallback(() => {
     if (!previewContainerRef.current) return;
     const container = previewContainerRef.current;
@@ -789,7 +1290,7 @@ export default function Home() {
     const availH = container.clientHeight - padding * 2;
     const scaleX = availW / dims.width;
     const scaleY = availH / dims.height;
-    setScale(Math.min(scaleX, scaleY, 1));
+    setFitScale(Math.min(scaleX, scaleY, 1));
   }, [dims.width, dims.height]);
 
   useEffect(() => {
@@ -859,6 +1360,23 @@ export default function Home() {
     writeSession(latestDocRef.current);
     router.push("/simple");
   }, [router, writeSession]);
+
+  /**
+   * Select a text layer WITHOUT opening its caret.
+   *
+   * A single click used to call `onEditText`, so it selected AND started an
+   * edit session in one go. That made the canvas lie in two directions: the
+   * cursor read `cursor-move`, promising a drag, and Backspace — the key a
+   * Figma user presses to delete the selected layer — deleted a CHARACTER of
+   * the copy instead. Selection and editing are now two separate acts.
+   *
+   * A group still selects as a group, and a locked layer still just selects;
+   * those two rules already lived in `onEditText` and are unchanged.
+   */
+  const selectTextOnly = useCallback((textId: string, additive?: boolean) => {
+    selectWithGroup(`text:${textId}`, additive);
+    setCropEditingId(null);
+  }, [selectWithGroup]);
 
   const handleReset = useCallback(() => {
     if (canvasImages.length === 0 && design.texts.length === 0) return;
@@ -1362,7 +1880,59 @@ export default function Home() {
           nudgeSelectionBy((dx * step) / dims.width, (dy * step) / dims.height);
         }
       }
+      // Tool shortcuts — single bare letters, the way every canvas app does it.
+      // Guarded on no modifier so ⌘R (reload), ⌘T, ⌘L etc. are untouched, and
+      // on !isEditableTarget so typing "r" in a text stays typing.
+      if (!isEditableTarget && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        const hit = TOOLS.find((t) => t.key.toLowerCase() === e.key.toLowerCase());
+        if (hit) {
+          e.preventDefault();
+          setActiveTool(hit.id);
+        }
+      }
+      // Zoom shortcuts. Ctrl/Cmd+0 = 100%, Shift+1 = fit, Ctrl/Cmd +/- steps.
+      // Everything here is guarded on !isEditableTarget so typing "0" or "1"
+      // into a field never moves the canvas.
+      if (!isEditableTarget) {
+        const mod = e.metaKey || e.ctrlKey;
+        if (mod && e.key === "0") {
+          e.preventDefault();
+          zoomTo(1);
+        } else if (e.shiftKey && e.key === "1") {
+          e.preventDefault();
+          zoomToFit();
+        } else if (mod && (e.key === "=" || e.key === "+")) {
+          e.preventDefault();
+          zoomBy(1.25);
+        } else if (mod && (e.key === "-" || e.key === "_")) {
+          e.preventDefault();
+          zoomBy(1 / 1.25);
+        }
+      }
+      // Enter opens the caret on the one selected text layer — the keyboard
+      // half of the click/double-click split. Without it, moving the caret off
+      // a single click would leave no way to start typing except the mouse.
+      // Esc (below) is the way back out, so the pair is symmetrical.
+      if (!isEditableTarget && e.key === "Enter" && selectedIds.size === 1) {
+        const only = selectedIds.values().next().value;
+        if (typeof only === "string" && only.startsWith("text:")) {
+          const t = design.texts.find((tt) => `text:${tt.id}` === only);
+          // Locked and grouped text never enter the caret, same as a
+          // double-click on them.
+          if (t && !t.locked && !t.groupId) {
+            e.preventDefault();
+            setEditingTextId(t.id);
+          }
+        }
+      }
       // Esc clears canvas selection (or exits crop-edit mode if active).
+      // A held tool is disarmed FIRST: Escape means "get me out of this mode",
+      // and losing your selection as well would be two undos in one keypress.
+      if (!isEditableTarget && e.key === "Escape" && activeToolRef.current !== "select") {
+        e.preventDefault();
+        setActiveTool("select");
+        return;
+      }
       if (!isEditableTarget && e.key === "Escape") {
         if (cropEditingId) {
           e.preventDefault();
@@ -1394,13 +1964,19 @@ export default function Home() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [isExporting, isExportingVideo, handleExport, undo, redo, selectedIds, cropEditingId, setDoc, copySelection, pasteFromClipboard, duplicateSelection, nudgeSelectionBy, dims.width, dims.height, groupSelection, ungroupSelection, reorderSelection]);
+  }, [isExporting, isExportingVideo, handleExport, undo, redo, selectedIds, cropEditingId, setDoc, copySelection, pasteFromClipboard, duplicateSelection, nudgeSelectionBy, dims.width, dims.height, groupSelection, ungroupSelection, reorderSelection, design.texts, zoomTo, zoomToFit, zoomBy, setActiveTool]);
 
   const goToStep = useCallback((next: number) => {
     setCurrentStep(Math.max(1, Math.min(STEPS.length, next)));
   }, []);
 
-  const canvasIsEmpty = design.texts.length === 0 && canvasImages.length === 0;
+  // Shapes count as content. They did not, so drawing a rectangle with the new
+  // R tool left the start-from-a-template gallery sitting on top of the thing
+  // you had just drawn, with no way to see it but to pick a template or press
+  // Start blank.
+  const canvasIsEmpty = design.texts.length === 0
+    && canvasImages.length === 0
+    && (design.shapes ?? []).length === 0;
   const photoBackground = canvasImages.find((ci) => ci.isBackdrop) ?? null;
 
   // Compute the effective canvas-layer stack so the ImageDragOverlay's
@@ -1592,7 +2168,7 @@ export default function Home() {
                 />
               )}
               {currentStep === 2 && (
-                <StepText design={design} setDesign={setDesign} focusedId={focusedTextId} />
+                <StepText design={design} setDesign={setDesign} focusedId={focusedTextId} canvasSize={dims} />
               )}
               {currentStep === 3 && (
                 <StepImages
@@ -1615,6 +2191,7 @@ export default function Home() {
                     return typeof only === "string" && only.startsWith("shape:") ? only.slice(6) : null;
                   })()}
                   onSelectShape={(id) => setSelectedIds(id ? new Set([`shape:${id}`]) : new Set())}
+                  canvasSize={dims}
                 />
               )}
             </GlassCard>
@@ -1623,14 +2200,149 @@ export default function Home() {
           {/* Center: Controls bar + Preview */}
           <main className="flex-1 flex flex-col min-h-0 min-w-0 gap-3">
             {/* Canvas controls strip — sits above the preview */}
-            <div className="shrink-0 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 text-[10px] font-medium text-muted uppercase tracking-[0.18em]">
-                <span className="inline-block size-1.5 rounded-full bg-red" />
-                {dims.label} · {Math.round(scale * 100)}%
+            {/* flex-wrap, because this row now carries dimensions, zoom, seven
+                tools and nine toggles. Without it the last controls were
+                pushed outside the strip and clipped at 1280px wide. */}
+            <div className="shrink-0 flex flex-wrap items-center justify-between gap-y-2 gap-x-2">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 text-[10px] font-medium text-muted uppercase tracking-[0.18em]">
+                  <span className="inline-block size-1.5 rounded-full bg-red" />
+                  <span className="hidden 2xl:inline">{dims.label}</span>
+                </div>
+                {/* Format is a per-post decision that gets made and re-made —
+                    the same wall goes out as a 16:9 slide and a 9:16 story —
+                    so it belongs in the canvas strip, not three clicks deep in
+                    the Canvas panel. Switching refits the zoom (see the effect
+                    on dims) so the new shape is fully in view. */}
+                <div role="radiogroup" aria-label="Canvas format" className="flex items-center rounded-lg bg-card-2 p-0.5">
+                  {([
+                    { id: "presentation" as const, label: "16:9" },
+                    { id: "square" as const, label: "1:1" },
+                    { id: "story" as const, label: "9:16" },
+                  ]).map(({ id, label }) => {
+                    const active = format === id;
+                    return (
+                      <button
+                        key={id}
+                        role="radio"
+                        aria-checked={active}
+                        onClick={() => setFormat(id)}
+                        title={FORMAT_DIMENSIONS[id].label}
+                        className={`px-2 h-7 rounded-md text-[10px] font-semibold tabular-nums transition-colors ${
+                          active ? "bg-surface text-ink" : "text-muted hover:bg-white/10 hover:text-foreground"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {/* Zoom cluster. The gestures (z-drag, Ctrl+wheel) are faster
+                    once you know them, but nobody discovers a gesture — so
+                    every one of them is also a button here, with the shortcut
+                    named in the tooltip. */}
+                <div className="flex items-center rounded-lg bg-card-2 p-0.5">
+                  <button
+                    onClick={() => zoomBy(1 / 1.25)}
+                    disabled={scale <= ZOOM_MIN + 1e-6}
+                    aria-label="Zoom out"
+                    title="Zoom out (⌘−) · or hold Z and drag left"
+                    className="flex items-center justify-center w-7 h-7 rounded-md text-muted hover:bg-white/10 hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                  >
+                    <ZoomOut className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  </button>
+                  <Popover.Root>
+                    <Popover.Trigger asChild>
+                      <button
+                        aria-label="Zoom level"
+                        title="Zoom presets · hold Z and drag to scrub, ⌘+wheel to zoom at the pointer, Space+drag to pan"
+                        className="flex items-center gap-0.5 px-2 h-7 rounded-md text-[10px] font-semibold tabular-nums text-foreground hover:bg-white/10 transition-colors"
+                      >
+                        {Math.round(scale * 100)}%
+                        <ChevronDownIcon className="w-3 h-3 text-muted" strokeWidth={1.5} />
+                      </button>
+                    </Popover.Trigger>
+                    <Popover.Portal>
+                      <Popover.Content
+                        side="bottom"
+                        align="start"
+                        sideOffset={6}
+                        className="z-50 rounded-lg bg-card-2 shadow-2xl p-1.5 min-w-[176px]"
+                      >
+                        <Popover.Close asChild>
+                          <button
+                            onClick={zoomToFit}
+                            className="w-full flex items-center justify-between gap-3 px-2 py-1.5 rounded-md text-[11px] text-foreground hover:bg-white/10 transition-colors"
+                          >
+                            <span className="flex items-center gap-1.5">
+                              <Maximize2 className="w-3 h-3 text-muted" strokeWidth={1.5} />
+                              Fit to window
+                            </span>
+                            <span className="text-[9px] text-muted tracking-wider">⇧1</span>
+                          </button>
+                        </Popover.Close>
+                        <div className="my-1 h-px bg-white/10" />
+                        {([["50%", 0.5, ""], ["100%", 1, "⌘0"], ["200%", 2, ""], ["400%", 4, ""]] as const).map(([label, value, hint]) => (
+                          <Popover.Close asChild key={label}>
+                            <button
+                              onClick={() => zoomTo(value)}
+                              className="w-full flex items-center justify-between gap-3 px-2 py-1.5 rounded-md text-[11px] text-foreground hover:bg-white/10 transition-colors"
+                            >
+                              <span className="tabular-nums">{label}</span>
+                              {hint && <span className="text-[9px] text-muted tracking-wider">{hint}</span>}
+                            </button>
+                          </Popover.Close>
+                        ))}
+                      </Popover.Content>
+                    </Popover.Portal>
+                  </Popover.Root>
+                  <button
+                    onClick={() => zoomBy(1.25)}
+                    disabled={scale >= ZOOM_MAX - 1e-6}
+                    aria-label="Zoom in"
+                    title="Zoom in (⌘+) · or hold Z and drag right"
+                    className="flex items-center justify-center w-7 h-7 rounded-md text-muted hover:bg-white/10 hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                  >
+                    <ZoomIn className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  </button>
+                </div>
+                {isZoomed && (
+                  <button
+                    onClick={zoomToFit}
+                    title="Fit the canvas to the window (Shift+1)"
+                    aria-label="Fit canvas to window"
+                    className="flex items-center justify-center w-8 h-8 rounded-lg border border-surface/40 bg-transparent text-muted hover:bg-white/5 hover:text-foreground transition-colors"
+                  >
+                    <Maximize2 className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  </button>
+                )}
+                {/* Tools. Pick one, then draw on the canvas where you want the
+                    thing — as opposed to the sidebar's Add buttons, which drop
+                    it at canvas centre and leave you to move it. */}
+                <div role="radiogroup" aria-label="Canvas tool" className="flex items-center rounded-lg bg-card-2 p-0.5">
+                  {TOOLS.map(({ id, label, key, icon: Icon }) => {
+                    const active = activeTool === id;
+                    return (
+                      <button
+                        key={id}
+                        role="radio"
+                        aria-checked={active}
+                        aria-label={label}
+                        onClick={() => setActiveTool(id)}
+                        title={`${label} (${key})${id === "select" ? "" : " · click or drag on the canvas"}`}
+                        className={`flex items-center justify-center w-7 h-7 rounded-md transition-colors ${
+                          active ? "bg-surface text-ink" : "text-muted hover:bg-white/10 hover:text-foreground"
+                        }`}
+                      >
+                        <Icon className="w-3.5 h-3.5" strokeWidth={1.5} />
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
               {showEditTip && !editingTextId && !canvasIsEmpty && (
                 <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-orange/10 border border-orange/30 text-[11px] text-amber">
-                  <span>Tip: click any text on the canvas to edit it</span>
+                  <span>Tip: double-click any text on the canvas to edit it</span>
                   <button
                     onClick={dismissEditTip}
                     aria-label="Dismiss tip"
@@ -1673,6 +2385,19 @@ export default function Home() {
                   }`}
                 >
                   <Grid3x3 className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => setShowRulers((r) => !r)}
+                  aria-label="Toggle rulers"
+                  aria-pressed={showRulers}
+                  title={showRulers ? "Rulers: on — measured in export pixels" : "Rulers: off"}
+                  className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${
+                    showRulers
+                      ? "bg-red/20 text-orange border border-red/40"
+                      : "border border-surface/40 bg-transparent text-muted hover:bg-white/5 hover:text-foreground"
+                  }`}
+                >
+                  <Ruler className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => setSnapEnabled((s) => !s)}
@@ -1794,6 +2519,20 @@ export default function Home() {
           <div
             ref={previewContainerRef}
             className="flex-1 min-h-0 min-w-0 flex items-center justify-center overflow-hidden rounded-2xl bg-card relative"
+            style={{
+              cursor: gestureCursor === "pan"
+                ? "grab"
+                : gestureCursor === "zoom"
+                  ? "ew-resize"
+                  : activeTool === "text" && textToolOverText
+                    // Over existing text the click EDITS it, so promise a caret.
+                    ? "text"
+                    : activeTool !== "select"
+                      // Crosshair is the universal "you are about to place
+                      // something" cursor; an arrow would promise selection.
+                      ? "crosshair"
+                      : undefined,
+            }}
           >
             <input
               ref={photoBackgroundInputRef}
@@ -1811,6 +2550,9 @@ export default function Home() {
                 }
               }}
             />
+            {showRulers && (
+              <CanvasRulers width={dims.width} height={dims.height} scale={scale} pan={pan} />
+            )}
             {canvasIsEmpty && galleryDismissed && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
                 <div className="text-center rounded-2xl bg-black/60 backdrop-blur-sm px-7 py-6 shadow-xl">
@@ -1905,7 +2647,9 @@ export default function Home() {
             )}
             <div
               style={{
-                transform: `scale(${scale})`,
+                // translate BEFORE scale: pan is in screen px, so it must not
+                // be multiplied by the zoom.
+                transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
                 transformOrigin: "center center",
               }}
             >
@@ -1924,6 +2668,7 @@ export default function Home() {
                     canvasImages={canvasImages}
                     paused={bgPaused || interacting}
                     snapEnabled={snapEnabled}
+                    onSelectText={selectTextOnly}
                     onEditText={(textId) => {
                       const t = design.texts.find((tt) => tt.id === textId);
                       if (t?.locked) {
@@ -1956,6 +2701,7 @@ export default function Home() {
                     // the overlay captures all clicks.
                     selectedIds={selectedIds}
                     cropEditingId={cropEditingId}
+                    previewScale={scale}
                     onCropChange={(imageId, crop) => {
                       setCanvasImages((prev) =>
                         prev.map((ci) => (ci.id === imageId ? { ...ci, crop } : ci)),
@@ -2084,6 +2830,74 @@ export default function Home() {
                 {/* Marquee selection rectangle — rendered while user drags an
                     empty-canvas area. Sits OUTSIDE exportRef so it never appears
                     in PNG output. */}
+                {dragInfo && (() => {
+                  // Text has to stay a fixed size on screen, so every
+                  // dimension divides by the zoom — the same rule as the
+                  // handles, the guide lines and the rulers.
+                  const s = scale > 0 ? scale : 1;
+                  return (
+                    <div
+                      data-drag-readout="true"
+                      style={{
+                        position: "absolute",
+                        left: `${dragInfo.x * 100}%`,
+                        top: `${dragInfo.y * 100}%`,
+                        // Just below the box and centred on it, so it never
+                        // covers the edge being dragged.
+                        transform: `translate(-50%, ${10 / s}px)`,
+                        padding: `${3 / s}px ${7 / s}px`,
+                        borderRadius: 4 / s,
+                        background: "#fa7000",
+                        color: "#fff",
+                        fontSize: 11 / s,
+                        lineHeight: 1.4,
+                        fontWeight: 600,
+                        fontVariantNumeric: "tabular-nums",
+                        whiteSpace: "nowrap",
+                        pointerEvents: "none",
+                        zIndex: 160,
+                        boxShadow: `0 ${1 / s}px ${3 / s}px rgba(0,0,0,0.4)`,
+                      }}
+                    >
+                      {dragInfo.text}
+                    </div>
+                  );
+                })()}
+                {drawPreview && (() => {
+                  const x = Math.min(drawPreview.x1, drawPreview.x2);
+                  const y = Math.min(drawPreview.y1, drawPreview.y2);
+                  const w = Math.abs(drawPreview.x2 - drawPreview.x1);
+                  const h = Math.abs(drawPreview.y2 - drawPreview.y1);
+                  const stroke = Math.max(1, Math.round(1 / scale));
+                  // The preview has to look like the thing you are drawing. A
+                  // rectangle outline for every tool made the circle tool feel
+                  // like it drew a square and the line tool like it drew a box.
+                  const isCircle = activeTool === "circle";
+                  const isLine = activeTool === "line";
+                  const lineThickness = Math.max(2, Math.round(dims.width * 0.006));
+                  return (
+                    <div
+                      style={{
+                        position: "absolute",
+                        left: `${x * 100}%`,
+                        // A line has no height: it draws as a bar on the drag's
+                        // own centre line, which is where it will land.
+                        top: isLine ? `${(y + h / 2) * 100}%` : `${y * 100}%`,
+                        width: `${w * 100}%`,
+                        height: isLine ? lineThickness : `${h * 100}%`,
+                        marginTop: isLine ? -lineThickness / 2 : undefined,
+                        // Dashed, to read as "not placed yet" against the solid
+                        // outline a real selection gets.
+                        border: isLine ? "none" : `${stroke}px dashed #fa7000`,
+                        borderRadius: isCircle ? "50%" : undefined,
+                        background: isLine ? "#fa7000" : "rgba(250, 112, 0, 0.10)",
+                        opacity: isLine ? 0.65 : 1,
+                        pointerEvents: "none",
+                        zIndex: 150,
+                      }}
+                    />
+                  );
+                })()}
                 {marquee && (() => {
                   const x = Math.min(marquee.x1, marquee.x2);
                   const y = Math.min(marquee.y1, marquee.y2);
@@ -2097,8 +2911,8 @@ export default function Home() {
                         top: `${y * 100}%`,
                         width: `${w * 100}%`,
                         height: `${h * 100}%`,
-                        border: `${Math.max(1, Math.round(1 / scale))}px solid #fa7000`,
-                        background: "rgba(250, 112, 0, 0.08)",
+                        border: `${1 / (scale > 0 ? scale : 1)}px solid ${SELECTION_COLOR}`,
+                        background: "rgba(44, 123, 229, 0.10)",
                         pointerEvents: "none",
                         zIndex: 150,
                       }}
@@ -2170,12 +2984,14 @@ export default function Home() {
                     snapEnabled={snapEnabled}
                     resizable={selectedImageId === img.id}
                     zIndex={layerZ(`image:${img.id}`)}
-                    onSelect={() => selectWithGroup(`image:${img.id}`)}
+                    scale={scale}
+                    onSelect={(additive) => selectWithGroup(`image:${img.id}`, additive)}
                     onDeselect={() => setSelectedImageId(null)}
                     onChange={(updated) => setCanvasImages((prev) =>
                       prev.map((ci) => (ci.id === updated.id ? updated : ci))
                     )}
                     onGuidesChange={setGuidesIfChanged}
+                    onDragInfo={setDragInfoIfChanged}
                     onEditStart={beginTransaction}
                     onEditEnd={endTransaction}
                     onBeginDrag={beginGroupDrag}
@@ -2309,7 +3125,8 @@ export default function Home() {
                       snapEnabled={snapEnabled}
                       resizable={selectedIds.size === 1 && selectedIds.has(`shape:${sh.id}`)}
                       zIndex={layerZ(`shape:${sh.id}`)}
-                      onSelect={() => selectWithGroup(`shape:${sh.id}`)}
+                      scale={scale}
+                      onSelect={(additive) => selectWithGroup(`shape:${sh.id}`, additive)}
                       onChange={(updated) =>
                         setDesign((prev) => ({
                           ...prev,
@@ -2317,6 +3134,7 @@ export default function Home() {
                         }))
                       }
                       onGuidesChange={setGuidesIfChanged}
+                      onDragInfo={setDragInfoIfChanged}
                       onEditStart={beginTransaction}
                       onEditEnd={endTransaction}
                       onBeginDrag={beginGroupDrag}
@@ -2338,7 +3156,8 @@ export default function Home() {
                     selected={selectedIds.has("tbbqLogo")}
                     snapEnabled={snapEnabled}
                     zIndex={layerZ("tbbqLogo")}
-                    onSelect={() => setSelectedIds(new Set(["tbbqLogo"]))}
+                    scale={scale}
+                    onSelect={(additive) => selectWithGroup("tbbqLogo", additive)}
                     onChange={(patch) =>
                       setDesign((prev) => {
                         const next = { ...prev } as DesignConfig;
@@ -2398,11 +3217,11 @@ export default function Home() {
                   selectedImageId={selectedImageId}
                   setSelectedImageId={setSelectedImageId}
                   removeCanvasImage={removeCanvasImage}
-                  onEditText={(textId) => {
-                    setEditingTextId(textId);
-                    setSelectedIdsRaw(new Set([`text:${textId}`]));
-                  }}
-                  onSelectShape={(shapeId) => setSelectedIds(new Set([`shape:${shapeId}`]))}
+                  selectedIds={selectedIds}
+                  onSelectText={selectTextOnly}
+                  // Through selectWithGroup like every other selection path, so
+                  // a grouped shape selects its group and text-editing exits.
+                  onSelectShape={(shapeId) => selectWithGroup(`shape:${shapeId}`)}
                   onDuplicateRow={(layerId) => {
                     const src: NonNullable<typeof clipboardRef.current> = { texts: [], shapes: [], images: [] };
                     if (layerId.startsWith("text:")) {

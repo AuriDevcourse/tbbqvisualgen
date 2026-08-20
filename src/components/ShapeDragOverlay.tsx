@@ -3,9 +3,19 @@
 import { useCallback, useRef, useState, useEffect } from "react";
 import { Upload } from "lucide-react";
 import type { ShapeElement } from "@/types/template";
-import { computeSnapTargets, snapBbox, type Bbox } from "@/lib/snap";
+import { computeSnapTargets, snapBbox, snapValue, snapSize, type Bbox } from "@/lib/snap";
+import { ResizeHandle } from "./ResizeHandle";
+import { pointerAngle, rotationFromDrag } from "@/lib/rotate";
 
-type DragMode = "move" | "nw" | "ne" | "sw" | "se" | null;
+/** Corner handles resize both axes; edge handles resize ONE. Eight handles
+ *  is the Illustrator / Figma standard, and the edges are what you reach for
+ *  far more often — widening a banner should not also make it taller. */
+/** Diameter of the rotation ring around each corner, in SCREEN px. Bigger
+ *  than the resize handle it surrounds, so the ring is reachable, and divided
+ *  by the zoom at use so it stays a constant size on screen. */
+const ROTATE_ZONE_PX = 34;
+
+type DragMode = "move" | "nw" | "ne" | "sw" | "se" | "n" | "s" | "e" | "w" | "rotate" | null;
 
 interface ShapeDragOverlayProps {
   shape: ShapeElement;
@@ -18,9 +28,17 @@ interface ShapeDragOverlayProps {
   snapEnabled: boolean;
   resizable?: boolean;
   zIndex?: number;
-  onSelect: () => void;
+  /** Preview scale (canvas px -> screen px). Handles divide by it so they stay
+   *  a constant size on screen at any zoom. Defaults to 1. */
+  scale?: number;
+  /** Select this element. `additive` is true when Shift was held: the host
+   *  TOGGLES the element in the current selection instead of replacing it. */
+  onSelect: (additive?: boolean) => void;
   onChange: (next: ShapeElement) => void;
   onGuidesChange?: (guides: { x: number | null; y: number | null }) => void;
+  /** Live readout while dragging: the size being made, or the position being
+   *  moved to, in canvas px. Cleared with null on release. */
+  onDragInfo?: (info: { text: string; x: number; y: number } | null) => void;
   onEditStart?: () => void;
   onEditEnd?: () => void;
   onBeginDrag?: (id: string) => void;
@@ -39,14 +57,14 @@ interface ShapeDragOverlayProps {
 
 export function ShapeDragOverlay({
   shape, otherBboxes, canvasWidth, canvasHeight, selected, snapEnabled, resizable = selected,
-  zIndex, onSelect, onChange, onGuidesChange,
+  zIndex, scale = 1, onSelect, onChange, onGuidesChange, onDragInfo,
   onEditStart, onEditEnd, onBeginDrag, onMoveBy, onEndDrag,
   onPlaceholderUpload,
 }: ShapeDragOverlayProps) {
   const [dragging, setDragging] = useState<DragMode>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const startRef = useRef({ mx: 0, my: 0, x: 0, y: 0, w: 0, h: 0 });
+  const startRef = useRef({ mx: 0, my: 0, x: 0, y: 0, w: 0, h: 0, rotation: 0, pointerAngle: 0 });
 
   const handlePlaceholderFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -77,7 +95,6 @@ export function ShapeDragOverlay({
   const shapeW = Math.round(canvasWidth * shape.width);
   const shapeLeft = Math.round(shape.x * canvasWidth - shapeW / 2);
   const shapeTop = Math.round(shape.y * canvasHeight - bboxH / 2);
-  const handleSize = 14;
 
   const startDrag = useCallback((mode: DragMode, e: React.MouseEvent) => {
     if (shape.locked) return;
@@ -93,8 +110,21 @@ export function ShapeDragOverlay({
       y: shape.y,
       w: shape.width,
       h: shape.height,
+      rotation: shape.rotation || 0,
+      // Where the pointer sat relative to the centre when the drag began. The
+      // rotation applied is the CHANGE in pointer angle since then, so the
+      // shape does not jump to wherever the pointer happens to be on grab.
+      pointerAngle: 0,
     };
-  }, [shape.id, shape.x, shape.y, shape.width, shape.height, shape.locked, onEditStart, onBeginDrag]);
+    if (mode === "rotate") {
+      const rect = overlayRef.current?.getBoundingClientRect();
+      if (rect) {
+        const cx = rect.left + shape.x * rect.width;
+        const cy = rect.top + shape.y * rect.height;
+        startRef.current.pointerAngle = pointerAngle(cx, cy, e.clientX, e.clientY);
+      }
+    }
+  }, [shape.id, shape.x, shape.y, shape.width, shape.height, shape.rotation, shape.locked, onEditStart, onBeginDrag]);
 
   useEffect(() => {
     if (!dragging) return;
@@ -105,11 +135,30 @@ export function ShapeDragOverlay({
     let frame = 0;
 
     const applyMove = (clientX: number, clientY: number, altHeld: boolean, shiftHeld: boolean) => {
-      const rect = overlayRef.current?.getBoundingClientRect();
-      // See ImageDragOverlay: a zero-size rect yields NaN geometry.
-      if (!rect || rect.width === 0 || rect.height === 0) return;
-      const dx = (clientX - startRef.current.mx) / rect.width;
-      const dy = (clientY - startRef.current.my) / rect.height;
+      // Normalise against the canvas size times the preview scale, NOT the
+      // overlay's bounding rect. Once the overlay is rotated with its shape,
+      // getBoundingClientRect returns the axis-aligned box of the ROTATED
+      // element, which is bigger than the canvas — so a rect-based divisor
+      // silently shrank every drag on a rotated shape.
+      const s = scale > 0 ? scale : 1;
+      const spanX = canvasWidth * s;
+      const spanY = canvasHeight * s;
+      if (spanX === 0 || spanY === 0) return;
+      const screenDX = clientX - startRef.current.mx;
+      const screenDY = clientY - startRef.current.my;
+
+      // MOVE follows the pointer in screen space. RESIZE happens in the
+      // shape's OWN frame: dragging the corner of a shape rotated 30 degrees
+      // should lengthen it along its own edge, not along the screen's x-axis.
+      const theta = ((shape.rotation || 0) * Math.PI) / 180;
+      const cos = Math.cos(theta);
+      const sin = Math.sin(theta);
+      const dx = dragging === "move"
+        ? screenDX / spanX
+        : (screenDX * cos + screenDY * sin) / spanX;
+      const dy = dragging === "move"
+        ? screenDY / spanY
+        : (-screenDX * sin + screenDY * cos) / spanY;
 
       if (dragging === "move") {
         const rawX = startRef.current.x + dx;
@@ -129,14 +178,42 @@ export function ShapeDragOverlay({
           newX = Math.max(0, Math.min(1, rawX));
           newY = Math.max(0, Math.min(1, rawY));
         }
+        onDragInfo?.({
+          text: `X ${Math.round(newX * canvasWidth)}  Y ${Math.round(newY * canvasHeight)}`,
+          x: newX,
+          y: newY + shape.height / 2,
+        });
         onMoveBy?.(newX - startRef.current.x, newY - startRef.current.y);
+        return;
+      }
+
+      if (dragging === "rotate") {
+        const rect = overlayRef.current?.getBoundingClientRect();
+        if (!rect || rect.width === 0) return;
+        const cx = rect.left + shape.x * rect.width;
+        const cy = rect.top + shape.y * rect.height;
+        const rounded = rotationFromDrag({
+          startRotation: startRef.current.rotation,
+          startPointerAngle: startRef.current.pointerAngle,
+          currentPointerAngle: pointerAngle(cx, cy, clientX, clientY),
+          snap: shiftHeld,
+        });
+        onGuidesChange?.({ x: null, y: null });
+        onDragInfo?.({ text: `${rounded}°`, x: shape.x, y: shape.y + shape.height / 2 });
+        onChange({ ...shape, rotation: rounded });
         return;
       }
 
       // Resize — Shift locks aspect, Alt scales from center.
       const { x: sx, y: sy, w: sw, h: sh } = startRef.current;
-      const isW = dragging === "nw" || dragging === "sw";
-      const isN = dragging === "nw" || dragging === "ne";
+      const isW = dragging === "nw" || dragging === "sw" || dragging === "w";
+      const isN = dragging === "nw" || dragging === "ne" || dragging === "n";
+      // An edge handle moves one edge only, so the other axis gets NO delta.
+      // Zeroing it here rather than patching the result afterwards means the
+      // dragged edge simply stays where it started, and every clamp and
+      // from-centre case below keeps working untouched.
+      const affectsX = dragging !== "n" && dragging !== "s";
+      const affectsY = dragging !== "e" && dragging !== "w";
       const fromCenter = altHeld;
       const lockAspect = shiftHeld;
       const fixedX = fromCenter ? sx : (isW ? sx + sw / 2 : sx - sw / 2);
@@ -144,8 +221,36 @@ export function ShapeDragOverlay({
       const draggedStartX = isW ? sx - sw / 2 : sx + sw / 2;
       const draggedStartY = isN ? sy - sh / 2 : sy + sh / 2;
 
-      let newDraggedX = draggedStartX + dx;
-      let newDraggedY = draggedStartY + dy;
+      // With Shift held the aspect block below deliberately reads the zeroed
+      // axis, which is how an edge drag scales proportionally — the same as
+      // Shift-dragging an edge in Illustrator.
+      let newDraggedX = draggedStartX + (affectsX ? dx : 0);
+      let newDraggedY = draggedStartY + (affectsY ? dy : 0);
+
+      // Snap the MOVING EDGE to its neighbours. Done before the aspect-lock
+      // block below so that with Shift held the snapped edge stays snapped and
+      // the other axis is derived from it — the edge you are dragging is the
+      // one you meant to place.
+      let resizeGuideX: number | null = null;
+      let resizeGuideY: number | null = null;
+      const sizeCandidates: { widths: number[]; heights: number[] } = { widths: [], heights: [] };
+      if (snapEnabled) {
+        for (const b of otherBboxes || []) {
+          sizeCandidates.widths.push(b.width);
+          sizeCandidates.heights.push(b.height);
+        }
+        const targets = computeSnapTargets(otherBboxes || []);
+        if (affectsX) {
+          const snapped = snapValue(newDraggedX, targets.x);
+          newDraggedX = snapped.value;
+          resizeGuideX = snapped.guide;
+        }
+        if (affectsY) {
+          const snapped = snapValue(newDraggedY, targets.y);
+          newDraggedY = snapped.value;
+          resizeGuideY = snapped.guide;
+        }
+      }
 
       if (lockAspect) {
         const aspect = sw / sh;
@@ -179,12 +284,47 @@ export function ShapeDragOverlay({
         newBottom = Math.max(fixedY, newDraggedY);
       }
 
-      const newW = newRight - newLeft;
-      const newH = newBottom - newTop;
+      let newW = newRight - newLeft;
+      let newH = newBottom - newTop;
+
+      // Match a neighbour's WIDTH or HEIGHT. Edge snapping cannot do this: two
+      // cards you want the same width may be nowhere near each other, so no
+      // edge ever comes into range. Applied by moving the dragged edge and
+      // leaving the fixed one, which is what the user is holding.
+      let matchedW: number | null = null;
+      let matchedH: number | null = null;
+      if (snapEnabled) {
+        if (affectsX) {
+          const m = snapSize(newW, sizeCandidates.widths);
+          if (m.matched !== null) { newW = m.size; matchedW = m.size; }
+        }
+        if (affectsY) {
+          const m = snapSize(newH, sizeCandidates.heights);
+          if (m.matched !== null) { newH = m.size; matchedH = m.size; }
+        }
+      }
+
+      // Rebuild the box around whichever edge stayed put.
+      if (fromCenter) {
+        newLeft = sx - newW / 2; newRight = sx + newW / 2;
+        newTop = sy - newH / 2;  newBottom = sy + newH / 2;
+      } else {
+        if (isW) { newLeft = newRight - newW; } else { newRight = newLeft + newW; }
+        if (isN) { newTop = newBottom - newH; } else { newBottom = newTop + newH; }
+      }
+
       const newX = (newLeft + newRight) / 2;
       const newY = (newTop + newBottom) / 2;
 
-      onGuidesChange?.({ x: null, y: null });
+      onGuidesChange?.({ x: resizeGuideX, y: resizeGuideY });
+      // A size match has no line to draw, so the pill is the only signal it
+      // happened. "=" marks the axis that locked onto a neighbour.
+      onDragInfo?.({
+        text: `${matchedW !== null ? "= " : ""}${Math.round(newW * canvasWidth)}`
+          + ` × ${matchedH !== null ? "= " : ""}${Math.round(newH * canvasHeight)}`,
+        x: newX,
+        y: newBottom,
+      });
 
       onChange({
         ...shape,
@@ -205,6 +345,7 @@ export function ShapeDragOverlay({
     };
 
     const handleMouseUp = () => {
+      onDragInfo?.(null);
       // Flush the queued frame so the drag lands where the pointer was let go.
       if (frame) {
         cancelAnimationFrame(frame);
@@ -229,12 +370,31 @@ export function ShapeDragOverlay({
     };
   }, [dragging, shape, onChange, otherBboxes, onGuidesChange, onEditEnd, onMoveBy, onEndDrag]);
 
+  // Eight handles: four corners (resize both axes) and four edge midpoints
+  // (resize one). Named `corners` still, so the render loop below is untouched.
   const corners: { key: DragMode; cx: number; cy: number; cursor: string }[] = [
-    { key: "nw", cx: shapeLeft,         cy: shapeTop,         cursor: "nwse-resize" },
-    { key: "ne", cx: shapeLeft + shapeW, cy: shapeTop,         cursor: "nesw-resize" },
-    { key: "sw", cx: shapeLeft,         cy: shapeTop + bboxH, cursor: "nesw-resize" },
-    { key: "se", cx: shapeLeft + shapeW, cy: shapeTop + bboxH, cursor: "nwse-resize" },
+    { key: "nw", cx: shapeLeft,          cy: shapeTop,          cursor: "nwse-resize" },
+    { key: "n",  cx: shapeLeft + shapeW / 2, cy: shapeTop,          cursor: "ns-resize" },
+    { key: "ne", cx: shapeLeft + shapeW,     cy: shapeTop,          cursor: "nesw-resize" },
+    { key: "e",  cx: shapeLeft + shapeW,     cy: shapeTop + bboxH / 2, cursor: "ew-resize" },
+    { key: "se", cx: shapeLeft + shapeW,     cy: shapeTop + bboxH,     cursor: "nwse-resize" },
+    { key: "s",  cx: shapeLeft + shapeW / 2, cy: shapeTop + bboxH,     cursor: "ns-resize" },
+    { key: "sw", cx: shapeLeft,          cy: shapeTop + bboxH,     cursor: "nesw-resize" },
+    { key: "w",  cx: shapeLeft,          cy: shapeTop + bboxH / 2, cursor: "ew-resize" },
   ];
+
+  // The shape RENDERS rotated (DynamicTemplate applies the transform) but this
+  // overlay never knew about `rotation`, so on a rotated shape the outline and
+  // all four handles sat on the un-rotated box — pointing the wrong way and
+  // detached from the thing they belong to. Rotating the whole overlay about
+  // the shape's centre carries the bbox and every handle with it in one go,
+  // because the children are already positioned in canvas coordinates.
+  const rotateStyle: React.CSSProperties = shape.rotation
+    ? {
+        transform: `rotate(${shape.rotation}deg)`,
+        transformOrigin: `${shape.x * canvasWidth}px ${shape.y * canvasHeight}px`,
+      }
+    : {};
 
   return (
     <div
@@ -247,6 +407,14 @@ export function ShapeDragOverlay({
         zIndex: (zIndex ?? 10) + (selected ? 1 : 0),
       }}
     >
+      {/* The rotation lives on an INNER wrapper, not on the root above.
+       *  Rotating the root made its getBoundingClientRect return the
+       *  axis-aligned box of a rotated element — bigger than the canvas — and
+       *  the rotate maths reads that rect to find the shape's centre. The
+       *  centre therefore drifted as the shape turned, so a 30-degree drag
+       *  produced 3 degrees. Keeping the measured root square fixes it at the
+       *  source instead of correcting for it at each use. */}
+      <div style={{ position: "absolute", inset: 0, pointerEvents: "none", ...rotateStyle }}>
       {/* Clickable bbox. For filled shapes the whole rect catches clicks; for
        *  outline-only rect/circle we use an SVG with `pointer-events: stroke`
        *  so the hollow interior is click-through to whatever's underneath. */}
@@ -257,6 +425,11 @@ export function ShapeDragOverlay({
           if ((e as React.MouseEvent).button === 2) return;
           e.preventDefault();
           e.stopPropagation();
+          // Shift-click toggles instead of replacing, and never drags.
+          if ((e as React.MouseEvent).shiftKey) {
+            onSelect(true);
+            return;
+          }
           if (shape.locked) {
             if (!selected) onSelect();
             return;
@@ -405,26 +578,45 @@ export function ShapeDragOverlay({
           `}</style>
         </>
       )}
+      {/* Rotation grab zones, just OUTSIDE each corner.
+       *  Figma and Illustrator both put rotation here rather than on a
+       *  dedicated handle: the corner is where your pointer already is after a
+       *  resize, and an extra visible handle would crowd a small shape. They
+       *  sit UNDER the resize handles in the DOM order below, so the inner
+       *  corner still resizes and only the ring around it rotates. */}
+      {resizable && corners.filter((c) => c.key === "nw" || c.key === "ne" || c.key === "sw" || c.key === "se").map(({ key, cx, cy }) => {
+        const zone = ROTATE_ZONE_PX / (scale > 0 ? scale : 1);
+        return (
+          <div
+            key={`rot-${key}`}
+            onMouseDown={(e) => startDrag("rotate", e)}
+            title="Drag to rotate · hold Shift for 15° steps"
+            style={{
+              position: "absolute",
+              left: cx - zone / 2,
+              top: cy - zone / 2,
+              width: zone,
+              height: zone,
+              borderRadius: "50%",
+              cursor: "grab",
+              pointerEvents: "auto",
+              // Below the resize handles, above the bbox.
+              zIndex: 10,
+            }}
+          />
+        );
+      })}
       {resizable && corners.map(({ key, cx, cy, cursor }) => (
-        <div
+        <ResizeHandle
           key={key}
+          cx={cx}
+          cy={cy}
+          cursor={cursor}
+          scale={scale}
           onMouseDown={(e) => startDrag(key, e)}
-          style={{
-            position: "absolute",
-            left: cx - handleSize / 2,
-            top: cy - handleSize / 2,
-            width: handleSize,
-            height: handleSize,
-            background: "#FF6B00",
-            border: "2px solid white",
-            borderRadius: 2,
-            cursor,
-            pointerEvents: "auto",
-            zIndex: 11,
-            boxShadow: "0 0 4px rgba(0,0,0,0.5)",
-          }}
         />
       ))}
+      </div>
     </div>
   );
 }

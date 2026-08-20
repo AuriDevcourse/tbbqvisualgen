@@ -7,6 +7,7 @@ import { ColorPicker } from "@/components/ColorPicker";
 import { newTextElement } from "@/types/template";
 import type { DesignConfig, TextElement } from "@/types/template";
 import { CANVAS_FONT_OPTIONS, FONTS } from "@/lib/constants";
+import { GeometryFields } from "@/components/GeometryFields";
 
 // Curated font-size scale from 18px (smallest readable) up to 150px (the
 // largest preset). The user can pick one of these via the dropdown OR type
@@ -19,9 +20,11 @@ interface StepTextProps {
   /** When set, auto-expand and scroll to this text's row so the user can
    *  edit the layer they just clicked on the canvas. */
   focusedId?: string | null;
+  /** Canvas pixel size, so the numeric fields can read in export pixels. */
+  canvasSize?: { width: number; height: number };
 }
 
-export function StepText({ design, setDesign, focusedId }: StepTextProps) {
+export function StepText({ design, setDesign, focusedId, canvasSize = { width: 1920, height: 1080 } }: StepTextProps) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const rowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
@@ -340,19 +343,27 @@ export function StepText({ design, setDesign, focusedId }: StepTextProps) {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between pt-1 border-t border-white/5">
-                    <span className="text-[9px] uppercase tracking-wider text-white/65">Position</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-mono text-white/65">
-                        {Math.round(text.position.x * 100)}% · {Math.round(text.position.y * 100)}%
-                      </span>
-                      <button
-                        onClick={() => updateText(text.id, { position: { x: 0.5, y: 0.5 } })}
-                        className="text-[10px] text-white/65 hover:text-white/80 transition-colors underline"
-                      >
-                        center
-                      </button>
-                    </div>
+                  <div className="pt-1 border-t border-white/5 flex flex-col gap-1.5">
+                    {/* A text has no width or height of its own — it is a
+                        position plus a font size — so only X and Y. */}
+                    <GeometryFields
+                      value={{ x: text.position.x, y: text.position.y }}
+                      canvasWidth={canvasSize.width}
+                      canvasHeight={canvasSize.height}
+                      showSize={false}
+                      onChange={(patch) => updateText(text.id, {
+                        position: {
+                          x: patch.x ?? text.position.x,
+                          y: patch.y ?? text.position.y,
+                        },
+                      })}
+                    />
+                    <button
+                      onClick={() => updateText(text.id, { position: { x: 0.5, y: 0.5 } })}
+                      className="self-start text-[10px] text-white/65 hover:text-white/80 transition-colors underline"
+                    >
+                      centre on canvas
+                    </button>
                   </div>
                   <p className="text-[10px] text-white/60">Drag the text on the canvas to reposition.</p>
                 </div>
