@@ -96,6 +96,17 @@ export const BACKGROUND_OPTIONS: { id: string; label: string; group: string }[] 
 export interface TextElement {
   id: string;
   content: string;
+  /**
+   * User-typed layer name, shown in the Layers panel instead of the derived
+   * label. Unset on everything the presets generate, which is the normal case;
+   * the panel falls back to the content preview then.
+   *
+   * A partner wall puts five `Name Surname` rows in the list, so the derived
+   * label cannot identify a row on the documents where identifying a row
+   * matters most. Renaming is how anyone navigates a layer list in Figma or
+   * Illustrator.
+   */
+  name?: string;
   /** Which Panel Maker field this layer came from — e.g. "headline",
    *  "speaker-1.title". Lets Panel Maker retarget a form edit at the matching
    *  layer of a hand-tuned design instead of regenerating and losing the
@@ -153,6 +164,9 @@ export interface ShapeBorderRadii {
 export interface ShapeElement {
   id: string;
   type: ShapeType;
+  /** User-typed layer name for the Layers panel. See `TextElement.name`.
+   *  Shapes need it most: `Circle · pe-2` names the code, not the artwork. */
+  name?: string;
   /** Which Panel Maker slot this shape stands in for — set on the partner
    *  templates' empty-logo placeholder frames (e.g. "logo-duo-1") so a slot
    *  edit can swap the right frame. Absent on hand-added shapes. */
@@ -291,6 +305,17 @@ export interface DesignConfig {
 
   // Layer-system flags
   hideOverlay?: boolean;
+
+  /**
+   * User-typed names for groups, keyed by `groupId`.
+   *
+   * A group is only a shared tag on its members — there is no group OBJECT to
+   * hang a `name` field off, the way `TextElement.name` hangs off a text. So
+   * the names live here on the design. Absent key = fall back to the derived
+   * `Group (N)` label. Stale keys for groups that no longer exist are harmless
+   * and cost a few bytes; they are not swept.
+   */
+  groupNames?: Record<string, string>;
 
   /**
    * Explicit layer stack order — bottom to top. Entries use stable ids:

@@ -145,9 +145,15 @@ export function StepElements({ design, setDesign, selectedShapeId, onSelectShape
             const ShapeIcon = isPlaceholder
               ? ImagePlus
               : SHAPE_BUTTONS.find((b) => b.type === s.type)?.Icon ?? Square;
-            const rowLabel = isPlaceholder
-              ? `Photo slot · ${s.imagePlaceholder?.label ?? "PHOTO"}`
-              : `${s.type[0].toUpperCase() + s.type.slice(1)} · ${s.id.slice(-4)}`;
+            // A shape named in the Layers panel has to read the same here. This
+            // is the THIRD list of layers in the editor (Layers panel, Text
+            // step, Elements step) — a rename that only lands in one of them is
+            // worse than no rename at all.
+            const rowLabel = s.name?.trim()
+              ? s.name.trim()
+              : isPlaceholder
+                ? `Photo slot · ${s.imagePlaceholder?.label ?? "PHOTO"}`
+                : `${s.type[0].toUpperCase() + s.type.slice(1)} · ${s.id.slice(-4)}`;
             return (
               <div
                 key={s.id}

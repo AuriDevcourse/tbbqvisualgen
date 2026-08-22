@@ -12,6 +12,9 @@ import { GeometryFields } from "./GeometryFields";
 
 export interface CanvasImage {
   id: string;     // unique identifier
+  /** User-typed layer name for the Layers panel. See `TextElement.name`.
+   *  `Photo · a1b2` carries no information about which photo it is. */
+  name?: string;
   src: string;
   x: number;      // 0–1 fraction (center of image on canvas)
   y: number;      // 0–1 fraction (center of image on canvas)
@@ -37,6 +40,16 @@ export interface CanvasImage {
   simpleRole?: string;
   /** When true the image can't be selected via marquee or dragged. */
   locked?: boolean;
+  /**
+   * Visibility flag — when true the image renders nothing on the canvas.
+   *
+   * `TextElement` and `ShapeElement` have had this since the layer system
+   * landed; images did not, which is why the Layers panel suppressed the eye
+   * button on image rows entirely. Images were the ONLY layer type that could
+   * not be hidden, so "hide this while I look at what is behind it" meant
+   * deleting the photo and re-uploading it.
+   */
+  hidden?: boolean;
   /** Shared group identifier — clicking any member selects the whole group. */
   groupId?: string;
   /** Source image natural pixel dimensions — captured at upload time and

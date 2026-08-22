@@ -134,7 +134,10 @@ export function StepText({ design, setDesign, focusedId, canvasSize = { width: 1
                     text.hidden ? "text-white/65 line-through" : "text-white/85",
                   )}
                 >
-                  {text.content.trim().slice(0, 32) || "Empty text"}
+                  {/* A layer named in the Layers panel has to read the same
+                      here. Two lists disagreeing about what a layer is called
+                      is worse than neither list naming it. */}
+                  {text.name?.trim() || text.content.trim().slice(0, 32) || "Empty text"}
                 </span>
                 <button
                   onClick={() => updateText(text.id, { hidden: !text.hidden })}

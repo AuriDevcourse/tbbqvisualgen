@@ -377,6 +377,7 @@ export function DynamicTemplate({
     // Build snap targets from every OTHER visible element on the canvas.
     const otherBboxes: Bbox[] = [];
     for (const ci of canvasImages ?? []) {
+      if (ci.hidden) continue;
       otherBboxes.push({ x: ci.x, y: ci.y, width: ci.width, height: ci.height });
     }
     for (const t of design.texts) {
@@ -459,6 +460,7 @@ export function DynamicTemplate({
 
     const otherBboxes: Bbox[] = [];
     for (const ci of canvasImages ?? []) {
+      if (ci.hidden) continue;
       otherBboxes.push({ x: ci.x, y: ci.y, width: ci.width, height: ci.height });
     }
     for (const t of design.texts) {
@@ -688,6 +690,8 @@ export function DynamicTemplate({
 
       {/* Canvas images (photos placed by user) */}
       {canvasImages?.map((ci) => {
+        // Same rule shapes and texts already follow.
+        if (ci.hidden) return null;
         const imgW = Math.round(dims.width * ci.width);
         const imgH = Math.round(dims.height * ci.height);
         const imgLeft = Math.round(ci.x * dims.width - imgW / 2);

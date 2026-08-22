@@ -6,6 +6,895 @@ not required reading.
 
 ---
 
+## SESSION HANDOFF · 2026-08-22 (35): item 10 shipped · header, filter, fixed footer — the Layers plan is DONE
+
+Item 10 was the last open item on handoff 28's list. Items 1, 2, 3, 4, 6, 8 and
+10 are built; 5 was cut and 7 deferred, both on Auri's call.
+
+### The structural change: the panel owns its own scrolling
+
+It used to be one scroller in `editor/page.tsx`:
+
+```
+aside
+ ├─ header (shrink-0)   "Layers" + X, nothing else
+ └─ div.overflow-y-auto EVERYTHING scrolled, including the two things
+                        that are not layers
+```
+
+Now:
+
+```
+aside
+ ├─ header (shrink-0)              "Layers" + X  (unchanged, in the editor)
+ └─ LayersPanel  flex flex-col min-h-0 flex-1
+     ├─ count + filter  (shrink-0)
+     ├─ the rows        (flex-1 overflow-y-auto)   ← only real layers scroll
+     └─ footer strip    (shrink-0)                 ← background + hints
+```
+
+The editor's wrapper went from `flex-1 min-h-0 overflow-y-auto p-3` to
+`flex-1 min-h-0 flex flex-col`; the padding moved inside. **This is why the
+footer could not simply be "moved" before — there was nowhere fixed to put it.**
+
+### 1. Layer count
+
+`16 layers` = `texts + shapes + images`. The logo, colour overlay and
+background are canvas furniture, not layers you added, and this definition is
+**stable regardless of collapse or filter state** — which is why it is computed
+from the doc and not from the rendered rows.
+
+While filtering it reads `3 of 16`, and a `Clear` button appears.
+
+### 2. Filter
+
+Matches case-insensitively on the DISPLAYED name, so it searches the names you
+chose in item 4, not only generated labels.
+
+Group behaviour, all verified:
+
+| you type | you get |
+|---|---|
+| a child's name | the parent as CONTEXT + only the matching children |
+| the group's name | the parent + ALL its children |
+| nothing matching | `No layer matches "zzz".` |
+
+`collapsedGroupIds` is **ignored while filtering** — a match must never hide
+inside a collapsed group. Collapse state is preserved and returns when the
+filter clears.
+
+`memberLayerIds` on the group row is deliberately the WHOLE membership, not the
+filtered subset: it drives "is this group selected" and "select this group",
+and neither should change because a filter is active.
+
+Escape inside the box clears the filter and **stops propagation**, so it does
+not also clear the canvas selection.
+
+### 3. The background is no longer a pretend layer
+
+It is not pushed as a row at all any more. It never was a layer: no `layerId`,
+not draggable, not clickable, zero controls, and it cannot be reordered because
+it is always behind everything. It was a status line that scrolled out of view
+like a row, so you could not see which background was set. It now lives in the
+fixed footer with the orientation hints.
+
+### Two defects found and fixed during the build
+
+1. **`iconFor("background")` called in render** — assigning the returned
+   component to a local and rendering it trips
+   `react-hooks/static-components` ("Cannot create components during render").
+   The footer uses `LayersIcon` directly.
+2. **The footer hint clipped mid-word.** One 10px sentence does not fit a 230px
+   column, and the aside's `overflow-hidden` cut it to "top of canva". It is
+   two short lines now, and both were measured non-clipping
+   (`scrollWidth <= clientWidth`) rather than eyeballed — the first attempt at
+   splitting it still clipped the second line.
+
+### Dead prop removed
+
+`selectedImageId` is gone from `LayersPanelProps`. It existed only so an image
+row could toggle its own selection off, which item 8 removed. The editor still
+passes it to `ImagePlacer` (L2213) — only the LayersPanel usage went.
+
+### Verified in the browser
+
+- header and footer both fixed; only the rows scroll
+- `16 layers` on a 7-text + 5-shape + 4-image doc
+- `name` → 3 of 16, three `Name Surname` rows
+- `pe-1` → `Card pair` parent + `Rectangle · pe-1` only
+- `card` → `Card pair` + both members
+- `zzz` → empty-state line
+- Escape → filter cleared, full list back, canvas selection untouched
+- both footer hint lines measured non-clipping at 256px
+
+`tsc --noEmit` clean, 0 eslint errors, `npx vitest run` 377/377.
+
+### The Layers plan from handoff 28 is now closed
+
+1 flat rows · 2 hover-reveal + Delete out of the row · 3 24px targets ·
+4 rename · 6 group nesting · 8 one rule per row type · 10 header/filter/footer.
+**5 (thumbnails) CUT. 7 (keyboard/a11y) DEFERRED.** Neither should be
+re-proposed without Auri raising it.
+
+### Carried forward, none of it blocking
+
+- **Item 9 (non-drag reorder) was skipped**, not built. Auri: "9 is whatever."
+  The editor already binds `Cmd+]` / `[` / `Shift` variants to
+  `reorderSelection` on `selectedIds`, so selecting a row in the panel and
+  pressing them very likely already works — **unverified**. The missing parts
+  are a right-click menu and any hint that the shortcuts exist.
+- Group-level Lock / Eye on the group parent row.
+- `CanvasImage.name` in the Images step — the fourth list, which shows no name
+  at all (census in handoff 32).
+- Cmd/Ctrl-click on a group child (`onToggleLayerExact`) is typechecked but was
+  never click-tested.
+- Nobody exported a doc containing a hidden photo and looked at the PNG.
+- Item 7's a11y gap is real and accepted: the rows still have no `role`, no
+  `tabIndex` and no `aria-selected`, and are unreachable by keyboard.
+
+### Still open from 27/28, none of it touched
+
+1. Auri's call on the 14-partner, all-barter community wall.
+2. Four partners need usable dark-wall artwork: Adeo Web, Creative Business
+   Network, Erhvervshus Sjælland, eryk.
+3. Four Airtable Community rows have no Partnership Type 2026.
+4. `.gitattributes` with `*.svg text eol=lf` still unwritten.
+
+---
+
+## SESSION HANDOFF · 2026-08-21 (34): item 8 shipped · one rule for every row type
+
+Handoff 29 measured eight different action sets across 19 rows. That is now one
+rule for every element row, plus one deliberate exception and the rows that are
+not elements at all.
+
+### Before → after, same 19-row seed doc
+
+| row type | before | after |
+|---|---|---|
+| text | Duplicate + Lock + Eye | Duplicate + Lock + Eye |
+| shape | Duplicate + Lock + Eye | Duplicate + Lock + Eye |
+| **photo** | Duplicate + Lock, **no Eye at all** | Duplicate + Lock + Eye |
+| **photo background** | Duplicate + Lock, no Eye | **Lock + Eye** (Duplicate gone) |
+| TechBBQ logo | Eye | Eye |
+| colour overlay | Eye + Delete | Eye + Delete |
+| group parent | chevron | chevron |
+| background | none | none |
+
+Among the rows that are actual canvas elements: **four rules became one**, with
+the full-bleed backdrop as the single stated exception.
+
+### 1. Images can now be hidden — `CanvasImage.hidden`
+
+`TextElement` and `ShapeElement` have had `hidden` since the layer system
+landed. Images never did, which is why the panel suppressed the eye on image
+rows: there was nothing to toggle. Hiding a photo meant deleting it and
+re-uploading.
+
+Honouring it took **six** sites, not one — worth knowing, because missing any
+of them leaves an invisible photo that still behaves like a visible one:
+
+- `DynamicTemplate` render map — `if (ci.hidden) return null`
+- `DynamicTemplate` snap targets, BOTH drag loops (text drag and shape drag)
+- editor drag/resize overlays — a hidden image must not keep a grabbable bbox
+- editor `otherImages` snap siblings
+- editor locked-badge list, and the two remaining `otherBboxes` lists
+
+The pattern was already there to copy: shapes do
+`.filter((sh) => !sh.hidden)` and texts do `if (t.hidden) continue`.
+
+### 2. The backdrop lost its Duplicate
+
+`Row` gained `isBackdrop`. Stamping a copy of the full-bleed photo background
+is meaningless — it is a canvas-level choice managed from the Canvas step, not
+a layer you duplicate.
+
+### 3. Image rows no longer toggle selection OFF
+
+`setSelectedImageId(row.id === selectedImageId ? null : row.id)` became
+`setSelectedImageId(row.id)`. Clicking an already-selected image row used to
+deselect it while text and shape rows stayed selected — one gesture, two
+behaviours, depending on layer type. Click elsewhere or press Escape to clear.
+
+### 4. Panel selection is the canvas selection colour
+
+Was `#FF0028`, now `SELECTION_COLOR` (`#2C7BE5`) from `lib/selectionStyle`,
+applied through an inline `style` rather than a Tailwind arbitrary value **on
+purpose**: a static `bg-[#2C7BE5]/20` class would silently drift the day that
+constant changes. `selectionStyle.ts` already explains why selection chrome is
+cool blue and not brand orange — an orange outline on orange artwork is
+invisible exactly when it matters, and reads as design rather than as tool.
+
+### 5. Loose end from handoff 33 closed
+
+`onToggleLayerExact`: Cmd/Ctrl-click on a group CHILD now toggles only that
+child, matching what a plain click on it does since 33. Anything else still
+toggles its whole group, matching the canvas.
+
+**Caveat on verification:** this one is typechecked and follows the exact same
+shape as `onSelectLayerExact` (which IS click-tested), but it was not itself
+click-tested in the browser. Worth one click next session.
+
+### Verified in the browser
+
+- an image row shows Duplicate + Lock + Eye where it previously showed no eye
+- clicking that eye removed the photo from the canvas and struck the row
+  through — end to end, not just the panel
+- clicking an image row twice leaves it selected
+- selection paints blue, matching the canvas
+- the per-row hover sweep reports `Lock+Hide` for `Photo background`, i.e. no
+  Duplicate
+
+`tsc --noEmit` clean, 0 eslint errors, `npx vitest run` 377/377.
+
+### Measurement note
+
+Counting "distinct action sets" by raw `aria-label` **overcounts**, because
+`Unlock` vs `Lock` and `Show` vs `Hide` are the same rule in a different toggle
+state. Normalise those before comparing, or the number stays at 8 no matter
+what you fix. Also: at rest a row shows only its ACTIVE toggles (hover-reveal),
+so the sweep has to hover each row one at a time.
+
+### Not built
+
+- Group-level Lock / Eye on the group parent row.
+- `CanvasImage.name` in the Images step (census in handoff 32).
+- Export path was not re-checked against `hidden` images. `DynamicTemplate` is
+  what renders and what exports, so it should follow, but nobody exported a doc
+  with a hidden photo and looked at the PNG.
+
+### Next: 9, then 10
+
+- **9** Reorder without dragging: `Ctrl+]` / `Ctrl+[`, `Ctrl+Shift+]` / `[`.
+  The editor ALREADY binds these for the canvas selection (`reorderSelection`,
+  around L1864 pre-change), so this is mostly surfacing existing behaviour in
+  the panel plus a right-click menu.
+- **10** Panel header: layer count, filter box, and move the dead
+  `Background · ...` row into a fixed footer strip.
+
+Item 5 (thumbnails) CUT, item 7 (keyboard) DEFERRED, both on Auri's call.
+
+### Still open from 27/28, none of it touched
+
+1. Auri's call on the 14-partner, all-barter community wall.
+2. Four partners need usable dark-wall artwork: Adeo Web, Creative Business
+   Network, Erhvervshus Sjælland, eryk.
+3. Four Airtable Community rows have no Partnership Type 2026.
+4. `.gitattributes` with `*.svg text eol=lf` still unwritten.
+
+---
+
+## SESSION HANDOFF · 2026-08-21 (33): child rows select themselves · and a phantom bug worth not re-chasing
+
+Auri: "if i group, then i try to select individual layer, sometimes it selects
+the whole group it is happening with text currently."
+
+Two separate things came out of this. One was real and is fixed. The other cost
+most of the session and turned out to be a measurement artifact — read the
+second half before spending any time on it again.
+
+### Fixed: a child row selects ONLY itself
+
+`onSelectLayerExact` is a new panel prop, wired in the editor to
+`setSelectedIds(new Set([layerId]))` — the ONLY selection path that does not
+expand a grouped member to its whole group.
+
+`selectRow` routes to it when `row.depth` is set, which is true on exactly the
+rows rendered as group children. So:
+
+| click | result |
+|---|---|
+| group child row | that layer alone |
+| group parent row | the whole group |
+| any top-level row | unchanged from before |
+
+Both verified in the browser at correct coordinates.
+
+Keying on `row.depth` has a second payoff: inside a group, the three element
+types now behave IDENTICALLY, because the exact-select branch runs before the
+per-type paths. Outside a group the old split still applies — text and shape
+expand to the group, images do not — and that is still item 8's job.
+
+### Also fixed: a dead Eye button on group parent rows
+
+`toggleVisibility` has no `"group"` case, so the eye rendered on a group row
+did nothing when clicked. Group rows are now excluded. Group-level hide and
+lock are worth having and are still NOT built.
+
+### The phantom: "the first row click after load does nothing"
+
+**There is no such bug. Do not chase it.** It was an artifact of driving the
+browser, and it burned most of a session.
+
+What actually happened: **the Chrome window kept changing size between tool
+calls** — 1441x840, then 1466x812, then 1521x784, against a CSS viewport of
+1460x753. So screenshot coordinates and CSS coordinates drifted apart by call,
+and clicks computed from a stale screenshot landed on a row edge, a gap, or the
+neighbouring row. Clicking "the same spot twice" appeared to work on the second
+try only because the layout had settled by then.
+
+Two things made the false signal convincing enough to keep chasing:
+
+1. It looked like a REGRESSION, because with the changes stashed the first
+   click "worked". Baseline rows were 30.5px plus a 6px gap — a 36.5px pitch —
+   while the new flat rows are 32px with no gap. The same wrong y therefore
+   landed inside a baseline row and outside a new one. The row heights changed,
+   not the click handling.
+2. It reproduced across many attempts, because the coordinate error was
+   systematic rather than random.
+
+What finally settled it: console instrumentation on `selectWithGroup` and on
+the row's `onClick` showed **neither ever fired**, while
+`document.elementFromPoint` at the row's real CSS centre returned the row's own
+label span with nothing overlaying it. A handler that never fires plus a clear
+hit target means the click was not landing where it was believed to land.
+
+Ruled out along the way, each tested rather than reasoned about, all innocent:
+
+- the Shift/Cmd click wiring (reverted `onClick` to the original one-liner)
+- hover state and the `mouseenter` re-render (handlers removed entirely)
+- the group nesting render (`displayRows` made a pass-through)
+- `rangeAnchor` as state (see below)
+- hydration timing (a 3s wait before clicking)
+- window focus (a priming click first)
+- an overlay intercepting the click (`elementFromPoint`)
+
+**Method note for next time.** Read click coordinates off a screenshot taken in
+the SAME turn, and never compute them from `getBoundingClientRect` or from an
+older screenshot — the two coordinate spaces do not match and the window
+resizes underneath you. Synthetic `dispatchEvent` clicks do not drive React
+here at all (they silently do nothing), so they are useless for this.
+
+### One real improvement fell out of it
+
+`rangeAnchor` is now `rangeAnchorRef`, a ref rather than state. Nothing in the
+render reads the anchor, so as state it bought nothing and re-rendered the whole
+panel on every plain click. It was suspected of eating the click, and it wasn't,
+but the ref is the right shape regardless.
+
+### Not built, carried forward
+
+- Group-level Lock / Eye on the parent row.
+- **Cmd/Ctrl-click on a group CHILD still toggles the whole group**, because
+  `onToggleLayer` goes through `selectWithGroup(id, true)`. Now that a plain
+  click on a child selects just that child, the toggle disagrees with it. It
+  wants an exact-toggle callback. Known, deliberate, small.
+- `CanvasImage.name` in the Images step (census in handoff 32).
+
+### Next: the rest of item 8, then 9 and 10
+
+Unchanged from handoff 32: images gain `hidden`, the backdrop loses its stray
+Duplicate, image rows stop toggling selection off on a second plain click,
+panel selection moves to the canvas `SELECTION_COLOR` `#2C7BE5`. Then 9
+(non-drag reorder) and 10 (panel header).
+
+Item 5 (thumbnails) CUT, item 7 (keyboard) DEFERRED, both on Auri's call.
+
+### Still open from 27/28, none of it touched
+
+1. Auri's call on the 14-partner, all-barter community wall.
+2. Four partners need usable dark-wall artwork: Adeo Web, Creative Business
+   Network, Erhvervshus Sjælland, eryk.
+3. Four Airtable Community rows have no Partnership Type 2026.
+4. `.gitattributes` with `*.svg text eol=lf` still unwritten.
+
+---
+
+## SESSION HANDOFF · 2026-08-21 (32): panel multi-select (Shift range, Cmd toggle) + renameable groups
+
+Auri, on handoff 31: "for the grouping it should allow to shift select layers,
+the same way we can shift select elements, and allow to rename groups in layer
+table." Both built. This pulls the multi-select half of item 8 forward, because
+without it `Cmd+G` could not be driven from the panel at all — you had to build
+the selection on the canvas first, which defeats grouping from a list.
+
+### Shift ranges, Cmd/Ctrl toggles — and why they differ from the canvas
+
+| | canvas | Layers panel |
+|---|---|---|
+| Shift-click | TOGGLES the element (and its whole group) | selects the RANGE from the anchor |
+| Cmd/Ctrl-click | — | TOGGLES the layer (and its whole group) |
+
+The asymmetry is deliberate. A flat list has an order to range over and a
+canvas does not, so Shift means range in every list UI — Figma's own layer
+panel, Illustrator, Finder — while Shift on a canvas means "add/remove this
+one". Putting range on Shift and moving the canvas's toggle to Cmd/Ctrl gives
+both gestures without either behaving unlike its platform.
+
+**The toggle is not reimplemented.** `onToggleLayer` is wired straight to the
+host's `selectWithGroup(id, true)` — the exact call the canvas makes for
+Shift-click. So the documented group rule (a whole group toggles together, a
+group never ends up half-selected) holds in the panel for free and cannot
+drift. `onSelectLayerRange` goes through `expandToGroups` for the same reason.
+
+### The range walks what is ON SCREEN
+
+`displayRows`, not `rows`. Two consequences, both correct and both tested:
+
+- A **collapsed** group inside the range contributes **all** its members. A
+  4-row visual range covering a collapsed 3-member group selected 6 layers.
+- Rows hidden inside a collapsed group are never swept in by accident, because
+  they are not in `displayRows` to begin with.
+
+The anchor (`rangeAnchor`) is the last row picked with a plain or Cmd click.
+
+### Renameable groups
+
+`design.groupNames?: Record<string, string>`, keyed by `groupId`.
+
+A group is only a shared tag on its members — there is no group OBJECT to hang
+a `name` field off the way `TextElement.name` hangs off a text — so the names
+live on the design. Absent key falls back to the derived `Group (N)`. Clearing
+the name DELETES the key, and the whole map goes back to `undefined` when the
+last name is removed, so a doc that never named a group carries no new field.
+
+Stale keys for deleted groups are harmless, cost a few bytes, and are **not**
+swept. If that ever matters, sweep on export, not on edit.
+
+Mechanically it reuses item 4's rename wholesale: double-click, Enter commits,
+Escape discards, blur commits, placeholder shows the derived label. The one new
+piece is `rowKey` — hover and rename are now keyed on `row.layerId ?? row.id`
+rather than `layerId` alone, because a group row deliberately has NO `layerId`
+(that is what keeps it out of the drag system) but still has to be hoverable
+and renameable. `draggable` still keys on `layerId`, so group rows stay
+undraggable.
+
+### A THIRD layer list turned up: the Elements step
+
+Handoff 30 warned there were two lists (Layers panel, Text step). Testing this
+change surfaced the third: `StepElements` renders `SHAPES (N)` and derived its
+own label the same way, so a shape renamed in the Layers panel still read
+`Rectangle · s-a` there. Fixed, same fallback order as the other two.
+
+**The full census, so the next session stops rediscovering this:**
+
+| list | file | honours `name`? |
+|---|---|---|
+| Layers panel | `LayersPanel.tsx` | yes |
+| Text step | `steps/StepText.tsx` | yes |
+| Elements step | `steps/StepElements.tsx` | yes, as of now |
+| Images step | `ImagePlacer.tsx` | **shows no name at all** |
+
+The Images list is not inconsistent, it is just nameless — its rows read
+"Click to edit" next to a thumbnail, which identifies the image visually. So
+`CanvasImage.name` is currently only visible in the Layers panel. Surfacing it
+there is a real improvement and is NOT built.
+
+### Verified in the browser
+
+Seeded six loose named shapes, then:
+
+- click Shape F, Shift-click Shape C → exactly F, E, D, C
+- Cmd-click Shape A → added; Cmd-click Shape E → removed (toggle both ways)
+- click Shape F, Shift-click Shape D, `Cmd+G` → `Group (3)` with F/E/D
+  indented, i.e. grouping driven entirely from the panel, which is the point
+- double-click the group row → input, empty, placeholder `Group (3)`
+- typed "Top row shapes", Enter → row renamed, `design.groupNames` holds the
+  one key
+- reloaded → the group name survived
+- collapsed the group, then a Shift-range across it → all 3 hidden members in
+  the selection (the parent row lights only when EVERY member is selected,
+  which is how this was confirmed)
+- the Elements step now reads `Shape A … Shape F`, not `Rectangle · s-a`
+
+`tsc --noEmit` clean, `npx vitest run` 377/377. The lint error in
+`StepElements.tsx` is at **line 36** and is pre-existing — confirmed by
+stashing the change and re-running; the only edit in that file is at line ~148.
+Same story as the `StepText.tsx` line 34 error from handoff 30.
+
+### Not built, deliberately
+
+- Group-level Lock / Eye on the parent row (still open from 31).
+- Shift-click with no anchor yet falls through to a plain select. Fine, but it
+  means the very first Shift-click after load selects one row.
+- `CanvasImage.name` in the Images step, per the census above.
+
+### Next: the rest of item 8, then 9 and 10
+
+Item 8's multi-select half is now done. What remains of it:
+
+- images gain `hidden` (`CanvasImage` has no such field, which is why image
+  rows show no eye button at all)
+- the backdrop loses its stray Duplicate
+- image rows stop toggling selection OFF on a second plain click when text and
+  shape rows do not
+- panel selection moves from `#FF0028` to the canvas `SELECTION_COLOR`
+  `#2C7BE5`
+
+Then **9** (reorder without dragging — note the editor already binds
+`Cmd+]`/`[` for the canvas selection at L1864) and **10** (panel header: count,
+filter, move the dead `Background · ...` row into a fixed footer).
+
+Item 5 (thumbnails) is CUT and item 7 (keyboard) is DEFERRED, both on Auri's
+call. Do not re-propose either.
+
+### Still open from 27/28, none of it touched
+
+1. Auri's call on the 14-partner, all-barter community wall.
+2. Four partners need usable dark-wall artwork: Adeo Web, Creative Business
+   Network, Erhvervshus Sjælland, eryk.
+3. Four Airtable Community rows have no Partnership Type 2026.
+4. `.gitattributes` with `*.svg text eol=lf` still unwritten.
+
+---
+
+## SESSION HANDOFF · 2026-08-21 (31): Layers panel item 6 shipped · group nesting, and Cmd+G now collects the stack
+
+### Item 7 (keyboard) is DEFERRED, on Auri's call
+
+"I dont need Keyboard currently to be that functional." Items 8, 9, 10 remain.
+Do not re-propose the a11y pass as the next step; it is a known, accepted gap.
+
+### What a group actually was, before this
+
+Worth writing down because handoff 28 ranked item 6 as trivial on the strength
+of a half-truth.
+
+`Cmd+G` on a 2+ selection stamps a shared `groupId` (`group-<ts>-<rand>`) onto
+each selected text / shape / image; `Cmd+Shift+G` strips it. That is the whole
+model: **a flat tag, not a container.** No group object exists anywhere, so a
+group has no name, no order of its own, and cannot nest. What the tag buys is
+selection expansion, in `editor/page.tsx` around L541 and L656 — click any
+member and every member selects, on the canvas AND in this panel.
+
+Also: **nothing in the presets or generators ever creates a group.** Grep is
+clean apart from `presetExport.ts` carrying the field through. Groups exist
+only where a human pressed `Cmd+G`.
+
+### Correction to handoffs 29 and 30
+
+Both said item 6 was "rendering only, cheaper than ranked", on the grounds
+that selection already handled groups. Selection does. But two things were not
+rendering, and they should have been caught before repeating that twice:
+
+1. **Members could sit non-adjacent in the stack.** The tag never moved
+   anything, so a group could have members at stack positions 3 and 9 with
+   strangers between them. A single parent row cannot honestly stand for that,
+   because the list's other promise is printed in its own footer: "top of list
+   = top of canvas stack".
+2. **Groups have no name and nowhere to store one.** Solved by deriving
+   `Group (N)`; a real group name would need a new `design.groupNames` map.
+
+### Auri's call on (1): Cmd+G collects
+
+Grouping now also gathers the members into one contiguous run, **anchored at
+the topmost member so the group keeps its front-ness**. This is what Figma and
+Illustrator do. Verified: stack `pe-1, ac-1, pe-2` (bottom→top) grouping pe-1
++ pe-2 becomes `ac-1, pe-1, pe-2` — the group holds the top slot and the
+stranger drops below it.
+
+The accepted cost, stated plainly: **if a non-member sat sandwiched between two
+members, grouping changes what paints in front of what.** That is a visible
+change to the artwork from a keystroke that sounds organisational. It is one
+explicit action and `Cmd+Z` undoes it.
+
+### Old docs with a scattered group render FLAT, deliberately
+
+`displayRows` collapses *runs* of adjacent same-group rows, not "every row
+carrying this groupId". A doc saved before this change can still hold a
+scattered group; rather than yank a member somewhere it does not sit, a stray
+member renders flat exactly as it did before. Regrouping it fixes it. A run of
+one gets no parent row either.
+
+This was tested first, before the collect was wired: the scattered seed
+rendered 0 parent rows and 0 indented rows.
+
+### What the group row is
+
+Disclosure chevron (24px, `aria-expanded`), folder icon, derived label
+`Group (N)`, members indented one level at `pl-5`. One indent level is all the
+model can express.
+
+- **Clicking the parent selects the whole group** — by selecting its first
+  member and letting the host's existing expansion do the rest. No new prop,
+  one code path, so the parent row can never disagree with a member row.
+- **The parent shows selected only when EVERY member is selected.**
+- Collapse is **view state only** (`collapsedGroupIds` in the panel) — verified
+  that collapsing leaves `layerOrder` byte-identical and does not select.
+- The parent row is not draggable and carries no Lock / Eye / Duplicate.
+  Group-level lock and hide would be genuinely useful and are NOT built.
+
+### Verified in the browser
+
+Seeded a deliberately scattered group, then:
+
+- scattered group → no parent row, no indent (the honest fallback)
+- clicking one member selects both (pre-existing expansion, confirmed intact)
+- `Cmd+G` → members contiguous in `layerOrder`, `Group (2)` parent appears,
+  both members indented at 20px
+- chevron collapses → children unmounted, `aria-expanded="false"`,
+  `layerOrder` unchanged, no selection side effect
+- clicking the collapsed parent selects the whole group
+- expand → both members highlighted again
+- `Cmd+Shift+G` → parent row gone, no stranded indent
+
+`tsc --noEmit` clean, `npx vitest run` 377/377. The eslint warnings in
+`editor/page.tsx` (unused `focusedShapeId`, four exhaustive-deps, one `<img>`)
+are all pre-existing and unrelated.
+
+### Known rough edge, not fixed
+
+Dragging a member row out of the run splits the group visually — the run
+breaks, so the remaining members fall back to flat rows while still sharing the
+tag. Reordering within a group is item 9's territory.
+
+### Next: items 8, 9, 10
+
+- **8** One set of rules for every row type. Measured in 29: eight action sets
+  across 19 rows. Images gain `hidden`; the backdrop loses Duplicate; image
+  rows stop toggling selection OFF on a second click; panel selection moves
+  from `#FF0028` to the canvas `SELECTION_COLOR` `#2C7BE5`; Shift-click range,
+  Ctrl-click add.
+- **9** Reorder without dragging: `Ctrl+]` / `Ctrl+[`, `Ctrl+Shift+]` / `[`.
+  Note the editor ALREADY has these bound for the canvas selection (L1864).
+- **10** Panel header: layer count, filter box, and move the dead
+  `Background · ...` row into a fixed footer strip.
+
+### Still open from 27/28, none of it touched
+
+1. Auri's call on the 14-partner, all-barter community wall.
+2. Four partners need usable dark-wall artwork: Adeo Web, Creative Business
+   Network, Erhvervshus Sjælland, eryk.
+3. Four Airtable Community rows have no Partnership Type 2026.
+4. `.gitattributes` with `*.svg text eol=lf` still unwritten.
+
+---
+
+## SESSION HANDOFF · 2026-08-21 (30): Layers panel item 4 shipped · renameable layers, and the label cap raised
+
+### Two changes, one of them a one-liner that did most of the visible work
+
+Item 4 was really two problems wearing one number.
+
+1. **The 24-char content cap.** `t.content.trim().slice(0, 24)` was chosen when
+   the label had 74px to live in. Handoff 29 gave it 182px, at which point the
+   cap was the ONLY thing still cutting names — `Draft note — do not expo` with
+   room to spare. Now `CONTENT_LABEL_CHARS = 48`, and the rows read
+   `Draft note — do not export`, `Head of Something Very Long At A Company`,
+   `Thank you to our Community Partners`. Two of those still clip on width,
+   which is what `truncate` plus the hover `title` is for, and what a real
+   name is for.
+2. **Actual rename**, which is the only fix for `Photo · a1b2` and
+   `Circle · pe-2`. No amount of label width helps a name that carries no
+   information about the artwork.
+
+### The model
+
+`name?: string` on `TextElement`, `ShapeElement` and `CanvasImage`. Unset on
+everything the presets generate, which is the normal case. The row builder
+computes `derivedName` exactly as before and displays `custom || derivedName`,
+so nothing changes for anyone who never renames.
+
+**An empty commit CLEARS the name** (stores `undefined`, not `""`) and the row
+falls back to its derived label. That is the only way back out of a rename,
+and it was tested: the key is absent from the doc afterwards, not empty.
+
+### The interaction
+
+Double-click the label. Enter commits, Escape discards, blur commits. The
+input seeds with the user's own name when there is one (select-all, so
+retyping is one gesture) and with **empty plus the derived label as
+placeholder** when there is not — seeding with the derived label would make
+every rename a delete-this-first chore, and would silently freeze a content
+preview into a real name on the first Enter.
+
+`draggable` goes false on the row being renamed, so the drag source stops
+swallowing the pointer that is trying to place a caret.
+
+### Verified in the browser, not just typechecked
+
+Same 19-row seed doc as 28/29. All of this was exercised live:
+
+- rename commits on a shape, an image and a text row — three different setter
+  paths (`setDesign` twice, `setCanvasImages` once)
+- Enter commits · Escape discards the draft · blur commits
+- reopening a renamed row seeds with the existing name, fully selected
+- clearing the name reverts the row to its derived label, key absent from doc
+- the name survives a reload (it is in the session doc)
+- Cmd+Z undoes a rename — renames go through the normal doc history
+- renaming a text layer does NOT touch its `content`; the canvas is unchanged
+- **Backspace inside the rename input did not delete the layer.** The editor's
+  global handler treats an `INPUT` as an editable target, so Delete /
+  Backspace / nudge / undo already stay out of the way. `stopPropagation` on
+  the input's keydown belts that braces.
+
+Items 29's numbers re-measured after the change and unchanged: 19 rows, 4
+buttons at rest, 24px smallest hit box, 32px rows.
+
+### `StepText` had the same list, with the same labels
+
+The Text step keeps its own layer list, and it derived its label the same way
+(`slice(0, 32)`). A layer renamed in the Layers panel still read
+`Name Surname` there. Two lists disagreeing about what a layer is called is
+worse than neither list naming it, so `StepText` now honours `text.name` too.
+One line. Same fallback order.
+
+**Worth remembering: there are two layer lists.** Anything item 5-10 does to
+row identity has to be checked against `StepText` as well, or they drift.
+
+### Retarget already preserves names
+
+`retargetTunedDoc` builds from the TUNED element (`{ ...t, content: next }`,
+`{ ...img, src: ... }`), so a rename survives a Panel Maker form edit. No
+change needed, but it was checked rather than assumed.
+
+### Not done, and deliberately so
+
+`name` is NOT surfaced in the shape or image editor panels, only in the layer
+lists. Rename belongs where you navigate, and adding a Name field to three
+property panels is a different, larger change.
+
+### Pre-existing lint, so nobody chases it
+
+`eslint src/components/steps/StepText.tsx` reports a `setState` in an effect at
+**line 34**. That is byte-identical to HEAD and unrelated to this work; the
+only change in that file is at line 137. `tsc --noEmit` clean,
+`npx vitest run` 377/377.
+
+### Page feedback, same session: the hover box is rounded again
+
+Auri: "Round up the hover box." Done — `rounded-md` on the row.
+
+This is not item 1 being reverted. Item 1 removed a border PLUS a background
+painted on all 19 rows AT REST, which is what made them compete with each
+other. A radius on the one row being pointed at or selected is a highlight,
+which is what Figma paints too. Verified at 2x zoom on both states, hover and
+selection.
+
+### Item 5 (thumbnails) is CUT, on Auri's call
+
+"I dont think we need thumbnails." So identification rests on rename plus the
+48-char content preview, which is where handoff 30 leaves it. Do not
+re-propose thumbnails as the fix for a row that is hard to identify; the
+answer now is that someone renames it.
+
+That removes the only item that needed per-row image rendering, so nothing
+downstream depended on it.
+
+### Next: items 6-10 from handoff 28, unchanged in substance
+
+Recommended order after the cut: **7, then 8** — 7 is the real correctness
+gap (the panel cannot be reached by keyboard at all, while dumping tab stops
+into the page), and rename now gives Enter-to-rename something to open. 8
+closes the eight-action-sets inconsistency that handoff 29 measured.
+
+- **6** Group nesting. Still cheaper than ranked: selection already handles
+  groups, so it is rendering only.
+- **7** Keyboard + a11y: `role="listbox"`, `aria-selected`, roving `tabIndex`,
+  arrows to walk, Enter to rename, Delete to delete.
+- **8** One set of rules for every row type. Images gain `hidden`; the backdrop
+  loses Duplicate; image rows stop toggling selection OFF on a second click;
+  panel selection moves from `#FF0028` to the canvas `SELECTION_COLOR`
+  `#2C7BE5`; Shift-click range, Ctrl-click add.
+- **9** Reorder without dragging: `Ctrl+]` / `Ctrl+[`, `Ctrl+Shift+]` / `[`.
+- **10** Panel header: layer count, filter box, and move the dead
+  `Background · ...` row into a fixed footer strip.
+
+### Still open from 27/28, none of it touched
+
+1. Auri's call on the 14-partner, all-barter community wall.
+2. Four partners need usable dark-wall artwork: Adeo Web, Creative Business
+   Network, Erhvervshus Sjælland, eryk.
+3. Four Airtable Community rows have no Partnership Type 2026.
+4. `.gitattributes` with `*.svg text eol=lf` still unwritten.
+
+---
+
+## SESSION HANDOFF · 2026-08-21 (29): Layers panel items 1-3 shipped · flat rows, hover-reveal, 24px targets
+
+### Measured before, measured after, same 19-row document both times
+
+Handoff 28 was a plan. Items 1-3 are now built. The seed doc from 28 was
+rebuilt and the panel re-measured, so these are the same numbers on the same
+document rather than a before-and-after on two different canvases.
+
+| | before | after |
+|---|---|---|
+| Rows | 19 | 19 |
+| Buttons painted at rest | **63** | **4** |
+| Buttons on the hovered row | 4 | 3 |
+| Always-armed Delete buttons | **17** | **0** |
+| Smallest hit box | 16px | 24px |
+| Hit boxes under 24px | 63 | 0 |
+| Row height | 30.5px | 32px |
+| List content height | 717px | 646px |
+| Tab stops dumped into the page | 63 | 4 |
+| Label width on a text row | 74px | **182px** |
+| CSS-truncated labels | 10 of 19 | **0** |
+| Per-row border / radius / background | 1px / 8px / white 5% | none |
+
+`npx vitest run` 377/377, `tsc --noEmit` and `eslint` clean.
+
+### Reproducing the measurement
+
+28's seeding recipe works, with one trap that cost a cycle: **seed from a page
+other than `/editor`**. The editor's debounced persist (350ms) writes back the
+doc it already hydrated, so seeding session storage while `/editor` is open is
+overwritten before the reload can read it. Seed on `/` (which redirects to
+`/simple`), then navigate to `/editor`. The symptom is a document one layer
+short of the seed, which reads like a rendering bug and is not one.
+
+### What testing found that the audit had not
+
+1. **The button cluster was wider than the label.** 88px of buttons against
+   74px of label space, on a row whose label ("Name Surname") needs 80px.
+   That is why 10 of 19 labels clipped. The four buttons were not merely
+   noisy, they were the direct cause of the identification problem that items
+   4 and 5 were going to fix by adding rename and thumbnails. Unmounting them
+   returns 182px and drops CSS truncation to zero on its own.
+2. **`opacity-0` would not have worked.** A faded button still occupies its
+   box, so the label wins nothing back. Hover-reveal has to unmount, which is
+   why this is React state (`hoveredLayerId`) and not a `group-hover:` rule.
+3. **Hover revealed nothing before.** The row carried the `group` class but no
+   `group-hover` rule ever used it. Item 2 was greenfield, not a tweak.
+4. **The Delete key already worked from a panel-only selection.** Verified
+   live BEFORE removing anything: click a row in the panel, press Delete, the
+   layer goes. Removing 17 Delete buttons removed no capability.
+5. **Delete was instant, silent, and undoable.** No confirm and no toast, but
+   Cmd+Z restores. The real severity of the always-armed Delete was "silent
+   surprise", not "destroyed work". Worth knowing; it did not change the call.
+6. **Groups already select together.** Clicking `Rectangle · pe-1` highlights
+   both members of the `groupId` pair. Item 6 is pure rendering; the
+   selection wiring already understands groups.
+7. **The image-row toggle-off asymmetry is real**, reproduced by clicking
+   twice: a Photo row deselects on the second click, a text row stays
+   selected. Still open, it is item 8.
+8. **Eight different action sets across 19 rows.** Measured: the logo gets
+   Hide only; the overlay gets Hide + Delete; images get Duplicate + Lock +
+   Delete and no eye at all; the backdrop gets a Duplicate button; the
+   background row gets none. Item 8's "one set of rules" is eight sets today.
+
+### What shipped, in `src/components/LayersPanel.tsx` only
+
+- **Item 1, flat rows.** Per-row border, background and radius gone, plus the
+  6px row gap. Hover (`white/6%`) and selection (`#FF0028/20`) are the only
+  things painted, so selection is the one thing the eye catches.
+- **Item 2, hover-reveal.** Duplicate / Lock / Eye render only on the hovered
+  row, and a toggle that is ON stays painted on every row so a locked or
+  hidden layer is findable without sweeping the pointer down the list.
+  Delete is gone from every element row; the footer hint now says the Delete
+  key removes the selected layer.
+- **Item 3, 24px targets.** `ACTION_BTN` is a 24x24 box around a 14px icon.
+  WCAG 2.2 AA 2.5.8 and CLAUDE.md r9, the same call the canvas already made
+  with `HANDLE_HIT_PX = 20`.
+- Labels carry `title={row.name}`, so a clipped name is readable on hover
+  until item 4 lands.
+
+### Deliberate exception: the colour overlay keeps its Delete
+
+The overlay row is not clickable, so it is not selectable, so the Delete key
+cannot reach it. Taking its button away would have left the panel with no way
+to clear the overlay. 17 always-armed Deletes became one, on the only row
+nothing else can reach. (`StepCanvas` can also zero the opacity, but that is
+a different panel and not where someone goes looking.)
+
+### `deleteRow` is now dormant for text / image / shape
+
+Those branches are unreachable from the UI. Kept on purpose: item 2's second
+half, the right-click menu, needs them. `radix-ui@1.4.3` is already a
+dependency, so that menu costs no new package.
+
+### Next, ranking unchanged, two items re-priced
+
+Items 4-10 from handoff 28 stand as written.
+
+- **Item 4 (rename) is now the binding constraint on labels.** With 182px of
+  room the limit is no longer CSS, it is `t.content.trim().slice(0, 24)` in
+  the row builder, which is why "Draft note — do not expo" still reads that
+  way. Raising that slice is a one-line partial win before rename lands.
+- **Item 6 (group nesting) is cheaper than it was ranked**, because selection
+  already handles groups. It is rendering only.
+
+### Still open from 27/28, none of it touched
+
+1. Auri's call on the 14-partner, all-barter community wall.
+2. Four partners need usable dark-wall artwork: Adeo Web, Creative Business
+   Network, Erhvervshus Sjælland, eryk.
+3. Four Airtable Community rows have no Partnership Type 2026.
+4. `.gitattributes` with `*.svg text eol=lf` still unwritten.
+
+---
+
 ## SESSION HANDOFF · 2026-08-20 (28): the Layers panel audit · 10 ranked fixes, none built yet
 
 ### State: this is a PLAN, not a shipped change. Nothing in `LayersPanel.tsx` moved.

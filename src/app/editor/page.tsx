@@ -1549,19 +1549,56 @@ export default function Home() {
   }, [selectedIds, setDoc]);
 
   // Cmd+G — bind the current 2+ selection into a new group.
+  //
+  // Grouping also COLLECTS the members into one contiguous run in the layer
+  // stack, anchored at the topmost member so the group keeps its front-ness.
+  //
+  // `groupId` is only a shared tag: it never moved anything, so members could
+  // sit at stack positions 3 and 9 with strangers in between. The Layers panel
+  // now nests a group under one parent row, and a parent row cannot honestly
+  // stand for members that are not adjacent — the list's other promise is
+  // "top of list = top of canvas stack". Figma and Illustrator collect on
+  // group for the same reason.
+  //
+  // The cost, accepted deliberately: if a non-member sat sandwiched between
+  // two members, grouping changes what paints in front of what. That is a
+  // visible change to the artwork from a keystroke that sounds organisational,
+  // so it is one explicit action and Cmd+Z undoes it.
   const groupSelection = useCallback(() => {
     if (selectedIds.size < 2) return;
     const ids = selectedIds;
     const newGroupId = `group-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    setDoc((prev) => ({
-      ...prev,
-      design: {
-        ...prev.design,
-        texts: prev.design.texts.map((t) => (ids.has(`text:${t.id}`) ? { ...t, groupId: newGroupId } : t)),
-        shapes: (prev.design.shapes ?? []).map((s) => (ids.has(`shape:${s.id}`) ? { ...s, groupId: newGroupId } : s)),
-      },
-      canvasImages: prev.canvasImages.map((ci) => (ids.has(`image:${ci.id}`) ? { ...ci, groupId: newGroupId } : ci)),
-    }));
+    setDoc((prev) => {
+      const split = splitImageLayerIds(prev.canvasImages);
+      const defaultOrder = [
+        ...split.backdrops,
+        "overlay",
+        ...split.photos,
+        ...(prev.design.shapes ?? []).map((s) => `shape:${s.id}`),
+        ...prev.design.texts.map((t) => `text:${t.id}`),
+        "tbbqLogo",
+      ];
+      const order = reconcileLayerOrder(prev.design.layerOrder, defaultOrder);
+      const members = order.filter((id) => ids.has(id));
+      // The topmost member's slot is where the collected run goes.
+      const anchor = order.reduce((acc, id, i) => (ids.has(id) ? i : acc), -1);
+      const collected: string[] = [];
+      for (let i = 0; i < order.length; i++) {
+        if (i === anchor) { collected.push(...members); continue; }
+        if (ids.has(order[i])) continue;
+        collected.push(order[i]);
+      }
+      return {
+        ...prev,
+        design: {
+          ...prev.design,
+          layerOrder: collected,
+          texts: prev.design.texts.map((t) => (ids.has(`text:${t.id}`) ? { ...t, groupId: newGroupId } : t)),
+          shapes: (prev.design.shapes ?? []).map((s) => (ids.has(`shape:${s.id}`) ? { ...s, groupId: newGroupId } : s)),
+        },
+        canvasImages: prev.canvasImages.map((ci) => (ids.has(`image:${ci.id}`) ? { ...ci, groupId: newGroupId } : ci)),
+      };
+    });
   }, [selectedIds, setDoc]);
 
   // Cmd+Shift+G — strip groupId from every selected element. Other group
@@ -2924,7 +2961,7 @@ export default function Home() {
                     user has a visible cue. Lives outside exportRef so it
                     never appears in PNG/JPG output. */}
                 {[
-                  ...canvasImages.filter((ci) => ci.locked).map((ci) => ({
+                  ...canvasImages.filter((ci) => ci.locked && !ci.hidden).map((ci) => ({
                     key: `lock-img-${ci.id}`,
                     x: ci.x, y: ci.y, w: ci.width, h: ci.height,
                   })),
@@ -2967,8 +3004,10 @@ export default function Home() {
                   </div>
                 ))}
 
-                {/* Drag overlays — one per canvas image, outside exportRef */}
-                {canvasImages.map((img) => (
+                {/* Drag overlays — one per VISIBLE canvas image, outside
+                    exportRef. A hidden image must not keep a grabbable bbox;
+                    shape overlays already filter the same way. */}
+                {canvasImages.filter((ci) => !ci.hidden).map((img) => (
                   // Suppress the drag/resize overlay while THIS image is in
                   // crop-edit mode — the in-template crop UI takes pointer
                   // events for panning, and we don't want the bbox/handles to
@@ -2977,7 +3016,7 @@ export default function Home() {
                   <ImageDragOverlay
                     key={img.id}
                     image={img}
-                    otherImages={canvasImages.filter((ci) => ci.id !== img.id)}
+                    otherImages={canvasImages.filter((ci) => ci.id !== img.id && !ci.hidden)}
                     canvasWidth={dims.width}
                     canvasHeight={dims.height}
                     selected={selectedIds.has(`image:${img.id}`)}
@@ -3110,7 +3149,7 @@ export default function Home() {
                     ...(design.shapes ?? []).filter((o) => o.id !== sh.id).map((o) => ({
                       x: o.x, y: o.y, width: o.width, height: o.height,
                     })),
-                    ...canvasImages.map((ci) => ({
+                    ...canvasImages.filter((ci) => !ci.hidden).map((ci) => ({
                       x: ci.x, y: ci.y, width: ci.width, height: ci.height,
                     })),
                   ];
@@ -3179,7 +3218,7 @@ export default function Home() {
                     onMoveBy={groupDragMoveBy}
                     onEndDrag={endGroupDrag}
                     otherBboxes={[
-                      ...canvasImages.map((ci) => ({ x: ci.x, y: ci.y, width: ci.width, height: ci.height })),
+                      ...canvasImages.filter((ci) => !ci.hidden).map((ci) => ({ x: ci.x, y: ci.y, width: ci.width, height: ci.height })),
                       ...(design.shapes ?? []).map((s) => ({ x: s.x, y: s.y, width: s.width, height: s.height })),
                     ]}
                   />
@@ -3208,13 +3247,12 @@ export default function Home() {
                   <X className="w-3.5 h-3.5" strokeWidth={1.5} />
                 </button>
               </div>
-              <div className="flex-1 min-h-0 overflow-y-auto p-3">
+              <div className="flex-1 min-h-0 flex flex-col">
                 <LayersPanel
                   design={design}
                   setDesign={setDesign}
                   canvasImages={canvasImages}
                   setCanvasImages={setCanvasImages}
-                  selectedImageId={selectedImageId}
                   setSelectedImageId={setSelectedImageId}
                   removeCanvasImage={removeCanvasImage}
                   selectedIds={selectedIds}
@@ -3222,6 +3260,31 @@ export default function Home() {
                   // Through selectWithGroup like every other selection path, so
                   // a grouped shape selects its group and text-editing exits.
                   onSelectShape={(shapeId) => selectWithGroup(`shape:${shapeId}`)}
+                  // Cmd/Ctrl-click in the panel is the SAME call the canvas
+                  // makes for Shift-click, so panel and canvas cannot drift on
+                  // what toggling a grouped layer means.
+                  onToggleLayer={(layerId) => selectWithGroup(layerId, true)}
+                  onSelectLayerRange={(layerIds) => {
+                    stopTextEditing();
+                    setSelectedIds(expandToGroups(new Set(layerIds)));
+                  }}
+                  // Reaching into a group from the tree: exactly this layer, no
+                  // group expansion. The only selection path that does NOT
+                  // expand, and only the panel's child rows use it.
+                  onSelectLayerExact={(layerId) => {
+                    stopTextEditing();
+                    setCropEditingId(null);
+                    setSelectedIds(new Set([layerId]));
+                  }}
+                  onToggleLayerExact={(layerId) => {
+                    stopTextEditing();
+                    setSelectedIds((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(layerId)) next.delete(layerId);
+                      else next.add(layerId);
+                      return next;
+                    });
+                  }}
                   onDuplicateRow={(layerId) => {
                     const src: NonNullable<typeof clipboardRef.current> = { texts: [], shapes: [], images: [] };
                     if (layerId.startsWith("text:")) {
