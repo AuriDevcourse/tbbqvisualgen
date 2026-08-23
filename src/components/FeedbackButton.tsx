@@ -1,13 +1,47 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MessageSquare, Send, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-export function FeedbackButton() {
-  const [open, setOpen] = useState(false);
+interface FeedbackButtonProps {
+  /**
+   * Drive the dialog from outside and render no trigger of our own.
+   *
+   * The header's overflow menu needs Feedback as a menu row, but this component
+   * rendered its trigger and its dialog as siblings in one fragment — put that
+   * button inside a Popover and the dialog mounts inside the popover too, so
+   * closing the menu unmounts the dialog you just opened. Splitting them keeps
+   * the dialog in the header, where nothing can unmount it.
+   *
+   * Omit both and it behaves exactly as before: its own pill, its own state.
+   */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+export function FeedbackButton({ open: openProp, onOpenChange }: FeedbackButtonProps = {}) {
+  const controlled = openProp !== undefined;
+  const [openSelf, setOpenSelf] = useState(false);
+  const open = controlled ? openProp : openSelf;
+  const setOpen = (next: boolean) => {
+    if (!controlled) setOpenSelf(next);
+    onOpenChange?.(next);
+  };
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
+
+  // `autoFocus` on the textarea is not enough when the dialog is opened FROM the
+  // header's overflow menu: Radix returns focus to the popover trigger as it
+  // closes, and that happens after the dialog has mounted, so it steals the
+  // focus straight back. Re-assert it on the next frame, once the menu's own
+  // focus restore has run.
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const id = requestAnimationFrame(() => textareaRef.current?.focus());
+    return () => cancelAnimationFrame(id);
+  }, [open]);
 
   // Escape closes modal
   useEffect(() => {
@@ -46,14 +80,16 @@ export function FeedbackButton() {
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        aria-label="Send feedback"
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white/5 border border-white/10 text-white/50 hover:bg-white/10 hover:text-white/70 transition-colors"
-      >
-        <MessageSquare className="w-3.5 h-3.5" />
-        Feedback
-      </button>
+      {!controlled && (
+        <button
+          onClick={() => setOpen(true)}
+          aria-label="Send feedback"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white/5 border border-white/10 text-white/50 hover:bg-white/10 hover:text-white/70 transition-colors"
+        >
+          <MessageSquare className="w-3.5 h-3.5" />
+          Feedback
+        </button>
+      )}
 
       {open && (
         <div
@@ -78,6 +114,7 @@ export function FeedbackButton() {
               </button>
             </div>
             <textarea
+              ref={textareaRef}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={(e) => {

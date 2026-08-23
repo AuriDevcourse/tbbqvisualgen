@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Square, Circle, Minus, Star, Trash2, Eye, EyeOff, ChevronDown, ChevronRight, Plus, Link2, Unlink, ImagePlus } from "lucide-react";
+import { Square, Circle, Minus, Star, Eye, EyeOff, ChevronDown, ChevronRight, Link2, Unlink, ImagePlus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ACTION_BTN, ACTION_BTN_IDLE, ACTION_BTN_ACTIVE, ROW_BASE, ROW_HOVER, rowSelectedStyle } from "@/lib/panelRow";
 import { GeometryFields } from "@/components/GeometryFields";
 import { ColorPicker } from "@/components/ColorPicker";
 import { newShapeElement, newImagePlaceholder } from "@/types/template";
@@ -25,44 +26,42 @@ const SHAPE_BUTTONS: { type: ShapeType; label: string; Icon: typeof Square }[] =
 ];
 
 export function StepElements({ design, setDesign, selectedShapeId, onSelectShape, canvasSize = { width: 1920, height: 1080 } }: StepElementsProps) {
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  /** Which shape the properties pane below is showing, or null. See the note
+   *  in StepText — rows no longer expand, so there is nothing to "expand". */
+  const [editingId, setEditingId] = useState<string | null>(null);
+  /** Which row the pointer is over — see the note in StepText. */
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
   const shapes = design.shapes ?? [];
-  const selected = shapes.find((s) => s.id === selectedShapeId) ?? null;
   const rowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   // Auto-expand the row matching the canvas single-selection.
   useEffect(() => {
     if (!selectedShapeId) return;
-    setExpandedIds((prev) => {
-      if (prev.has(selectedShapeId)) return prev;
-      const next = new Set(prev);
-      next.add(selectedShapeId);
-      return next;
-    });
+    setEditingId(selectedShapeId);
   }, [selectedShapeId]);
 
   // Scroll in a second pass, after the expanded card has laid out — see the
   // same split in StepText for why one effect got the wrong position.
-  const focusedIsExpanded = selectedShapeId ? expandedIds.has(selectedShapeId) : false;
+  const focusedIsEditing = selectedShapeId ? editingId === selectedShapeId : false;
   useEffect(() => {
-    if (!selectedShapeId || !focusedIsExpanded) return;
+    if (!selectedShapeId || !focusedIsEditing) return;
     const el = rowRefs.current.get(selectedShapeId);
     if (!el) return;
     const raf = requestAnimationFrame(() => el.scrollIntoView({ block: "start", behavior: "smooth" }));
     return () => cancelAnimationFrame(raf);
-  }, [selectedShapeId, focusedIsExpanded]);
+  }, [selectedShapeId, focusedIsEditing]);
 
   const addShape = (type: ShapeType) => {
     const next = newShapeElement(type);
     setDesign((d) => ({ ...d, shapes: [...(d.shapes ?? []), next] }));
-    setExpandedIds((prev) => new Set(prev).add(next.id));
+    setEditingId(next.id);
     onSelectShape(next.id);
   };
 
   const addPhotoSlot = () => {
     const next = newImagePlaceholder();
     setDesign((d) => ({ ...d, shapes: [...(d.shapes ?? []), next] }));
-    setExpandedIds((prev) => new Set(prev).add(next.id));
+    setEditingId(next.id);
     onSelectShape(next.id);
   };
 
@@ -73,23 +72,19 @@ export function StepElements({ design, setDesign, selectedShapeId, onSelectShape
     }));
   };
 
-  const removeShape = (id: string) => {
-    setDesign((d) => ({ ...d, shapes: (d.shapes ?? []).filter((s) => s.id !== id) }));
-  };
-
-  const toggleExpand = (id: string) => {
-    setExpandedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
+  const editing = (design.shapes ?? []).find((sh) => sh.id === editingId) ?? null;
 
   return (
-    <div className="flex flex-col gap-4">
+    // Adders and the list on top, properties below — the same split as the Text
+    // panel, so the two behave alike.
+    <div className="flex flex-col min-h-0 flex-1 gap-4">
       {/* Add photo slot — emphasized as a primary action because it's the
        *  fastest way to lay out speaker/headshot frames before uploading. */}
+      {/* The adders keep their natural height and never scroll: they are the
+          primary action of this panel. Only the LIST is capped. Putting them
+          inside the list's budget squeezed "SHAPES (5)" down to one visible
+          row. */}
+      <div className="flex flex-col gap-4 shrink-0">
       <section className="flex flex-col gap-2">
         <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.18em]">Add photo slot</span>
         <button
@@ -123,23 +118,22 @@ export function StepElements({ design, setDesign, selectedShapeId, onSelectShape
         </div>
       </section>
 
-      {/* Shape layers list */}
-      <section className="flex flex-col gap-2 pt-3 border-t border-white/5">
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.18em]">
-            Shapes ({shapes.length})
-          </span>
-        </div>
+      </div>
 
+      {/* Shape layers list — its own scroller, so the adders above and the
+          properties below cannot starve it. */}
+      <section className="flex flex-col gap-2 flex-1 min-h-0 pt-3 border-t border-white/5">
+        {/* The `Shapes (n)` heading is gone — the ELEMENTS tab above carries
+            the count now. This row held nothing else, so the whole row and its
+            gap go with it. */}
         {shapes.length === 0 && (
           <div className="text-[11px] text-white/65 px-3 py-4 text-center border border-dashed border-white/10 rounded-lg">
             No shapes yet. Click one of the buttons above to add.
           </div>
         )}
 
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col overflow-y-auto -mx-1 px-1">
           {shapes.map((s) => {
-            const expanded = expandedIds.has(s.id);
             const isSel = selectedShapeId === s.id;
             const isPlaceholder = !!s.imagePlaceholder;
             const ShapeIcon = isPlaceholder
@@ -161,64 +155,71 @@ export function StepElements({ design, setDesign, selectedShapeId, onSelectShape
                   if (node) rowRefs.current.set(s.id, node);
                   else rowRefs.current.delete(s.id);
                 }}
-                className={cn(
-                  "rounded-lg border bg-white/5 transition-colors",
-                  isSel ? "border-[#FF0028]/50 ring-1 ring-[#FF0028]/20" : expanded ? "border-[#FF6B00]/30" : "border-white/10",
-                )}
+                onMouseEnter={() => setHoveredId(s.id)}
+                onMouseLeave={() => setHoveredId((cur) => (cur === s.id ? null : cur))}
               >
                 <div
-                  className="flex items-center gap-1.5 px-2 py-1.5 cursor-pointer"
+                  className={cn(ROW_BASE, "px-1.5 cursor-pointer", !isSel && ROW_HOVER)}
+                  style={isSel ? rowSelectedStyle() : undefined}
                   onClick={() => {
                     onSelectShape(s.id);
-                    toggleExpand(s.id);
+                    setEditingId(s.id);
                   }}
                 >
-                  <button
-                    onClick={(e) => { e.stopPropagation(); toggleExpand(s.id); }}
-                    aria-label={expanded ? "Collapse" : "Expand"}
-                    className="p-0.5 rounded text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+                  <ShapeIcon className={cn("w-3.5 h-3.5 shrink-0", isPlaceholder ? "text-[#FF6B00]" : "text-white/60")} />
+                  <span
+                    className={cn("flex-1 text-[11px] truncate", s.hidden ? "text-white/65 line-through" : "text-white/85")}
+                    title={rowLabel}
                   >
-                    {expanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                  </button>
-                  <ShapeIcon className={cn("w-3.5 h-3.5", isPlaceholder ? "text-[#FF6B00]" : "text-white/60")} />
-                  <span className={cn("flex-1 text-[11px] truncate", s.hidden ? "text-white/65 line-through" : "text-white/85")}>
                     {rowLabel}
                   </span>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); updateShape(s.id, { hidden: !s.hidden }); }}
-                    aria-label={s.hidden ? "Show shape" : "Hide shape"}
-                    className="p-0.5 rounded text-white/50 hover:text-white hover:bg-white/10 transition-colors"
-                  >
-                    {s.hidden ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); removeShape(s.id); }}
-                    aria-label="Delete shape"
-                    className="p-0.5 rounded text-white/65 hover:text-[#FF0028] hover:bg-[#FF0028]/10 transition-colors"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
+                  {(hoveredId === s.id || s.hidden) && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); updateShape(s.id, { hidden: !s.hidden }); }}
+                      aria-label={s.hidden ? "Show shape" : "Hide shape"}
+                      aria-pressed={s.hidden}
+                      className={cn(ACTION_BTN, s.hidden ? ACTION_BTN_ACTIVE : ACTION_BTN_IDLE)}
+                    >
+                      {s.hidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                  )}
+                  {/* Delete is gone from the row: clicking it already selects
+                      the shape on canvas, so the Delete key removes it. */}
                 </div>
 
-                {expanded && (
-                  <ShapeEditor
-                    shape={s}
-                    canvasSize={canvasSize}
-                    onChange={(patch) => updateShape(s.id, patch)}
-                  />
-                )}
               </div>
             );
           })}
         </div>
       </section>
 
-      {selected && !expandedIds.has(selected.id) && (
-        <div className="flex items-center gap-2 text-[10px] text-white/65">
-          <Plus className="w-3 h-3" />
-          <span>Click the selected shape row above to edit.</span>
-        </div>
-      )}
+      {/* ---- Properties for the selected shape ---- */}
+      <div className="flex flex-col min-h-0 flex-[1.6] border-t border-white/10 pt-3">
+        {editing ? (
+          <>
+            <div className="flex items-center gap-1.5 shrink-0 pb-2">
+              <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.18em] shrink-0">Editing</span>
+              <span className="flex-1 truncate text-[11px] text-white/85">
+                {editing.name?.trim()
+                  || (editing.imagePlaceholder
+                        ? `Photo slot · ${editing.imagePlaceholder.label ?? "PHOTO"}`
+                        : `${editing.type[0].toUpperCase() + editing.type.slice(1)} · ${editing.id.slice(-4)}`)}
+              </span>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto -mx-1 px-1">
+              <ShapeEditor
+                shape={editing}
+                canvasSize={canvasSize}
+                onChange={(patch) => updateShape(editing.id, patch)}
+              />
+            </div>
+          </>
+        ) : (
+          (design.shapes ?? []).length > 0 && (
+            <p className="text-[11px] text-white/45 pt-1">Pick a shape above to edit it.</p>
+          )
+        )}
+      </div>
     </div>
   );
 }
@@ -236,7 +237,7 @@ function ShapeEditor({ shape, onChange, canvasSize }: ShapeEditorProps & { canva
   const [showMore, setShowMore] = useState(false);
 
   return (
-    <div className="flex flex-col gap-2.5 px-3 pb-3 pt-1 border-t border-white/5">
+    <div className="flex flex-col gap-2.5">
       {/* Placeholder label — visible only for image-upload slots. */}
       {isPlaceholder && (
         <div className="flex items-center gap-3">

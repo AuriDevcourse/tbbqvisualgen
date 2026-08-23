@@ -1,6 +1,8 @@
 "use client";
 
-import { FormatPicker } from "@/components/FormatPicker";
+import { useState } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
+
 import { BackgroundPicker } from "@/components/BackgroundPicker";
 import { OverlayPicker } from "@/components/OverlayPicker";
 import { PhotoBackgroundCard } from "@/components/PhotoBackgroundCard";
@@ -16,11 +18,44 @@ const LOGO_STYLES: { id: NonNullable<DesignConfig["logoStyle"]>; label: string; 
   { id: "gradient", label: "Gradient", swatch: { background: "linear-gradient(120deg, #fa7000 0%, #ff2600 45%, #ce0f2e 100%)" } },
 ];
 
+/**
+ * One canvas-wide decoration, collapsed by default.
+ *
+ * Accents, the logo and the colour overlay used to sit BELOW the background
+ * gallery, so reaching the logo colour meant scrolling past eight groups of
+ * swatches — measured at 1036px of content in a 592px column, with these three
+ * making up 314px of it (PROGRESS.md handoff 36, item 5). They are above the
+ * gallery now and collapsed, which is what makes putting three sections up
+ * front affordable.
+ *
+ * Collapsed by default rather than open: they are set once per design, and the
+ * point is that they are FINDABLE, not that they are always expanded.
+ */
+function Decoration({ label, children, summary }: { label: string; summary?: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <section className="flex flex-col">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex items-center gap-1.5 py-1.5 pr-1 rounded-md hover:bg-white/[0.06] transition-colors text-left"
+      >
+        {open
+          ? <ChevronDown className="w-3.5 h-3.5 shrink-0 text-white/60" />
+          : <ChevronRight className="w-3.5 h-3.5 shrink-0 text-white/60" />}
+        <span className="flex-1 text-[10px] font-medium text-white/65 uppercase tracking-[0.18em] truncate">{label}</span>
+        {!open && summary && <span className="text-[10px] text-white/40 shrink-0 truncate max-w-[96px]">{summary}</span>}
+      </button>
+      {open && <div className="flex flex-col gap-2 pb-2 pt-0.5">{children}</div>}
+    </section>
+  );
+}
+
 interface StepCanvasProps {
+  /** Read-only here: format is CHOSEN in the canvas strip (see below), but the
+   *  accent thumbnails still need the real canvas dimensions to size against. */
   format: PlatformFormat;
-  setFormat: (next: PlatformFormat) => void;
   customSize: { width: number; height: number };
-  setCustomSize: (next: { width: number; height: number }) => void;
   design: DesignConfig;
   setDesign: (next: DesignConfig) => void;
   /** The full-bleed uploaded photo acting as the background, if any. */
@@ -31,9 +66,18 @@ interface StepCanvasProps {
 }
 
 // The template picker lives in the empty-canvas gallery (single start funnel).
-// This tab is the canvas *setup*: format, background, logo, overlay.
+// This tab is the canvas *setup*: background, logo, overlay.
+//
+// Format is NOT here any more. It used to be, in a `FormatPicker` that rendered
+// four stacked buttons — 143px with the section gap, 15% of the whole panel —
+// while the canvas strip carried a second copy of the same control, calling the
+// same `setFormat`, visible at the same time on every tab. Two controls, one
+// state. Deleting this one took the panel from 1.33 screens to 1.10 at 300px
+// wide (PROGRESS.md handoff 47). The strip gained the Custom option this block
+// used to own, which also fixed a live bug: with `format === "custom"` the
+// strip's radiogroup had ZERO checked radios.
 export function StepCanvas({
-  format, setFormat, customSize, setCustomSize, design, setDesign,
+  format, customSize, design, setDesign,
   photoBackground, addPhotoBackground, updateCanvasImage, removeCanvasImage,
 }: StepCanvasProps) {
   // The accent circles are sized off the canvas, so switching them needs the
@@ -41,54 +85,12 @@ export function StepCanvas({
   const accentDims = format === "custom" ? customSize : (FORMAT_DIMENSIONS[format] ?? FORMAT_DIMENSIONS.square);
   return (
     <div className="flex flex-col gap-5">
-      <section className="flex flex-col gap-2">
-        <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.18em]">Format</span>
-        <FormatPicker
-          value={format}
-          onChange={setFormat}
-          customWidth={customSize.width}
-          customHeight={customSize.height}
-          onCustomSizeChange={(w, h) => setCustomSize({ width: w, height: h })}
-        />
-      </section>
-
-      <section className="flex flex-col gap-2">
-        <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.18em]">Background</span>
-
-        <PhotoBackgroundCard
-          image={photoBackground}
-          onPick={addPhotoBackground}
-          onUpdate={updateCanvasImage}
-          onRemove={removeCanvasImage}
-        />
-
-        {/* The gradient still renders underneath an uploaded photo, so say so
-            rather than letting the picker look broken. */}
-        <div className="flex items-center gap-2 pt-1">
-          <span className="h-px flex-1 bg-white/10" />
-          <span className="text-[9px] uppercase tracking-[0.18em] text-white/40">
-            {photoBackground ? "Behind the photo" : "Or pick a gradient"}
-          </span>
-          <span className="h-px flex-1 bg-white/10" />
-        </div>
-
-        <div className={photoBackground ? "opacity-50 transition-opacity" : "transition-opacity"}>
-          <BackgroundPicker
-            value={design.backgroundId}
-            onChange={(id) => setDesign({ ...design, backgroundId: id })}
-          />
-        </div>
-        <p className="text-[10px] text-white/60">
-          {photoBackground
-            ? "Your photo covers this. Remove the photo to see it again."
-            : "Pause/resume the animation above the canvas."}
-        </p>
-      </section>
-
       {/* Investor accents — same choice as in Quick Templates, so fine-tuning
           a design doesn't mean losing the ability to change it. */}
-      <section className="flex flex-col gap-2">
-        <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.18em]">Investor accents</span>
+      <Decoration
+        label="Investor accents"
+        summary={ACCENT_OPTIONS.find((o) => o.id === design.accentId)?.label ?? "None"}
+      >
         <div className="flex gap-1.5">
           {[{ id: undefined, label: "None" }, ...ACCENT_OPTIONS].map((opt) => {
             const active = (design.accentId ?? undefined) === opt.id;
@@ -111,11 +113,14 @@ export function StepCanvas({
           })}
         </div>
         <p className="text-[10px] text-white/60">Renders behind every layer, in opposite corners.</p>
-      </section>
+      </Decoration>
 
-      <section className="flex flex-col gap-2 pt-3 border-t border-white/5">
+      <Decoration
+        label="TechBBQ logo"
+        summary={design.showLogo === false ? "Hidden" : (design.logoStyle ?? "white")}
+      >
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.18em]">TechBBQ logo</span>
+          <span className="text-[10px] text-white/50">Visibility</span>
           <label className="flex items-center gap-1.5 text-[10px] text-white/50 cursor-pointer select-none">
             <input
               type="checkbox"
@@ -148,10 +153,12 @@ export function StepCanvas({
           })}
         </div>
         <p className="text-[10px] text-white/60">Click the logo on the canvas to move or resize it.</p>
-      </section>
+      </Decoration>
 
-      <section className="flex flex-col gap-2 pt-3 border-t border-white/5">
-        <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.18em]">Color overlay</span>
+      <Decoration
+        label="Color overlay"
+        summary={design.overlayColor && (design.overlayOpacity ?? 0) > 0 ? `${Math.round((design.overlayOpacity ?? 0) * 100)}%` : "None"}
+      >
         <OverlayPicker
           color={design.overlayColor}
           opacity={design.overlayOpacity ?? 0}
@@ -161,7 +168,42 @@ export function StepCanvas({
           onBlendChange={(b) => setDesign({ ...design, overlayBlend: b })}
         />
         <p className="text-[10px] text-white/60">Tints the whole canvas with a color + blend mode.</p>
+      </Decoration>
+
+      <section className="flex flex-col gap-2">
+        <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.18em]">Background</span>
+
+        <PhotoBackgroundCard
+          image={photoBackground}
+          onPick={addPhotoBackground}
+          onUpdate={updateCanvasImage}
+          onRemove={removeCanvasImage}
+        />
+
+        {/* The gradient still renders underneath an uploaded photo, so say so
+            rather than letting the picker look broken. */}
+        <div className="flex items-center gap-2 pt-1">
+          <span className="h-px flex-1 bg-white/10" />
+          <span className="text-[9px] uppercase tracking-[0.18em] text-white/40">
+            {photoBackground ? "Behind the photo" : "Or pick a gradient"}
+          </span>
+          <span className="h-px flex-1 bg-white/10" />
+        </div>
+
+        <div className={photoBackground ? "opacity-50 transition-opacity" : "transition-opacity"}>
+          <BackgroundPicker
+          collapsible
+            value={design.backgroundId}
+            onChange={(id) => setDesign({ ...design, backgroundId: id })}
+          />
+        </div>
+        <p className="text-[10px] text-white/60">
+          {photoBackground
+            ? "Your photo covers this. Remove the photo to see it again."
+            : "Pause/resume the animation above the canvas."}
+        </p>
       </section>
+
     </div>
   );
 }

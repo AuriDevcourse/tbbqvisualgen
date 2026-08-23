@@ -22,9 +22,11 @@ export function StepImages({
   // would offer radius / border / size controls that break its full-bleed fit.
   const placedImages = canvasImages.filter((ci) => !ci.isBackdrop);
   return (
-    <div className="flex flex-col gap-5">
-      <section className="flex flex-col gap-2">
-        <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.18em]">Images on canvas</span>
+    <div className="flex flex-col gap-5 min-h-0 flex-1">
+      <section className="flex flex-col gap-2 min-h-0 flex-1">
+        {/* The `Images (n)` heading that used to sit here is gone: the tab
+            directly above it already says IMAGES, and now carries the count
+            too. One word, said once. */}
         {canvasImages.length !== placedImages.length && (
           <p className="text-[10px] text-white/55">
             Your photo background is set in the Canvas step.

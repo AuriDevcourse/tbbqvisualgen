@@ -123,16 +123,21 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
     replaceInputRef.current?.click();
   }, []);
 
-  // When canvas-side single-selection picks an image, scroll its card into
-  // view so the user can immediately reach its controls. `block: "start"` puts
-  // the card at the top of the panel with the controls below it; "nearest"
-  // refused to move at all whenever a sliver of the card was already visible,
-  // which on a long list left the controls off screen.
+  // Scroll the selected card into view, but only if it is actually off screen,
+  // and WITHIN the list's own scroller.
+  //
+  // This used to be `block: "start"`, which yanked the chosen card to the top
+  // of the panel every time — Auri: "I press on first image and it scrolls down
+  // to the properties and I cannot see what was selected". That behaviour made
+  // sense when the controls rendered directly beneath the list and had to be
+  // dragged into view. The properties have their own pane now, so the list no
+  // longer needs to move at all in the common case, and `nearest` leaves an
+  // already-visible card exactly where it is.
   useEffect(() => {
     if (!selectedId) return;
     const el = cardRefs.current.get(selectedId);
     if (!el) return;
-    const raf = requestAnimationFrame(() => el.scrollIntoView({ block: "start", behavior: "smooth" }));
+    const raf = requestAnimationFrame(() => el.scrollIntoView({ block: "nearest", behavior: "smooth" }));
     return () => cancelAnimationFrame(raf);
   }, [selectedId]);
 
@@ -263,8 +268,11 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
   };
 
   return (
-    <div className="flex flex-col gap-3">
-      {/* Image list */}
+    // Same split as the Text and Elements panels (item 4): the list keeps its
+    // own scroller so selecting a photo can no longer scroll the list out of
+    // view and leave you unsure which card you picked.
+    <div className="flex flex-col gap-3 min-h-0 flex-1">
+      <div className="flex flex-col gap-3 flex-1 min-h-0 overflow-y-auto -mx-1 px-1">
       {images.map((img) => (
         <div
           key={img.id}
@@ -278,7 +286,7 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
             e.stopPropagation();
             openReplacePicker(img.id);
           }}
-          title="Click to edit this image · double-click to change the picture, keeping this box"
+          title={`${img.name?.trim() || `Photo · ${img.id.slice(-4)}`} — click to edit, double-click to change the picture and keep this box`}
           className={cn(
             "flex items-center gap-3 p-1.5 rounded-lg cursor-pointer transition-all duration-150",
             img.id === selectedId
@@ -295,14 +303,27 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
             className="w-10 h-10 object-cover shrink-0"
           />
           <div className="flex-1 min-w-0">
-            <span className="block text-xs text-white/50">
-              {img.id === selectedId ? "Selected" : "Click to edit"}
+            {/* The card says WHICH image this is, not what to do with it. Every
+                card used to read "Click to edit / Double click to change
+                picture", so four photos were four identical cards and the
+                thumbnail was the only identity — while the Layers panel showed
+                the name, the crop and the lock all along (PROGRESS.md handoff
+                32's census, item 8). The instruction moved to the row's
+                `title`: it is a one-time discovery, not worth four permanent
+                repetitions. */}
+            <span className={cn("block text-xs truncate", img.id === selectedId ? "text-white/90" : "text-white/80")}>
+              {img.name?.trim()
+                || `Photo · ${img.id.slice(-4)}`}
             </span>
-            {/* Spelled out rather than left as a discoverable gesture — nobody
-                guesses a double-click, and the alternative was delete-and-
-                re-add, which threw the whole frame away. */}
+            {/* The second line carries STATE the Layers panel already showed
+                and this list did not: size, crop, lock, hidden. */}
             <span className="block text-[10px] text-white/40 truncate">
-              Double click to change picture
+              {[
+                img.naturalWidth && img.naturalHeight ? `${img.naturalWidth} \u00d7 ${img.naturalHeight}` : null,
+                img.crop ? "cropped" : null,
+                img.locked ? "locked" : null,
+                img.hidden ? "hidden" : null,
+              ].filter(Boolean).join(" \u00b7 ") || "\u00a0"}
             </span>
           </div>
           <button
@@ -384,10 +405,20 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
         </div>
       )}
 
-      {/* Controls for selected image */}
+      </div>
+
+      {/* Properties for the selected image — its own pane, its own scroller. */}
       {selectedImage && (() => {
         const currentRadius = selectedImage.cornerRadius ?? (selectedImage.shape === "circle" ? 50 : 10);
-        return (<>
+        return (
+        <div className="flex flex-col min-h-0 flex-[1.4] border-t border-white/10 pt-3">
+          <div className="flex items-center gap-1.5 shrink-0 pb-2">
+            <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.18em] shrink-0">Editing</span>
+            <span className="flex-1 truncate text-[11px] text-white/85">
+              {selectedImage.name?.trim() || `Photo · ${selectedImage.id.slice(-4)}`}
+            </span>
+          </div>
+          <div className="flex flex-col gap-3 flex-1 min-h-0 overflow-y-auto -mx-1 px-1">
           <GeometryFields
             value={{ x: selectedImage.x, y: selectedImage.y, width: selectedImage.width, height: selectedImage.height }}
             canvasWidth={canvasSize.width}
@@ -665,7 +696,8 @@ export function ImagePlacer({ images, selectedId, onAdd, onUpdate, onRemove, onS
               </button>
             )}
           </div>
-        </>);
+          </div>
+        </div>);
       })()}
 
       {cropDialogFor && (() => {

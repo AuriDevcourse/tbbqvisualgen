@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { Eye, EyeOff, Trash2, GripVertical, Type, ImageIcon, Layers as LayersIcon, Square, ImagePlus, Paintbrush, Lock, Unlock, Copy, Folder, ChevronDown, ChevronRight, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { SELECTION_COLOR } from "@/lib/selectionStyle";
+import { ACTION_BTN, CONTENT_LABEL_CHARS, ROW_BASE, ROW_HOVER, rowSelectedStyle } from "@/lib/panelRow";
 import type { DesignConfig } from "@/types/template";
 import { BACKGROUND_OPTIONS, reconcileLayerOrder, splitImageLayerIds } from "@/types/template";
 import type { CanvasImage } from "./ImagePlacer";
@@ -65,26 +65,6 @@ interface LayersPanelProps {
 }
 
 type RowType = "background" | "overlay" | "image" | "text" | "shape" | "tbbqLogo" | "group";
-
-/**
- * Row-action hit box. 24px is the WCAG 2.2 AA 2.5.8 floor and CLAUDE.md r9
- * makes it a defect rather than a preference — these buttons were 16px, the
- * same call the canvas already made with `HANDLE_HIT_PX = 20`. The icon stays
- * small; only the target grows.
- */
-const ACTION_BTN = "flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors";
-
-/**
- * How much of a text layer's content stands in for its name when the layer
- * has no name of its own.
- *
- * This was 24, chosen when the label had 74px to live in because the row's
- * four always-on buttons ate the rest. Hover-reveal gave the label 182px, at
- * which point the 24-char cut was the ONLY thing still truncating names —
- * "Draft note — do not expo" with room to spare. 48 fills the width the row
- * now has; `truncate` handles anything longer.
- */
-const CONTENT_LABEL_CHARS = 48;
 
 interface Row {
   id: string;
@@ -668,7 +648,8 @@ export function LayersPanel({
               // background painted on all 19 rows at rest, which is what made
               // them compete. A radius on the ONE row being pointed at or
               // selected reads as a highlight, which is what Figma does too.
-              "relative flex items-center gap-1.5 h-8 pr-1 rounded-md transition-colors",
+              ROW_BASE,
+              "pr-1",
               // One indent level is all the model can express: an element has
               // at most one groupId, and groups do not nest.
               row.depth ? "pl-5" : "pl-1.5",
@@ -676,13 +657,13 @@ export function LayersPanel({
               // the panel and the canvas cannot drift apart. It was #FF0028
               // here and #2C7BE5 on canvas: two colours for one idea, and the
               // brand red also reads as artwork rather than as chrome.
-              !isSelected && "hover:bg-white/[0.06]",
+              !isSelected && ROW_HOVER,
               isBeingDragged && "opacity-30",
               clickable && "cursor-pointer",
               isDropTarget && dragOverPos === "above" && "before:absolute before:left-0 before:right-0 before:top-0 before:h-0.5 before:bg-[#FF6B00] before:rounded-full before:pointer-events-none",
               isDropTarget && dragOverPos === "below" && "after:absolute after:left-0 after:right-0 after:bottom-0 after:h-0.5 after:bg-[#FF6B00] after:rounded-full after:pointer-events-none",
             )}
-            style={isSelected ? { backgroundColor: `${SELECTION_COLOR}33` } : undefined}
+            style={isSelected ? rowSelectedStyle() : undefined}
           >
             {row.type === "group" && (
               <button

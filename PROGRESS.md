@@ -6,6 +6,1743 @@ not required reading.
 
 ---
 
+## ⏸ STOPPED HERE · 2026-08-23 — plan closed except item 5's Elements half (+ 9B rename)
+
+Items 1-4 of the left-panel plan are done. Item 5 is next.
+
+### Everything below is UNCOMMITTED. Do not `git checkout .`
+
+Last commit is `2fb6233` (the Layers panel work, already pushed to `master`
+and therefore live on Vercel). Items 1, 2 and 3 of the LEFT-panel plan are in
+the working tree only:
+
+```
+ M src/app/editor/page.tsx
+ M src/components/BackgroundPicker.tsx
+ M src/components/LayersPanel.tsx
+ M src/components/steps/StepCanvas.tsx
+ M src/components/steps/StepElements.tsx
+ M src/components/steps/StepText.tsx
+ M PROGRESS.md                      (handoffs 36–44)
+?? src/lib/panelRow.ts              (NEW, untracked — easiest thing to lose)
+?? src/components/TextEditor.tsx    (NEW, untracked — same risk)
+ M src/data/logoLibrary.json        (predev churn, not real work — see below)
+```
+
+`tsc --noEmit` clean, `npx vitest run` 377/377 at the point of stopping. The
+two eslint errors in `StepText` / `StepElements` (setState in an effect) are
+pre-existing and predate all of this.
+
+### Where the left-panel plan stands
+
+Plan is handoff **36** (the audit: 3 root causes, 10 ranked fixes).
+
+| item | state |
+|---|---|
+| 1 · one row design across all three lists | **done** (handoff 37) |
+| 2 · background gallery collapses | **done** (handoff 38) |
+| 3 · one expanded row at a time | **done** (handoff 39) |
+| 4 · properties into their own pane | **done** (handoff 40) |
+| 5 · Canvas panel split | **done for Canvas** (handoff 41) · Elements half NOT done |
+| 6 · filter the backgrounds | **DROPPED** — no question it answered |
+| 7 · one truncation rule | **done** — via item 1 |
+| 8 · image cards need identity | **done** (handoff 42) |
+| 9 · tab semantics | **9A done** (handoff 43) · 9B rename deferred into item 5 |
+| 10 · left-panel header parity | **done** (handoff 44) |
+
+### Item 5 is next, and it now covers TWO panels
+
+Canvas is six jobs in one column (1052px in a 566px body). Item 4 revealed the
+Elements panel has the same disease: its adders take a third of the column, so
+its list gets 87px and its properties 152px. Read item 5 as covering both.
+
+Also fold in the `GlassCard` conditional wart from handoff 40 — once Canvas owns
+its own scrolling, `currentStep === 2 || currentStep === 4` can go.
+
+### Demo artifact
+
+`https://claude.ai/code/artifact/7a454193-3e13-4af6-8d67-c9ba75db80ff`
+("Left Panel Rebuild") shows items 1-3 before/after. Republish by editing the
+same file path; passing a different path makes a SECOND artifact. There is also
+a throwaway "Render Probe" artifact from debugging that can be deleted.
+
+### The `logoLibrary.json` churn is not work
+
+`predev` / `prebuild` regenerate it and line endings differ between machines,
+so it shows as ~1180 changed lines of nothing. It was deliberately left out of
+the last commit. The real fix is the `.gitattributes` line still open from
+handoff 27: `*.svg text eol=lf`.
+
+---
+
+## SESSION HANDOFF · 2026-08-23 (52): handoff 51 items 1 + 2 shipped · Start over actually starts over
+
+Items 1 and 2 of handoff 51. Both were one-cause bugs in `handleReset`.
+
+### What was wrong
+
+```js
+if (canvasImages.length === 0 && design.texts.length === 0) return;   // shapes ignored
+setDoc((prev) => ({ ...prev, design: DEFAULT_DESIGN, canvasImages: [] })); // format kept
+```
+
+1. **A shapes-only canvas reported "empty"** and the function returned before the
+   confirm, so Start over produced no confirm, no reset and no toast — no signal
+   of any kind. Reproduced before the fix (handoff 51).
+2. **`{...prev}` kept `format` and `customSize`**, so starting over on a Custom
+   4096×100 canvas handed you a *blank* 4096×100 canvas.
+
+### The fix, and why it is shaped this way
+
+**`canvasIsEmpty` was hoisted ~600 lines**, from just above `photoBackground` to
+just above `handleReset`. That distance is the actual root cause: the correct
+expression already existed and already counted shapes, but it was declared far
+past the reset guard, so the guard grew a second copy and the copy was wrong.
+There is now one expression with both callers.
+
+**The doc is replaced outright — `setDoc(() => INITIAL_DOC)` — not spread.** A
+spread requires remembering every field; `DocSnapshot` has four and the author
+remembered two. Assigning `INITIAL_DOC` makes "forgot a field" impossible, so
+when a fifth field is added it cannot silently survive a reset the way `format`
+did. Still `setDoc`, not `replaceDoc`, so the reset stays on the undo stack.
+
+**The silent `return` became a toast.** "Already a blank canvas" — if the answer
+is "there is nothing to do", say it. Note the guard is now
+`canvasIsEmpty && format === INITIAL_DOC.format`, because an empty canvas that
+is still 4096×100 *does* have something to reset.
+
+**The confirm text was wrong and is now right:** it said "clears the design, text,
+and images" and never mentioned shapes; it now reads "clears the text, images,
+shapes and canvas size."
+
+### Verified in the running editor
+
+`window.confirm` blocks the automation, so it was stubbed to return true for the
+duration of the test — that exercises the real code path rather than skipping it.
+
+**Test A — empty canvas, default format**
+- `confirm` called **0** times · toast **"Already a blank canvas"** · nothing reset
+
+**Test B — 4 shapes, format = custom 1080×1080**
+- `confirm` called **1** time — the old guard returned before ever reaching it
+- text: *"Start over? This clears the text, images, shapes and canvas size."*
+- shapes: `Elements, 4` → **`Elements`** (badge gone)
+- format: **`1080×1080*` → `1:1*`**, Custom relabelled to the word
+- toast: "Reset — ready for a new visual"
+
+**Undo** — clicked Undo after the reset: format back to `1080×1080*`, tabs back
+to `Elements, 4`. The reset is undoable, as intended.
+
+`tsc --noEmit` clean · `eslint` **0 errors** · `vitest run` **377/377**
+
+### Design call worth revisiting
+
+Start over now resets format to `square`. That is the honest reading of "start
+over" and it makes the code trivially correct, but if you produce several 9:16
+stories in a row you will be switching format back each time. Keeping a *preset*
+format while still normalising `custom` is a one-line change if that turns out
+to be the annoying behaviour — say so and it moves.
+
+### Still open from handoff 51
+
+**3** make load-template and start-over one function · **4** clear
+`selectedIds` / `cropEditingId` · **5** reset `galleryDismissed` so the start
+gallery returns · **6–10** the Templates modal.
+
+Item 4 is now the odd one out: `onLoad` clears both, `handleReset` still clears
+neither, so you can be mid-crop on an image that no longer exists. It is the
+natural next commit and it is what makes item 3 obvious.
+
+Also unchanged: `window.confirm` is still the app's only native modal (handoff
+45 item 4), and `sessionStorage.removeItem(STORAGE_KEY)` in `handleReset` is
+still a no-op — the 350ms debounced persist rewrites immediately after.
+
+---
+
+## SESSION HANDOFF · 2026-08-23 (51): Templates modal + Start over · 10 ranked fixes, none built yet
+
+### State: this is a PLAN, not a shipped change. Neither file was touched.
+
+Auri asked for research and 10 improvements across two things: the Templates
+panel, and what happens when you Start over. Same method as handoffs 28, 36
+and 46 — measure, then rank by value per unit of diff.
+
+### What was measured
+
+Templates modal, open, at 1512×893:
+
+| | |
+|---|---|
+| modal | **672 × 714px** |
+| unused viewport | **840px of width, 179px of height** |
+| body scroller | **570px visible / 1568px content = 2.75 screens** |
+| presets section / templates section | 627px / **905px** |
+| interactive elements | 36 |
+| **under 24px** | **13** — smallest **19px** |
+| inputs | **1**, "Name this template (optional)" — no filter, no search |
+| `role="dialog"` / `aria-modal` | **absent / absent** |
+| focus on open | **`<body>`** — never moved into the modal |
+| focus trap | **none** — 5 header buttons still tabbable behind it |
+| Escape closes it | **no** (backdrop click and the X only) |
+
+The 13 sub-24px targets: `Move to folder` 22×22 (×3), `Hide preset` 22×22 (×3),
+`Delete template` 22×22 (×6), `Restore 1 hidden` 110×**19**. Deletes already use
+confirm-tick (`confirmDeleteId`), so this is purely hit size, not armed
+destruction.
+
+### The core finding: two document-replacement paths, and the newer one does less
+
+Loading a template and starting over both replace the document. They clean up
+different things, and **Start over cleans up less**:
+
+| | `onLoad` (template) | `handleReset` (Start over) |
+|---|---|---|
+| `format` / `customSize` | **replaced** (`setDoc(t.doc)`) | **KEPT** (`{...prev}`) |
+| `selectedIds` | cleared | **not cleared** |
+| `cropEditingId` | cleared | **not cleared** |
+| `selectedImageId` | — | cleared |
+| `currentStep` | — | set to 1 |
+| `galleryDismissed` | not cleared | **not cleared** |
+
+`SavedTemplate.doc` carries `format` and `customSize` (`types/sharedLibrary.ts`),
+so templates ARE format-aware. Start over is not. These should be one function.
+
+### Reproduced, not inferred
+
+**Start over does nothing at all when the canvas holds only shapes.** Added 4
+shapes (0 texts, 0 images), clicked Start over: no confirm, no reset, no toast,
+the menu just closed. The guard is
+`if (canvasImages.length === 0 && design.texts.length === 0) return;` — shapes
+are not checked, though `canvasIsEmpty` (~600 lines away) does check them. The
+early return also means the `window.confirm` never fires, which is why this was
+safe to test.
+
+### The 10, ranked by value per unit of diff
+
+**Start over**
+
+1. **Fix the guard: count shapes.** A canvas of five shapes reports "empty" and
+   Start over silently no-ops, giving no feedback of any kind. Reuse
+   `canvasIsEmpty`, which already has the right expression, instead of a second
+   hand-rolled one. One line, and it removes a dead end the user cannot diagnose.
+2. **Reset the canvas format.** `{...prev}` keeps `format` and `customSize`, so
+   Start over on a Custom 4096×100 canvas hands you a *blank* 4096×100 canvas.
+   Now that Custom is a first-class control (handoff 47) this is easy to hit and
+   very confusing. Loading a template already replaces format — match it.
+3. **Make the two replacement paths ONE function.** Per the table above,
+   `handleReset` and `onLoad` each clear a different subset. A single
+   `replaceDocument(next, { resetView })` used by both is what stops item 2 and
+   item 4 recurring the next time either path grows.
+4. **Clear the stale selection and crop state.** `handleReset` clears neither
+   `selectedIds` nor `cropEditingId`, so you can be mid-crop on an image that no
+   longer exists. `onLoad` already clears both.
+5. **Bring the start gallery back.** `galleryDismissed` flips true when you pick
+   a background and is never reset, so a freshly-started doc renders the
+   *dismissed* empty state rather than the template gallery — withholding
+   templates at the exact moment they are most useful.
+
+**Templates modal**
+
+6. **Make it a real dialog.** No `role="dialog"`, no `aria-modal`, focus stays
+   on `<body>`, nothing traps Tab (5 header buttons remain reachable behind it),
+   and **Escape does not close it** — while `FeedbackButton`'s dialog in the same
+   app does. Two dialogs, two contracts. Cheapest correctness win here.
+7. **Raise the 13 sub-24px targets.** Smallest is 19px. The left panel went
+   39 → 0 across handoffs 29–35 and this modal was simply never included, so the
+   editor is now internally inconsistent: 24px everywhere the panels reach, 19px
+   here.
+8. **Use the width.** 672px of a 1512px viewport, 840px unused, while the body
+   is 2.75 screens. A wider modal — or two columns, presets beside templates —
+   converts unused horizontal space into removed vertical scroll. Biggest
+   measured number in this area.
+9. **Add a filter.** 3 presets + 6 templates + folders = 1568px of list with no
+   way to narrow it. **Note this reverses the call in handoff 46 item 6**, where
+   a search box was rejected for the left panel — correctly, because the longest
+   list there is 14 short rows. Here the list is 2.75 screens of thumbnail cards,
+   so the same argument points the other way.
+10. **Show a saved template's format on its card.** `FORMAT_BADGES` is rendered
+    for presets only (lines 361/365); template cards show thumbnail, name and
+    date. Since loading replaces `format`, clicking a 9:16 template while you
+    are on 16:9 silently reshapes the canvas with no warning beforehand.
+
+### Two notes, folded in rather than ranked
+
+- **`sessionStorage.removeItem(STORAGE_KEY)` in `handleReset` is a no-op in
+  practice** — the 350ms debounced persist rewrites the (now empty) doc
+  immediately after. Harmless, but it reads as if it does something.
+- **`window.confirm`** is still the only native modal in the app (handoff 45
+  item 4). It belongs with this work: if Start over is being fixed anyway, the
+  confirm should become the app's own confirm-tick at the same time. It also
+  blocks automation, which is why `Start over` could not be driven end-to-end.
+
+### Suggested order
+
+**1 → 2 → 4 → 3** as one commit (the guard, then the state it should be
+clearing, then extracting the shared function once you know what belongs in it),
+then **6** on its own, then **8 + 9** together since both are layout.
+
+---
+
+## SESSION HANDOFF · 2026-08-23 (50): handoff 46 item 9 shipped · the header stops wrapping
+
+Item 9, the last of handoff 46's three deletions/moves. The four wayfinding
+pills — Simple Editor, Templates, New, Feedback — are now one overflow control.
+
+### Correction to handoff 45, item 2
+
+Handoff 45 reported the header growing to **88px at 1280**. That measurement was
+taken **with the Quick Templates button present** and the handoff never said so.
+Measured both states properly this time:
+
+| | group width | wraps at | at Auri's 1219 | at 1024 |
+|---|---|---|---|---|
+| without the QT button | 765px | 1024px | 66px | 88px |
+| **with** it (the Quick Templates entry path) | **1010px** | **1280px** | **88px** | **114px** |
+
+So the 88px-at-1280 figure was right, but only on the Quick Templates path — and
+that is the path that matters, because it is how people arrive. **At Auri's own
+1219 viewport, arriving from Quick Templates, the header was 88px**: 22px of
+canvas gone and "Visual Generator" broken across two lines.
+
+The cause is that `<h1>` was the only shrinkable thing in a
+`flex items-center gap-4` row with `ml-auto` and no `shrink-0` on the pills. The
+product name gave way so that six secondary buttons could keep full width.
+
+### Measured result
+
+| | before | after |
+|---|---|---|
+| action group (with QT button) | **1010px** | **568px** |
+| children | 7 | 4 — QT 238 · overflow **32** · export 144 · save 130 |
+| wrap threshold | **1280px** | **860px** |
+| header at 1219 / 1100 / 1024 | 88 / 98 / 114px | **66 / 66 / 66px** |
+
+The four pills were 451px, 59% of the group; they are a 32px button now.
+
+### Design calls
+
+- **`Save & back to Quick Templates` stays visible.** It is task completion for
+  the flow you are in, not wayfinding. It is also the 238px that made the wrap
+  happen, so it is the thing the extra room is *for*.
+- **Templates' count moves onto the trigger** as a corner badge. The whole point
+  of that badge is saying there is something in there; hiding it inside the menu
+  would have deleted the signal. It also appears again on the menu row.
+- **`Start over` sits below a separator.** It throws the design away while
+  having had the exact same pill styling as `Templates`.
+- Menu rows are 216×36 — no 24px-target problem.
+
+### Two real bugs this surfaced, both fixed
+
+1. **A dialog opened from inside a Popover unmounts when the Popover closes.**
+   `FeedbackButton` rendered its trigger and its dialog as siblings of one
+   fragment, so putting the trigger in the menu put the dialog there too. It now
+   takes optional `open` / `onOpenChange`; in that mode it renders **no trigger**
+   and the editor renders it as a sibling of the overflow trigger, outside the
+   menu. Uncontrolled use is unchanged, so nothing else had to move.
+2. **Radix returns focus to the popover trigger AFTER the dialog mounts**, so the
+   textarea's `autoFocus` lost the race and focus landed back on "More actions".
+   A `requestAnimationFrame` refocus did **not** fix it — the restore happens
+   later still. The fix is to stop the restore, not out-time it:
+   `onCloseAutoFocus` calls `preventDefault()`, but **only when a menu row opened
+   a dialog** (tracked in a `menuOpenedDialog` ref). Escape-dismissing the menu
+   still returns focus to the trigger, which is what a keyboard user needs.
+
+**Do not fix a focus race with a timer.** Both attempts are recorded above
+because the timer version looks like it works until something re-orders.
+
+### Verified in the running editor
+
+- `tsc --noEmit` clean · `vitest run` **377/377** · eslint **0 errors**
+- Group **1010 → 568px**; header **66px at every width from 1512 down to 860**
+- Overflow trigger 32×32 with the `6` templates badge
+- Menu opens: 4 rows at 216×36, `Templates` shows its count, 1 separator,
+  `aria-expanded` toggles
+- `Send feedback` → menu closes, dialog opens, **textarea focused**
+- Escape-dismiss → menu closes, **focus back on the trigger**
+- `Templates` → the modal opens (z-300 overlay reading
+  "Templates / Presets (3) / Team presets")
+
+**`Start over` was NOT clicked.** It calls `window.confirm`, which blocks the
+page and the automation with it. Its handler is the same one the pill used, and
+it is still the `window.confirm` flagged as handoff 45 item 4.
+
+### Logged, not fixed
+
+`TemplatesModal` has **no `role="dialog"` and no `aria-modal`** — it is a
+`fixed inset-0` div at z-300. Found because a `role="dialog"` query said the
+modal had not opened when it had. Pre-existing, out of scope here.
+
+### Handoff 46 status
+
+Built: **1** (Format duplicate, 143px) · **6 + 7** (counts onto the tabs) ·
+**9** (this). Remaining: **2** (243px of background group headers — the biggest
+single number left), **3**, **4**, **5**, **8**, **10**.
+
+---
+
+## SESSION HANDOFF · 2026-08-23 (49): Auri's two findings on the custom size · Enter closes, and exports stop lying about their size
+
+Both came from Auri actually using the control shipped in handoff 47 — neither
+was caught by the verification there.
+
+### 1. Enter applied the size but left the fields sitting open
+
+Reads as "nothing happened", when in fact the size had already committed and was
+already showing on the radio. The popover has no job once you have committed.
+
+`Popover.Root` is now **controlled** (`customSizeOpen`), and the Enter handler
+does `applyCustomSize(); setCustomSizeOpen(false);`. Blur still applies without
+closing, which is what you want when tabbing width → height.
+
+### 2. The exported file was 2× the size typed — and it always has been
+
+**Not a regression from handoff 47.** `useExport.ts` has always set
+`pixelRatio: 2`, with a comment saying so: a 2× supersample, because the
+condensed TechBBQ wordmark's thin strokes anti-alias to grey at 1:1. So **every
+still has always exported at twice its design size** — the 1:1 preset (1500²)
+writes **3000²**, 16:9 writes 3840×2160.
+
+Nobody noticed because the presets are labelled by their *design* size and you
+do not check the file. **Custom is what exposed it:** typing an exact number
+states an intent, and silently returning double is a lie of omission. Auri typed
+1080 and opened a 2160px PNG.
+
+**The supersample stays** — it exists for a real reason and removing it would
+make every export worse. What changed is that the UI now says it:
+
+- `EXPORT_SUPERSAMPLE = 2` is **exported from `useExport.ts`** and used for
+  `pixelRatio`, so the number the UI prints cannot drift from the number the
+  renderer uses. Anything showing a size to the user multiplies by it rather
+  than hard-coding 2.
+- The custom popover's footer: `Enter to apply · exports at 8192×200`.
+- The custom radio's `title`: design size **and** export size.
+- **`Save image`'s tooltip now names the output pixels for every format**, not
+  just custom — verified reading `1:1` as
+  `Save the bare background — no logo, no text · 3000×3000px (⌘E)`. That is the
+  general fix; the popover label is the specific one.
+
+MP4 is untouched: video is capped by `MAX_VIDEO_PIXELS` and scaled by
+`videoFrameSize`, a different path that never supersampled.
+
+### Verified in the running editor
+
+- `tsc --noEmit` clean · `vitest run` **377/377** · eslint **0 errors**
+- Doc persisted at 4096×100 across a reload; popover opened reading
+  **`exports at 8192×200`**
+- Typed `1080` + Enter → **popover closed**, radio read `1080×100`, canvas refit
+  to 70%, focus returned to the radio
+- Clicked `1:1` → exactly **1 checked radio**, Custom relabels back to the word
+  "Custom", and `Save image`'s title read **`· 3000×3000px`**
+
+### Open question for Auri, not a bug
+
+If an exact output size is ever needed (a spec that says 1080×1080 and means
+it), the fix is a 1× / 2× export-scale choice, not removing the supersample.
+Not built — nobody has asked for it, and the label now at least makes the 2×
+predictable.
+
+---
+
+## SESSION HANDOFF · 2026-08-23 (48): handoff 46 items 6 + 7 shipped · counts moved onto the tabs
+
+Items 6 and 7 of handoff 46 turned out to be one change, so they shipped
+together: put the count on the tab, then delete the panel heading that was
+saying the same word one row lower.
+
+### Correction to handoff 46, item 7
+
+**Item 7 claimed the change "returns a ~25px row on every tab". That was
+wrong.** Measured after the fact, by re-inserting a row identical to the deleted
+one and reading the delta:
+
+| panel | what happened | height recovered |
+|---|---|---|
+| **Images** (`#panel-3`) | the heading was a bare `<span>` with nothing else in the row | **+23px to the list scroller** (685 → 708) |
+| **Elements** (`#panel-4`) | heading had its own row, but the column is ratio-driven | **0px** — both scrollers stayed 128px / 251px |
+| **Text** (`#panel-2`) | `Add text` shares the row, so the row cannot go | **0px, by construction** |
+
+So the height benefit is **23px on one of three tabs**, not 25px on all of them.
+Two related things I had also not registered when writing item 7:
+
+1. **Elements and Images do not overflow at all.** Their content height measures
+   exactly the panel height (708px = 708px) because they are `flex-1 min-h-0`
+   columns that *fill* the space. Removing a row there redistributes space; it
+   does not shorten anything. Only the **Canvas** panel actually overflows —
+   which is why handoff 47's item 1 was worth 143px and this one is worth 23px.
+2. In Elements the freed 23px did **not** reach either scroller. Something else
+   in that flex column absorbed it. Not chased; nothing regressed (both
+   scrollers measured identical before and after), but it is unexplained.
+
+**The real value of this change is item 6, not item 7** — the count becoming
+visible on the control that chooses the list. The row deletions are tidying.
+
+### Why the count rides the icon line, not the label
+
+Measured the intrinsic text width against the actual label box, at a 340px
+panel (usable label width **72px** after padding, 10px/500 uppercase,
+0.5px tracking):
+
+| string | width | |
+|---|---|---|
+| `Text` | 27.7px | |
+| `Images` | 41.5px | |
+| `Canvas` | 44.6px | |
+| `Elements` | **57.4px** | fits |
+| `Elements (5)` | **75.5px** | **does not fit** |
+| `Images (4)` | 60.1px | fits |
+
+And at Auri's 300px panel each tab is only ~70px wide, so the label has ~62px —
+`Elements` alone is already tight there and any suffix truncates. `truncate`
+would have hidden the count silently, which is worse than not having it.
+
+**Do not measure this with `scrollWidth`.** The label has `truncate w-full`, so
+`scrollWidth` equals `clientWidth` and reports "fits" for every string. Clone
+into a detached `<span>` with `white-space:nowrap` and the same computed
+`font` / `letterSpacing` / `textTransform`.
+
+### What changed
+
+- **`Stepper.tsx`** — new optional `counts?: Partial<Record<number, number>>`
+  prop, keyed by step id. The badge sits beside the icon in a new
+  `flex items-center gap-1` wrapper; the label row is untouched. `count ? … :
+  null` so **0 renders nothing**, matching the header's Templates badge.
+  `aria-label` became `` `${label}, ${count}` `` — a visual badge that is not
+  spoken makes the tab announce less than it shows.
+- **`editor/page.tsx`** — passes `{2: texts.length, 3: placed images, 4:
+  shapes.length}`. **Canvas gets no count**: it is setup, not a list. **Images
+  counts placed photos only** (`!ci.isBackdrop`), matching what the Images panel
+  lists — the full-bleed backdrop is set in Canvas and is not a row there, so
+  counting it would make the badge disagree with the list it describes.
+- **`StepImages.tsx`** — `Images (n)` span deleted.
+- **`StepElements.tsx`** — `Shapes (n)` and its wrapper row deleted.
+- **`StepText.tsx`** — `Text (n)` deleted; the row stays for `Add text` and
+  became `justify-end` (it was `justify-between` with the label on the left).
+
+### Verified in the running editor
+
+- `tsc --noEmit` clean · `vitest run` **377/377** · eslint **2 errors, both
+  pre-existing** (`set-state-in-effect` at `StepText:50` and `StepElements:40`,
+  confirmed by linting a `git stash`ed tree)
+- Empty doc: **no badges on any tab** (all four 80×51)
+- 12 texts added: `TEXT` shows `12`, `aria-label="Text, 12"`, tab still
+  **80×51**, label **not truncated** — the two-digit case fits
+- 4 shapes added: `ELEMENTS` shows `4`, `aria-label="Elements, 4"`
+- Canvas and Images stayed badge-free while empty
+- `#panel-2` no longer contains `Text (` · `#panel-3` no `Images (` ·
+  `#panel-4` no `Shapes (`
+- `#panel-2` first row is now `h=25px, justify-content: flex-end`, single child
+  `button "Add text"`
+
+### Handoff 47's outstanding gap is now CLOSED
+
+**The custom canvas size applies and clamps at both bounds.** Verified with real
+typing (not synthetic events) in the running editor:
+
+| typed | field became | strip radio | canvas |
+|---|---|---|---|
+| — (clicked `Custom`) | 1080 × 1080 | `1080×1080` | refit, zoom 48% → 64% |
+| width `99999` + Enter | **4096** | `4096×1080` | refit, zoom → 20% |
+| height `5` + Enter | **100** | `4096×100` | refit, zoom → 18% |
+
+So: the popover opens with the width field focused and its value selected, Enter
+commits, `Math.max(100, Math.min(4096, n))` holds at both ends, the strip radio
+tracks the live size, and the zoom refits so the new shape stays in view.
+
+**Method note:** this only worked with the `computer` tool's real
+click/type/key. The earlier attempt used the native value setter plus `blur()`
+and nothing applied — synthetic events do not drive React here (handoff 33).
+Use real input for anything that commits on blur or Enter.
+
+### Browser tooling — reuse ONE tab
+
+`tabs_context_mcp` kept returning a fresh, empty session-scoped group, so every
+call to it looked like it needed a new tab, and Auri ended up with a row of
+them. **Reuse the single tab the group reports and `navigate` / reload it.** It
+never exposes the user's own tabs, so there is nothing to attach to — just do
+not keep creating.
+
+### Next in handoff 46's order
+
+**9** collapse the four wayfinding pills behind one overflow control — the last
+of the three deletions/moves, and it also fixes handoff 45 item 2 (the header
+growing to 88px at 1280 and 114px at 1024). Then **2**, the 243px of background
+group headers.
+
+---
+
+## SESSION HANDOFF · 2026-08-23 (47): handoff 46 item 1 shipped · the duplicate Format control is gone
+
+Item 1 of handoff 46, the first of the three tagged areas. Auri asked for the
+evidence before the change, and chose "Custom becomes a 4th radio in the strip
++ popover" over keeping a reduced block in the panel.
+
+### The evidence that justified it
+
+**They were the same control, not two features.** `FormatPicker` (rendered at
+`StepCanvas.tsx:82`) and the strip's `role="radiogroup"` both called the same
+`setFormat` with the same three ids — `presentation`, `square`, `story`. The
+strip sits outside the panel column, so it is visible on every tab: the panel
+copy was never the only route.
+
+**Measured by hiding the section and reading the content wrapper directly.**
+`scrollHeight` clamps to `clientHeight` once content fits, so it *understates*
+the saving — read `firstElementChild`'s height instead:
+
+| panel width | content before | after | saved |
+|---|---|---|---|
+| **300px (Auri's)** | 826px | **683px** | **143px** |
+| 340px | 850px | **707px** | **143px** |
+
+143px = the 123px section + the 20px `gap-5` that collapses with it.
+
+At Auri's 1219×772 (619px of visible panel): **1.33 screens → 1.10**, overflow
+**+207px → +64px**. On a taller window (740px visible) the Canvas panel stops
+scrolling altogether — 0.92 screens.
+
+**Why it could not just be made smaller:** the four buttons measure 172–185px
+wide against 268–308px of content, so they always stack. The strip does the
+same three choices in 112×32px — **1/4.4 of the height for the same function**.
+
+### The bug the evidence turned up, which existed before this change
+
+With `format === "custom"`, the strip's radiogroup reported
+`16:9:false 1:1:false 9:16:false` — **zero checked radios**. An ARIA radiogroup
+must have exactly one. So the strip silently misrepresented the canvas format
+whenever Custom was in use, and it would have done so whether or not the panel
+block was deleted. That is why Custom moving into the strip is a fix, not a
+consolation prize.
+
+### What changed
+
+- **`StepCanvas.tsx`** — `FormatPicker` import and the whole `Format` section
+  deleted. `setFormat` and `setCustomSize` dropped from the props; `format` and
+  `customSize` **stay**, because `accentDims` still needs the real canvas
+  dimensions to size the accent thumbnails against.
+- **`editor/page.tsx`** — the strip's radiogroup gained a 4th radio, `Custom`,
+  wrapped in a `Popover.Trigger`. The trigger both selects custom AND opens the
+  size fields, because choosing "custom" without saying what size is not a
+  complete action. When custom is active the radio shows the live size
+  (`1600×900`) rather than the word.
+- `customWDraft` / `customHDraft` + `applyCustomSize` added next to `dims`.
+  **Draft strings, not numbers** — same lesson as the MP4 seconds field: a
+  controlled number input clamped on every keystroke fights you when you
+  backspace `1080` to type `600`. Clamp on blur / Enter only.
+- `FormatPicker.tsx` is now **unused**. Left in place deliberately — `/simple`
+  was never measured and this is not the commit to touch it. Delete it only
+  after confirming nothing else imports it.
+
+### Verified
+
+- `tsc --noEmit` clean · `eslint` 0 errors (6 pre-existing warnings) ·
+  `vitest run` **377/377**
+- Panel has no `Format` section any more (DOM query, post-change)
+- Content height **826 → 683px at 300px** and **850 → 707px at 340px** —
+  matches the prediction exactly
+- Strip radiogroup: **4 radios, exactly 1 checked**
+- Clicking `Custom`: format becomes custom, checked count stays **1** (bug
+  fixed), popover opens with both inputs at 1080, the radio relabels to
+  `1080×1080`, and the strip's dims label becomes `Custom (1080×1080)`
+
+### NOT verified — do this next
+
+**Typing a new size and having it apply or clamp was never confirmed.** The
+attempt used the native value setter plus `blur()`, and nothing applied — which
+is the *expected* result of driving React with synthetic events here (handoff
+33), so the test was inconclusive, not a failure. Then the Chrome extension
+started timing out on script injection and the tab was destroyed three times in
+a row, so a real-typing test never ran.
+
+The clamp is a straight port of `FormatPicker`'s `applyCustomSize` — same
+`Math.max(100, Math.min(4096, n))` — so the risk is low, but it is untested.
+**Type a size into the popover, press Enter, and confirm the canvas resizes and
+that 99999 clamps to 4096 / 5 clamps to 100.**
+
+### Browser-tooling note, worth not re-learning
+
+`resize_window` reports success and silently reverts (it went back to
+1512×893 repeatedly). The session's tab group was also recreated on almost every
+call, invalidating tab ids. **To measure a specific width deterministically,
+force the element's width and restore it** — that is how both the 300px and
+340px numbers above were obtained:
+
+```js
+const col = p1.closest('aside');
+const prev = [col.style.width, col.style.minWidth, col.style.maxWidth];
+col.style.width = col.style.minWidth = col.style.maxWidth = '300px';
+/* read wrapper height */
+col.style.width = prev[0]; col.style.minWidth = prev[1]; col.style.maxWidth = prev[2];
+```
+
+Media queries do **not** respond to this, so it is valid for flex/intrinsic
+layout only — which is what the panel is.
+
+### Next in handoff 46's order
+
+**7** fold the count onto the tab and drop the panel header · **9** collapse the
+four wayfinding pills behind one overflow control (also fixes handoff 45 item 2)
+— the other two deletions/moves. Then 2 (the 243px of group headers).
+
+---
+
+## SESSION HANDOFF · 2026-08-23 (46): three tagged areas · 10 ranked fixes, none built yet
+
+### State: this is a PLAN, not a shipped change. Nothing was touched.
+
+Auri tagged three regions with Page Feedback on `/editor` at **1219×772** and
+asked for 10 improvements to those specifically:
+
+| tag | selector | what it is |
+|---|---|---|
+| 1 | `.w-[300px] > #panel-1 > .flex > .flex` | the **Canvas panel body** (`StepCanvas` inside `GlassCard`) |
+| 2 | `.relative > .flex-1 > .w-[300px] > .flex` | the **panel tab strip** (`Stepper`, `role="tablist"`) |
+| 3 | `.h-screen > .relative > .px-6 > .ml-auto` | the **header action group** |
+
+### Measured at 1219×772 — and that width matters
+
+**`resize_window` is unreliable** (it silently reverts, and the tab group gets
+recreated between calls — see handoff 45). One clean 1219 sample was obtained;
+a later call had reverted to 1430. Both are recorded below, and the difference
+is itself a finding.
+
+| | at 1219 | at 1430 |
+|---|---|---|
+| left panel width | **300px** | 340px |
+| `#panel-1` visible / content | 619 / **858px** | 619 / 882px |
+| overflow | **+239px (1.39 screens)** | +263px |
+| tablist | 300 × **59px** | 340 × 59px |
+| `.ml-auto` group | **765 × 34px, 24px slack** | 765 × 34px, 24px slack |
+
+**The left-panel plan was measured at 340px throughout. Auri works at 300px.**
+Handoff 41 reported the Canvas panel at **1.26 screens** after item 5; at the
+width actually in use it is **1.39**. Re-measure the whole plan at 300px before
+trusting any of its "after" numbers.
+
+### Where the Canvas panel's 858px goes (300px wide, 268px of content)
+
+| block | height | share |
+|---|---|---|
+| **Format** | **123px** | 15% |
+| Investor accents (collapsed) | 27px | 3% |
+| TechBBQ logo (collapsed) | 27px | 3% |
+| Color overlay (collapsed) | 27px | 3% |
+| **Background** | **542px** | **66%** |
+
+Background internals: heading 15 · photo card **78** · "Or pick a gradient" 18 ·
+**nine group headers × 27 = 243** · one open thumbnail grid · footer hint 15.
+
+Item 5's three collapsed decorations are now the most efficient 81px in the
+column. Format and Background are the whole problem.
+
+### The 10, ranked by value per unit of diff
+
+**Area 1 — the Canvas panel body**
+
+1. **Delete the Format block. It is 123px, 15% of the panel, and a duplicate of
+   a control visible at the same time 40px to its right.** The strip's own
+   comment argues format "belongs in the canvas strip, not three clicks deep in
+   the Canvas panel" — the strip copy landed, `FormatPicker` in
+   `StepCanvas.tsx:82` never left. **This single deletion recovers 123px of the
+   239px overflow — 51% — and it is a removal, not a feature.** The only thing
+   the panel copy has that the strip lacks is **Custom**; move that one button
+   into the strip and the block goes entirely. Highest value per unit of diff in
+   all three areas.
+2. **Nine always-visible group headers are a fixed 243px tax.** Item 2's
+   accordion capped the *open* grids but not the *headers* — 40% of the
+   Background block is spent before a single thumbnail. A group dropdown, or a
+   two-column header grid, returns ~120px.
+3. **Nothing in the panel adapts to its own width.** The Format buttons measure
+   185 / 172 / 175px against 268px of content width, so they can never sit
+   two-up and always stack — at 300px *or* 340px. Whatever survives item 1 needs
+   a layout that responds to the 300px case, because that is the real one.
+4. **The photo card spends 78px explaining itself.** "Use your own photo /
+   Stage shot, winner, crowd. Fills the canvas, text sits on top." — two
+   permanent lines of instruction, exactly the pattern item 8 just removed from
+   the image cards by moving the instruction to `title`. Same fix, ~40px back.
+5. **A hint about a control 700px away.** "Pause/resume the animation above the
+   canvas" is a 15px footer inside the Background block; the Pause button lives
+   in the canvas strip. Move the hint to the button's `title` or drop it.
+
+**Area 2 — the panel tab strip**
+
+6. **The four tabs carry no counts, and the count is already rendered one row
+   below.** Measured: the active tab's text is `Text`, and the first row of
+   `#panel-2` is `Text (0)`. Item 10 gave every list a count, and the Background
+   groups have counts (6, 2, 3, 3, 3, 3, 15) — the tabs, the one control that
+   decides which list you see, show nothing. A Text tab with 0 texts looks
+   identical to one with 7. **Zero height cost; it is a move, not an addition.**
+7. **The word appears twice, 20px apart.** Tab `TEXT` sits directly above panel
+   header `Text (0)`. Folding the count onto the tab (item 6) lets the panel
+   header go. ~~returning a ~25px row on every tab~~ — **CORRECTED in handoff
+   48: 23px on Images only, 0px on Text (the adder shares that row) and 0px on
+   Elements (ratio-driven column). Elements and Images do not overflow at all.
+   The value of this item is the de-duplication, not height.**
+8. **59px of column height for a four-way switcher.** Each tab is 80×51 — icon
+   stacked over a 10px uppercase label. A single-row icon+label at ~32px returns
+   27px to the panel, 11% of the current overflow, and nothing is lost.
+
+**Area 3 — the header action group**
+
+9. **Four of the six controls are wayfinding, and they stand between the user
+   and the primary action.** Simple Editor 130 + Templates 139 + New 80 +
+   Feedback 102 = **451px, 59% of the group**, all identical pills competing with
+   Save image. Collapsing them behind one overflow control takes the group from
+   765px to ~314px, turns 24px of slack into ~475px, **and fixes the 1280 header
+   wrap in handoff 45 item 2 as a side effect** — plus makes room for the
+   Quick-Templates button, which currently has none.
+10. **Nothing separates the two tasks in the row.** `Export format` (144) +
+    `Save image` (130) are one job; the other four are another. One flat
+    `gap-2` row, so no grouping reads. A hairline or a wider gap before the
+    export pair costs zero pixels of height and is what makes the primary
+    action findable.
+
+### Cross-cutting note
+
+Items 1, 7 and 9 are all **deletions or moves**, and together they recover
+~123 + 25 + 451px without adding a single control. Do those three first.
+
+---
+
+## SESSION HANDOFF · 2026-08-23 (45): the top panel audit · 10 ranked fixes, none built yet
+
+### State: this is a PLAN, not a shipped change. No top-panel file was touched.
+
+Same method as handoffs 28 and 36: load the editor, measure the chrome, then
+rank by value per unit of diff. Auri asked for "10 ways to improve the top
+panel" after the left-panel plan closed.
+
+### What "the top panel" is
+
+Two stacked bars, both in `src/app/editor/page.tsx` — there is no header
+component:
+
+| | where | lines | height | controls | tab stops |
+|---|---|---|---|---|---|
+| `<header>` | inline in the page | **2046–2179** | **66px** | 8 (9 from Quick Templates) | 9 |
+| Canvas controls strip | inline in the page | **2257+** | **32px** | 21 | 21 |
+
+**98px of chrome (12.7% of a 772px window) above the canvas, and 30 of the
+page's ~31 tab stops before you reach any content.**
+
+### How it was measured (repeat this before touching the bars)
+
+Load `/editor` at 1446×772. For the widest header state — the one anyone
+arriving from Quick Templates sees — set the handoff flag and reload:
+
+```js
+sessionStorage.setItem('tbbqvisualgen.simple.handoff','1'); location.reload();
+```
+
+**`resize_window` did not take** (the page kept reporting 1446 after every
+call — the same flakiness that produced the phantom bug in handoff 33). Measure
+narrow widths by constraining the element and reverting instead:
+
+```js
+const h=document.querySelector('header'); const prev=h.style.width;
+for (const w of [1440,1366,1280,1200,1100,1024]) { h.style.width=w+'px'; /* read */ }
+h.style.width=prev;
+```
+
+**Also: many "sub-24px targets" a whole-page query returns are the
+Claude-in-Chrome extension's own toolbar** (`.eye-open`, `.copy-icon`,
+`.send-arrow-icon`, "Manage MCP & Webhooks", "Learn more"), not the app. Same
+trap as the "hBBQ logo" in handoff 33. Filter by `closest('header')` or by y.
+
+### What the measurement found
+
+| | |
+|---|---|
+| Header height at 1446 / 1280 / 1100 / 1024 | **66 / 88 / 98 / 114px** |
+| `<h1>` width at those widths | 136 / 134 / 112 / **83px** — wraps to 2 lines from 1280 down |
+| Header content width at 1446 (with Quick Templates button) | **1398px, 24px of slack** |
+| Hard overflow threshold | 1024px (+2px) |
+| `role="radiogroup"` in the two bars | **3** — Export format, Canvas format, Canvas tool |
+| Radios inside them | **13**, all their own tab stop (`roving=0` on all three) |
+| `onKeyDown` anywhere in `editor/page.tsx` | **0** |
+| Sub-24px targets in the app chrome | **3** — PNG 43×23, JPG 41×23, MP4 44×23 |
+| Format controls rendered at once | **2** (strip radiogroup + `FormatPicker` in StepCanvas) |
+| Header controls with a keyboard hint | **1 of 8** (Save image, ⌘E) |
+| Header controls with no `title` | 1 (Feedback) |
+| Document name / saved-state indicator | **absent** |
+
+### Three root causes, not ten problems
+
+1. **The two bars don't share a width budget.** The strip already learned to
+   wrap (`flex-wrap`, with a comment saying the last controls were clipped at
+   1280 before it). The header never did: it is `flex items-center gap-4` with
+   `ml-auto`, no `shrink-0` on the pill group, so the only shrinkable thing is
+   the `<h1>` — and the *product name* is what breaks to two lines while six
+   secondary pills keep full width. That is why the header grows 66 → 114px
+   instead of shedding anything.
+2. **Three radiogroups announce a contract none of them honours.** This is the
+   exact defect fixed on the tablist in handoff 43, replicated three times. The
+   fixed tablist reports `roving=3`; all three radiogroups report `roving=0`,
+   and the file has zero `onKeyDown`. The fix already exists in `Stepper.tsx` —
+   it needs extracting, not designing.
+3. **Controls were added to the strip without removing the old copy, and one
+   label is hidden at the width everyone uses.** Format now lives in the strip
+   *and* still in the Canvas panel. The dimensions label is `hidden 2xl:inline`
+   — the only `2xl:` in the file — so below 1536px its red dot renders alone
+   and reads as a status light.
+
+### The 10, ranked by value per unit of diff
+
+1. **Give the three radiogroups the keyboard contract they declare.** 13 tab
+   stops → 3, arrow keys work as announced. `Stepper.tsx`'s `onKeyDown` +
+   roving `tabIndex` generalised into one hook. Cheapest item with the biggest
+   measured effect, because the code is already written and proven.
+2. **Stop the header growing on a 1280 laptop.** `shrink-0` on the pill group,
+   and let the title truncate or drop rather than the layout reflow. Recovers
+   22px of canvas at 1280 and 48px at 1024.
+3. **`New` silently does nothing when the canvas holds only shapes.**
+   `handleReset` (1382) early-returns on
+   `canvasImages.length === 0 && design.texts.length === 0` — shapes are not
+   checked, though `canvasIsEmpty` (2015) does check them. Five shapes on the
+   canvas, click New: no confirm, no toast, no reset. One-line fix.
+4. **Replace `window.confirm` in `handleReset` with the app's confirm-tick.**
+   It is the only native modal in the product; the Templates modal's trash
+   already establishes the pattern. Native dialogs also block everything.
+5. **Delete one of the two format controls.** The strip's comment argues format
+   "belongs in the canvas strip, not three clicks deep in the Canvas panel" —
+   the strip copy was added and `FormatPicker` in `StepCanvas.tsx:82` was never
+   removed. They also disagree: the strip has no Custom.
+6. **Unhide the dimensions label, or drop its dot.** `hidden 2xl:inline` at
+   2261 means at Auri's 1446 viewport there is a bare red dot with no text.
+7. **Raise the three export-format radios to 24px.** They are 23px — the only
+   sub-24px targets left in the chrome after the left panel went 39 → 0. A
+   padding value.
+8. **Put document identity in the header.** No template name, no dirty/saved
+   state. The doc persists to sessionStorage on a 350ms debounce, so "is this
+   saved?" is currently unanswerable from the UI, and the Templates badge (6)
+   says how many exist but not which one you are in.
+9. **Surface the shortcuts that already exist.** 1 of 8 header controls shows
+   one (⌘E). The app has a full map — ⌘Z, ⌘D, ⌘G, ⌘], ⌘E — and the header is
+   where people look for it.
+10. **Split the strip by scope.** Undo/Redo (document-global) and the Layers
+    toggle (app chrome) sit among zoom, tools and format (canvas-local) —
+    "dimensions, zoom, seven tools and nine toggles" by its own comment, 21
+    controls in a 32px row. Moving the global ones up is also what makes item 2
+    solvable without an overflow menu.
+
+### Two things NOT on this list, deliberately
+
+- **`Save image` is never disabled on an empty canvas.** PROGRESS's Export
+  section still claims "disabled when `canvasIsEmpty` or `isExporting`"; the
+  code is `disabled={isExporting || isExportingVideo}` and the title reads
+  "Save the bare background — no logo, no text". The **doc** is stale, not the
+  code. Fixed in this handoff, no code change needed.
+- **The Layers panel header reads "0 LAYERS" while listing a TechBBQ logo
+  row.** Real, but it is the Layers panel, not the top panel. Logged here so it
+  is not lost.
+
+---
+
+## SESSION HANDOFF · 2026-08-23 (44): item 10 shipped · the list headers agree
+
+The last untouched item on handoff 36's list, and the smallest.
+
+### Four lists had three header formats
+
+```
+Text panel      "Text layers (7)"    noun + count
+Elements panel  "Shapes (5)"         different noun style
+Images panel    "Images on canvas"   NO COUNT AT ALL
+Layers panel    "16 layers"          count first
+```
+
+The Images tab was the only panel that could not tell you how many things it
+held.
+
+### Now
+
+```
+Text (3)  ·  Images (2)  ·  Shapes (2)
+```
+
+`<tab noun> (n)`, taking the noun from the tab that owns the list. Verified live
+on an empty document: `Text (0)` / `Images (0)` / `Shapes (0)`.
+
+The Elements header also became `shrink-0`, matching the other two, so it cannot
+be squeezed by the panes below it.
+
+### Why the Layers panel was deliberately NOT changed to match
+
+It still reads `16 layers`, count first. That is not an oversight:
+
+- it is a **status line above a filter**, not a section title — and while
+  filtering it reads `3 of 16`, which the parenthetical form cannot express
+- its count means something different: total content layers across all three
+  types, not the count of one list
+
+Two different jobs, two justified formats. Forcing one shape on both would have
+made the filter counter read worse.
+
+`tsc --noEmit` clean, `npx vitest run` 377/377, 0 new eslint errors.
+
+### Honest scale of this item
+
+Three text labels. It is the smallest thing in the plan and it fixes nothing
+that was broken — only an inconsistency you would notice if you switched tabs
+looking for a count. Recorded at its real size.
+
+### handoff 36's plan is now closed
+
+| item | |
+|---|---|
+| 1 one row design | ✓ (37) |
+| 2 gallery collapses | ✓ (38) |
+| 3 one open row | ✓ (39) |
+| 4 properties pane | ✓ (40) |
+| 5 Canvas split | ✓ (41) — **Elements half still open** |
+| 6 background filter | **dropped** — no question it answered |
+| 7 one truncation rule | ✓ via item 1 |
+| 8 image card identity | ✓ (42) |
+| 9A tab semantics | ✓ (43) |
+| 9B steps→panels rename | deferred into item 5's Elements work |
+| 10 header parity | ✓ (44) |
+
+**Two things remain, both known:**
+
+1. **Item 5's Elements half.** Its "Add photo slot" and "Add shape" blocks take
+   about a third of the column, leaving 87px of list and 152px of properties.
+   The only measured pain left in the panel.
+2. **Item 9B**, the 36-reference `currentStep` → panel rename, to land in the
+   same commit — it is what finally deletes the last `currentStep === 1`
+   conditional in `editor/page.tsx`.
+
+### Still open from 27/28, untouched all session
+
+1. Auri's call on the 14-partner, all-barter community wall.
+2. Four partners need usable dark-wall artwork: Adeo Web, Creative Business
+   Network, Erhvervshus Sjælland, eryk.
+3. Four Airtable Community rows have no Partnership Type 2026.
+4. `.gitattributes` with `*.svg text eol=lf` still unwritten.
+
+---
+
+## SESSION HANDOFF · 2026-08-23 (43): item 9A shipped · the tab strip is honest now
+
+Item 9 was two unrelated things under one number. Auri picked **part A** (the
+ARIA semantics); **part B** (the steps-vs-panels rename) is deliberately
+deferred — see the bottom.
+
+### What was wrong
+
+The strip declared `role="tablist"` and `role="tab"` with `aria-selected`, and
+then delivered none of what those roles promise:
+
+- no `aria-controls`, and **no `role="tabpanel"` anywhere in the app** — a screen
+  reader was told "tab, selected" and nothing about what it switches
+- no arrow-key navigation, though `tablist` promises Left/Right
+- all four buttons sat in the page's tab order, though `tablist` promises the
+  group is ONE tab stop
+
+Declaring a role and not honouring its keyboard contract is worse than not
+declaring it, because assistive tech announces the promise either way.
+
+### What it does now
+
+| | before | after |
+|---|---|---|
+| `aria-controls` on tabs | absent | `panel-1` … `panel-4` |
+| `role="tabpanel"` | **nowhere in the app** | on the panel container |
+| `aria-labelledby` on the panel | absent | `panel-tab-N` |
+| Tab stops in the strip | **4** | **1** (roving `tabIndex`) |
+| Arrow keys | nothing | Left/Right cycle, Home/End jump |
+
+`panelTabId()` and `panelId()` are exported from `Stepper.tsx` so the two sides
+cannot drift on the id format — the tabs and the panel that references them are
+in different files.
+
+Selection follows focus, which is right here: switching panels is instant and
+reversible, so there is nothing to confirm.
+
+`GlassCard` now extends `React.HTMLAttributes<HTMLDivElement>` and spreads
+`...rest`, because it had no way to accept `role` / `id` / `aria-labelledby`.
+
+### Verified — and read the caveat
+
+Confirmed in the browser: four tabs each carrying a distinct `aria-controls`,
+exactly one tab stop, the panel carrying `role="tabpanel"` with matching
+`aria-labelledby`, and the relationship resolving BOTH ways (selected tab's
+`aria-controls` === panel id, and panel's `aria-labelledby` === that tab's id).
+The panel's accessible name comes out as "Images" / "Canvas" etc.
+
+Keyboard: Home jumped to Canvas, ArrowLeft from the first tab wrapped to
+Elements, focus followed selection, and the panel content followed.
+
+**Caveat: those key results come from DISPATCHED KeyboardEvents, not real key
+presses.** A real arrow key never reaches the page through the browser
+automation here — a capture-phase listener on `window` logged nothing at all,
+so it is swallowed before the document, not intercepted by the app. Other keys
+(Delete, Enter, Escape, Cmd+Z, Cmd+G) deliver fine, so this is specific to
+arrows. **Worth one manual check: click a tab, press the right arrow.**
+
+`tsc --noEmit` clean, `npx vitest run` 377/377, 0 new eslint errors.
+
+### Part B is deferred on purpose
+
+The rename — `Stepper` / `currentStep` / `setCurrentStep` / `goToStep` / `STEPS`
+/ `StepDef`, **36 references** — models a wizard you walk through in order.
+These are four tabs you jump between, and the editor's own comment at L213 says
+so: "The left sidebar's CANVAS / TEXT / IMAGES / ELEMENTS are PANELS … That is
+not a tool."
+
+It changes no behaviour and produces a large diff that would collide with the
+uncommitted work. **Do it as part of item 5's Elements change**, which is the
+commit that finally deletes the last `currentStep === 1` conditional in
+`editor/page.tsx` — not as its own churn.
+
+### Plan status
+
+1 ✓ · 2 ✓ · 3 ✓ · 4 ✓ · 5 ✓ Canvas (**Elements half open**) · 6 dropped ·
+7 ✓ via 1 · 8 ✓ · 9A ✓ (**9B deferred**) · **10 not started**
+
+Item 10 (header parity: "Text layers (7)" vs "Shapes (5)" vs nothing in Images)
+is the last untouched item and the smallest. The Elements half of item 5 is the
+more valuable remaining work.
+
+---
+
+## SESSION HANDOFF · 2026-08-23 (42): item 8 shipped · image cards, and the Images panel gets the item-4 split
+
+Two things, one from the plan and one Auri spotted while looking at it.
+
+### Item 8 — the image cards say which image they are
+
+Every card read the same two lines, so four photos were four identical cards and
+the thumbnail was the only identity:
+
+```
+[thumb]  Click to edit
+         Double click to change picture
+```
+
+Now:
+
+```
+[thumb]  Maria headshot          400 x 300
+[thumb]  Photo · mg-2            400 x 300 · cropped
+[thumb]  Photo · mg-3            400 x 300 · locked
+```
+
+Line one is `name` then the derived `Photo · xxxx` — the same fallback order as
+the other three lists. Line two carries the STATE the Layers panel had all
+along and this list did not: natural size, cropped, locked, hidden.
+
+The instruction moved to the card's `title`, together with the name. Learning
+that double-click swaps the picture is a one-time discovery; it was not worth
+four permanent repetitions of screen space.
+
+**This closes the handoff-32 census.** All four lists that show layers now
+honour `CanvasImage.name` / `TextElement.name` / `ShapeElement.name`.
+
+### Auri's observation: the panel jumped and hid what you selected
+
+> "I press on first image and it scrolls down to the properties and I cannot see
+> what was selected"
+
+Two causes, both fixed:
+
+1. **The Images panel never got item 4's split.** Items 1-4 covered Text and
+   Elements; Images kept one scroller with the controls rendered straight after
+   the list, so selecting a photo pushed the list away. It now has the same
+   shape as the others — list on top with its own scroller, properties below in
+   a `flex-[1.4]` pane headed `EDITING <name>`.
+2. **`scrollIntoView({ block: "start" })`** yanked the chosen card to the top of
+   the panel on every selection. That was reasonable when the controls rendered
+   directly beneath the list and had to be dragged into view; with a separate
+   pane the list does not need to move at all. It is `block: "nearest"` now, so
+   an already-visible card stays exactly where it is.
+
+Verified: two independent scrollers (215px list over 343px, 277px properties
+over 441px), the outer panel does not scroll, and the selected card stays on
+screen.
+
+### The GlassCard conditional finally inverted
+
+`editor/page.tsx` went from
+`currentStep === 2 || currentStep === 4 ? …` to `currentStep === 1 ? "overflow-y-auto" : "flex flex-col overflow-hidden"`.
+**Canvas is now the only panel that scrolls as one block.** When item 5's
+Elements half lands, the condition can disappear entirely.
+
+`tsc --noEmit` clean, `npx vitest run` 377/377, 0 new eslint errors.
+
+### Items 6 and 7 are CLOSED without code
+
+- **6 (filter the backgrounds): dropped, on Auri's call.** He asked "search for
+  what?" and there was no good answer. 27 of the 57 labels are just
+  `<group name> + number`, so searching them reproduces a group header you can
+  already click; the rest are colour names you would only search if you knew
+  them. What you would actually filter by — dark, green, 16:9-safe — is not in
+  the data. If anything there is worth doing later it is marking which
+  backgrounds are ANIMATED, since only those export as MP4, and that is
+  currently discoverable only by noticing the word "Pulse".
+- **7 (one truncation rule): already done by item 1.** Moving
+  `CONTENT_LABEL_CHARS = 48` into `lib/panelRow.ts` made it the only label cap
+  in the codebase. `StepElements` stays uncapped on purpose — its labels are
+  `Circle · pe-2`, short by construction.
+
+### Where the plan stands
+
+1 ✓ · 2 ✓ · 3 ✓ · 4 ✓ · 5 ✓ (Canvas; **Elements half still open**) ·
+6 dropped · 7 ✓ (via 1) · 8 ✓ · **9 and 10 not started**
+
+- **9** finish tab semantics: no `aria-controls`, no `role="tabpanel"`, and the
+  code still calls the panels "steps" while its own comment says they are not.
+- **10** left-panel header parity: "Text layers (7)" in one tab, "Shapes (5)" in
+  another, nothing in Images.
+
+Both are small and neither fixes anything visible to Auri. The Elements half of
+item 5 is the more valuable remaining piece.
+
+---
+
+## SESSION HANDOFF · 2026-08-23 (41): left-panel item 5 shipped · the buried controls moved up
+
+Item 5 of handoff 36, built as **option 1**: move Investor accents, TechBBQ logo
+and Colour overlay ABOVE the background gallery, and collapse each.
+
+### Measured
+
+| | before | after |
+|---|---|---|
+| Canvas panel content | **1036px** | **748px** |
+| Screens (at the same 592px body) | 1.75 | **1.26** |
+| Investor accents | 125px | **27px** collapsed |
+| TechBBQ logo | 94px | **27px** collapsed |
+| Colour overlay | 95px | **27px** collapsed |
+
+Order is now Format · Accents · Logo · Overlay · Background.
+
+### The insight that decided the shape
+
+Drawing the options to scale showed something the prose had got wrong:
+**collapsing the three sections where they already sat would have saved exactly
+the same height.** Option 1 and option 3 are identical in pixels. The move up
+buys nothing in size — it buys only that the controls are findable, which is the
+entire reason the item exists. That is why the cheaper "collapse in place" was
+the wrong answer, and it is worth remembering if anyone revisits this.
+
+### `Decoration`, a local component in StepCanvas
+
+Collapsed by default, because these are set once per design — the point is that
+they are findable, not that they are open. Each collapsed header shows its
+**current value** as a summary: `None` / `red` / `40%`. That was not in the plan
+and is the best part of the change: you can read the state of all three without
+opening anything.
+
+They are independent, NOT an accordion — unlike the background groups. Three
+unrelated controls have no reason to close each other.
+
+### Verified in the browser
+
+- order confirmed Format / Accents / Logo / Overlay / Background
+- all three collapsed at load, each showing its live summary
+- opened the logo, picked Red, `design.logoStyle` became `"red"` and the
+  collapsed header then read `red`
+- opening accents left the logo closed (independent, as intended)
+
+`tsc --noEmit` clean, `npx vitest run` 377/377, 0 new eslint errors.
+
+### Carried forward
+
+Item 5 was folded to cover the Elements panel too (handoff 40), and that half is
+**not done** — its adders still take a third of the column, leaving 87px of list
+and 152px of properties. Same treatment should go there.
+
+### The demo artifact — and the one rule that matters
+
+`https://claude.ai/code/artifact/7a454193-3e13-4af6-8d67-c9ba75db80ff` works.
+
+**DO NOT LINK GOOGLE FONTS FROM AN ARTIFACT.** A
+`<link rel="stylesheet" href="https://fonts.googleapis.com/...">` blanks the
+ENTIRE document — no page at all, not a page with fallback fonts. Removing that
+one line fixed a page that had been blank for a dozen publishes. Use system font
+stacks instead.
+
+The other confirmed blanker, found by controlled test on the way:
+**an XML comment inside inline SVG** also blanks the whole document — two
+byte-identical probes, one with `<!-- -->`, only that one blank.
+
+A misdiagnosis worth recording so it is not trusted again: an unescaped `&` in
+that same font URL looked like the cause early on, and escaping it to `&amp;`
+appeared to fix things. It did not — the link itself was always fatal. Any
+"fix" that coincides with a republish needs a second confirmation.
+
+**Cost note:** roughly a third of this session went into bisecting the artifact
+renderer rather than the product, mostly because that false positive sent the
+search in the wrong direction. If a page blanks: strip the font link FIRST.
+
+---
+
+## SESSION HANDOFF · 2026-08-23 (40): left-panel item 4 shipped · properties in their own pane
+
+Item 4 of handoff 36 — the structural one. Auri chose **split the column**:
+list on top, properties below, each scrolling independently.
+
+### The shape
+
+Both `StepText` and `StepElements` are now three parts in one column:
+
+```
+header            shrink-0      "Text layers (7)"  +  Add text
+list              flex-1        scrolls
+properties        flex-[1.6]    scrolls, headed "EDITING <name>"
+```
+
+Measured on a 719px-tall window (566px panel body):
+
+| | list | properties |
+|---|---|---|
+| Text panel | 187px visible / 224px content | **275px visible / 523px content** |
+| Elements panel | 87px / 160px | **152px / 242px** |
+
+The outer panel itself **never scrolls** any more — each half owns its own
+scroller. The list therefore cannot be pushed off screen by the thing you are
+editing, which was the entire complaint.
+
+### Why the properties pane exists at all: `TextEditor`
+
+The text properties were **~215 lines of inline JSX inside the row**. They could
+not move until they were a component, so item 4 began by extracting
+`src/components/TextEditor.tsx` (plus the `SliderRow` helper it was the only
+caller of). `ShapeEditor` was already a component inside `StepElements`, so it
+just moved out of the row.
+
+**Nothing about the fields changed** — the extraction was verbatim, with
+`updateText(text.id, patch)` becoming `onChange(patch)`.
+
+### Rows no longer expand, so the chevron is gone
+
+With a separate pane there is nothing to expand inline, so:
+
+- the chevron button was removed from both panels
+- `expandedId` became `editingId` — "whose properties the pane shows"
+- a row click **sets** the subject rather than toggling it (no accidental
+  deselect, same call the Layers panel made in item 8)
+- text rows gained the `Type` icon, because the chevron had been their only
+  leading element and a bare label read as loose text rather than a list row
+
+That is the third narrowing of this state in three items: `Set` of expanded rows
+-> single `expandedId` (item 3) -> `editingId` naming a pane subject (item 4).
+
+### The outer scroller had to go, and only for two panels
+
+`GlassCard` in `editor/page.tsx` was `overflow-y-auto`, which would defeat two
+inner scrollers. It is now conditional:
+
+```tsx
+currentStep === 2 || currentStep === 4 ? "flex flex-col overflow-hidden" : "overflow-y-auto"
+```
+
+Canvas and Images still scroll as one block. **This conditional is a wart** —
+when item 5 restructures the Canvas panel it should own its scrolling too, and
+then the condition can go.
+
+### Two mistakes made and fixed while building this
+
+1. **The adders ate the list's budget.** First attempt put "Add photo slot" and
+   "Add shape" inside the same capped scroller as the shapes list, so
+   `SHAPES (5)` rendered **one visible row**. The adders are `shrink-0` on
+   their own now.
+2. **Fixed caps starved the properties pane.** With list and adders both
+   `shrink-0` and capped, properties got whatever was left — **80px for 242px
+   of content** in Elements. Both are flex children sharing the column now,
+   properties weighted 1.6.
+
+### Honest state: the Elements panel is still cramped
+
+87px of list and 152px of properties on a short window, because the adders take
+roughly a third of the column before either appears. The Text panel is
+comfortable; Elements is not. **This is the same disease as item 5** — a panel
+doing several jobs in one column — and item 5 should be read as covering the
+Elements panel too, not just Canvas.
+
+### Not a bug: "hBBQ logo" in screenshots
+
+While testing, the Layers panel's first row appeared to read `hBBQ logo` with
+the wrong icon. It is the **Claude-in-Chrome extension's own toolbar**
+(`position: fixed`, `z-index: 100000`, attached to `<body>` outside the React
+tree) overlapping the panel in the capture. Nothing to fix. Do not chase it.
+
+`tsc --noEmit` clean, `npx vitest run` 377/377. The two eslint errors
+(`StepText` L50, `StepElements` L40, setState in an effect) remain pre-existing.
+
+### Next: item 5
+
+Split the Canvas panel — and, per the finding above, the Elements panel with
+it. That is what finally gets these columns to one screen. Then 6-10.
+
+---
+
+## SESSION HANDOFF · 2026-08-22 (39): left-panel item 3 shipped · one expanded row at a time
+
+Item 3 of handoff 36. `expandedIds: Set<string>` became `expandedId: string | null`
+in both `StepText` and `StepElements`.
+
+### Measured, same doc, seven text layers
+
+| rows open | before | after |
+|---|---|---|
+| 1 | 833px · 1.47 screens | 833px |
+| 2 | **1373px · 2.43 screens** | **833px** |
+| 7 | ~4073px · ~7.2 screens (extrapolated) | **833px** |
+
+Each additional property body added **~540px** (1373 − 833), measured rather
+than guessed. The panel body is 566px.
+
+Note this supersedes handoff 36's figure of "839px per row, ~5900px for seven".
+Item 1 shrank the row headers, so the real increment is 540px and the seven-row
+worst case is ~4073px. Still 7.2 screens; the shape of the problem was right.
+
+### Where the accordion also fires
+
+- The auto-expand effect (canvas selection -> open that row) now SETS the open
+  row instead of adding to a set. Selecting on canvas therefore closes whatever
+  you had open, which is correct: you asked for that layer.
+- `addText` / the shape adders open the new layer, which now also closes the
+  previous one. Also correct — the new layer is the one you came to edit.
+- `StepElements` had a second reader, `{selected && !expandedIds.has(selected.id)}`,
+  now `expandedId !== selected.id`.
+
+### What item 3 does NOT fix, and this matters
+
+**One open row still fills the entire column** and pushes the other six off
+screen. Item 3 stops the problem MULTIPLYING; it does not solve it. The real
+answer is item 4 — properties in their own pane rather than inline in the list.
+Anyone reading the numbers above should not conclude the panel is now
+comfortable.
+
+### Artifact
+
+The before/after for items 1, 2 and 3 is published at
+`https://claude.ai/code/artifact/7a454193-3e13-4af6-8d67-c9ba75db80ff`
+("Left Panel Rebuild"). Item 3 is shown as a **height chart, not a screenshot**,
+because the overflow is exactly the part a viewport-sized capture cannot show —
+two open rows look identical to one until you scroll.
+
+Two artifact-authoring traps hit while building it, both worth remembering:
+
+1. **Raw `&` in a Google Fonts `<link href>` blanks the whole artifact.** The
+   renderer's sanitizer rejects the invalid entity and discards the document —
+   you get an empty page, not a page with wrong fonts. Use `&amp;`.
+2. **`<span>` bars need `display:block`.** Width and height do not apply to
+   inline elements, so a CSS bar chart made of spans renders as empty tracks.
+
+`tsc --noEmit` clean, `npx vitest run` 377/377. The two eslint errors in these
+files (setState in an effect) remain pre-existing.
+
+### Next: item 4, and it is the big one
+
+Properties out of the list into their own pane. Everything else on handoff 36's
+list is cosmetic next to it. Then 5 (split the Canvas panel, which is what
+finally gets that panel to one screen), then 6-10.
+
+---
+
+## SESSION HANDOFF · 2026-08-22 (38): left-panel item 2 shipped · the background gallery collapses
+
+Item 2 of handoff 36.
+
+### Measured, same doc
+
+| | before | all groups closed | current group open |
+|---|---|---|---|
+| Canvas panel content | **1916px** | **922px** | **1052px** |
+| Screens of scrolling | **3.1** | 1.63 | 1.86 |
+| Buttons in the panel | **74** | 22 | 28 |
+| Background thumbnails on screen | **57** | 0 | 6 |
+
+**It did NOT reach one screen, and that was never item 2's to fix.** The
+remaining ~1000px is Format, the photo-background card, eight group headers,
+Investor accents, the logo and the colour overlay — six unrelated jobs in one
+column, which is item 5.
+
+### Behaviour
+
+- Eight groups, **one open at a time**. Opening a group closes the previous one.
+- The group holding the **current** background opens on load, so the panel
+  shows where you already are instead of eight closed drawers. Implemented as
+  `openGroup === undefined ? currentGroup : openGroup`, so the auto-open is an
+  initial answer rather than something pinned forever — once you touch a group,
+  your choice sticks, including collapsing everything.
+- A closed group holding the current background shows a small red dot. A dot,
+  not a label: the group names need the width more than a word like "current"
+  does.
+- Each header shows its item count, `tabular-nums` so the digits line up.
+- Opening a group **does not change the selection** — verified, the background
+  stayed Life Science 2 while browsing Tech Stage.
+
+### `collapsible` is OPT-IN, deliberately
+
+`BackgroundPicker` has two callers: this Canvas panel and the Simple Editor at
+`/simple`. Handoff 36 only measured the editor, so the accordion is a prop that
+`StepCanvas` passes and `/simple` does not. **Verified after the change:
+`/simple` still renders 41 expanded thumbnails and no accordion.** Changing a
+panel nobody has measured would have been guessing.
+
+When `/simple` does get measured, flipping it on is one word.
+
+### A perf argument that turned out not to exist
+
+Worth writing down so nobody re-derives it: the 57 thumbnails are NOT live
+canvases. `BackgroundThumbnail` resolves to a static `div` with a background
+image or gradient, and `CanvasBackground.tsx` says why — "a live canvas per
+swatch would redraw every picker cell every frame for no information gain".
+So item 2 buys height and findability only, not frame rate.
+
+### Testing note
+
+The seed doc used `backgroundId: "soft-ember"`, which is **not a real id** in
+`BACKGROUND_OPTIONS` — it was invented for earlier seeds. With an unknown id
+`currentGroup` is undefined and nothing auto-opens, which is correct behaviour
+but silently untested the feature. Re-seeded with `ls2` (Life Science) to
+verify the auto-open actually fires. **Use a real id from
+`BACKGROUND_OPTIONS` when seeding, or you are testing the fallback path.**
+
+`tsc --noEmit` clean, 0 new eslint errors, `npx vitest run` 377/377.
+
+### Next in handoff 36's order
+
+**3** one expanded row at a time (bounds the 9.4-screen worst case) · **4**
+properties into their own pane · **5** split the Canvas panel, which is what
+finally gets it to one screen · then 6-10.
+
+---
+
+## SESSION HANDOFF · 2026-08-22 (37): left-panel item 1 shipped · one row design across all three lists
+
+Item 1 of handoff 36. Auri asked to go through that plan one item at a time.
+
+### Measured before and after, same seed doc
+
+| | Text before | Text after | Elements before | Elements after |
+|---|---|---|---|---|
+| buttons at rest | 22 | **9** | 23 | **12** |
+| hit boxes under 24px | **21 of 22** | **0** | **18 of 23** | **0** |
+| smallest hit box | 16px | **24px** | 16px | **24px** |
+| always-armed Delete | **7** | **0** | **6** | **0** |
+| row height | 30px card + 8px gutter | **32px, no gutter** | same | **32px, no gutter** |
+| label cap | 32 chars | **48** | uncapped | 48 (shared const) |
+
+13 of the 16 always-armed destructive buttons in the left panel are gone. The
+remaining 3 are the Images tab's per-card ✕, untouched by this item.
+
+### `src/lib/panelRow.ts` is the point of this change
+
+The row chrome now lives in ONE module that all three lists import: `ROW_BASE`,
+`ROW_HOVER`, `rowSelectedStyle()`, `ACTION_BTN`, `ACTION_BTN_IDLE`,
+`ACTION_BTN_ACTIVE`, `CONTENT_LABEL_CHARS`.
+
+`ACTION_BTN` and `CONTENT_LABEL_CHARS` used to live inside `LayersPanel.tsx`.
+Copy-pasting them into two more files is exactly how these lists drifted in the
+first place — root cause 1 in handoff 36 — so the Layers panel was changed to
+import them too rather than keeping its own copy. **Anything that decides how a
+layer row LOOKS belongs in that file.** What a row DOES stays per-panel: the
+Layers panel finds and orders, the left panels edit, and they are meant to
+differ in behaviour while looking identical.
+
+### Two deliberate divergences from the Layers panel
+
+1. **The chevron is always visible**, where the Layers panel hover-reveals its
+   grip. There the grip is decorative; here the chevron is the affordance for
+   this panel's whole job, so hiding it would hide the only thing saying these
+   rows open. It also gained `aria-expanded`, which it never had.
+2. **An expanded row keeps a hairline** (`bg-white/[0.03] ring-1 ring-white/10`)
+   while closed rows are fully flat. An open properties body genuinely is a
+   different kind of thing from a closed row and needs its extent readable. The
+   flattening is about the 7 closed rows competing with each other, not about
+   the one open one.
+
+### Clicking a text row now SELECTS it — Auri's call, and it is what let Delete go
+
+`StepText` had no selection callback at all: it received `focusedId`
+(canvas → panel) but never pushed selection back, so you could be editing a
+layer with nothing selected, and that is precisely why this panel needed its own
+Delete button. It now takes `onSelectText`, wired to the editor's existing
+`selectTextOnly`.
+
+Consequences, all verified:
+
+- clicking a text row paints it selected in BOTH panels, in the same blue
+- the Delete key then removes it: 7 rows -> 6, and the section header follows
+- Cmd+Z restores it
+- `selectTextOnly` -> `selectWithGroup` -> `stopTextEditing()`, so clicking a
+  row while another text is being edited inline commits that edit first
+
+`StepElements` needed none of this — its row click already called
+`onSelectShape`, which is why dropping its Delete was safe from the start.
+
+### Dead code removed
+
+`removeText` in StepText and `removeShape` in StepElements, plus both `Trash2`
+imports. Unlike `deleteRow` in the Layers panel (kept for a future right-click
+menu), these had no second caller.
+
+### Verified in the browser
+
+Text and Elements measured at rest and side by side with the Layers panel; the
+two lists now read as one system. The expanded properties body still works in
+full — Content, Size, Color, Font, Weight, Align, Style, Rotate/Opacity/Blur,
+Position & Size. Hidden layers keep a visible eye badge when not hovered, in
+both panels.
+
+`tsc --noEmit` clean, `npx vitest run` 377/377. The two remaining eslint errors
+(`StepText` L50, `StepElements` L39, setState in an effect) are pre-existing —
+the diff hunks do not touch those effects, the line numbers only shifted.
+
+### What item 1 did NOT fix
+
+The expanded row is still 839px in a 622px column, and expansion is still an
+unbounded `Set`. That is items 3 and 4, untouched. Canvas is still 1916px
+(item 2). Images cards still say "Click to edit" (item 8).
+
+### Next in handoff 36's order
+
+**2** collapsible background groups (1916px -> ~1 screen) · **3** one expanded
+row at a time · **4** properties into their own pane · then 5-10.
+
+---
+
+## SESSION HANDOFF · 2026-08-22 (36): the left panel audit · 10 ranked fixes, none built yet
+
+### State: this is a PLAN, not a shipped change. No left-panel file was touched.
+
+Same method as handoff 28: seed a realistic document, measure the panel, then
+rank by value per unit of diff. Auri asked for "10 improvements like we did
+with layers".
+
+### How it was measured (repeat this before touching the panel)
+
+Seed the doc from the Layers audit plus one photo-slot shape, so all four
+panels have content, then walk the four tabs:
+
+```js
+// Seed on `/` (NOT /editor — the editor's debounced persist eats it), then
+// navigate to /editor. See handoff 29 for that trap.
+sessionStorage.setItem('tbbqvisualgen.session.v4', JSON.stringify(doc));
+```
+
+The doc: 7 texts (one hidden, one locked), 6 shapes (one photo slot, two
+grouped, one locked), 4 images (one backdrop, one cropped, one locked). Panel
+body measures 340px wide x 622px visible.
+
+### What the measurement found
+
+| tab | content height | buttons | tab stops | smallest hit box | under 24px |
+|---|---|---|---|---|---|
+| **Canvas** | **1916px (3.1 screens)** | 74 | 78 | 25px | 0 |
+| Text | 622px | 22 | 22 | **16px** | **21 of 22** |
+| Images | 622px | 6 | 8 | **22px** | **6 of 6** |
+| Elements | 622px | 23 | 23 | **16px** | **18 of 23** |
+| Text, one row expanded | **871px** | 35 | 43 | **15px** | 23 of 35 |
+
+Other counts:
+
+| | |
+|---|---|
+| Background thumbnails in the Canvas gallery | **57** |
+| Section headings stacked in the Canvas panel | **15** |
+| Filter / search anywhere in the left panel | **0** |
+| Collapsible sections in the Canvas panel | **1** |
+| Height of ONE expanded text row | **839px** (panel is 622px) |
+| Rows that can be expanded at once | **unbounded** — a Set, no accordion |
+| Always-armed destructive buttons | **16** (7 Text, 6 Elements, 3 Images) |
+| `aria-controls` on the tabs / `role="tabpanel"` | **absent / absent** |
+
+Headings in the Canvas panel, in order: Format · Background · Darken · Behind
+the photo · Life Science · Investor Relations · Tech Stage · BBQ Stage ·
+Bonfire Stage · Founder Stage · New styling · Liquid metal · Investor accents ·
+TechBBQ logo · Color overlay.
+
+### Three root causes, not ten problems
+
+1. **The left panel and the Layers panel are the same list under different
+   rules.** Text and Elements list the same layers the Layers panel lists, but
+   still in the design we spent handoffs 29-35 removing: bordered cards with
+   6px gutters, always-on 16px eye + trash, always-armed Delete, and a 32-char
+   label cap against Layers' 48. Open the Text tab next to the Layers panel and
+   the editor visibly contradicts itself — same seven texts, two sets of rules,
+   two truncations, one of which offers a destructive button the other
+   deliberately dropped.
+2. **The Canvas panel is six unrelated jobs in one 3.1-screen scroll.** Format,
+   the photo background, a 57-item background gallery in eight groups, investor
+   accents, the logo, and the colour overlay — 15 headings, no filter, and
+   exactly one collapsible thing in the whole column. The gallery is 57 of the
+   74 buttons, and the last control sits 1827px down.
+3. **Properties are inline-expanded inside the list, so editing one thing hides
+   everything else.** One expanded text row is 839px in a 622px column — the
+   row is larger than the panel that contains it. Expansion is a `Set` with no
+   accordion, so seven open texts is roughly 5,900px, about 9.4 screens. The
+   chevrons carry no `aria-expanded`.
+
+### The 10 improvements, in the order to build them
+
+Ranked by value per unit of diff. Items 1-3 are the cheapest and fix most of
+the felt problem.
+
+1. **Port the Layers row design to Text and Elements.** Flat borderless rows,
+   hover-revealed controls, 24px hit targets, Delete out of the row. The code
+   already exists in `LayersPanel.tsx` — this is a port, not a design job. It
+   fixes 21-of-22 and 18-of-23 sub-24px buttons at once and removes 13 of the
+   16 always-armed destructive buttons.
+2. **Make the background gallery collapsible.** Eight groups, collapsed by
+   default, remembering the one you opened. Takes the Canvas panel from 1916px
+   to roughly one screen and is the single largest reduction available anywhere
+   in the panel.
+3. **One expanded row at a time.** Turn `expandedIds` into a single id. Bounds
+   the panel at about 1.4 screens instead of 9.4, and is a handful of lines.
+   Do this even if item 4 lands later; it is the cheap half of the same problem.
+4. **Move properties out of the list into their own pane.** The structural fix
+   behind item 3: one selected element, one properties area with its own
+   scroll, instead of an 839px accordion wedged inside a 622px list. Everything
+   else on this list is cosmetic next to this.
+5. **Split the Canvas panel.** Format and background belong together; the
+   investor accents, the logo and the colour overlay are canvas-wide
+   decorations that have no business sitting under a background gallery. They
+   are also the three things a user looks for and cannot find, because they are
+   below 57 thumbnails.
+6. **A filter for the backgrounds.** 57 items, zero search. The Layers panel
+   just got one and it cost very little. Fold into item 2 if the collapse
+   already makes them findable.
+7. **One naming and truncation rule across every list.** `slice(0, 32)` in
+   StepText, 48 in the Layers panel, uncapped in StepElements. All four lists
+   now honour `name` (handoff 32) — they should agree on the cap too.
+8. **Image cards should say which image they are.** Every card reads
+   "Click to edit / Double click to change picture", so the thumbnail is the
+   only identity, and `CanvasImage.name` — which exists as of handoff 30 — is
+   not shown here at all. This is the fourth list from the handoff-32 census,
+   still nameless.
+9. **Finish the tab semantics, and stop calling them steps.** `role="tablist"`
+   and `role="tab"` are there, but no `aria-controls` and no `role="tabpanel"`,
+   so nothing announces what a tab controls. And rename `Stepper` /
+   `currentStep` / `goToStep` / `STEPS`: the editor's own comment at L213 says
+   "these are PANELS: ... That is not a tool", and the wizard naming is exactly
+   why they keep being reasoned about as a sequence.
+10. **Panel header parity.** The Layers panel now has a count and a filter in a
+    fixed header. The left panel has "TEXT LAYERS (7)" in one tab, "SHAPES (6)"
+    in another, nothing in Images, and no filter anywhere.
+
+### Is the Layers panel the right target for items 1 and 7?
+
+For the row design, yes, and deliberately: those rules were measured rather
+than guessed (handoffs 29 and 34), and a second list of the same layers under
+different rules is worse than either ruleset alone. Two divergences to keep:
+
+- **Keep the left panel's expansion**, whatever form item 3 or 4 gives it. The
+  Layers panel is for finding and ordering; the left panel is for editing. They
+  should look the same and do different jobs.
+- **Do not port the Layers filter to Text/Elements.** Those lists are 7 and 6
+  rows; a filter earns its space at 17 and above, which is why item 6 is about
+  the 57-item gallery and item 10 is only about the count.
+
+### What this does NOT cover
+
+The Simple Editor / Panel Maker at `/simple` has its own left-hand form and was
+not measured. Neither was the top toolbar or the canvas context menu.
+
+---
+
 ## SESSION HANDOFF · 2026-08-22 (35): item 10 shipped · header, filter, fixed footer — the Layers plan is DONE
 
 Item 10 was the last open item on handoff 28's list. Items 1, 2, 3, 4, 6, 8 and

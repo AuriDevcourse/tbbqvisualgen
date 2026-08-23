@@ -12,6 +12,18 @@ export type ExportFormat = "png" | "jpeg";
  * in-memory muxer buffer and the real-time wait stop being reasonable (a 60s
  * capture is 1800 frames and takes a full minute of watching).
  */
+/**
+ * Still exports are supersampled by this factor, so the FILE is this many times
+ * the design dimensions — a 1080² canvas writes a 2160² PNG.
+ *
+ * Exported because the UI has to be able to say so. It always did this, but
+ * nothing surfaced it: presets are labelled by their design size and nobody
+ * checks the file. The moment Custom let you TYPE an exact number, silence
+ * became a lie — you ask for 1080 and get 2160. Anything that shows a size to
+ * the user multiplies by this rather than hard-coding 2.
+ */
+export const EXPORT_SUPERSAMPLE = 2;
+
 export const VIDEO_MIN_SECONDS = 1;
 export const VIDEO_MAX_SECONDS = 60;
 /** The lengths worth one click. Anything else goes in the number field. */
@@ -111,11 +123,12 @@ export function useExport() {
       const opts = {
         width: exportRef.current.offsetWidth,
         height: exportRef.current.offsetHeight,
-        // 2x supersample — the condensed TechBBQ wordmark and text edges need
-        // more pixels than the 1:1 design size to render crisply (a 1080px
-        // export makes the logo's thin strokes anti-alias to grey/blurry).
-        // Output is 2x the design dimensions, e.g. a 1080² canvas -> 2160².
-        pixelRatio: 2,
+        // Supersample — the condensed TechBBQ wordmark and text edges need more
+        // pixels than the 1:1 design size to render crisply (a 1080px export
+        // makes the logo's thin strokes anti-alias to grey/blurry). Output is
+        // this multiple of the design dimensions, e.g. a 1080² canvas -> 2160².
+        // The constant is exported so the UI can state it; see its docblock.
+        pixelRatio: EXPORT_SUPERSAMPLE,
         cacheBust: true,
         skipFonts: false,
         // JPEG has no alpha — flatten onto warm-black so transparent corners

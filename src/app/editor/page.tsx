@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Pause, Play, X, RotateCcw, Layers as LayersIcon, Download, Film, LayoutTemplate, Type, Image as ImageIcon, Shapes, Undo2, Redo2, Lock, Unlock, Trash2, Copy, LibraryBig, AlignStartVertical, AlignCenterVertical, AlignEndVertical, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignHorizontalDistributeCenter, AlignVerticalDistributeCenter, Grid3x3, Magnet, Group, Ungroup, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Loader2, Users, Save, ZoomIn, ZoomOut, Maximize2, ChevronDown as ChevronDownIcon, MousePointer2, Square, Circle, Minus, Star, ImagePlus, Ruler } from "lucide-react";
+import { Pause, Play, X, RotateCcw, Layers as LayersIcon, Download, Film, LayoutTemplate, Type, Image as ImageIcon, Shapes, Undo2, Redo2, Lock, Unlock, Trash2, Copy, LibraryBig, AlignStartVertical, AlignCenterVertical, AlignEndVertical, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignHorizontalDistributeCenter, AlignVerticalDistributeCenter, Grid3x3, Magnet, Group, Ungroup, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Loader2, Users, Save, ZoomIn, ZoomOut, Maximize2, ChevronDown as ChevronDownIcon, MousePointer2, Square, Circle, Minus, Star, ImagePlus, Ruler, MoreHorizontal, MessageSquare } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as Popover from "@radix-ui/react-popover";
 import { toast } from "sonner";
@@ -13,15 +13,16 @@ import { ShapeDragOverlay } from "@/components/ShapeDragOverlay";
 import { LogoDragOverlay } from "@/components/LogoDragOverlay";
 import { cleanGuides, type Bbox } from "@/lib/snap";
 import { SELECTION_COLOR } from "@/lib/selectionStyle";
+import { cn } from "@/lib/utils";
 import { DynamicTemplate } from "@/components/templates/DynamicTemplate";
-import { useExport, VIDEO_MAX_SECONDS, VIDEO_MIN_SECONDS, type ExportFormat } from "@/hooks/useExport";
+import { useExport, EXPORT_SUPERSAMPLE, VIDEO_MAX_SECONDS, VIDEO_MIN_SECONDS, type ExportFormat } from "@/hooks/useExport";
 import { isAnimatedBackground } from "@/components/CanvasBackground";
 import { useUndoableDoc } from "@/hooks/useUndoableDoc";
 import { FORMAT_DIMENSIONS, DEFAULT_DESIGN, reconcileLayerOrder, splitImageLayerIds, newTextElement, newShapeElement, newImagePlaceholder } from "@/types/template";
 import type { PlatformFormat, DesignConfig } from "@/types/template";
 import { FeedbackButton } from "@/components/FeedbackButton";
 import { CanvasRulers } from "@/components/CanvasRulers";
-import { Stepper } from "@/components/Stepper";
+import { Stepper, panelId, panelTabId } from "@/components/Stepper";
 import type { StepDef } from "@/components/Stepper";
 import { StepCanvas } from "@/components/steps/StepCanvas";
 import { StepText } from "@/components/steps/StepText";
@@ -301,6 +302,48 @@ export default function Home() {
   const lastLoadedPreset: Preset | null = lastLoadedPresetId
     ? visiblePresets.find((p) => p.id === lastLoadedPresetId) ?? null
     : null;
+
+  /**
+   * The ONE way to swap the document out from under the user.
+   *
+   * Three paths did this — load a preset, load a template, start over — and each
+   * cleaned up a different subset of the state that points INTO the document.
+   * The audited drift (PROGRESS.md handoff 51/52):
+   *
+   * | | preset | template | reset |
+   * |---|---|---|---|
+   * | `selectedIds`        | yes | yes | yes |
+   * | `cropEditingId`      | yes | yes | **no** |
+   * | `editingTextId`      | **no** | **no** | **no** |
+   * | `lastLoadedPresetId` | set | **stale** | **stale** |
+   * | `galleryDismissed`   | **no** | **no** | **no** |
+   *
+   * Every id here is a reference into the OLD document. Leaving one set aims a
+   * live interaction at something that no longer exists — a crop session on a
+   * deleted image swallows the next Escape; an inline text edit points at a
+   * text that is gone. Fixing them one at a time is what produced this table,
+   * so they are fixed in one place instead.
+   *
+   * `setDoc`, not `replaceDoc`, so ⌘Z restores what the user was working on.
+   */
+  const replaceDocument = useCallback((
+    next: DocSnapshot,
+    opts?: { presetId?: string | null; goToCanvasTab?: boolean },
+  ) => {
+    setDoc(() => next);
+    setSelectedIdsRaw(new Set());
+    setCropEditingId(null);
+    setEditingTextId(null);
+    // Only the preset path owns a preset identity; the other two leave it null
+    // rather than keeping a stale "Save back to <preset>" target.
+    setLastLoadedPresetId(opts?.presetId ?? null);
+    // The start gallery renders only on an empty canvas that has not been
+    // dismissed, and picking a background dismisses it permanently. Without
+    // this, starting over withheld templates at the exact moment they are most
+    // useful. Harmless on the load paths — their canvas is not empty.
+    setGalleryDismissed(false);
+    if (opts?.goToCanvasTab) setCurrentStep(1);
+  }, [setDoc]);
   // Format sets used by the editing bar's chips. For user presets, "saved
   // by you" = the variants stored directly on the preset; "built-in" is
   // empty since they ship nothing from source. For built-ins, "saved by
@@ -344,15 +387,12 @@ export default function Home() {
       targetFormat = preset.format;
     }
     const resolved = resolvePresetForFormat(preset, targetFormat, ovVariants);
-    setDoc({
+    replaceDocument({
       format: resolved.format,
       customSize: resolved.customSize,
       design: resolved.design,
       canvasImages: resolved.canvasImages,
-    });
-    setSelectedIdsRaw(new Set());
-    setCropEditingId(null);
-    setLastLoadedPresetId(preset.id);
+    }, { presetId: preset.id });
     const overrideUsed = ovVariants?.[targetFormat];
     const variantUsed = preset.variants?.[targetFormat];
     toast.success(
@@ -367,6 +407,17 @@ export default function Home() {
   }, [format, setDoc, presetOverrides, isUserPresetId]);
   const handleLoadPreset = useCallback((preset: Preset) => handleLoadPresetAtFormat(preset), [handleLoadPresetAtFormat]);
   const [templatesOpen, setTemplatesOpen] = useState(false);
+  // The header's overflow menu, and the Feedback dialog it opens. The dialog is
+  // rendered by the header itself, NOT inside the popover — a dialog mounted
+  // inside the menu unmounts the moment the menu closes.
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  // Set when a menu row opens a dialog, so the menu can decline to pull focus
+  // back to its own trigger on the way out. Radix restores focus AFTER the
+  // dialog has mounted, so the dialog's autoFocus loses the race; the fix is to
+  // stop the restore, not to out-time it. Only for dialog-opening rows —
+  // dismissing the menu with Escape should still return focus to the trigger.
+  const menuOpenedDialog = useRef(false);
 
   // In-memory clipboard for canvas elements — Cmd/Ctrl+C copies the current
   // selection, Cmd/Ctrl+V pastes copies with a small offset. Not the OS
@@ -392,6 +443,39 @@ export default function Home() {
   const dims = format === "custom"
     ? { width: customSize.width, height: customSize.height, label: `Custom (${customSize.width}×${customSize.height})` }
     : FORMAT_DIMENSIONS[format] || FORMAT_DIMENSIONS.square;
+
+  // ---- Custom canvas size (strip popover) ----
+  // Moved out of the Canvas panel's FormatPicker, which was a second copy of
+  // the strip's format control calling the same `setFormat`. Custom was the one
+  // thing only that copy had, and `format === "custom"` left the strip's
+  // radiogroup with zero checked radios — invalid ARIA and no visible
+  // selection. See PROGRESS.md handoff 47.
+  //
+  // Draft strings, not numbers: a controlled number input clamped on every
+  // keystroke fights you when you backspace "1080" to type "600". Same lesson
+  // as the MP4 seconds field — clamp on blur / Enter.
+  // Controlled, so Enter can close it. Applying a size and leaving the fields
+  // sitting open reads as "nothing happened" — the size is already shown on the
+  // radio itself, so the popover has no job once you have committed.
+  const [customSizeOpen, setCustomSizeOpen] = useState(false);
+  const [customWDraft, setCustomWDraft] = useState(String(customSize.width));
+  const [customHDraft, setCustomHDraft] = useState(String(customSize.height));
+  useEffect(() => {
+    setCustomWDraft(String(customSize.width));
+    setCustomHDraft(String(customSize.height));
+  }, [customSize.width, customSize.height]);
+
+  const applyCustomSize = useCallback(() => {
+    const clamp = (raw: string, fallback: number) => {
+      const n = parseInt(raw, 10);
+      return Number.isFinite(n) ? Math.max(100, Math.min(4096, n)) : fallback;
+    };
+    const w = clamp(customWDraft, customSize.width);
+    const h = clamp(customHDraft, customSize.height);
+    setCustomWDraft(String(w));
+    setCustomHDraft(String(h));
+    setCustomSize({ width: w, height: h });
+  }, [customWDraft, customHDraft, customSize.width, customSize.height, setCustomSize]);
 
   // ---- One-time "double-click any text to edit" tip ----
   useEffect(() => {
@@ -1378,16 +1462,44 @@ export default function Home() {
     setCropEditingId(null);
   }, [selectWithGroup]);
 
+  /**
+   * Is there anything on the canvas at all?
+   *
+   * Declared HERE, above `handleReset`, because it used to live ~600 lines
+   * further down — past the only other place that needed it — so the reset
+   * guard grew its own copy of the expression and that copy forgot shapes.
+   * Five shapes on the canvas reported "empty", and Start over silently did
+   * nothing: no confirm, no reset, no toast (PROGRESS.md handoff 51).
+   *
+   * One expression, used by both.
+   */
+  const canvasIsEmpty = design.texts.length === 0
+    && canvasImages.length === 0
+    && (design.shapes ?? []).length === 0;
+
   const handleReset = useCallback(() => {
-    if (canvasImages.length === 0 && design.texts.length === 0) return;
-    const ok = window.confirm("Start over? This clears the design, text, and images.");
+    // Nothing to clear AND already the default shape: say so rather than
+    // returning in silence. The old guard just `return`ed, so a canvas of
+    // shapes-only gave no confirm, no toast, and no clue why.
+    if (canvasIsEmpty && format === INITIAL_DOC.format) {
+      toast("Already a blank canvas");
+      return;
+    }
+    const ok = window.confirm("Start over? This clears the text, images, shapes and canvas size.");
     if (!ok) return;
-    setDoc((prev) => ({ ...prev, design: DEFAULT_DESIGN, canvasImages: [] }));
-    setSelectedImageId(null);
-    setCurrentStep(1);
+    // Replace the WHOLE doc, not a spread of it. `{...prev, design, canvasImages}`
+    // silently kept `format` and `customSize`, so starting over on a Custom
+    // 4096×100 canvas handed you a *blank* 4096×100 canvas. Assigning
+    // INITIAL_DOC outright means a new field added to DocSnapshot cannot be
+    // forgotten here — which is exactly how format got missed.
+    replaceDocument(INITIAL_DOC, { goToCanvasTab: true });
+    // Kept, though the 350ms debounced persist rewrites the (now empty) doc
+    // right after, so it looks pointless. It is not quite: close the tab inside
+    // that 350ms window and this is what stops the PRE-reset doc being restored
+    // on the way back in.
     try { sessionStorage.removeItem(STORAGE_KEY); } catch {}
     toast.success("Reset — ready for a new visual");
-  }, [canvasImages.length, design.texts.length, setDoc]);
+  }, [canvasIsEmpty, format, replaceDocument]);
 
   // ---- Click outside canvas exits crop-edit mode ----
   // Marquee handles empty-canvas clicks; this catches everything ELSE outside
@@ -2011,9 +2123,6 @@ export default function Home() {
   // R tool left the start-from-a-template gallery sitting on top of the thing
   // you had just drawn, with no way to see it but to pick a template or press
   // Start blank.
-  const canvasIsEmpty = design.texts.length === 0
-    && canvasImages.length === 0
-    && (design.shapes ?? []).length === 0;
   const photoBackground = canvasImages.find((ci) => ci.isBackdrop) ?? null;
 
   // Compute the effective canvas-layer stack so the ImageDragOverlay's
@@ -2061,46 +2170,91 @@ export default function Home() {
                 Save &amp; back to Quick Templates
               </button>
             ) : null}
-            {/* Always available, whichever way the user arrived. It used to
-                render only when they had NOT come from Quick Templates, so
-                anyone who fine-tuned a quick design had exactly one way out
-                and no way to hop over to the form without taking the
-                save-and-return path. It flushes the doc through the same
-                handler as that button, so navigating here never loses
-                fine-tuning either. */}
-            <button
-              onClick={handleOpenSimpleEditor}
-              aria-label="Open the Simple Editor"
-              title="Simple Editor — build a visual from a form. Fine-tuning is saved on the way."
-              className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium border border-surface/40 bg-transparent text-foreground hover:border-surface hover:bg-white/5 transition-colors"
-            >
-              <Users className="w-3.5 h-3.5" strokeWidth={1.5} />
-              Simple Editor
-            </button>
-            <button
-              onClick={() => setTemplatesOpen(true)}
-              aria-label="Templates"
-              title="Saved templates"
-              className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium border border-surface/40 bg-transparent text-foreground hover:border-surface hover:bg-white/5 transition-colors"
-            >
-              <LibraryBig className="w-3.5 h-3.5" strokeWidth={1.5} />
-              Templates
-              {templates.length > 0 && (
-                <span className="ml-0.5 px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-red text-surface leading-none">
-                  {templates.length}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={handleReset}
-              aria-label="Start over"
-              title="Start over"
-              className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium border border-surface/40 bg-transparent text-foreground hover:border-surface hover:bg-white/5 transition-colors"
-            >
-              <RotateCcw className="w-3.5 h-3.5" strokeWidth={1.5} />
-              New
-            </button>
-            <FeedbackButton />
+            {/* Wayfinding, behind one control.
+
+                These four — Simple Editor, Templates, New, Feedback — were four
+                full-width pills spending 451px, 59% of this group, and they sat
+                BETWEEN the user and Save image while looking exactly like it.
+                They are also things you do once per session, not per edit.
+
+                Collapsing them took the group from 1010px to ~570px with the
+                Quick Templates button present, which is what stops the header
+                wrapping: the `<h1>` was the only shrinkable thing in the row, so
+                at 1280 "Visual Generator" broke to two lines and the header grew
+                66 -> 88px, and 114px at 1024. (PROGRESS.md handoff 50.)
+
+                Save & back to Quick Templates stays visible above: it is a
+                task-completion action for the flow you are in, not wayfinding.
+                Templates' count moves onto the trigger, because the whole point
+                of that badge is telling you there is something in there. */}
+            <Popover.Root open={moreOpen} onOpenChange={setMoreOpen}>
+              <Popover.Trigger asChild>
+                <button
+                  aria-label="More actions"
+                  title="Simple Editor · Templates · New · Feedback"
+                  className="relative flex items-center justify-center w-8 h-8 rounded-full border border-surface/40 bg-transparent text-foreground hover:border-surface hover:bg-white/5 transition-colors"
+                >
+                  <MoreHorizontal className="w-4 h-4" strokeWidth={1.5} />
+                  {templates.length > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[15px] px-1 text-[9px] font-bold rounded-full bg-red text-surface leading-[15px] tabular-nums">
+                      {templates.length}
+                    </span>
+                  )}
+                </button>
+              </Popover.Trigger>
+              <Popover.Portal>
+                <Popover.Content
+                  side="bottom"
+                  align="end"
+                  sideOffset={6}
+                  onCloseAutoFocus={(e) => {
+                    if (menuOpenedDialog.current) {
+                      e.preventDefault();
+                      menuOpenedDialog.current = false;
+                    }
+                  }}
+                  className="z-50 w-56 rounded-lg bg-card-2 shadow-2xl p-1"
+                >
+                  <button
+                    onClick={() => { setMoreOpen(false); handleOpenSimpleEditor(); }}
+                    className="w-full flex items-center gap-2 px-2.5 h-9 rounded-md text-xs font-medium text-foreground hover:bg-white/10 transition-colors text-left"
+                  >
+                    <Users className="w-3.5 h-3.5 shrink-0" strokeWidth={1.5} />
+                    <span className="flex-1">Simple Editor</span>
+                  </button>
+                  <button
+                    onClick={() => { menuOpenedDialog.current = true; setMoreOpen(false); setTemplatesOpen(true); }}
+                    className="w-full flex items-center gap-2 px-2.5 h-9 rounded-md text-xs font-medium text-foreground hover:bg-white/10 transition-colors text-left"
+                  >
+                    <LibraryBig className="w-3.5 h-3.5 shrink-0" strokeWidth={1.5} />
+                    <span className="flex-1">Templates</span>
+                    {templates.length > 0 && (
+                      <span className="px-1.5 text-[9px] font-bold rounded-full bg-red text-surface leading-[15px] tabular-nums">
+                        {templates.length}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => { menuOpenedDialog.current = true; setMoreOpen(false); setFeedbackOpen(true); }}
+                    className="w-full flex items-center gap-2 px-2.5 h-9 rounded-md text-xs font-medium text-foreground hover:bg-white/10 transition-colors text-left"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5 shrink-0" strokeWidth={1.5} />
+                    <span className="flex-1">Send feedback</span>
+                  </button>
+                  {/* Separated: this one throws the design away. It kept the
+                      same pill styling as "Templates" while doing something
+                      irreversible. */}
+                  <div className="my-1 h-px bg-white/10" />
+                  <button
+                    onClick={() => { setMoreOpen(false); handleReset(); }}
+                    className="w-full flex items-center gap-2 px-2.5 h-9 rounded-md text-xs font-medium text-foreground hover:bg-white/10 transition-colors text-left"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 shrink-0" strokeWidth={1.5} />
+                    <span className="flex-1">Start over</span>
+                  </button>
+                </Popover.Content>
+              </Popover.Portal>
+            </Popover.Root>
             {/* Export — persistent primary action (PNG/JPG toggle + Save). */}
             <div
               role="radiogroup"
@@ -2164,32 +2318,65 @@ export default function Home() {
               onClick={() => handleExport()}
               disabled={isExporting || isExportingVideo}
               aria-label={effectiveFormat === "mp4" ? "Save video" : "Save image"}
-              title={canvasIsEmpty
-                ? (effectiveFormat === "mp4"
-                    ? `Record ${videoSeconds} seconds of the bare background as an MP4 (⌘E)`
-                    : "Save the bare background — no logo, no text (⌘E)")
-                : effectiveFormat === "mp4" ? `Record ${videoSeconds} seconds of animation as an MP4 (⌘E)` : "Save image (⌘E)"}
+              // The still tooltips name the OUTPUT pixels, not the design size.
+              // Every still is supersampled, so a 1500² canvas writes a 3000²
+              // file — true since the export moved to the header, and never
+              // said anywhere. Auri found it by typing 1080 into Custom and
+              // opening a 2160px PNG.
+              title={effectiveFormat === "mp4"
+                ? `Record ${videoSeconds} seconds of ${canvasIsEmpty ? "the bare background" : "animation"} as an MP4 (⌘E)`
+                : `${canvasIsEmpty ? "Save the bare background — no logo, no text" : "Save image"} · ${dims.width * EXPORT_SUPERSAMPLE}×${dims.height * EXPORT_SUPERSAMPLE}px (⌘E)`}
               className="flex items-center gap-1.5 px-5 py-2 rounded-full bg-surface text-ink text-xs font-semibold tracking-wide hover:bg-white active:bg-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isExporting || isExportingVideo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : effectiveFormat === "mp4" ? <Film className="w-3.5 h-3.5" strokeWidth={1.5} /> : <Download className="w-3.5 h-3.5" strokeWidth={1.5} />}
               {isExportingVideo ? `Recording… ${videoProgress}%` : isExporting ? "Exporting…" : effectiveFormat === "mp4" ? "Save video" : "Save image"}
             </button>
           </div>
+          {/* Rendered here, a sibling of the overflow trigger rather than a
+              child of its menu, so closing the menu cannot unmount the dialog
+              the menu just opened. It renders no trigger of its own in this
+              mode — the menu row is the trigger. */}
+          <FeedbackButton open={feedbackOpen} onOpenChange={setFeedbackOpen} />
         </header>
 
         {/* Main content */}
         <div className="flex-1 flex min-h-0 px-4 pb-4 gap-4">
           {/* Left: tool tabs + active tool panel */}
           <aside aria-label="Design tools" className="w-[300px] xl:w-[340px] shrink-0 flex flex-col gap-3 max-h-full min-h-0">
-            <Stepper steps={STEPS} current={currentStep} onChange={goToStep} />
+            {/* Canvas (1) gets no count — it is setup, not a list of things.
+                Images counts PLACED photos only, matching what the Images
+                panel lists: the full-bleed backdrop is set in Canvas and is
+                not a row there, so counting it would make the badge disagree
+                with the list it describes. */}
+            <Stepper
+              steps={STEPS}
+              current={currentStep}
+              onChange={goToStep}
+              counts={{
+                2: design.texts.length,
+                3: canvasImages.filter((ci) => !ci.isBackdrop).length,
+                4: (design.shapes ?? []).length,
+              }}
+            />
 
-            <GlassCard className="flex-1 min-h-0 p-4 overflow-y-auto">
+            {/* The Text and Elements panels manage their OWN scrolling now —
+                they split into a list plus a properties pane, and an outer
+                scroller would defeat both. Only Canvas still scrolls as one
+                block. */}
+            <GlassCard
+              // Completes the tab relationship the strip only half-declared:
+              // the tabs say what they control, this says what labels it.
+              role="tabpanel"
+              id={panelId(currentStep)}
+              aria-labelledby={panelTabId(currentStep)}
+              className={cn(
+              "flex-1 min-h-0 p-4",
+              currentStep === 1 ? "overflow-y-auto" : "flex flex-col overflow-hidden",
+            )}>
               {currentStep === 1 && (
                 <StepCanvas
                   format={format}
-                  setFormat={setFormat}
                   customSize={customSize}
-                  setCustomSize={setCustomSize}
                   design={design}
                   // Picking a background is a deliberate design act — get the
                   // start gallery off the preview so the choice is visible
@@ -2205,7 +2392,7 @@ export default function Home() {
                 />
               )}
               {currentStep === 2 && (
-                <StepText design={design} setDesign={setDesign} focusedId={focusedTextId} canvasSize={dims} />
+                <StepText design={design} setDesign={setDesign} focusedId={focusedTextId} canvasSize={dims} onSelectText={selectTextOnly} />
               )}
               {currentStep === 3 && (
                 <StepImages
@@ -2273,6 +2460,78 @@ export default function Home() {
                       </button>
                     );
                   })}
+                  {/* Custom — the fourth radio, so this radiogroup always has
+                      exactly one checked option. It used to live in the Canvas
+                      panel, which is why selecting it left every radio here
+                      unchecked. The trigger both SELECTS custom and opens the
+                      size fields, because picking "custom" without saying what
+                      size is not a complete action. */}
+                  <Popover.Root open={customSizeOpen} onOpenChange={setCustomSizeOpen}>
+                    <Popover.Trigger asChild>
+                      <button
+                        role="radio"
+                        aria-checked={format === "custom"}
+                        onClick={() => setFormat("custom")}
+                        title={`Custom size — ${customSize.width}×${customSize.height}px design, exports at ${customSize.width * EXPORT_SUPERSAMPLE}×${customSize.height * EXPORT_SUPERSAMPLE}`}
+                        className={`flex items-center gap-1 px-2 h-7 rounded-md text-[10px] font-semibold tabular-nums transition-colors ${
+                          format === "custom" ? "bg-surface text-ink" : "text-muted hover:bg-white/10 hover:text-foreground"
+                        }`}
+                      >
+                        <Ruler className="w-3 h-3" strokeWidth={1.5} />
+                        {format === "custom" ? `${customSize.width}×${customSize.height}` : "Custom"}
+                      </button>
+                    </Popover.Trigger>
+                    <Popover.Portal>
+                      <Popover.Content
+                        side="bottom"
+                        align="start"
+                        sideOffset={6}
+                        className="z-50 rounded-lg bg-card-2 shadow-2xl p-2"
+                      >
+                        <div className="text-[9px] uppercase tracking-wider text-muted px-1 pb-1.5">
+                          Canvas size
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="number"
+                            min={100}
+                            max={4096}
+                            value={customWDraft}
+                            aria-label="Custom canvas width in pixels (100–4096)"
+                            onChange={(e) => setCustomWDraft(e.target.value)}
+                            onBlur={applyCustomSize}
+                            onKeyDown={(e) => { if (e.key === "Enter") { applyCustomSize(); setCustomSizeOpen(false); } }}
+                            className="w-16 px-1.5 py-1 rounded-md bg-surface/10 border border-white/10 text-[11px] tabular-nums text-foreground text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70"
+                          />
+                          <span className="text-[11px] text-muted">×</span>
+                          <input
+                            type="number"
+                            min={100}
+                            max={4096}
+                            value={customHDraft}
+                            aria-label="Custom canvas height in pixels (100–4096)"
+                            onChange={(e) => setCustomHDraft(e.target.value)}
+                            onBlur={applyCustomSize}
+                            onKeyDown={(e) => { if (e.key === "Enter") { applyCustomSize(); setCustomSizeOpen(false); } }}
+                            className="w-16 px-1.5 py-1 rounded-md bg-surface/10 border border-white/10 text-[11px] tabular-nums text-foreground text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70"
+                          />
+                          <span className="text-[11px] text-muted">px</span>
+                        </div>
+                        {/* The number you type is the DESIGN size. Export
+                            supersamples by 2 (useExport.ts) so the logo's thin
+                            strokes stay crisp, which means the file is twice
+                            what you typed. Typing an exact number states an
+                            intent, so leaving that unsaid was a lie of
+                            omission — Auri typed 1080 and got a 2160px file. */}
+                        <div className="text-[9px] text-muted px-1 pt-1.5 tabular-nums">
+                          Enter to apply · exports at{" "}
+                          <span className="text-foreground">
+                            {customSize.width * EXPORT_SUPERSAMPLE}×{customSize.height * EXPORT_SUPERSAMPLE}
+                          </span>
+                        </div>
+                      </Popover.Content>
+                    </Popover.Portal>
+                  </Popover.Root>
                 </div>
                 {/* Zoom cluster. The gestures (z-drag, Ctrl+wheel) are faster
                     once you know them, but nobody discovers a gesture — so
@@ -3315,11 +3574,10 @@ export default function Home() {
           await saveTemplate({ name, doc, thumbnailNode: exportRef.current });
         }}
         onLoad={(t: SavedTemplate) => {
-          // Use setDoc (not replaceDoc) so the previous state is pushed onto
-          // the undo stack — Cmd/Ctrl+Z restores what the user was working on.
-          setDoc(t.doc);
-          setSelectedIdsRaw(new Set());
-          setCropEditingId(null);
+          // No presetId: a template is not a preset, and keeping the previous
+          // one alive left a stale "Save back to <preset>" target pointing at
+          // something the user is no longer editing.
+          replaceDocument(t.doc);
           setTemplatesOpen(false);
           toast.success(`Loaded "${t.name}"`);
         }}

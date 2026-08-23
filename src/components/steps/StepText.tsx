@@ -1,18 +1,12 @@
 "use client";
 
-import { Plus, Trash2, Eye, EyeOff, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Eye, EyeOff, Type } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import { ColorPicker } from "@/components/ColorPicker";
+import { TextEditor } from "@/components/TextEditor";
+import { ACTION_BTN, ACTION_BTN_IDLE, ACTION_BTN_ACTIVE, CONTENT_LABEL_CHARS, ROW_BASE, ROW_HOVER, rowSelectedStyle } from "@/lib/panelRow";
 import { newTextElement } from "@/types/template";
 import type { DesignConfig, TextElement } from "@/types/template";
-import { CANVAS_FONT_OPTIONS, FONTS } from "@/lib/constants";
-import { GeometryFields } from "@/components/GeometryFields";
-
-// Curated font-size scale from 18px (smallest readable) up to 150px (the
-// largest preset). The user can pick one of these via the dropdown OR type
-// any number in the adjacent input for a custom size.
-const FONT_SIZE_PRESETS = [18, 24, 32, 42, 56, 72, 88, 108, 128, 150];
 
 interface StepTextProps {
   design: DesignConfig;
@@ -22,21 +16,38 @@ interface StepTextProps {
   focusedId?: string | null;
   /** Canvas pixel size, so the numeric fields can read in export pixels. */
   canvasSize?: { width: number; height: number };
+  /**
+   * Select this text on the canvas. Wired to the editor's `selectTextOnly`.
+   *
+   * Clicking a row used to ONLY expand it, so you could be editing a layer
+   * with nothing selected on canvas — and it was the reason this panel needed
+   * its own Delete button. Selecting on click means the Delete key already
+   * removes the row's layer, the way it does in the Layers panel, and the
+   * handles appear on the thing you are about to edit.
+   */
+  onSelectText?: (textId: string) => void;
 }
 
-export function StepText({ design, setDesign, focusedId, canvasSize = { width: 1920, height: 1080 } }: StepTextProps) {
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+export function StepText({ design, setDesign, focusedId, canvasSize = { width: 1920, height: 1080 }, onSelectText }: StepTextProps) {
+  /**
+   * Which layer the properties pane below is showing, or null.
+   *
+   * This started as a `Set` of inline-expanded rows (heights stacked to ~4000px),
+   * became a single id when item 3 made it an accordion, and is now simply the
+   * subject of a separate pane — so there is nothing to "expand" at all.
+   */
+  const [editingId, setEditingId] = useState<string | null>(null);
+  /** Which row the pointer is over — its actions are revealed for that row
+   *  only. State rather than `group-hover:` because an `opacity-0` button
+   *  still occupies its box, and the point is to give the label its width
+   *  back. See PROGRESS.md handoff 29. */
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
   const rowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   // Expand the focused row whenever the canvas single-selection changes.
   useEffect(() => {
     if (!focusedId) return;
-    setExpandedIds((prev) => {
-      if (prev.has(focusedId)) return prev;
-      const next = new Set(prev);
-      next.add(focusedId);
-      return next;
-    });
+    setEditingId(focusedId);
   }, [focusedId]);
 
   // …then scroll to it, in a SEPARATE pass once the expanded card has laid out.
@@ -45,19 +56,19 @@ export function StepText({ design, setDesign, focusedId, canvasSize = { width: 1
   // landed below the fold and it was guesswork which layer was selected.
   // `block: "start"` rather than "nearest" for the same reason: "nearest" does
   // nothing at all once any sliver of a tall card is already on screen.
-  const focusedIsExpanded = focusedId ? expandedIds.has(focusedId) : false;
+  const focusedIsEditing = focusedId ? editingId === focusedId : false;
   useEffect(() => {
-    if (!focusedId || !focusedIsExpanded) return;
+    if (!focusedId || !focusedIsEditing) return;
     const el = rowRefs.current.get(focusedId);
     if (!el) return;
     const raf = requestAnimationFrame(() => el.scrollIntoView({ block: "start", behavior: "smooth" }));
     return () => cancelAnimationFrame(raf);
-  }, [focusedId, focusedIsExpanded]);
+  }, [focusedId, focusedIsEditing]);
 
   const addText = () => {
     const next = newTextElement("YOUR TEXT");
     setDesign((d) => ({ ...d, texts: [...d.texts, next] }));
-    setExpandedIds((prev) => new Set(prev).add(next.id));
+    setEditingId(next.id);
   };
 
   const updateText = (id: string, patch: Partial<TextElement>) => {
@@ -67,25 +78,19 @@ export function StepText({ design, setDesign, focusedId, canvasSize = { width: 1
     }));
   };
 
-  const removeText = (id: string) => {
-    setDesign((d) => ({ ...d, texts: d.texts.filter((t) => t.id !== id) }));
-  };
-
-  const toggleExpand = (id: string) => {
-    setExpandedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
+  const selected = design.texts.find((t) => t.id === editingId) ?? null;
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.18em]">
-          Text layers ({design.texts.length})
-        </span>
+    // Three parts: a fixed header, the list, and the properties pane. The list
+    // is capped and scrolls; properties take the rest and scroll separately, so
+    // editing a layer can no longer bury the list you were navigating.
+    <div className="flex flex-col min-h-0 flex-1 gap-3">
+      {/* `justify-end`, not `justify-between`: the `Text (n)` label that used
+          to sit on the left is gone — the TEXT tab above says it and now
+          carries the count. Unlike Images and Elements this row does NOT
+          disappear, because Add text lives in it, so no height is recovered
+          here. Only the duplication goes. */}
+      <div className="flex items-center justify-end shrink-0">
         <button
           onClick={addText}
           aria-label="Add text layer"
@@ -102,9 +107,12 @@ export function StepText({ design, setDesign, focusedId, canvasSize = { width: 1
         </div>
       )}
 
-      <div className="flex flex-col gap-2">
+      {/* The list and the properties pane SHARE what is left of the column as
+          flex children, properties weighted heavier because their content is
+          longer. Both were `shrink-0` with fixed caps at first, which left
+          properties whatever remained — 80px in the Elements panel. */}
+      <div className="flex flex-col flex-1 min-h-0 overflow-y-auto -mx-1 px-1">
         {design.texts.map((text) => {
-          const expanded = expandedIds.has(text.id);
           const isFocused = focusedId === text.id;
           return (
             <div
@@ -113,316 +121,81 @@ export function StepText({ design, setDesign, focusedId, canvasSize = { width: 1
                 if (node) rowRefs.current.set(text.id, node);
                 else rowRefs.current.delete(text.id);
               }}
-              className={cn(
-                "rounded-lg border bg-white/5 transition-colors",
-                isFocused ? "border-[#FF0028]/50 ring-1 ring-[#FF0028]/20" : expanded ? "border-[#FF6B00]/30" : "border-white/10",
-              )}
+              onMouseEnter={() => setHoveredId(text.id)}
+              onMouseLeave={() => setHoveredId((cur) => (cur === text.id ? null : cur))}
             >
-              {/* Row header */}
-              <div className="flex items-center gap-1.5 px-2 py-1.5">
-                <button
-                  onClick={() => toggleExpand(text.id)}
-                  aria-label={expanded ? "Collapse" : "Expand"}
-                  className="p-0.5 rounded text-white/50 hover:text-white hover:bg-white/10 transition-colors"
-                >
-                  {expanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                </button>
+              {/* Nothing wraps the row any more — no card, and no hairline for
+                  an "expanded" state, because rows no longer expand. The row IS
+                  the row, exactly as in the Layers panel. */}
+              <div
+                onClick={() => { onSelectText?.(text.id); setEditingId(text.id); }}
+                className={cn(ROW_BASE, "px-1.5 cursor-pointer", !isFocused && ROW_HOVER)}
+                style={isFocused ? rowSelectedStyle() : undefined}
+              >
+                {/* Matches the Layers panel's row icon. With the chevron gone
+                    this was the row's only leading element, and a bare label
+                    read as loose text rather than as a list row. */}
+                <Type className="w-3.5 h-3.5 shrink-0 text-white/60" />
                 <span
-                  onClick={() => toggleExpand(text.id)}
                   className={cn(
-                    "flex-1 text-[11px] truncate cursor-pointer",
+                    "flex-1 text-[11px] truncate",
                     text.hidden ? "text-white/65 line-through" : "text-white/85",
                   )}
+                  title={text.name?.trim() || text.content.trim() || "Empty text"}
                 >
                   {/* A layer named in the Layers panel has to read the same
                       here. Two lists disagreeing about what a layer is called
                       is worse than neither list naming it. */}
-                  {text.name?.trim() || text.content.trim().slice(0, 32) || "Empty text"}
+                  {text.name?.trim() || text.content.trim().slice(0, CONTENT_LABEL_CHARS) || "Empty text"}
                 </span>
-                <button
-                  onClick={() => updateText(text.id, { hidden: !text.hidden })}
-                  aria-label={text.hidden ? "Show layer" : "Hide layer"}
-                  className="p-0.5 rounded text-white/50 hover:text-white hover:bg-white/10 transition-colors"
-                >
-                  {text.hidden ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                </button>
-                <button
-                  onClick={() => removeText(text.id)}
-                  aria-label="Delete layer"
-                  className="p-0.5 rounded text-white/65 hover:text-[#FF0028] hover:bg-[#FF0028]/10 transition-colors"
-                >
-                  <Trash2 className="w-3 h-3" />
-                </button>
+                {/* Revealed on hover, and kept visible while hidden so a
+                    hidden layer is findable without sweeping the list. */}
+                {(hoveredId === text.id || text.hidden) && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); updateText(text.id, { hidden: !text.hidden }); }}
+                    aria-label={text.hidden ? "Show layer" : "Hide layer"}
+                    aria-pressed={text.hidden}
+                    className={cn(ACTION_BTN, text.hidden ? ACTION_BTN_ACTIVE : ACTION_BTN_IDLE)}
+                  >
+                    {text.hidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                )}
+                {/* Delete is gone from the row. Clicking a row now selects the
+                    layer on canvas, so the editor's existing Delete/Backspace
+                    handler removes it — the same trade the Layers panel made,
+                    which took 17 always-armed 16px Delete buttons out of a
+                    list you click to select things in. */}
               </div>
 
-              {/* Expanded controls */}
-              {expanded && (
-                <div className="flex flex-col gap-2.5 px-3 pb-3 pt-1 border-t border-white/5">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[9px] uppercase tracking-wider text-white/65">Content</label>
-                    <textarea
-                      value={text.content}
-                      onChange={(e) => updateText(text.id, { content: e.target.value })}
-                      rows={2}
-                      placeholder="Enter text..."
-                      className="bg-white/5 border border-white/10 rounded-md px-2 py-1.5 text-xs text-white placeholder:text-white/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70 focus:border-[#FF6B00]/40 resize-none"
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[9px] uppercase tracking-wider text-white/65">Size</label>
-                    <div className="flex items-center gap-1.5">
-                      <select
-                        value={FONT_SIZE_PRESETS.includes(text.fontSize) ? text.fontSize : ""}
-                        onChange={(e) => {
-                          const v = Number(e.target.value);
-                          if (!Number.isNaN(v) && v > 0) updateText(text.id, { fontSize: v });
-                        }}
-                        aria-label="Font size preset"
-                        className="flex-1 bg-white/5 border border-white/10 rounded-md px-2 py-1 text-xs text-white/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70 focus:border-[#FF6B00]/40"
-                      >
-                        <option value="" disabled className="bg-[#15110e]">Custom · {text.fontSize}px</option>
-                        {FONT_SIZE_PRESETS.map((px) => (
-                          <option key={px} value={px} className="bg-[#15110e]">
-                            {px}px
-                          </option>
-                        ))}
-                      </select>
-                      <input
-                        type="number"
-                        min={1}
-                        max={500}
-                        value={text.fontSize}
-                        onChange={(e) => {
-                          const v = Number(e.target.value);
-                          if (!Number.isNaN(v) && v > 0) updateText(text.id, { fontSize: v });
-                        }}
-                        aria-label="Font size (custom)"
-                        className="w-16 bg-white/5 border border-white/10 rounded-md px-2 py-1 text-xs text-white text-right focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70 focus:border-[#FF6B00]/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                      />
-                      <span className="text-[10px] font-mono text-white/65">px</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <label className="text-[9px] uppercase tracking-wider text-white/65 w-12 shrink-0">Color</label>
-                    <ColorPicker
-                      color={text.color}
-                      defaultColor="#FFFFFF"
-                      onChange={(c) => updateText(text.id, { color: c })}
-                      ariaLabel="Text color"
-                      allowClear
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <label className="text-[9px] uppercase tracking-wider text-white/65 w-12 shrink-0">Font</label>
-                    <div className="flex gap-1 flex-1">
-                      {CANVAS_FONT_OPTIONS.map((f) => (
-                        <button
-                          key={f.value}
-                          onClick={() => updateText(text.id, { font: f.value })}
-                          style={{ fontFamily: FONTS[f.value] }}
-                          className={cn(
-                            "flex-1 py-1 rounded text-[11px] font-medium transition-colors",
-                            (text.font ?? "onest") === f.value
-                              ? "bg-[#FF0028] text-white"
-                              : "bg-white/5 border border-white/10 text-white/60 hover:bg-white/10",
-                          )}
-                        >
-                          {f.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <label className="text-[9px] uppercase tracking-wider text-white/65 w-12 shrink-0">Weight</label>
-                    <div className="flex gap-1 flex-1">
-                      {[400, 600, 800].map((w) => (
-                        <button
-                          key={w}
-                          onClick={() => updateText(text.id, { weight: w })}
-                          className={cn(
-                            "flex-1 py-1 rounded text-[10px] font-medium transition-colors",
-                            (text.weight ?? 700) === w
-                              ? "bg-[#FF0028] text-white"
-                              : "bg-white/5 border border-white/10 text-white/60 hover:bg-white/10",
-                          )}
-                          style={{ fontWeight: w }}
-                        >
-                          {w === 400 ? "Regular" : w === 600 ? "Semibold" : "Bold"}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <label className="text-[9px] uppercase tracking-wider text-white/65 w-12 shrink-0">Align</label>
-                    <div className="flex gap-1 flex-1">
-                      {(["left", "center", "right"] as const).map((a) => (
-                        <button
-                          key={a}
-                          onClick={() => updateText(text.id, { align: a })}
-                          className={cn(
-                            "flex-1 py-1 rounded text-[10px] font-medium transition-colors capitalize",
-                            (text.align ?? "center") === a
-                              ? "bg-[#FF0028] text-white"
-                              : "bg-white/5 border border-white/10 text-white/60 hover:bg-white/10",
-                          )}
-                        >
-                          {a}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <label className="text-[9px] uppercase tracking-wider text-white/65 w-12 shrink-0">Style</label>
-                    <div className="flex gap-1.5">
-                      <button
-                        onClick={() => updateText(text.id, { uppercase: !text.uppercase })}
-                        title="Uppercase"
-                        className={cn(
-                          "px-2 py-1 rounded text-[10px] font-medium transition-colors",
-                          text.uppercase
-                            ? "bg-[#FF0028]/20 text-[#FF6B00] border border-[#FF0028]/30"
-                            : "bg-white/5 border border-white/10 text-white/60 hover:bg-white/10",
-                        )}
-                      >
-                        AA
-                      </button>
-                      <button
-                        onClick={() => updateText(text.id, { italic: !text.italic })}
-                        title="Italic"
-                        className={cn(
-                          "px-2 py-1 rounded text-[10px] font-medium italic transition-colors",
-                          text.italic
-                            ? "bg-[#FF0028]/20 text-[#FF6B00] border border-[#FF0028]/30"
-                            : "bg-white/5 border border-white/10 text-white/60 hover:bg-white/10",
-                        )}
-                      >
-                        I
-                      </button>
-                      <button
-                        onClick={() => updateText(text.id, { gradient: !text.gradient })}
-                        className={cn(
-                          "px-2 py-1 rounded text-[10px] font-medium transition-colors",
-                          text.gradient
-                            ? "bg-[#FF0028]/20 text-[#FF6B00] border border-[#FF0028]/30"
-                            : "bg-white/5 border border-white/10 text-white/60 hover:bg-white/10",
-                        )}
-                      >
-                        Gradient
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Rotation + opacity + blur — line-height is now fixed at
-                   *  1.0 globally (see DynamicTemplate) so the bbox hugs the
-                   *  glyphs as tightly as possible. No user control. */}
-                  <div className="grid grid-cols-2 gap-x-3 gap-y-2 pt-1 border-t border-white/5">
-                    <SliderRow
-                      label="Rotate"
-                      value={text.rotation ?? 0}
-                      min={-180} max={180} step={1}
-                      snap={[-180, -135, -90, -45, 0, 45, 90, 135, 180]}
-                      format={(v) => `${Math.round(v)}°`}
-                      onChange={(v) => updateText(text.id, { rotation: v })}
-                    />
-                    <SliderRow
-                      label="Opacity"
-                      value={text.opacity ?? 1}
-                      min={0} max={1} step={0.01}
-                      format={(v) => `${Math.round(v * 100)}%`}
-                      onChange={(v) => updateText(text.id, { opacity: v })}
-                    />
-                    <SliderRow
-                      label="Blur"
-                      value={text.blur ?? 0}
-                      min={0} max={0.05} step={0.001}
-                      format={(v) => `${Math.round(v * 1000)}`}
-                      onChange={(v) => updateText(text.id, { blur: v })}
-                    />
-                  </div>
-
-                  <div className="pt-1 border-t border-white/5 flex flex-col gap-1.5">
-                    {/* A text has no width or height of its own — it is a
-                        position plus a font size — so only X and Y. */}
-                    <GeometryFields
-                      value={{ x: text.position.x, y: text.position.y }}
-                      canvasWidth={canvasSize.width}
-                      canvasHeight={canvasSize.height}
-                      showSize={false}
-                      onChange={(patch) => updateText(text.id, {
-                        position: {
-                          x: patch.x ?? text.position.x,
-                          y: patch.y ?? text.position.y,
-                        },
-                      })}
-                    />
-                    <button
-                      onClick={() => updateText(text.id, { position: { x: 0.5, y: 0.5 } })}
-                      className="self-start text-[10px] text-white/65 hover:text-white/80 transition-colors underline"
-                    >
-                      centre on canvas
-                    </button>
-                  </div>
-                  <p className="text-[10px] text-white/60">Drag the text on the canvas to reposition.</p>
-                </div>
-              )}
             </div>
           );
         })}
       </div>
-    </div>
-  );
-}
 
-// Reusable labeled slider row, matches the StepElements one.
-interface SliderRowProps {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  format: (v: number) => string;
-  onChange: (v: number) => void;
-  /** Values the slider magnetically snaps to when dragged near them. */
-  snap?: number[];
-  /** How close (in value units) to a snap point before it grabs. Default 3. */
-  snapWithin?: number;
-}
-
-function SliderRow({ label, value, min, max, step, format, onChange, snap, snapWithin = 3 }: SliderRowProps) {
-  const applySnap = (v: number) => {
-    if (!snap) return v;
-    let best = v;
-    let bestDist = snapWithin;
-    for (const s of snap) {
-      const d = Math.abs(v - s);
-      if (d <= bestDist) {
-        best = s;
-        bestDist = d;
-      }
-    }
-    return best;
-  };
-  return (
-    <div className="flex flex-col gap-1">
-      <div className="flex items-center justify-between">
-        <label className="text-[9px] uppercase tracking-wider text-white/65">{label}</label>
-        <span className="text-[10px] font-mono text-white/60">{format(value)}</span>
+      {/* ---- Properties for the selected layer ---- */}
+      <div className="flex flex-col min-h-0 flex-[1.6] border-t border-white/10 pt-3">
+        {selected ? (
+          <>
+            <div className="flex items-center gap-1.5 shrink-0 pb-2">
+              <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.18em] shrink-0">Editing</span>
+              <span className="flex-1 truncate text-[11px] text-white/85" title={selected.name?.trim() || selected.content.trim()}>
+                {selected.name?.trim() || selected.content.trim().slice(0, CONTENT_LABEL_CHARS) || "Empty text"}
+              </span>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto -mx-1 px-1">
+              <TextEditor
+                text={selected}
+                onChange={(patch) => updateText(selected.id, patch)}
+                canvasSize={canvasSize}
+              />
+            </div>
+          </>
+        ) : (
+          design.texts.length > 0 && (
+            <p className="text-[11px] text-white/45 pt-1">Pick a layer above to edit it.</p>
+          )
+        )}
       </div>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(applySnap(Number(e.target.value)))}
-        className="w-full accent-[#FF6B00]"
-      />
     </div>
   );
 }
