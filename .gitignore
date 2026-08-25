@@ -76,3 +76,6 @@ exports-ls-dt/
 
 .vercel
 .env*
+
+# One-off migration backups (contain full template docs, no secrets)
+backup-templates-*.json

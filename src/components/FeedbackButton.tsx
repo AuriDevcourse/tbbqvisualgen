@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Dialog } from "radix-ui";
 import { MessageSquare, Send, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -43,15 +44,10 @@ export function FeedbackButton({ open: openProp, onOpenChange }: FeedbackButtonP
     return () => cancelAnimationFrame(id);
   }, [open]);
 
-  // Escape closes modal
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
+  // Escape, click-outside and the focus trap are Radix Dialog's job now. The
+  // hand-rolled window listener that used to live here only did Escape, and
+  // the `aria-modal="true"` beside it was a promise nothing kept: every
+  // control behind the overlay stayed tabbable.
 
   const handleSubmit = async () => {
     if (!message.trim() || sending) return;
@@ -91,20 +87,19 @@ export function FeedbackButton({ open: openProp, onOpenChange }: FeedbackButtonP
         </button>
       )}
 
-      {open && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Send feedback"
-          onMouseDown={() => setOpen(false)}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-        >
-          <div
-            onMouseDown={(e) => e.stopPropagation()}
-            className="bg-[#1a1a1a] border border-white/15 rounded-2xl p-5 w-[380px] shadow-2xl"
+      <Dialog.Root open={open} onOpenChange={setOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" />
+          <Dialog.Content
+            aria-describedby={undefined}
+            // Radix autofocuses the first tabbable child, which is the close
+            // button. Point it at the textarea instead: this dialog exists to
+            // be typed into, and the old code already did this by hand.
+            onOpenAutoFocus={(e) => { e.preventDefault(); textareaRef.current?.focus(); }}
+            className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 bg-[#1a1a1a] border border-white/15 rounded-2xl p-5 w-[380px] shadow-2xl"
           >
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-white/90">Send Feedback</h3>
+              <Dialog.Title className="text-sm font-semibold text-white/90">Send Feedback</Dialog.Title>
               <button
                 onClick={() => setOpen(false)}
                 aria-label="Close feedback dialog"
@@ -141,9 +136,9 @@ export function FeedbackButton({ open: openProp, onOpenChange }: FeedbackButtonP
                 )}
               </button>
             </div>
-          </div>
-        </div>
-      )}
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </>
   );
 }

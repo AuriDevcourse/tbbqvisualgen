@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { Dialog } from "radix-ui";
 import { X, Check, RotateCcw } from "lucide-react";
 
 interface CropRect {
@@ -33,15 +34,30 @@ export function CropDialog({ src, initial, onSave, onCancel }: CropDialogProps) 
   const imageRef = useRef<HTMLDivElement>(null);
   const startRef = useRef<{ mx: number; my: number; rect: CropRect }>({ mx: 0, my: 0, rect: { x: 0, y: 0, width: 1, height: 1 } });
 
-  // Esc cancels
+  // Enter saves. Escape is Radix Dialog's job now — see onEscapeKeyDown below,
+  // which routes it through the same discard confirmation the backdrop uses,
+  // something this window listener never did: Escape used to throw away an
+  // edited crop without asking, while clicking outside asked first.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onCancel();
       if (e.key === "Enter") onSave(crop);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [crop, onCancel, onSave]);
+  }, [crop, onSave]);
+
+  /** True when the crop differs from what it was opened with. */
+  const isDirty = () =>
+    JSON.stringify(crop) !== JSON.stringify(initial ?? { x: 0, y: 0, width: 1, height: 1 });
+
+  /** Shared by Escape and outside-press: confirm before losing an edited crop. */
+  const requestCancel = (e: { preventDefault: () => void }) => {
+    if (isDirty() && !window.confirm("Discard crop changes?")) {
+      e.preventDefault();
+      return;
+    }
+    onCancel();
+  };
 
   const startDrag = useCallback((mode: DragMode, e: React.MouseEvent) => {
     e.preventDefault();
@@ -111,25 +127,24 @@ export function CropDialog({ src, initial, onSave, onCancel }: CropDialogProps) 
   const isFullCrop = crop.x === 0 && crop.y === 0 && crop.width === 1 && crop.height === 1;
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Crop image"
-      onMouseDown={(e) => {
-        // Only treat clicks on the backdrop itself as dismiss intents.
-        if (e.target !== e.currentTarget) return;
-        const dirty = JSON.stringify(crop) !== JSON.stringify(initial ?? { x: 0, y: 0, width: 1, height: 1 });
-        if (dirty && !window.confirm("Discard crop changes?")) return;
-        onCancel();
-      }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-6"
-    >
-      <div
-        onMouseDown={(e) => e.stopPropagation()}
-        className="bg-[#15110e]/95 border border-[#FF6B00]/30 rounded-2xl p-5 max-w-[min(640px,90vw)] w-full shadow-2xl"
-      >
+    // Radix Dialog, matching LogoLibraryPicker. The old hand-rolled shell
+    // declared `aria-modal="true"` while every control behind it stayed
+    // tabbable, and had no focus trap at all.
+    //
+    // Both dismiss paths now run through requestCancel, so an edited crop
+    // cannot be lost silently by either one.
+    <Dialog.Root open onOpenChange={() => { /* dismissal handled below */ }}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
+        <Dialog.Content
+          aria-describedby={undefined}
+          onEscapeKeyDown={requestCancel}
+          onPointerDownOutside={requestCancel}
+          onInteractOutside={requestCancel}
+          className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 bg-[#15110e]/95 border border-[#FF6B00]/30 rounded-2xl p-5 max-w-[min(640px,90vw)] w-[calc(100vw-3rem)] shadow-2xl"
+        >
         <div className="flex items-center justify-between mb-4">
-          <span className="text-[10px] font-medium text-[#FF6B00] uppercase tracking-[0.18em]">Crop image</span>
+          <Dialog.Title className="text-[10px] font-medium text-[#FF6B00] uppercase tracking-[0.18em]">Crop image</Dialog.Title>
           <button
             onClick={onCancel}
             aria-label="Cancel"
@@ -220,7 +235,8 @@ export function CropDialog({ src, initial, onSave, onCancel }: CropDialogProps) 
         </div>
 
         <p className="text-[10px] text-white/60 mt-3 text-center">Drag the rectangle to move it · drag the corners to resize · Enter saves · Esc cancels</p>
-      </div>
-    </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
