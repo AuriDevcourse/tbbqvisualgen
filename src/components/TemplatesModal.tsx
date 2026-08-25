@@ -6,10 +6,7 @@ import { toast } from "sonner";
 import type { SavedTemplate } from "@/hooks/useTemplates";
 import type { Preset } from "@/data/presets";
 import type { PlatformFormat } from "@/types/template";
-import ModalShell from "./ModalShell";
-
-/** Ties the header's <h2> to the dialog's aria-labelledby. */
-const TITLE_ID = "templates-modal-title";
+import { Dialog } from "radix-ui";
 
 const FORMAT_BADGES: Record<PlatformFormat, string> = {
   square: "1:1",
@@ -82,7 +79,8 @@ interface TemplatesModalProps {
   presetCustomVariants?: (preset: Preset) => Set<PlatformFormat>;
   /** Reset a single team-saved variant override for this preset/format. */
   onResetVariant?: (presetId: string, format: PlatformFormat) => void;
-  /** Passed straight to ModalShell — see its `returnFocusRef` docs. */
+  /** Where focus goes on close, when the opener did not outlive the modal.
+   *  See the onCloseAutoFocus handler below. */
   returnFocusRef?: React.RefObject<HTMLElement | null>;
 }
 
@@ -152,20 +150,46 @@ export function TemplatesModal({
   };
 
   return (
-    <ModalShell
-      open={open}
-      onClose={onClose}
-      // The header's own <h2> is the accessible name, so the two cannot drift.
-      titleId={TITLE_ID}
-      returnFocusRef={returnFocusRef}
-      className="flex flex-col max-h-[80vh] w-full max-w-2xl rounded-2xl border border-white/10 bg-[#15110e]/95 backdrop-blur-2xl shadow-2xl overflow-hidden"
-    >
-      <>
+    <Dialog.Root open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-[300] bg-black/70 backdrop-blur-sm" />
+        <Dialog.Content
+          // No hand-written aria-labelledby: Dialog.Title registers itself and
+          // Radix wires the label. Overriding Dialog.Title's generated id broke
+          // exactly that — Radix went looking for its own id, could not find it,
+          // and logged "DialogContent requires a DialogTitle" on every open
+          // while silently losing the accessible name.
+          aria-describedby={undefined}
+          // Escape must cancel the INNERMOST open thing. Three inline editors
+          // live in this modal (rename template, rename preset, move-to-folder)
+          // and each cancels on Escape, so an unguarded Escape would cancel the
+          // edit AND close the modal in one keypress.
+          //
+          // Radix listens with capture:true, i.e. BEFORE React's handlers, so
+          // reading `defaultPrevented` here is useless — it is always false at
+          // this point. The open-editor state is the honest signal. Calling
+          // preventDefault only stops Radix dismissing; the event still reaches
+          // the input, which does the cancelling.
+          onEscapeKeyDown={(e) => {
+            if (editingId || editingPresetId || movingPresetId) e.preventDefault();
+          }}
+          // The opener lives inside the More-actions popover, which closes when
+          // this opens — so the remembered trigger is detached by the time we
+          // close, and focusing a detached node silently does nothing, leaving
+          // focus on <body>. Redirect to the control that outlives the menu.
+          onCloseAutoFocus={(e) => {
+            if (returnFocusRef?.current) {
+              e.preventDefault();
+              returnFocusRef.current.focus();
+            }
+          }}
+          className="fixed left-1/2 top-1/2 z-[300] -translate-x-1/2 -translate-y-1/2 flex flex-col max-h-[80vh] w-[min(42rem,calc(100vw-3rem))] rounded-2xl border border-white/10 bg-[#15110e]/95 backdrop-blur-2xl shadow-2xl overflow-hidden"
+        >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-white/10">
-          <h2 id={TITLE_ID} className="text-sm font-medium text-white/85">
+          <Dialog.Title className="text-sm font-medium text-white/85">
             Templates
-          </h2>
+          </Dialog.Title>
           <button
             onClick={onClose}
             aria-label="Close"
@@ -485,11 +509,12 @@ export function TemplatesModal({
                                           onMovePreset(p.id, newFolderDraft.trim());
                                           setMovingPresetId(null);
                                         } else if (e.key === "Escape") {
-                                          // Consume it: ModalShell closes the
-                                          // dialog on any Escape it still sees,
-                                          // so cancelling this draft must stop
-                                          // the key here. The other two inline
-                                          // editors already preventDefault.
+                                          // Kept for symmetry with the other two
+                                          // inline editors. What actually stops
+                                          // the modal closing is the
+                                          // onEscapeKeyDown guard on
+                                          // Dialog.Content, which checks this
+                                          // component's open-editor state.
                                           e.preventDefault();
                                           setMovingPresetId(null);
                                         }
@@ -674,7 +699,8 @@ export function TemplatesModal({
             </button>
           )}
         </div>
-      </>
-    </ModalShell>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
