@@ -17,6 +17,7 @@ import { ACCENT_OPTIONS } from "@/lib/accents";
 import { LogoLibraryPicker, asUploadedImage } from "@/components/LogoLibraryPicker";
 import { PARTNER_PROJECTS, type PartnerSet } from "@/data/partnerSets";
 import { PartnerSetBrowser } from "@/components/PartnerSetBrowser";
+import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { isSvgDataUrl, tintSvgDataUrl } from "@/lib/svgTint";
 import { ColorPicker } from "@/components/ColorPicker";
 import type { PlatformFormat } from "@/types/template";
@@ -1738,11 +1739,17 @@ export default function SimplePage() {
                   logos for is a question the sidebar answers on its own now,
                   without filling a wall to find out. */}
               {partner.layout === "thanks" && (
-                <PartnerSetBrowser
-                  projects={PARTNER_PROJECTS}
-                  fillingSet={fillingSet}
-                  onFill={(set) => void fillPartnerSet(set)}
-                />
+                // Collapsed by default: 415px of always-open browser inside a
+                // panel measured at 2.86 screens (handoff 59). Picking a
+                // ready-made set is a once-per-wall decision, so it does not
+                // earn permanent height the way the wall's own controls do.
+                <CollapsibleSection label="Ready-made partner sets">
+                  <PartnerSetBrowser
+                    projects={PARTNER_PROJECTS}
+                    fillingSet={fillingSet}
+                    onFill={(set) => void fillPartnerSet(set)}
+                  />
+                </CollapsibleSection>
               )}
               {/* The wall's size is a choice, not a consequence of how many
                   logos you have dropped in — pick the grid, then fill it. */}
@@ -1905,11 +1912,15 @@ export default function SimplePage() {
               </div>
               {/* Saved logos — search the ones committed under public/logos
                   instead of going to find the company's logo on the web. */}
-              <span className="mt-1 text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Logo Library</span>
-              <LogoLibraryPicker
-                onPick={(logo) => setPartnerLogo(nextLogoSlot, logo)}
-                targetHint={partnerSlotCount > 1 ? `slot ${nextLogoSlot + 1}` : undefined}
-              />
+              {/* 368px, previously always open. The label that was a bare
+                  <span> becomes the disclosure's own label, so the section
+                  gains a control without gaining a row. */}
+              <CollapsibleSection label="Logo library">
+                <LogoLibraryPicker
+                  onPick={(logo) => setPartnerLogo(nextLogoSlot, logo)}
+                  targetHint={partnerSlotCount > 1 ? `slot ${nextLogoSlot + 1}` : undefined}
+                />
+              </CollapsibleSection>
             </section>
             </>)}
 
@@ -2251,6 +2262,7 @@ export default function SimplePage() {
               <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Background</span>
               <BackgroundPicker
                 compact
+                collapsible
                 value={template === "partner" ? partner.backgroundId : template === "sales" ? sales.backgroundId : template === "next" ? next.backgroundId : form.backgroundId}
                 onChange={(id) => template === "partner"
                   ? setPartner((p) => ({ ...p, backgroundId: id }))
