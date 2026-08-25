@@ -1598,10 +1598,10 @@ export default function SimplePage() {
 
         <div className="flex-1 flex flex-col lg:flex-row min-h-0 px-4 sm:px-6 pb-4 sm:pb-6 gap-4 sm:gap-6 overflow-y-auto lg:overflow-hidden">
           {/* Form */}
-          <aside className="w-full lg:w-[420px] shrink-0 flex flex-col gap-4 lg:max-h-full lg:overflow-y-auto lg:pr-1">
+          <aside aria-label="Design controls" className="w-full lg:w-[420px] shrink-0 flex flex-col gap-4 lg:max-h-full lg:overflow-y-auto lg:pr-1">
             {/* Template — which quick template this form builds */}
             <section className="flex flex-col gap-2">
-              <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Template</span>
+              <h2 className="section-label text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Template</h2>
               <div className="flex gap-1.5">
                 {TEMPLATES.map((t) => {
                   const active = template === t.id;
@@ -1625,7 +1625,7 @@ export default function SimplePage() {
                 without official items yet (Sale) skip this section. */}
             {FLAVOURS[template] && (
             <section className="flex flex-col gap-2">
-              <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">{FLAVOURS[template]!.heading}</span>
+              <h2 className="section-label text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">{FLAVOURS[template]!.heading}</h2>
               <div className="flex gap-1.5">
                 {FLAVOURS[template]!.options.map((a) => {
                   // A built-in layout is active on the form flag alone; a
@@ -1651,7 +1651,7 @@ export default function SimplePage() {
                 the one saved for the target format, when the template has
                 one — it no longer discards the loaded template identity. */}
             <section className="flex flex-col gap-2">
-              <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Format</span>
+              <h2 className="section-label text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Format</h2>
               <div className="flex gap-1.5">
                 {FORMATS.map((f) => {
                   const active = doc.format === f.id;
@@ -1704,7 +1704,7 @@ export default function SimplePage() {
               )}
             </section>
             <section className="flex flex-col gap-2">
-              <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Partner logos</span>
+              <h2 className="section-label text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Partner logos</h2>
               <div className="flex gap-1.5">
                 {([
                   { id: "single" as const, label: "One", icon: Square },
@@ -1928,7 +1928,7 @@ export default function SimplePage() {
             {/* Sale composition — countdown post or discount post. Each keeps
                 its own tuned design per format, like the partner layouts. */}
             <section className="flex flex-col gap-2">
-              <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Sale type</span>
+              <h2 className="section-label text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Sale type</h2>
               <div className="flex gap-1.5">
                 {SALES_LAYOUTS.map((opt) => {
                   const active = sales.layout === opt.id;
@@ -1966,7 +1966,7 @@ export default function SimplePage() {
             </section>
 
             <section className="flex flex-col gap-2">
-              <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Photo</span>
+              <h2 className="section-label text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Photo</h2>
               <LogoSlot
                 logo={sales.photo}
                 onChange={(l) => setSales((p) => ({ ...p, photo: l }))}
@@ -1984,7 +1984,7 @@ export default function SimplePage() {
               <Field label="Stage name" value={form.label} onChange={(v) => setForm((f) => ({ ...f, label: v }))} placeholder="BBQ Stage" />
             </section>
             <section className="flex flex-col gap-2">
-              <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Setup</span>
+              <h2 className="section-label text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Setup</h2>
               <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] p-3">
                 <span className="text-sm text-white/85">Hosts</span>
                 <div className="flex items-center gap-1.5">
@@ -2009,9 +2009,9 @@ export default function SimplePage() {
               </div>
             </section>
             <section className="flex flex-col gap-2">
-              <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">
+              <h2 className="section-label text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">
                 {stageHosts.length > 1 ? `Stage hosts (${stageHosts.length})` : "Stage host"}
-              </span>
+              </h2>
               <div className="flex flex-col gap-2">
                 {stageHosts.map((h, i) => (
                   <PersonEditor
@@ -2031,7 +2031,7 @@ export default function SimplePage() {
             {template === "panel" && !stageHostMode && (<>
             {/* Setup — panel composition: moderator + how many speakers */}
             <section className="flex flex-col gap-2">
-              <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Setup</span>
+              <h2 className="section-label text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Setup</h2>
               <div className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
                 {/* Hosts have no moderator — the toggle only exists for panels. */}
                 {!hostMode && (
@@ -2083,7 +2083,7 @@ export default function SimplePage() {
             {/* Moderator — only when the setup toggle is on (never for hosts) */}
             {!hostMode && form.includeModerator && (
               <section className="flex flex-col gap-2">
-                <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Moderator</span>
+                <h2 className="section-label text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Moderator</h2>
                 <PersonEditor person={form.moderator} onChange={setModerator} roleLabel="Moderator" />
               </section>
             )}
@@ -2120,7 +2120,7 @@ export default function SimplePage() {
                 toggle: it is the constant that tells the room what the screen
                 is for, so it always renders. */}
             <section className="flex flex-col gap-2">
-              <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Setup</span>
+              <h2 className="section-label text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Setup</h2>
               <div className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-white/85">Moderator</span>
@@ -2195,7 +2195,7 @@ export default function SimplePage() {
 
             {/* Speakers */}
             <section className="flex flex-col gap-2">
-              <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Speakers ({next.speakers.length})</span>
+              <h2 className="section-label text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Speakers ({next.speakers.length})</h2>
               <div className="flex flex-col gap-2">
                 {next.speakers.map((s, i) => (
                   <PersonEditor
@@ -2220,7 +2220,7 @@ export default function SimplePage() {
             {/* Moderator */}
             {next.includeModerator && (
               <section className="flex flex-col gap-2">
-                <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Moderator</span>
+                <h2 className="section-label text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Moderator</h2>
                 <PersonEditor
                   person={next.moderator}
                   onChange={(patch) => setNext((n) => ({ ...n, moderator: { ...n.moderator, ...patch } }))}
@@ -2235,7 +2235,7 @@ export default function SimplePage() {
                 content choice, not decoration: gradient for investor relations
                 in general, orange for LP Forum, red for Investor Day. */}
             <section className="flex flex-col gap-2">
-              <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Investor accents</span>
+              <h2 className="section-label text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Investor accents</h2>
               <div className="flex gap-1.5">
                 {[{ id: undefined, label: "None" }, ...ACCENT_OPTIONS].map((opt) => {
                   const active = (accentId ?? undefined) === opt.id;
@@ -2259,7 +2259,7 @@ export default function SimplePage() {
 
             {/* Background */}
             <section className="flex flex-col gap-2">
-              <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Background</span>
+              <h2 className="section-label text-[10px] font-medium text-white/65 uppercase tracking-[0.16em]">Background</h2>
               <BackgroundPicker
                 compact
                 collapsible

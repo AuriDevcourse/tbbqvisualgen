@@ -114,6 +114,18 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: -0.02em;
 }
 
+/* A heading that reads as a micro-label.
+ *
+ * The Quick Templates panel names its sections with 10px uppercase labels. They
+ * became <h2> so the panel has a heading outline to navigate — it had none —
+ * but they must keep looking like labels, and the rule above would give them
+ * Onest at -0.02em tracking. A class beats a type selector, so this wins
+ * without !important. */
+.section-label {
+  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+  letter-spacing: 0.16em;
+}
+
 p {
   font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
 }
