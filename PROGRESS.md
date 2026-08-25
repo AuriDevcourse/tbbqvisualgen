@@ -6,53 +6,109 @@ not required reading.
 
 ---
 
-## STOPPED HERE · 2026-08-25 — branch `fix/gitattributes-and-dialog-shell`, UNCOMMITTED
+## STOPPED HERE · 2026-08-25 — Neon egress fix on a branch, UNVERIFIED against a real DB
 
-**Current state:** `.gitattributes` added and the SVG working tree renormalised
-to LF; a shared `ModalShell` built and wired into TemplatesModal only. `tsc`
-clean, 377/377 tests, 0 lint errors in the touched files. Nothing committed.
+**Current state:** handoff 53's work (`.gitattributes` + `ModalShell`) is merged
+and **pushed to master** as `629c18f`, so it is live on Vercel. On top of that,
+branch `fix/neon-egress-thumbnails` carries the Neon egress fix.
 
-```
- M src/app/editor/page.tsx           (moreActionsRef + returnFocusRef prop)
- M src/components/TemplatesModal.tsx (uses ModalShell, TITLE_ID, one preventDefault)
- M src/data/logoLibrary.json         (585 `bytes` fields — one-time LF normalisation)
-?? .gitattributes                    (NEW, untracked)
-?? src/components/ModalShell.tsx     (NEW, untracked — easiest thing to lose)
-```
+### The one thing to check first
 
-### Two blockers found this session that outrank the panel work
+**The `data - 'thumbnail'::text` projection has never been executed.** Neon
+answers HTTP 402 to every query, at the HTTP layer, before the SQL is parsed —
+so hitting `/api/editor-library` proves nothing about whether the SQL is valid.
+The cast is there because `jsonb - ?` is overloaded for text / integer / text[]
+and a bare literal arrives as `unknown`, which can fail with "operator is not
+unique". **The moment the quota resets, load `/editor` and confirm the route
+returns 200 rather than 500.**
 
-1. **Neon is out of quota.** `/api/editor-library` returns 500 because Neon
-   answers **HTTP 402 — "Your project has exceeded the data transfer quota."**
-   Those are the two console errors on `/editor`, and why the Templates modal
-   shows only one preset locally. Local `DATABASE_URL` points at
-   `ep-steep-rain-aswe9nwi`. Vercel's env was NOT checked, so whether prod
-   shares the project is **unconfirmed** — if it does, the Team Library is
-   broken live. Check this before anything else.
-2. **`npm run lint` is unusable.** It reports 462 errors and every one is in
-   `.claude/worktrees/ux-notes/.next/` — build output from an abandoned
-   worktree. Scoped to `src` the real count is **5 errors, all pre-existing**
-   (3 setState-in-effect, 2 rules-of-hooks in `LogoDragOverlay.tsx`, verified
-   identical to master ignoring EOL). This doc used to say 2, so 3 arrived with
-   the `new updates` commit. Fix: ignore the `.claude` tree in
-   `eslint.config.mjs`.
+Failure mode if it is wrong is the same as today: route 500s, editor falls back
+to built-in presets with a toast. So shipping cannot make the current broken
+state worse — but it will not fix it either until the quota resets.
 
-### The left-panel plan is CLOSED — the old text here was wrong
+---
 
-Everything the previous handoff listed as open had already shipped in commits
-`d8860c4` / `367f02b`. Re-verified against source on 2026-08-25:
+## SESSION HANDOFF · 2026-08-25 (54): Neon 402 — paying to send thumbnails, then deleting them
 
-| claimed open | actually |
-|---|---|
-| item 5's Elements half | **done** — three-region split, `StepElements.tsx:78-215` |
-| the `GlassCard` currentStep wart | **gone** from `editor/page.tsx` |
-| handoff 51 item 3 (one replacement fn) | **done** — `replaceDocument`, `editor/page.tsx:329` |
-| handoff 51 item 4 (`selectedIds`/`cropEditingId`) | **done** — `:333-335` |
-| handoff 51 item 5 (`galleryDismissed`) | **done** — `:344` |
+### What broke
 
-Only the **9B steps to panels rename** survives, and it lost its reason: the
-panel split already deleted the conditional the rename was meant to remove. It
-is now pure renaming, so it ranks below everything above.
+Neon returns **HTTP 402 — "Your project has exceeded the data transfer
+quota."** Not storage, not compute: **egress**. Every query fails, so
+`/api/editor-library` 500s and the editor shows "Could not load the team's
+templates — showing built-ins only".
+
+### The cause, in two parts
+
+**1. The strip happened on the wrong side of the wire.**
+`editorLibraryDb.ts` selected `data` whole, then removed the `thumbnail` key in
+JavaScript (`stripThumbnail`). Its own comment said this was to stop ~90KB of
+base64 per template dominating the payload — but JS runs *after* the bytes leave
+Neon. Neon meters bytes leaving Neon, so every thumbnail was paid for on every
+call and then thrown away. The payload the *browser* downloaded got smaller; the
+bill did not change.
+
+**2. A focus listener multiplied it.** `sharedEditorLibrary.ts` re-ran
+`refresh()` on every `window` focus event, unthrottled, with
+`cache: "no-store"`. Alt-tab to Slack and back and the whole library's previews
+came out of Neon again.
+
+### The fix
+
+- `SELECT id, kind, data - 'thumbnail'::text AS data ...` — drops the key **in
+  Postgres**. Read-time projection: SELECT writes nothing, the stored row keeps
+  its thumbnail, and `readThumbnails()` still reads it back.
+- `FOCUS_REFRESH_MIN_MS = 30_000` on the focus listener. An explicit save still
+  calls `refresh()` directly and is never throttled.
+- `stripThumbnail()` kept as a belt, with a comment saying why.
+
+**What actually changes:** first page load transfers thumbnails once, same as
+before. Every tab-focus after that now transfers **nothing**, where before it
+re-sent all of them. Visible cost: a brief "No preview" on first load, which is
+the tradeoff `readThumbnails()` already chose when it was split out.
+
+### Not verified, and why
+
+Docker has no daemon on this machine and the live DB answers 402, so there was
+no way to execute the SQL. It is written to be unambiguous rather than tested.
+`tsc` clean, `vitest` 377/377, 0 lint errors — none of which can validate SQL.
+
+### Numbered next steps
+
+1. **Check the Neon dashboard** for the reset date, the plan's egress
+   allowance, and which project/branch is over. Confirm whether **production**
+   shares `ep-steep-rain-aswe9nwi` — still unconfirmed, Vercel's env was never
+   read. If it does, the Team Library is down live.
+2. **When the quota resets, load `/editor` and confirm 200 from
+   `/api/editor-library`.** That is the only real test of the SQL.
+3. **Then watch Neon's usage graph.** If egress is still climbing, the diagnosis
+   was wrong and the bytes are coming from somewhere else.
+4. **The deeper fix: stop storing images in Postgres.** Base64 in `jsonb` is
+   ~33% larger than the raw bytes, cannot be CDN-cached, and is paid for on
+   every read. Thumbnails belong in object storage with a URL in the row
+   (Vercel Blob while on Vercel).
+5. Ignore the `.claude` tree in `eslint.config.mjs` — `npm run lint` still
+   reports 462 errors, all from a dead worktree's `.next`. Real count in `src`
+   is 5, all pre-existing.
+6. Apply `ModalShell` to the other four overlays (see handoff 53).
+
+### Gotcha worth keeping
+
+Asked whether Hetzner could replace Neon. It can, but **app on Vercel + Postgres
+on Hetzner is the worst option**: Vercel has no static egress IPs on Hobby/Pro,
+so Postgres cannot be IP-allowlisted and would have to face the internet
+(breaks SECURITY.md r11), and serverless would need PgBouncer to survive the
+connection limit that Neon's HTTP driver exists to avoid. Latency is a wash —
+Neon is `eu-central-1`, Hetzner is Nuremberg. If moving, move the *whole* app to
+Hetzner using the existing systemd + nginx + certbot pattern; then Postgres
+binds to localhost and Hetzner's ~20TB traffic makes egress a non-issue. But not
+as a fix for a 402: that is a bug, and migrating carries it along.
+
+### File pointers
+
+- `src/lib/editorLibraryDb.ts` — `:92` the projection, `readThumbnails()` below.
+- `src/lib/sharedEditorLibrary.ts` — the throttle, `refresh()`, the
+  `thumbnails` Map cache and the `withThumbnails` fill.
+- `src/hooks/useTemplates.ts` — `:17` thumbnail capture, `pixelRatio` 0.18.
 
 ---
 

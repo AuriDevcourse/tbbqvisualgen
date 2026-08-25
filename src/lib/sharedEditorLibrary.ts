@@ -140,11 +140,28 @@ async function loadThumbnails(): Promise<void> {
   }
 }
 
+/**
+ * Shortest gap between two focus-driven refreshes.
+ *
+ * Tab focus fires far more often than a teammate saves a template: alt-tab to
+ * Slack and back and it fires again, so an unthrottled listener re-read the
+ * whole library dozens of times an hour. 30s keeps "a teammate's save shows up
+ * without a reload" true in practice while collapsing a burst of tab switching
+ * into one read. An explicit save still calls refresh() directly and is never
+ * throttled.
+ */
+const FOCUS_REFRESH_MIN_MS = 30_000;
+let lastFocusRefresh = 0;
+
 /** Re-read when the tab regains focus, so a teammate's save shows up without
  *  a reload. Registered once, on the client only. */
 if (typeof window !== "undefined") {
   window.addEventListener("focus", () => {
-    if (state.hydrated) void refresh();
+    if (!state.hydrated) return;
+    const now = Date.now();
+    if (now - lastFocusRefresh < FOCUS_REFRESH_MIN_MS) return;
+    lastFocusRefresh = now;
+    void refresh();
   });
 }
 

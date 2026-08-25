@@ -89,7 +89,26 @@ export async function readLibrary(): Promise<SharedLibrary> {
   await ensureTables();
   const q = sql();
   const [items, settings] = await Promise.all([
-    q`SELECT id, kind, data FROM editor_items ORDER BY updated_at DESC LIMIT ${LIST_LIMIT}`,
+    // `data - 'thumbnail'` drops the key IN POSTGRES, so the base64 never
+    // crosses the wire. This is a read-time projection: SELECT writes nothing
+    // and the stored row keeps its thumbnail, which is what readThumbnails()
+    // below still reads back.
+    //
+    // It used to select `data` whole and strip the key in JS (stripThumbnail,
+    // still below). That shrank the payload the BROWSER downloads and did
+    // nothing about the bill: Neon meters bytes leaving Neon, so every
+    // thumbnail was paid for on every call and then thrown away. Combined with
+    // the focus listener in sharedEditorLibrary.ts, which re-runs this on every
+    // tab activation, the whole library's previews were re-sent each time the
+    // user came back to the tab. Neon started answering HTTP 402
+    // "data transfer quota exceeded" on 2026-08-25.
+    // The `::text` cast is deliberate. Postgres overloads `jsonb - ?` for text,
+    // integer and text[], and a bare 'thumbnail' literal arrives as `unknown`,
+    // which can fail to resolve with "operator is not unique". The cast pins
+    // the single-key form. This could not be executed before shipping — the
+    // database was answering 402 to every query — so it is written to be
+    // unambiguous rather than verified by running it.
+    q`SELECT id, kind, data - 'thumbnail'::text AS data FROM editor_items ORDER BY updated_at DESC LIMIT ${LIST_LIMIT}`,
     q`SELECT key, data FROM editor_settings`,
   ]);
   const rows = items as { id: string; kind: string; data: unknown }[];
@@ -115,6 +134,11 @@ export async function readLibrary(): Promise<SharedLibrary> {
   };
 }
 
+/**
+ * Belt for rows the SQL projection cannot reach. Kept deliberately: it costs
+ * nothing, and if a future caller selects `data` whole this stops thumbnails
+ * silently reappearing in the list payload.
+ */
 function stripThumbnail(data: unknown): unknown {
   if (!data || typeof data !== "object") return data;
   const rest = { ...(data as Record<string, unknown>) };
