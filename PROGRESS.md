@@ -6,36 +6,113 @@ not required reading.
 
 ---
 
-## STOPPED HERE · 2026-08-25 — Neon resolved and verified · two follow-ups queued
+## STOPPED HERE · 2026-08-25 — all green · photo-to-URL spike PROVEN, ready to build
 
-**Current state:** everything works. Production and local both return 200 from
-`/api/editor-library`. Master is `2f1552c` plus this doc. Nothing in flight.
+**Current state:** everything works. Production and local both 200 on
+`/api/editor-library`. Master is `8e36874`, clean, nothing in flight. The Neon
+outage is over (plan moved off Free to Launch, usage-based, no monthly minimum;
+~1.5 cents/month at current usage, storage the only charged meter).
 
-The Neon outage is over: the plan was moved off Free to **Launch**, which is
-fully usage-based with **no monthly minimum** (100 CU-hours and 500 GB transfer
-included per project; storage metered at $0.35/GB-month). At current usage —
-0.04 GB storage, 5.6 of 500 GB transfer, 15 of 100 CU-hours — the bill is about
-**1.5 cents a month**. Storage is the only meter actually charged, so it is the
-one to watch, and embedded images are what will grow it.
+**Branch `spike/photo-blob-storage` holds a THROWAWAY spike. Do not merge it.**
+It proved the approach and its job is done. Read handoff 56 before building the
+real thing.
 
-**The `data - 'thumbnail'::text` projection is now verified.** It had never been
-executed when it shipped (Neon was 402-ing before parsing SQL, and there was no
-local Postgres). It ran against the real database and returned 200, so the
-`::text` cast resolved the overload correctly. That open question from handoff 54
-is closed.
+### Next task, in order
 
-### The two follow-ups, in order
+1. **Photo backgrounds to object storage** — spike proven, plan in handoff 56.
+   Cuts the library payload ~95%.
+2. **Neon branch per environment** — `DATABASE_URL` is identical across
+   Production, Preview and Development, so every preview deploy and every local
+   `npm run dev` reads and writes live team data.
+3. `.claude` tree ignored in `eslint.config.mjs` (462 phantom errors).
+4. `ModalShell` applied to the other four overlays (handoff 53).
 
-1. **Get photo backgrounds out of the documents.** Measured below: 95% of the
-   626KB library payload is four base64 JPEGs. This is the same disease the
-   thumbnail fix addressed, one level up, and it is refetched on every focus
-   refresh.
-2. **Split preview and dev onto their own Neon branches.** `DATABASE_URL` is
-   currently identical across Production, Preview and Development, so every
-   branch preview and every local `npm run dev` reads and writes live team data.
+---
 
-Deliberately not done before the TechBBQ summit (26-27 Aug): changing database
-wiring the day before peak week is the wrong trade.
+## SESSION HANDOFF · 2026-08-25 (56): spike proves photo backgrounds can be URLs
+
+### The question, and why it needed answering first
+
+95% of the 626KB library payload is four base64 JPEGs embedded in saved template
+documents (handoff 55), refetched on every focus refresh. Moving them to URLs is
+obvious — except for one risk that decides the whole approach:
+
+**html-to-image inlines each `<img>` by fetching its `src`.** The app sets no
+`crossOrigin` attribute anywhere (`DynamicTemplate.tsx:830` is a plain
+`<img src={ci.src}>`), and a failed fetch does not throw — it produces a
+**silently blank background** in the export. Ship that unnoticed and every
+visual made during a summit comes out wrong.
+
+So the spike tested export, and nothing else. It served the photo
+**same-origin on purpose** to remove CORS from the experiment and isolate one
+variable.
+
+### Result — driven in the browser, real file through the app's own input
+
+| check | result |
+|---|---|
+| canvas `<img>` src | **URL**, not a data URL, loaded 1200x800 |
+| Save image | produced a 3000x3000 JPEG |
+| **photo present in the export** | **YES** — 479 orange (201,90,19) + 110 navy (19,40,119) of 900 sampled pixels, the test image's exact colours |
+| session document | **462 bytes total**, `src` 57 chars |
+
+| | |
+|---|---|
+| same photo as base64 | ~54KB |
+| as a URL (measured) | 462 bytes, whole doc |
+| reduction | **~119x** |
+| library payload today | 626KB (592KB base64) |
+| with URLs | **~34KB** |
+| **cut** | **~95%** |
+
+### The one variable NOT tested
+
+**CORS.** Same-origin was deliberate. Vercel Blob serves cross-origin, so
+**export must be re-tested against a real Blob URL** — that is step 2 below and
+it is not optional. Note `useExport.ts:132` sets `cacheBust: true`, which
+appends a query param to every image fetch and therefore interacts with caching
+and CORS preflight.
+
+If Blob's CORS does bite, the fallback is already proven by this spike: serve
+through a same-origin route. That spends Vercel bandwidth instead of Neon
+egress, which is still the win.
+
+### The build plan
+
+1. **Provision Vercel Blob**, upload on file pick in `readImageFile`
+   (`src/lib/photoBackground.ts:44` is where `readAsDataURL` currently creates
+   the base64), store the returned URL in `CanvasImage.src`.
+2. **Re-run the export test against a Blob URL.** Upload a photo, Save image,
+   then check the exported pixels actually contain it — not just that a file
+   downloaded. A blank background still downloads happily.
+3. **Keep `src` accepting BOTH forms indefinitely.** Three saved templates still
+   hold data URLs: BBQ Stage Hosts (2 images, 237KB), Campfire Stage (201KB),
+   Founder Stage (139KB).
+4. **Migrate those three last**, as a separate job. New uploads going to Blob is
+   useful on its own and much lower risk.
+
+### What the spike is NOT
+
+No auth, no rate limit, writes to the OS temp dir — it breaks SECURITY.md r5 and
+must never be merged. The real upload route needs auth, rate limit and a size
+cap. It does carry the `basename()` path-traversal guard (r4), because that is
+one line and there is no excuse even in a spike.
+
+### Gotcha
+
+Local dev shares the production database (see the STOPPED HERE block), so the
+spike deliberately measured document size **in memory via sessionStorage** rather
+than saving a template. Saving would have written test data to the live team
+library. Keep that in mind for any future measurement work until item 2 is done.
+
+### File pointers
+
+- `src/lib/photoBackground.ts` — `:44` `readAsDataURL`, the origin of every
+  base64 photo. The spike patched `readImageFile` here.
+- `src/components/templates/DynamicTemplate.tsx:830` — the canvas `<img>`, no
+  `crossOrigin`.
+- `src/hooks/useExport.ts` — `:132` `cacheBust: true`, `:140` toPng/toJpeg.
+- Spike branch: `src/app/api/photo-spike/` (both routes).
 
 ---
 
