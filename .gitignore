@@ -73,3 +73,6 @@ approved.png
 
 # Finished thank-you walls handed to marketing — deliverables, not source.
 exports-ls-dt/
+
+.vercel
+.env*

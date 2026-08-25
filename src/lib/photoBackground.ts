@@ -7,9 +7,38 @@ export const PHOTO_ACCEPT = "image/png,image/jpeg,image/webp";
 const ALLOWED_TYPES = new Set(PHOTO_ACCEPT.split(","));
 
 export interface LoadedImage {
+  /**
+   * What goes into `CanvasImage.src`. Either a Blob URL (~57 chars) or, when
+   * the upload is refused or fails, a base64 data URL as before.
+   *
+   * Both forms must keep working indefinitely: templates saved before
+   * 2026-08-25 hold data URLs, and an anonymous visitor still produces them.
+   * Nothing downstream may assume one or the other.
+   */
   dataUrl: string;
   naturalWidth: number;
   naturalHeight: number;
+}
+
+/**
+ * Store the photo and return its URL, so the saved document carries a pointer
+ * instead of ~33% inflated base64.
+ *
+ * Throws on any refusal — including the 401 an anonymous visitor gets — and the
+ * caller falls back to the data URL. That fallback is what keeps the auth gate
+ * invisible: a signed-out user gets exactly today's behaviour, with the photo
+ * living only in their own session.
+ */
+async function uploadPhoto(file: File): Promise<string> {
+  const res = await fetch("/api/photo", {
+    method: "POST",
+    headers: { "Content-Type": file.type },
+    body: file,
+  });
+  if (!res.ok) throw new Error(`upload refused: ${res.status}`);
+  const { url } = await res.json();
+  if (typeof url !== "string" || !url) throw new Error("upload returned no url");
+  return url;
 }
 
 /**
@@ -38,7 +67,16 @@ export function readImageFile(file: File): Promise<LoadedImage> {
       }
       const img = new Image();
       img.onerror = () => reject(new Error(`"${file.name}" is not a readable image`));
-      img.onload = () => resolve({ dataUrl, naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight });
+      img.onload = () => {
+        const size = { naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight };
+        // Decode first, upload second: a corrupt file is rejected by the <img>
+        // above before it can occupy paid storage. Any upload failure resolves
+        // with the data URL rather than rejecting, because a working photo the
+        // expensive way beats an error message.
+        uploadPhoto(file)
+          .then((url) => resolve({ dataUrl: url, ...size }))
+          .catch(() => resolve({ dataUrl, ...size }));
+      };
       img.src = dataUrl;
     };
     reader.readAsDataURL(file);
