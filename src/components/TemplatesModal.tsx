@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { X, Plus, Trash2, Check, Save, Pencil, Code, Sparkles, RotateCcw, Star, Folder, GripVertical } from "lucide-react";
+import { X, Plus, Trash2, Check, Save, Pencil, Code, Sparkles, RotateCcw, Star, Folder, GripVertical, Search } from "lucide-react";
 import { toast } from "sonner";
 import type { SavedTemplate } from "@/hooks/useTemplates";
 import type { Preset } from "@/data/presets";
 import type { PlatformFormat } from "@/types/template";
 import { Dialog } from "radix-ui";
+import { ACTION_BTN, ACTION_BTN_IDLE } from "@/lib/panelRow";
 
 const FORMAT_BADGES: Record<PlatformFormat, string> = {
   square: "1:1",
@@ -98,6 +99,7 @@ export function TemplatesModal({
   const currentPreset = currentPresetId && presets
     ? presets.find((p) => p.id === currentPresetId) ?? null
     : null;
+  const [query, setQuery] = useState("");
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -135,6 +137,22 @@ export function TemplatesModal({
     setEditingId(null);
   };
 
+  /**
+   * Item 9. The modal listed 3 presets, 6 templates and their folders down a
+   * 2.75-screen scroller with exactly one text input — and that input was the
+   * "name this template" field, not a filter.
+   *
+   * Deliberately matches the DISPLAYED name, so what you type is checked
+   * against what you can see: a preset the team renamed is findable by its new
+   * name, not the one in source.
+   */
+  const q = query.trim().toLowerCase();
+  const matches = (label: string) => !q || label.toLowerCase().includes(q);
+  const shownTemplates = templates.filter((t) => matches(t.name));
+  const shownPresets = (presets ?? []).filter((p) =>
+    matches(presetDisplayName ? presetDisplayName(p) : p.name),
+  );
+
   const handleSave = async () => {
     if (saving) return;
     setSaving(true);
@@ -171,7 +189,7 @@ export function TemplatesModal({
           // preventDefault only stops Radix dismissing; the event still reaches
           // the input, which does the cancelling.
           onEscapeKeyDown={(e) => {
-            if (editingId || editingPresetId || movingPresetId) e.preventDefault();
+            if (editingId || editingPresetId || movingPresetId || query) e.preventDefault();
           }}
           // The opener lives inside the More-actions popover, which closes when
           // this opens — so the remembered trigger is detached by the time we
@@ -183,17 +201,40 @@ export function TemplatesModal({
               returnFocusRef.current.focus();
             }
           }}
-          className="fixed left-1/2 top-1/2 z-[300] -translate-x-1/2 -translate-y-1/2 flex flex-col max-h-[80vh] w-[min(42rem,calc(100vw-3rem))] rounded-2xl border border-white/10 bg-[#15110e]/95 backdrop-blur-2xl shadow-2xl overflow-hidden"
+          className="fixed left-1/2 top-1/2 z-[300] -translate-x-1/2 -translate-y-1/2 flex flex-col max-h-[80vh] w-[min(60rem,calc(100vw-3rem))] rounded-2xl border border-white/10 bg-[#15110e]/95 backdrop-blur-2xl shadow-2xl overflow-hidden"
         >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-white/10">
-          <Dialog.Title className="text-sm font-medium text-white/85">
+        <div className="flex items-center gap-3 px-5 py-3 border-b border-white/10">
+          <Dialog.Title className="text-sm font-medium text-white/85 shrink-0">
             Templates
           </Dialog.Title>
+          {/* Item 9's filter. Matches the LogoLibraryPicker header pattern:
+              search sits beside the title, not above the list, so it stays put
+              while the list scrolls under it. */}
+          <label className="relative ml-auto flex w-56 items-center">
+            <Search className="absolute left-2.5 w-3.5 h-3.5 text-white/40" strokeWidth={2} />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                // Escape clears the filter first and only closes the modal on a
+                // second press — the same "innermost thing first" rule the
+                // inline renames follow. preventDefault stops Radix dismissing.
+                if (e.key === "Escape" && query) {
+                  e.preventDefault();
+                  setQuery("");
+                }
+              }}
+              placeholder="Filter by name"
+              aria-label="Filter presets and templates by name"
+              className="w-full h-7 pl-8 pr-3 rounded-lg bg-white/5 border border-white/10 text-[11px] text-white placeholder:text-white/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/70 focus:border-[#FF6B00]/40"
+            />
+          </label>
           <button
             onClick={onClose}
             aria-label="Close"
-            className="p-1 rounded text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+            className={`${ACTION_BTN} text-white/50 hover:text-white hover:bg-white/10 transition-colors`}
           >
             <X className="w-4 h-4" />
           </button>
@@ -255,13 +296,13 @@ export function TemplatesModal({
           {/* Presets — grouped by their `group` field (with overrides) into
            *  folders. The resolved group factors in user-side overrides via
            *  `presetDisplayGroup`. */}
-          {presets && presets.length > 0 && onLoadPreset && (() => {
+          {shownPresets.length > 0 && onLoadPreset && (() => {
             const groupOf = (p: Preset) => {
               const resolved = presetDisplayGroup ? presetDisplayGroup(p) : p.group;
               return resolved || (isUserPreset?.(p) ? "Team presets" : "Other");
             };
             const groups = new Map<string, Preset[]>();
-            for (const p of presets) {
+            for (const p of shownPresets) {
               const key = groupOf(p);
               const arr = groups.get(key);
               if (arr) arr.push(p);
@@ -281,7 +322,7 @@ export function TemplatesModal({
               <section className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.18em]">
-                    Presets ({presets.length})
+                    Presets ({shownPresets.length}{q && (presets?.length ?? 0) !== shownPresets.length ? ` of ${presets?.length ?? 0}` : ""})
                   </span>
                   {onReorderFolders && sortedFolderNames.length > 1 && (
                     <span className="text-[9px] text-white/60">Drag folder name to reorder</span>
@@ -344,7 +385,7 @@ export function TemplatesModal({
                       <span className="text-[9px] text-white/60">{items.length}</span>
                       <div className="flex-1 h-px bg-white/5" />
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
                       {items.map((p) => {
                   const builtInFormats = presetFormats(p);
                   const customSet = presetCustomVariants ? presetCustomVariants(p) : new Set<PlatformFormat>();
@@ -460,7 +501,7 @@ export function TemplatesModal({
                               }}
                               aria-label="Move to folder"
                               title="Move to folder"
-                              className="p-1 rounded text-white/65 hover:text-white hover:bg-white/10 transition-colors"
+                              className={`${ACTION_BTN} text-white/65 hover:text-white hover:bg-white/10 transition-colors`}
                             >
                               <Folder className="w-3.5 h-3.5" />
                             </button>
@@ -537,14 +578,14 @@ export function TemplatesModal({
                                 onClick={() => { onHidePreset(p.id); setConfirmDeleteId(null); }}
                                 aria-label="Confirm hide"
                                 title="Hide this preset"
-                                className="p-1 rounded text-[#FF6677] hover:bg-[#FF0028]/15 transition-colors"
+                                className={`${ACTION_BTN} text-[#FF6677] hover:bg-[#FF0028]/15 transition-colors`}
                               >
                                 <Check className="w-3.5 h-3.5" />
                               </button>
                               <button
                                 onClick={() => setConfirmDeleteId(null)}
                                 aria-label="Cancel"
-                                className="p-1 rounded text-white/50 hover:bg-white/10 transition-colors"
+                                className={`${ACTION_BTN} text-white/50 hover:bg-white/10 transition-colors`}
                               >
                                 <X className="w-3.5 h-3.5" />
                               </button>
@@ -554,7 +595,7 @@ export function TemplatesModal({
                               onClick={() => setConfirmDeleteId(p.id)}
                               aria-label="Hide preset"
                               title="Hide this preset"
-                              className="p-1 rounded text-white/65 hover:text-[#FF0028] hover:bg-[#FF0028]/10 transition-colors"
+                              className={`${ACTION_BTN} text-white/65 hover:text-[#FF0028] hover:bg-[#FF0028]/10 transition-colors`}
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -573,19 +614,21 @@ export function TemplatesModal({
 
           {/* User-saved templates */}
           <section className="flex flex-col gap-2">
-            {templates.length > 0 && (
+            {shownTemplates.length > 0 && (
               <span className="text-[10px] font-medium text-white/65 uppercase tracking-[0.18em]">
-                Team templates ({templates.length})
+                Team templates ({shownTemplates.length}{q && templates.length !== shownTemplates.length ? ` of ${templates.length}` : ""})
               </span>
             )}
-          {templates.length === 0 && (!presets || presets.length === 0) && (
+          {shownTemplates.length === 0 && shownPresets.length === 0 && (
             <div className="text-center text-[12px] text-white/65 py-10">
-              No templates saved yet. Build a design, give it a name, hit Save current.
+              {q
+                ? `Nothing matches “${query.trim()}”.`
+                : "No templates saved yet. Build a design, give it a name, hit Save current."}
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-2">
-            {templates.map((t) => {
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
+            {shownTemplates.map((t) => {
               const confirming = confirmDeleteId === t.id;
               return (
                 <div
@@ -643,7 +686,21 @@ export function TemplatesModal({
                             {t.name}
                             <Pencil className="w-2.5 h-2.5 text-white/60 opacity-0 group-hover/name:opacity-100 transition-opacity shrink-0" />
                           </p>
-                          <p className="text-[9px] text-white/65">{new Date(t.createdAt).toLocaleDateString()}</p>
+                          <p className="text-[9px] text-white/65 flex items-center gap-1.5">
+                            <span
+                              className="font-mono px-1 py-px rounded border border-white/15 text-white/70"
+                              title={
+                                t.doc.format === "custom"
+                                  ? `Custom ${t.doc.customSize.width}×${t.doc.customSize.height}`
+                                  : `Saved at ${FORMAT_BADGES[t.doc.format]}`
+                              }
+                            >
+                              {t.doc.format === "custom"
+                                ? `${t.doc.customSize.width}×${t.doc.customSize.height}`
+                                : FORMAT_BADGES[t.doc.format]}
+                            </span>
+                            {new Date(t.createdAt).toLocaleDateString()}
+                          </p>
                         </button>
                       )}
                     </div>
@@ -652,14 +709,14 @@ export function TemplatesModal({
                         <button
                           onClick={() => { onDelete(t.id); setConfirmDeleteId(null); }}
                           aria-label="Confirm delete"
-                          className="p-1 rounded text-[#FF6677] hover:bg-[#FF0028]/15 transition-colors"
+                          className={`${ACTION_BTN} text-[#FF6677] hover:bg-[#FF0028]/15 transition-colors`}
                         >
                           <Check className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => setConfirmDeleteId(null)}
                           aria-label="Cancel delete"
-                          className="p-1 rounded text-white/50 hover:bg-white/10 transition-colors"
+                          className={`${ACTION_BTN} text-white/50 hover:bg-white/10 transition-colors`}
                         >
                           <X className="w-3.5 h-3.5" />
                         </button>
@@ -668,7 +725,7 @@ export function TemplatesModal({
                       <button
                         onClick={() => setConfirmDeleteId(t.id)}
                         aria-label="Delete template"
-                        className="p-1 rounded text-white/65 hover:text-[#FF0028] hover:bg-[#FF0028]/10 transition-colors"
+                        className={`${ACTION_BTN} text-white/65 hover:text-[#FF0028] hover:bg-[#FF0028]/10 transition-colors`}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -691,7 +748,7 @@ export function TemplatesModal({
                 onRestoreHidden();
                 toast.success(`Restored ${hiddenPresetCount} hidden preset${hiddenPresetCount === 1 ? "" : "s"}`);
               }}
-              className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+              className="flex h-6 items-center gap-1 px-2 rounded text-[10px] text-white/60 hover:text-white hover:bg-white/10 transition-colors"
               title="Show all hidden built-in presets again"
             >
               <RotateCcw className="w-3 h-3" />
