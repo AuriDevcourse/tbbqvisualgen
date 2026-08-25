@@ -261,6 +261,11 @@ export default function Home() {
   // Right-click context menu coordinates (screen-space). When set the menu
   // is shown at this position; null hides it.
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const contextMenuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!contextMenu) return;
+    contextMenuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
+  }, [contextMenu]);
 
   // Compositional grid overlay. Pure visual aid — never exports. 10×10 fine
   // grid + bold lines at the rule-of-thirds positions (33% / 67%).
@@ -2278,7 +2283,7 @@ export default function Home() {
                   aria-checked={effectiveFormat === fmt}
                   onClick={() => setExportFormat(fmt)}
                   title={fmt === "mp4" ? `Record ${videoSeconds} seconds of the animated background as an MP4` : `Save a still ${SAVE_LABELS[fmt]}`}
-                  className={`px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider transition-colors ${
+                  className={`flex h-6 items-center px-2.5 rounded-full text-[10px] font-semibold uppercase tracking-wider transition-colors ${
                     effectiveFormat === fmt ? "bg-surface text-ink" : "text-muted hover:text-foreground"
                   }`}
                 >
@@ -3691,12 +3696,42 @@ export default function Home() {
             style={{ background: "transparent" }}
           />
           <div
-            className="fixed z-[201] min-w-[160px] rounded-lg border border-border bg-card-2 shadow-2xl p-1"
+            // A right-click menu that could not be closed from the keyboard.
+            // Escape did nothing and focus never entered it, so opening this
+            // with the context-menu key left you stuck: no way to reach an item
+            // and no way to dismiss it. Clicking outside was the only exit.
+            //
+            // `role="menu"` and arrow keys land together on purpose. Declaring
+            // the role without the keys is the fault this project already hit
+            // once with the panel tablist (handoff 43): assistive tech is told
+            // arrow keys work, and then they do not.
+            ref={contextMenuRef}
+            role="menu"
+            aria-label="Canvas element actions"
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                e.preventDefault();
+                setContextMenu(null);
+                return;
+              }
+              if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+              e.preventDefault();
+              const items = [...e.currentTarget.querySelectorAll<HTMLButtonElement>('button[role="menuitem"]')];
+              if (!items.length) return;
+              const i = items.indexOf(document.activeElement as HTMLButtonElement);
+              // Wraps at both ends, matching the tablist this codebase already
+              // fixed. -1 (focus lost) enters at the top.
+              const next = e.key === "ArrowDown"
+                ? items[(i + 1) % items.length]
+                : items[(i - 1 + items.length) % items.length];
+              next.focus();
+            }}
+            className="fixed z-[201] min-w-[160px] rounded-lg border border-border bg-card-2 shadow-2xl p-1 outline-none"
             style={{ left: Math.min(contextMenu.x, window.innerWidth - 180), top: Math.min(contextMenu.y, window.innerHeight - 100) }}
           >
             <button
               onClick={() => { duplicateSelection(); setContextMenu(null); }}
-              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[11px] text-white/85 hover:bg-white/10 transition-colors"
+              role="menuitem" className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[11px] text-white/85 hover:bg-white/10 transition-colors"
             >
               <Copy className="w-3.5 h-3.5 text-white/60" />
               <span>Duplicate</span>
@@ -3707,7 +3742,7 @@ export default function Home() {
             <div className="my-1 border-t border-white/10" />
             <button
               onClick={() => { reorderSelection("forward"); setContextMenu(null); }}
-              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[11px] text-white/85 hover:bg-white/10 transition-colors"
+              role="menuitem" className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[11px] text-white/85 hover:bg-white/10 transition-colors"
             >
               <ChevronUp className="w-3.5 h-3.5 text-white/60" />
               <span>Bring forward</span>
@@ -3715,7 +3750,7 @@ export default function Home() {
             </button>
             <button
               onClick={() => { reorderSelection("front"); setContextMenu(null); }}
-              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[11px] text-white/85 hover:bg-white/10 transition-colors"
+              role="menuitem" className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[11px] text-white/85 hover:bg-white/10 transition-colors"
             >
               <ChevronsUp className="w-3.5 h-3.5 text-white/60" />
               <span>Bring to front</span>
@@ -3723,7 +3758,7 @@ export default function Home() {
             </button>
             <button
               onClick={() => { reorderSelection("backward"); setContextMenu(null); }}
-              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[11px] text-white/85 hover:bg-white/10 transition-colors"
+              role="menuitem" className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[11px] text-white/85 hover:bg-white/10 transition-colors"
             >
               <ChevronDown className="w-3.5 h-3.5 text-white/60" />
               <span>Send backward</span>
@@ -3731,7 +3766,7 @@ export default function Home() {
             </button>
             <button
               onClick={() => { reorderSelection("back"); setContextMenu(null); }}
-              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[11px] text-white/85 hover:bg-white/10 transition-colors"
+              role="menuitem" className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[11px] text-white/85 hover:bg-white/10 transition-colors"
             >
               <ChevronsDown className="w-3.5 h-3.5 text-white/60" />
               <span>Send to back</span>
@@ -3745,7 +3780,7 @@ export default function Home() {
             {selectedIds.size >= 2 && (
               <button
                 onClick={() => { groupSelection(); setContextMenu(null); }}
-                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[11px] text-white/85 hover:bg-white/10 transition-colors"
+                role="menuitem" className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[11px] text-white/85 hover:bg-white/10 transition-colors"
               >
                 <Group className="w-3.5 h-3.5 text-white/60" />
                 <span>Group</span>
@@ -3755,7 +3790,7 @@ export default function Home() {
             {Array.from(selectedIds).some((id) => getGroupId(id)) && (
               <button
                 onClick={() => { ungroupSelection(); setContextMenu(null); }}
-                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[11px] text-white/85 hover:bg-white/10 transition-colors"
+                role="menuitem" className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[11px] text-white/85 hover:bg-white/10 transition-colors"
               >
                 <Ungroup className="w-3.5 h-3.5 text-white/60" />
                 <span>Ungroup</span>
@@ -3767,7 +3802,7 @@ export default function Home() {
             <div className="my-1 border-t border-white/10" />
             <button
               onClick={() => { toggleLockSelection(); setContextMenu(null); }}
-              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[11px] text-white/85 hover:bg-white/10 transition-colors"
+              role="menuitem" className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[11px] text-white/85 hover:bg-white/10 transition-colors"
             >
               {allSelectedLocked ? <Unlock className="w-3.5 h-3.5 text-orange" strokeWidth={1.5} /> : <Lock className="w-3.5 h-3.5 text-white/60" strokeWidth={1.5} />}
               <span>{allSelectedLocked ? "Unlock" : "Lock"}</span>
@@ -3775,7 +3810,7 @@ export default function Home() {
             <button
               onClick={() => { deleteSelection(); setContextMenu(null); }}
               disabled={allSelectedLocked}
-              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[11px] text-red hover:bg-red/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              role="menuitem" className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[11px] text-red hover:bg-red/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <Trash2 className="w-3.5 h-3.5" />
               <span>Delete</span>
