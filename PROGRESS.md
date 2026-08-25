@@ -32,7 +32,37 @@ production's value is backed up at `.env.local.bak-prod-db` (gitignored).
 Proved it: a template PUT to local appeared in dev and was **absent from
 production**, which still shows 6 templates. Test row deleted after.
 
-**Preview was NOT changed, on purpose.** `DATABASE_URL` is a SINGLE Vercel
+**UPDATE — Preview IS now isolated. And the feared failure DID happen.**
+
+`vercel env rm DATABASE_URL preview` **deleted the entire variable**, not just
+the preview target: Production lost its `DATABASE_URL` in the same breath. It
+was restored within seconds from `.env.local.bak-prod-db`, and production never
+went down because Vercel bakes env vars into a deployment at BUILD time — the
+running deployment kept its own copy. That is the only reason this was
+survivable. **Back the value up before touching that variable, always.**
+
+Final state, three separate rows, each verified by connecting with the real
+string and counting rows:
+
+| environment | endpoint | rows |
+|---|---|---|
+| Production | `ep-steep-rain-aswe9nwi-pooler` | 9 |
+| Preview | `ep-cold-smoke-assk34a8-pooler` | 9 |
+| Development | `ep-nameless-star-aswacz9b-pooler` | 9 |
+
+Production re-checked after: **200, 6 templates, 3 presets**.
+
+**Watch for:** `DATABASE_URL` is now three CLI-created variables instead of one
+integration-managed variable. If the Neon-Vercel integration ever re-syncs it
+may fight this. `DATABASE_URL_UNPOOLED` and the `POSTGRES_*` set are still
+single multi-target vars, but nothing in `src/` reads them — only
+`process.env.DATABASE_URL`.
+
+Preview deployments are protected (302 anonymously), so the preview app itself
+was not exercised end-to-end; the connection string was verified directly
+instead.
+
+**Superseded note below, kept for the reasoning:** `DATABASE_URL` is a SINGLE Vercel
 variable targeting all three environments (created by the Neon integration via
 its API). Isolating Preview means editing the same variable Production depends
 on. A throwaway probe showed CLI-created vars are three separate rows, so it did
@@ -42,9 +72,7 @@ before the summit. Do it after, when a mistake is cheap.
 
 ### Next task, in order
 
-1. **Isolate Preview** — see above. Back up `DATABASE_URL` first; the value is
-   already in `.env.local.bak-prod-db`.
-2. **Photo backgrounds to object storage** — BUILT on `feat/photo-blob-storage`,
+1. **Photo backgrounds to object storage** — BUILT on `feat/photo-blob-storage`,
    blocked on connecting the Blob store to the project (dashboard action).
    No longer urgent: Launch gives 500GB transfer against ~7GB/month.
 3. `.claude` tree ignored in `eslint.config.mjs` (462 phantom errors).
