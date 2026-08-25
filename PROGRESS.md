@@ -17,13 +17,36 @@ outage is over (plan moved off Free to Launch, usage-based, no monthly minimum;
 It proved the approach and its job is done. Read handoff 56 before building the
 real thing.
 
+### Neon branches: DEV DONE, PREVIEW DELIBERATELY NOT
+
+Two branches created off `main` in project `quiet-dust-26494809`:
+
+| branch | endpoint | used by |
+|---|---|---|
+| `main` | `ep-steep-rain-aswe9nwi` | Production (untouched) |
+| `preview` | `ep-cold-smoke-assk34a8` | nothing yet |
+| `dev` | `ep-nameless-star-aswacz9b` | **local `.env.local`** |
+
+**Local dev is now isolated.** `.env.local` points at the `dev` branch;
+production's value is backed up at `.env.local.bak-prod-db` (gitignored).
+Proved it: a template PUT to local appeared in dev and was **absent from
+production**, which still shows 6 templates. Test row deleted after.
+
+**Preview was NOT changed, on purpose.** `DATABASE_URL` is a SINGLE Vercel
+variable targeting all three environments (created by the Neon integration via
+its API). Isolating Preview means editing the same variable Production depends
+on. A throwaway probe showed CLI-created vars are three separate rows, so it did
+NOT reproduce the multi-target shape and could not answer how removing one
+target behaves. Unverifiable + production outage as the downside = not the day
+before the summit. Do it after, when a mistake is cheap.
+
 ### Next task, in order
 
-1. **Photo backgrounds to object storage** — spike proven, plan in handoff 56.
-   Cuts the library payload ~95%.
-2. **Neon branch per environment** — `DATABASE_URL` is identical across
-   Production, Preview and Development, so every preview deploy and every local
-   `npm run dev` reads and writes live team data.
+1. **Isolate Preview** — see above. Back up `DATABASE_URL` first; the value is
+   already in `.env.local.bak-prod-db`.
+2. **Photo backgrounds to object storage** — BUILT on `feat/photo-blob-storage`,
+   blocked on connecting the Blob store to the project (dashboard action).
+   No longer urgent: Launch gives 500GB transfer against ~7GB/month.
 3. `.claude` tree ignored in `eslint.config.mjs` (462 phantom errors).
 4. `ModalShell` applied to the other four overlays (handoff 53).
 
