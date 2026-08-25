@@ -100,12 +100,53 @@ function computeLogoRect(
   return { left, top, width: w, height: h };
 }
 
-export function LogoDragOverlay({
-  design, canvasWidth, canvasHeight, isPortrait, selected, snapEnabled,
+/**
+ * Splits in two on purpose.
+ *
+ * `computeLogoRect` returns null when the logo is hidden, and the bail-out for
+ * that has to sit BELOW every hook or React sees a different hook count between
+ * renders and throws "Rendered fewer hooks than expected". Putting the bail-out
+ * last works, but it forces the drag callback to carry an `if (!rect) return`
+ * guard for a state it can never actually be called in — and that guard is
+ * enough to make the React Compiler give up on the component
+ * ("Existing memoization could not be preserved").
+ *
+ * So the null case lives out here, and everything that needs a rect lives in a
+ * child that cannot be rendered without one. No conditional hooks, no
+ * unreachable guard, and the compiler can memoize again.
+ *
+ * The aspect ratio stays here because the rect cannot be computed without it.
+ */
+export function LogoDragOverlay(props: LogoDragOverlayProps) {
+  const { design, canvasWidth, canvasHeight, isPortrait } = props;
+  const [aspectRatio, setAspectRatio] = useState<number>(4);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadAspectRatio(logoSrc(design), (ar) => { if (!cancelled) setAspectRatio(ar); });
+    return () => { cancelled = true; };
+  }, [design]);
+
+
+  const rect = computeLogoRect(design, canvasWidth, canvasHeight, isPortrait, aspectRatio);
+  if (!rect) return null;
+
+  return <LogoDragOverlayRect {...props} rect={rect} aspectRatio={aspectRatio} />;
+}
+
+interface LogoDragOverlayRectProps extends LogoDragOverlayProps {
+  /** Non-null by construction — see the note on LogoDragOverlay. */
+  rect: { left: number; top: number; width: number; height: number };
+  /** Already resolved by the parent, and a dependency of the drag effect. */
+  aspectRatio: number;
+}
+
+function LogoDragOverlayRect({
+  design, canvasWidth, canvasHeight, selected, snapEnabled,
   onSelect, onChange, onGuidesChange, onEditStart, onEditEnd, otherBboxes, zIndex, scale = 1,
   onBeginDrag, onMoveBy, onEndDrag,
-}: LogoDragOverlayProps) {
-  const [aspectRatio, setAspectRatio] = useState<number>(4);
+  rect, aspectRatio,
+}: LogoDragOverlayRectProps) {
   const [dragging, setDragging] = useState<DragMode>(null);
   // Ref to the overlay container so we can read its on-screen pixel size
   // (the canvas is scaled to fit the preview area, so screen pixels !=
@@ -121,26 +162,7 @@ export function LogoDragOverlay({
   // we can't get it from doc state alone).
   const dragSnapTargetsRef = useRef<Bbox[]>([]);
 
-  useEffect(() => {
-    let cancelled = false;
-    loadAspectRatio(logoSrc(design), (ar) => { if (!cancelled) setAspectRatio(ar); });
-    return () => { cancelled = true; };
-  }, [design]);
-
-  const rect = computeLogoRect(design, canvasWidth, canvasHeight, isPortrait, aspectRatio);
-  // NOTE: the `if (!rect) return null` bail-out used to be HERE, above the two
-  // hooks below. That is a rules-of-hooks violation with teeth, not a lint nit:
-  // React identifies hooks by call order, so on the render where rect turns
-  // null it would see two fewer hooks than last time and throw "Rendered fewer
-  // hooks than expected", taking down the whole tree rather than hiding a logo.
-  // The bail-out now sits below every hook, just above the JSX.
-
   const startDrag = useCallback((mode: DragMode, e: React.MouseEvent) => {
-    // rect can be null now that this hook runs unconditionally. Nothing can
-    // actually call this in that state — the component renders null, so there
-    // is no handle to press — but the guard is what lets the hook exist above
-    // the bail-out at all.
-    if (!rect) return;
     e.preventDefault();
     e.stopPropagation();
     // Only replace the selection if the logo isn't already part of it —
@@ -188,7 +210,7 @@ export function LogoDragOverlay({
       });
     }
     dragSnapTargetsRef.current = targets;
-  }, [design.logoScale, onSelect, onEditStart, rect, canvasWidth, canvasHeight, selected, onBeginDrag]);
+  }, [design.logoScale, onSelect, onEditStart, rect, canvasWidth, canvasHeight, selected, onBeginDrag, otherBboxes]);
 
   useEffect(() => {
     if (!dragging) return;
@@ -321,10 +343,6 @@ export function LogoDragOverlay({
       window.removeEventListener("mouseup", handleMouseUp);
     };
   }, [dragging, canvasWidth, canvasHeight, onChange, onGuidesChange, onEditEnd, otherBboxes, onMoveBy, onEndDrag, aspectRatio]);
-
-  // Every hook has now run, so bailing out here cannot change the hook count
-  // between renders. See the note above the startDrag callback.
-  if (!rect) return null;
 
   const corners: { key: NonNullable<DragMode>; cx: number; cy: number; cursor: string }[] = [
     { key: "nw", cx: rect.left,               cy: rect.top,                cursor: "nwse-resize" },

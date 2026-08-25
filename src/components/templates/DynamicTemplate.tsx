@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import type { DesignConfig, PlatformFormat, TextElement, ShapeElement, ShapeBorderRadii } from "@/types/template";
 import { FORMAT_DIMENSIONS, reconcileLayerOrder, splitImageLayerIds } from "@/types/template";
 import { COLORS, FONTS, GRADIENT_TEXT_CSS, GRADIENT_BORDER_CSS } from "@/lib/constants";

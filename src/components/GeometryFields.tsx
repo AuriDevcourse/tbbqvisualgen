@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 /**
  * X / Y / W / H as typeable numbers, in EXPORT PIXELS.

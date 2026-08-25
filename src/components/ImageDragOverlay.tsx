@@ -4,7 +4,7 @@ import { useCallback, useRef, useState, useEffect } from "react";
 import type { CanvasImage } from "./ImagePlacer";
 import { computeSnapTargets, snapBbox, snapValue, snapSize, type Bbox } from "@/lib/snap";
 import { HANDLE_HIT_PX, ResizeHandle } from "./ResizeHandle";
-import { SELECTION_COLOR, selectionOutline } from "@/lib/selectionStyle";
+import { selectionOutline } from "@/lib/selectionStyle";
 
 /** Corner handles resize both axes; edge handles resize ONE. Eight handles
  *  is the Illustrator / Figma standard, and the edges are what you reach for
