@@ -6,25 +6,136 @@ not required reading.
 
 ---
 
-## STOPPED HERE · 2026-08-25 — Neon egress fix on a branch, UNVERIFIED against a real DB
+## STOPPED HERE · 2026-08-25 — Neon resolved and verified · two follow-ups queued
 
-**Current state:** handoff 53's work (`.gitattributes` + `ModalShell`) is merged
-and **pushed to master** as `629c18f`, so it is live on Vercel. On top of that,
-branch `fix/neon-egress-thumbnails` carries the Neon egress fix.
+**Current state:** everything works. Production and local both return 200 from
+`/api/editor-library`. Master is `2f1552c` plus this doc. Nothing in flight.
 
-### The one thing to check first
+The Neon outage is over: the plan was moved off Free to **Launch**, which is
+fully usage-based with **no monthly minimum** (100 CU-hours and 500 GB transfer
+included per project; storage metered at $0.35/GB-month). At current usage —
+0.04 GB storage, 5.6 of 500 GB transfer, 15 of 100 CU-hours — the bill is about
+**1.5 cents a month**. Storage is the only meter actually charged, so it is the
+one to watch, and embedded images are what will grow it.
 
-**The `data - 'thumbnail'::text` projection has never been executed.** Neon
-answers HTTP 402 to every query, at the HTTP layer, before the SQL is parsed —
-so hitting `/api/editor-library` proves nothing about whether the SQL is valid.
-The cast is there because `jsonb - ?` is overloaded for text / integer / text[]
-and a bare literal arrives as `unknown`, which can fail with "operator is not
-unique". **The moment the quota resets, load `/editor` and confirm the route
-returns 200 rather than 500.**
+**The `data - 'thumbnail'::text` projection is now verified.** It had never been
+executed when it shipped (Neon was 402-ing before parsing SQL, and there was no
+local Postgres). It ran against the real database and returned 200, so the
+`::text` cast resolved the overload correctly. That open question from handoff 54
+is closed.
 
-Failure mode if it is wrong is the same as today: route 500s, editor falls back
-to built-in presets with a toast. So shipping cannot make the current broken
-state worse — but it will not fix it either until the quota resets.
+### The two follow-ups, in order
+
+1. **Get photo backgrounds out of the documents.** Measured below: 95% of the
+   626KB library payload is four base64 JPEGs. This is the same disease the
+   thumbnail fix addressed, one level up, and it is refetched on every focus
+   refresh.
+2. **Split preview and dev onto their own Neon branches.** `DATABASE_URL` is
+   currently identical across Production, Preview and Development, so every
+   branch preview and every local `npm run dev` reads and writes live team data.
+
+Deliberately not done before the TechBBQ summit (26-27 Aug): changing database
+wiring the day before peak week is the wrong trade.
+
+---
+
+## SESSION HANDOFF · 2026-08-25 (55): Neon verified · the real payload hog is photo backgrounds
+
+### What the dashboard showed, and why the ratio was the proof
+
+| meter | value |
+|---|---|
+| network transfer | **5.6 / 5 GB** (over — the only limit hit) |
+| storage | **0.04 GB** |
+| compute | 15.02 / 100 CU-hrs |
+| region | AWS eu-central-1 (Frankfurt) |
+| window | since Aug 1, resets Sep 1 |
+
+40MB of data, 5.6GB moved out of it in 25 days: **140x the entire database**, for
+content that barely changes. Nothing about the tool's data explains that;
+re-sending the same images on every tab focus does.
+
+### Production was confirmed down, and shares the database
+
+`https://tbbqvisualgen.vercel.app/api/editor-library` returned **500**.
+`vercel env ls --project tbbqvisualgen` shows the full Neon integration var set
+(`NEON_PROJECT_ID`, `DATABASE_URL`, `POSTGRES_*`) added 35 days ago and scoped to
+**Production, Preview and Development** with the same value. So the earlier
+"unconfirmed" is resolved: one database serves all three.
+
+### The thumbnail fix works — measured against production
+
+| | result |
+|---|---|
+| main payload, `"thumbnail"` occurrences | **0** |
+| main payload, base64 PNGs | **0** |
+| thumbnails endpoint | 6 previews, ~108KB each |
+
+~650KB of previews no longer rides along on every refresh. It transfers once per
+page load, then comes from the in-memory Map. With the 30s focus throttle, the
+loop that burned 5.6GB is closed.
+
+### But the bigger leak was found while verifying it
+
+The main payload is still **626KB, and 95% of it is four base64 JPEGs**:
+
+| template | embedded images | size |
+|---|---|---|
+| BBQ Stage Hosts | 2 | 237KB |
+| Campfire Stage | 1 | 201KB |
+| Founder Stage | 1 | 139KB |
+
+Three of six templates. Biggest single image **206KB**. These are photo
+backgrounds inside saved template documents, not thumbnails, so the handoff-54
+fix does not touch them — and this payload IS refetched on every focus refresh.
+Add a few more photo-background templates and it is back to megabytes per
+refresh.
+
+**Why base64-in-Postgres is the wrong shape:** ~33% larger than the raw bytes,
+a CDN cannot cache it, and egress is paid on every read. Correct shape is the
+image in object storage with a URL in the document. Vercel Blob is the least
+friction while the app is on Vercel.
+
+### Numbered next steps
+
+1. **Move photo backgrounds to object storage.** Fixes 95% of the remaining
+   payload. Needs a migration for the three templates above plus whatever the
+   `photoBackground` save path writes — see `src/lib/photoBackground.ts` and
+   `PhotoBackgroundCard.tsx`.
+2. **Neon branch per environment.** A branch for Preview and one for
+   Development, so `DATABASE_URL` differs per environment. Stops previews and
+   local dev reading/writing live team data, and stops dev sessions spending
+   production's transfer allowance. Neon's branching is built for this and the
+   project already has 1 of 10 branches used.
+3. **Watch the transfer figure for a few days** of real use. Storage is 40MB, so
+   low hundreds of MB per month is healthy. Back toward gigabytes means the
+   diagnosis was incomplete.
+4. Ignore the `.claude` tree in `eslint.config.mjs` — `npm run lint` still
+   reports 462 errors, all from a dead worktree's `.next`. Real count in `src` is
+   5, all pre-existing.
+5. Apply `ModalShell` to the other four overlays (handoff 53).
+
+### Gotchas
+
+- **Adding Vercel credit does not lift a Neon limit.** Free caps transfer at 5GB
+  and refuses service at the cap; that is a tier ceiling, not a spend limit. The
+  plan itself has to change. Because the project sits under
+  "Vercel: auridevcourse's projects" it was provisioned via the Vercel
+  Marketplace, so the Neon upgrade bills through Vercel.
+- **Launch has no base fee.** Neon moved to usage-based pricing with no monthly
+  minimum, so the plan page lists inclusions and overage rates but no headline
+  price. That is not a missing number.
+- Vercel push-deploys DO work on this project — `vercel project ls` showed it
+  updated 2 minutes after the push. The Hobby commit-author block noted in other
+  projects did not bite here.
+
+### File pointers
+
+- `src/lib/editorLibraryDb.ts` — `:92` the verified projection, `readThumbnails()`.
+- `src/lib/sharedEditorLibrary.ts` — `FOCUS_REFRESH_MIN_MS`, the `thumbnails` Map.
+- `src/lib/photoBackground.ts` + `src/components/PhotoBackgroundCard.tsx` — where
+  step 1 has to land.
+- `src/hooks/useTemplates.ts` — `:17` thumbnail capture at `pixelRatio` 0.18.
 
 ---
 
