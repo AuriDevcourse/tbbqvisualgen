@@ -6,77 +6,165 @@ not required reading.
 
 ---
 
-## STOPPED HERE · 2026-08-25 — all green · photo-to-URL spike PROVEN, ready to build
+## STOPPED HERE · 2026-08-25 — ONE COMMAND LEFT, for Auri to run
 
-**Current state:** everything works. Production and local both 200 on
-`/api/editor-library`. Master is `8e36874`, clean, nothing in flight. The Neon
-outage is over (plan moved off Free to Launch, usage-based, no monthly minimum;
-~1.5 cents/month at current usage, storage the only charged meter).
+**Current state:** master is `ed547ef`+, everything merged and live. Production
+200, 6 templates. The only outstanding item is a single command that Claude was
+blocked from running.
 
-**Branch `spike/photo-blob-storage` holds a THROWAWAY spike. Do not merge it.**
-It proved the approach and its job is done. Read handoff 56 before building the
-real thing.
+### RUN THIS
 
-### Neon branches: DEV DONE, PREVIEW DELIBERATELY NOT
+```
+node --env-file=.env.migrate scripts/migrate-photos-to-blob.mjs --write
+```
 
-Two branches created off `main` in project `quiet-dust-26494809`:
+Converts the last 3 templates' base64 photos (578KB, 4 images) to Blob URLs in
+**production**. Claude's permission classifier blocked the write to the prod
+database, which is why it is still pending. Rehearsed end-to-end on the `dev`
+branch first: payload **625,884 -> 34,139 bytes (-94.5%)**, zero base64 left,
+migrated template loads with its photo rendering from Blob at 800x800, and a
+re-run reports "Nothing to migrate".
 
-| branch | endpoint | used by |
-|---|---|---|
-| `main` | `ep-steep-rain-aswe9nwi` | Production (untouched) |
-| `preview` | `ep-cold-smoke-assk34a8` | nothing yet |
-| `dev` | `ep-nameless-star-aswacz9b` | **local `.env.local`** |
+The script dumps every affected row to a timestamped `backup-templates-*.json`
+BEFORE writing and refuses to proceed if the backup fails. Idempotent.
 
-**Local dev is now isolated.** `.env.local` points at the `dev` branch;
-production's value is backed up at `.env.local.bak-prod-db` (gitignored).
-Proved it: a template PUT to local appeared in dev and was **absent from
-production**, which still shows 6 templates. Test row deleted after.
+**Then delete `.env.migrate`** — it holds the production connection string. It
+is gitignored but should not linger.
 
-**UPDATE — Preview IS now isolated. And the feared failure DID happen.**
+### Shipped this session
 
-`vercel env rm DATABASE_URL preview` **deleted the entire variable**, not just
-the preview target: Production lost its `DATABASE_URL` in the same breath. It
-was restored within seconds from `.env.local.bak-prod-db`, and production never
-went down because Vercel bakes env vars into a deployment at BUILD time — the
-running deployment kept its own copy. That is the only reason this was
-survivable. **Back the value up before touching that variable, always.**
+| commit | what |
+|---|---|
+| `629c18f` | `.gitattributes` LF pin + `ModalShell` dialog semantics |
+| `2f1552c` | Neon egress fix (`data - 'thumbnail'::text` + 30s focus throttle) |
+| `8e36874` / `91d6be3` | handoffs 55 / 56 |
+| `1146b4d` | Neon branch per environment |
+| `b8f25fe` | eslint ignores build output at any depth |
+| `788fae7` | `LogoDragOverlay` bail-out moved below its hooks |
+| `ed547ef` | photo backgrounds to Vercel Blob, CORS verified |
 
-Final state, three separate rows, each verified by connecting with the real
-string and counting rows:
+### Next, after the summit
 
-| environment | endpoint | rows |
-|---|---|---|
-| Production | `ep-steep-rain-aswe9nwi-pooler` | 9 |
-| Preview | `ep-cold-smoke-assk34a8-pooler` | 9 |
-| Development | `ep-nameless-star-aswacz9b-pooler` | 9 |
+1. **Run the migration command above** (or let Claude, with permission).
+2. **ModalShell on the other four overlays** — `CropDialog`, `FeedbackButton`,
+   `TeamLibrary`, `LogoLibraryPicker` still announce `aria-modal` without
+   honouring it. Each has a quirk to preserve; see handoff 53.
+3. **Templates modal items 7-10** — 13 targets under 24px, no filter, 840px of
+   unused width, no format badge on cards (`FORMAT_BADGES` is imported at
+   `TemplatesModal.tsx:14` and simply not rendered).
+4. **4 remaining lint errors**, all "setState synchronously within an effect":
+   `GeometryFields.tsx:64`, `StepElements.tsx:40`, `StepText.tsx:50`, plus one
+   more. Extra render passes, not crashes.
+5. **Dependency advisories** — `nanoid`, `next`, `postcss`. Needs a Next major
+   bump, so its own session.
 
-Production re-checked after: **200, 6 templates, 3 presets**.
+---
 
-**Watch for:** `DATABASE_URL` is now three CLI-created variables instead of one
-integration-managed variable. If the Neon-Vercel integration ever re-syncs it
-may fight this. `DATABASE_URL_UNPOOLED` and the `POSTGRES_*` set are still
-single multi-target vars, but nothing in `src/` reads them — only
-`process.env.DATABASE_URL`.
+## SESSION HANDOFF · 2026-08-25 (57): Blob shipped and verified · env isolation finished · lint made readable
 
-Preview deployments are protected (302 anonymously), so the preview app itself
-was not exercised end-to-end; the connection string was verified directly
-instead.
+### 1. Photo backgrounds to Blob — the CORS question is answered
 
-**Superseded note below, kept for the reasoning:** `DATABASE_URL` is a SINGLE Vercel
-variable targeting all three environments (created by the Neon integration via
-its API). Isolating Preview means editing the same variable Production depends
-on. A throwaway probe showed CLI-created vars are three separate rows, so it did
-NOT reproduce the multi-target shape and could not answer how removing one
-target behaves. Unverifiable + production outage as the downside = not the day
-before the summit. Do it after, when a mistake is cheap.
+The spike (handoff 56) deliberately served same-origin to isolate the export
+question, so cross-origin was never tested. That mattered: html-to-image inlines
+each `<img>` by fetching its src, and a failed fetch produces a **silently blank
+background**, not an error.
 
-### Next task, in order
+Blob serves `Access-Control-Allow-Origin: *` plus the immutable one-year
+Cache-Control the route requests. Driven end to end with a real 1200x800 JPEG
+through the app's own file input:
 
-1. **Photo backgrounds to object storage** — BUILT on `feat/photo-blob-storage`,
-   blocked on connecting the Blob store to the project (dashboard action).
-   No longer urgent: Launch gives 500GB transfer against ~7GB/month.
-3. `.claude` tree ignored in `eslint.config.mjs` (462 phantom errors).
-4. `ModalShell` applied to the other four overlays (handoff 53).
+| | |
+|---|---|
+| document `src` | **BLOB URL, 111 chars** (was ~54KB base64) |
+| whole session doc | **514 bytes** |
+| export | 3000x3000 JPEG |
+| **exported pixels** | **479 orange + 110 navy of 900 sampled** |
+
+Identical counts to the same-origin spike, so cross-origin costs nothing.
+
+**Auth on `/api/photo` is deliberate and is NOT a regression.** `readImageFile`
+falls back to the old data-URL path on any refusal, so a signed-out visitor gets
+exactly today's behaviour. The people who need URLs are the people who save
+templates, and saving already requires an @techbbq.org session. Verified in
+production: `/api/photo` returns **401** unauthenticated.
+
+Store `tbbqvisualgen-photos` (`store_oD7gId5eTX7DLcYn`, iad1, public). Public
+rather than private on purpose: private blobs need signed URLs that expire, and
+a template saved today must render months from now.
+
+### 2. Environment isolation finished — and the feared failure happened
+
+Preview is now isolated too. All three environments point at their own Neon
+branch, each verified by connecting with the real string and counting rows:
+production `ep-steep-rain`, preview `ep-cold-smoke`, development
+`ep-nameless-star`, 9 rows each.
+
+**`vercel env rm DATABASE_URL preview` deleted the ENTIRE variable**, not just
+the preview target — Production lost its `DATABASE_URL` in the same breath.
+Restored within seconds from `.env.local.bak-prod-db`. Production never went
+down, and the reason matters: **Vercel bakes env vars into a deployment at build
+time**, so the running deployment kept its own copy and only the NEXT deploy
+would have broken. Back that value up before ever touching this variable.
+
+`DATABASE_URL` is now three CLI-created variables rather than one
+integration-managed one, so a future Neon-Vercel re-sync may fight it. If team
+templates suddenly appear in a preview deploy, that is the cause.
+
+### 3. Lint made readable — 462 -> 4
+
+`npm run lint` reported 462 errors, every one from
+`.claude/worktrees/ux-notes/.next` — Next's own generated bundles inside an
+abandoned worktree. The existing ignore is `.next/**`, which is **anchored to
+the repo root**, so a build one directory down slipped straight past it. Added
+`**/.next/**` and `.claude/**`.
+
+This is why the doc claimed 2 pre-existing errors when there were 5: the signal
+was always 462, so nobody read it and 3 arrived unnoticed.
+
+### 4. LogoDragOverlay — a latent trap, honestly scoped
+
+`if (!rect) return null` sat above a `useCallback` and a `useEffect`. On a render
+where rect turned null React would see two fewer hooks and throw "Rendered fewer
+hooks than expected". Moved below every hook.
+
+**It was NOT a live crash, and an earlier note in this session wrongly said it
+was.** `computeLogoRect` returns null only when `design.showLogo` is false, and
+`editor/page.tsx:3458` already guards with
+`{design.showLogo && <LogoDragOverlay .../>}` — the parent unmounts the
+component in the same render, so hook order resets. It fires only if that guard
+is removed or the overlay is rendered elsewhere.
+
+Trades 2 rules-of-hooks errors for 1 React Compiler error at the same callback
+("Existing memoization could not be preserved"): the component loses
+auto-memoization but cannot crash. Removing that too means splitting the
+non-null rect into a child component — a real refactor of a 369-line drag
+component, not worth it the day before the summit.
+
+### Gotchas
+
+- **`vercel env pull` overwrites `.env.local`.** It preserved the dev-branch
+  `DATABASE_URL` this time because that value lives in Vercel's Development
+  scope now, but check the host after any pull.
+- **Vercel blocks agents from deleting a Blob store** non-interactively, and the
+  CLI only links a store to a project at CREATION time. Connecting an existing
+  store is a dashboard action.
+- **`@vercel/blob`'s `put()` needs `BLOB_READ_WRITE_TOKEN`** even though the docs
+  example shows no token — it is read implicitly from the environment. When
+  connecting the store, the "Add a read-write token env var" checkbox is OFF by
+  default and must be ticked.
+- Local dev now writes to the `dev` branch, so measurements no longer pollute
+  the live library. Earlier in the session that was not true.
+
+### File pointers
+
+- `scripts/migrate-photos-to-blob.mjs` — the pending migration. Dry run by
+  default, `--write` to apply, backs up first, idempotent.
+- `src/app/api/photo/route.ts` — upload route, auth + rate limit + size cap.
+- `src/lib/photoBackground.ts` — `uploadPhoto`, and the data-URL fallback that
+  keeps the auth gate invisible.
+- `eslint.config.mjs` — the `**/.next/**` and `.claude/**` ignores.
+- `.env.local.bak-prod-db` — production connection string. The thing that saved
+  the env-var incident.
 
 ---
 
