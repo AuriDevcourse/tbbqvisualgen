@@ -45,10 +45,21 @@ export function StepText({ design, setDesign, focusedId, canvasSize = { width: 1
   const rowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   // Expand the focused row whenever the canvas single-selection changes.
-  useEffect(() => {
-    if (!focusedId) return;
+  //
+  // Adjusted DURING render rather than in an effect. An effect would commit the
+  // collapsed row first and only then expand it, so every canvas selection cost
+  // an extra render pass and a visible frame of the wrong state. Setting state
+  // while rendering is the documented way to derive state from a changed prop:
+  // React discards the in-progress output and re-runs this component before
+  // touching the DOM, so nothing is painted twice.
+  //
+  // `lastFocusedId` is what makes it a one-shot. Without it this would fire on
+  // every render and loop.
+  const [lastFocusedId, setLastFocusedId] = useState<string | null>(null);
+  if (focusedId && focusedId !== lastFocusedId) {
+    setLastFocusedId(focusedId);
     setEditingId(focusedId);
-  }, [focusedId]);
+  }
 
   // …then scroll to it, in a SEPARATE pass once the expanded card has laid out.
   // Expanding and scrolling in one effect measured the row while it was still
