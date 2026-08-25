@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { signIn } from "next-auth/react";
+import { Dialog } from "radix-ui";
 import { toast } from "sonner";
 import { X, Loader2, Save, Trash2, FolderOpen, LogIn, Link2 } from "lucide-react";
 import type { SimpleDoc, SimpleFormsSnapshot } from "@/lib/simpleLayout";
@@ -148,11 +149,24 @@ export function TeamLibrary({
   };
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Team library" className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <button aria-label="Close" onClick={onClose} className="absolute inset-0 bg-black/70 backdrop-blur-sm cursor-default" />
-      <div className="relative w-full max-w-lg max-h-[80vh] flex flex-col rounded-2xl border border-white/10 bg-[#141414] shadow-2xl">
+    // Radix Dialog, same as LogoLibraryPicker. It supplies what this overlay
+    // was only pretending to have: it declared `aria-modal="true"` — which
+    // tells assistive tech the rest of the page is inert — while every control
+    // behind it stayed tabbable, and Escape did nothing at all.
+    //
+    // The old backdrop was a `<button aria-label="Close">` covering the
+    // viewport. That put a full-screen button in the tab order INSIDE the
+    // dialog, so the first Tab landed on "the backdrop". Dialog.Overlay is
+    // inert and Radix closes on an outside press instead.
+    <Dialog.Root open onOpenChange={(next) => { if (!next) onClose(); }}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
+        <Dialog.Content
+          aria-describedby={undefined}
+          className="fixed left-1/2 top-1/2 z-50 w-[min(32rem,94vw)] max-h-[80vh] -translate-x-1/2 -translate-y-1/2 flex flex-col rounded-2xl border border-white/10 bg-[#141414] shadow-2xl"
+        >
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
-          <h2 className="text-sm font-semibold text-white">Team library</h2>
+          <Dialog.Title className="text-sm font-semibold text-white">Team library</Dialog.Title>
           <button onClick={onClose} aria-label="Close" className="p-1 rounded text-white/60 hover:text-white hover:bg-white/10 transition-colors">
             <X className="w-4 h-4" />
           </button>
@@ -249,7 +263,8 @@ export function TeamLibrary({
             </div>
           </>
         )}
-      </div>
-    </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
