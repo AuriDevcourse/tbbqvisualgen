@@ -1452,7 +1452,7 @@ export default function SimplePage() {
               <span className="text-[11px] font-medium text-[#FF8A3D] whitespace-nowrap">Custom design active · saved</span>
               <button
                 onClick={revertCustom}
-                className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-white/10 text-white hover:bg-white/20 transition-colors"
+                className="flex h-6 items-center px-2.5 rounded-full text-[11px] font-medium bg-white/10 text-white hover:bg-white/20 transition-colors"
               >
                 Revert
               </button>
