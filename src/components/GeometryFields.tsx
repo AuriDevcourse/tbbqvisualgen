@@ -60,9 +60,21 @@ function NumField({ label, px, onCommit, min, max }: FieldProps) {
 
   // Follow the document while not being typed into — dragging on canvas has to
   // move these numbers — but never yank the text out from under the cursor.
-  useEffect(() => {
-    if (!focused) setDraft(String(rounded));
-  }, [rounded, focused]);
+  //
+  // Adjusted during render rather than in an effect. Dragging on canvas fires
+  // this on every pointer move, and an effect made each one a second render
+  // pass: the field committed the OLD number, then immediately re-rendered with
+  // the new one. React re-runs this component before painting when state is set
+  // while rendering, so the stale frame never reaches the DOM.
+  //
+  // `lastRounded` stays deliberately stale while focused, so blurring after the
+  // document moved underneath still syncs — which is what the old [rounded,
+  // focused] dependency array did.
+  const [lastRounded, setLastRounded] = useState(rounded);
+  if (!focused && rounded !== lastRounded) {
+    setLastRounded(rounded);
+    setDraft(String(rounded));
+  }
 
   const commit = () => {
     const n = Number(draft);

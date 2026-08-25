@@ -34,11 +34,14 @@ export function StepElements({ design, setDesign, selectedShapeId, onSelectShape
   const shapes = design.shapes ?? [];
   const rowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
-  // Auto-expand the row matching the canvas single-selection.
-  useEffect(() => {
-    if (!selectedShapeId) return;
+  // Auto-expand the row matching the canvas single-selection. Adjusted during
+  // render, not in an effect — see the fuller note on the same pattern in
+  // StepText: an effect commits the stale row first and costs an extra pass.
+  const [lastSelectedShapeId, setLastSelectedShapeId] = useState<string | null>(null);
+  if (selectedShapeId && selectedShapeId !== lastSelectedShapeId) {
+    setLastSelectedShapeId(selectedShapeId);
     setEditingId(selectedShapeId);
-  }, [selectedShapeId]);
+  }
 
   // Scroll in a second pass, after the expanded card has laid out — see the
   // same split in StepText for why one effect got the wrong position.
