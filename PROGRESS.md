@@ -6,57 +6,160 @@ not required reading.
 
 ---
 
-## STOPPED HERE · 2026-08-25 — ONE COMMAND LEFT, for Auri to run
+## STOPPED HERE · 2026-08-25 — every open item closed. One manual check left.
 
-**Current state:** master is `ed547ef`+, everything merged and live. Production
-200, 6 templates. The only outstanding item is a single command that Claude was
-blocked from running.
+**Current state:** master is `823b689`, clean, in sync, everything merged and
+live. `tsc` clean · `vitest` 377/377 · `npm audit` **0 vulnerabilities** ·
+`npm run lint` **1 error** (down from 462).
 
-### RUN THIS
+### The one thing Claude could not test
 
-```
-node --env-file=.env.migrate scripts/migrate-photos-to-blob.mjs --write
-```
+**Open a crop, drag a corner, press Escape — confirm it asks before
+discarding.** Playwright could not drive the resize handles, so the crop never
+became dirty and that branch went unexercised. Checked against master before
+concluding: master behaves identically, so it is a test limitation, not a
+regression. It is also the one path where a bug loses someone's work.
 
-Converts the last 3 templates' base64 photos (578KB, 4 images) to Blob URLs in
-**production**. Claude's permission classifier blocked the write to the prod
-database, which is why it is still pending. Rehearsed end-to-end on the `dev`
-branch first: payload **625,884 -> 34,139 bytes (-94.5%)**, zero base64 left,
-migrated template loads with its photo rendering from Blob at 800x800, and a
-re-run reports "Nothing to migrate".
-
-The script dumps every affected row to a timestamped `backup-templates-*.json`
-BEFORE writing and refuses to proceed if the backup fails. Idempotent.
-
-**Then delete `.env.migrate`** — it holds the production connection string. It
-is gitignored but should not linger.
-
-### Shipped this session
+### Shipped today
 
 | commit | what |
 |---|---|
-| `629c18f` | `.gitattributes` LF pin + `ModalShell` dialog semantics |
+| `629c18f` | `.gitattributes` LF pin + first dialog work |
 | `2f1552c` | Neon egress fix (`data - 'thumbnail'::text` + 30s focus throttle) |
-| `8e36874` / `91d6be3` | handoffs 55 / 56 |
-| `1146b4d` | Neon branch per environment |
-| `b8f25fe` | eslint ignores build output at any depth |
+| `1146b4d` | Neon branch per environment (dev) |
+| `b8f25fe` | eslint ignores build output at any depth · **462 errors -> 5** |
 | `788fae7` | `LogoDragOverlay` bail-out moved below its hooks |
 | `ed547ef` | photo backgrounds to Vercel Blob, CORS verified |
+| `2cfc611` | handoff 57 + the migration script |
+| `e01230a` | preview + production env isolation finished |
+| `8c29747` | CropDialog / FeedbackButton / TeamLibrary onto Radix Dialog |
+| `2e6a3de` | TemplatesModal onto Radix, **ModalShell deleted** |
+| `b4364f9` | Templates modal items 7-10 |
+| `ce9e33b` | state derived during render, not in effects |
+| `823b689` | Next 16.1.6 -> 16.3.3, **all advisories cleared** |
 
-### Next, after the summit
+### Nothing is blocking. Candidate next areas
 
-1. **Run the migration command above** (or let Claude, with permission).
-2. **ModalShell on the other four overlays** — `CropDialog`, `FeedbackButton`,
-   `TeamLibrary`, `LogoLibraryPicker` still announce `aria-modal` without
-   honouring it. Each has a quirk to preserve; see handoff 53.
-3. **Templates modal items 7-10** — 13 targets under 24px, no filter, 840px of
-   unused width, no format badge on cards (`FORMAT_BADGES` is imported at
-   `TemplatesModal.tsx:14` and simply not rendered).
-4. **4 remaining lint errors**, all "setState synchronously within an effect":
-   `GeometryFields.tsx:64`, `StepElements.tsx:40`, `StepText.tsx:50`, plus one
-   more. Extra render passes, not crashes.
-5. **Dependency advisories** — `nanoid`, `next`, `postcss`. Needs a Next major
-   bump, so its own session.
+1. **`/simple` has never been audited.** Handoff 36 said so explicitly and it is
+   still true — the Panel Maker has its own left-hand form, and neither the top
+   toolbar nor the canvas context menu was ever measured either.
+2. **`LogoDragOverlay`'s last lint error** — "Existing memoization could not be
+   preserved". A lost optimisation, not a fault. Fixing it means splitting the
+   non-null rect into a child component.
+3. **The 37 lint warnings**, now readable for the first time. Mostly
+   `no-img-element` and exhaustive-deps.
+4. **Move the Templates modal's remaining `window.confirm` calls** to a real
+   dialog — handoff 45 item 4 noted `window.confirm` is the app's only native
+   modal, and it is still true.
+5. **Neon storage** is the only metered cost now (~1.5 cents/month). Watch it
+   rather than act on it.
+
+---
+
+## SESSION HANDOFF · 2026-08-25 (58): dialogs onto Radix, modal polish, effects, deps
+
+### 1. ModalShell was a mistake, and Radix was already in the codebase
+
+`ModalShell` was written this morning on the strength of an audit that grepped
+for a literal `role="dialog"` and found none in `LogoLibraryPicker`. That
+component was already using **Radix Dialog**, which supplies the role, the focus
+trap, Escape and click-outside at runtime. So a correct implementation existed
+the whole time, and Radix was already a dependency.
+
+All five overlays are now on Radix and **`ModalShell` is deleted**. Radix also
+covers ground the hand-rolled shell did not: scroll lock, `aria-hidden` on
+background content, nested dialogs.
+
+Per overlay, what was actually wrong:
+
+- **TeamLibrary** had no Escape at all, and its backdrop was a full-screen
+  `<button aria-label="Close">` — a viewport-sized button sitting in the tab
+  order INSIDE the dialog.
+- **FeedbackButton** did Escape only. Radix autofocuses the first tabbable
+  child, which would be the close button, so `onOpenAutoFocus` redirects to the
+  textarea.
+- **CropDialog**'s Escape discarded an edited crop WITHOUT asking, while
+  clicking outside asked first. Both paths now run through one `requestCancel`.
+- **TemplatesModal** needed the nested-Escape guard rebuilt from scratch.
+
+### 2. The `defaultPrevented` trick does not port to Radix
+
+`ModalShell` handled the three nested inline editors by listening on `window`
+and ignoring an already-`defaultPrevented` event. **That approach is wrong under
+Radix**, which listens with `capture: true` — before React's handlers — so
+`defaultPrevented` is always false when Radix sees the key. Escape would have
+cancelled the rename AND closed the modal.
+
+The open-editor state is the honest signal instead. `preventDefault` inside
+`onEscapeKeyDown` only stops Radix dismissing; the event still reaches the
+input, which does the cancelling.
+
+### 3. A bug introduced and caught: never override Dialog.Title's id
+
+Giving `Dialog.Title` a custom `id` **overrode Radix's generated one**, so Radix
+went looking for its own id, could not find it, logged "DialogContent requires a
+DialogTitle" on every open — and **silently lost the accessible name**. Letting
+Radix wire the label fixed it and deleted code.
+
+### 4. Templates modal items 7-10, measured at 1808px
+
+|  | before | after |
+|---|---|---|
+| targets under 24px | 13 | **0** |
+| smallest target | 19px | **24px** |
+| modal width | 672px | **960px** |
+| body scroll | 2.75 screens | **1.14** |
+| filters | 0 | **1** |
+| template format on card | invisible | shown |
+
+Item 7 reuses `ACTION_BTN` from `lib/panelRow.ts`, the same constant the three
+layer lists adopted in left-panel item 1, so this modal cannot drift from them
+again. Item 8 needed the third card column, not just width — widening alone
+would have made the same list wider without shortening the scroll. Item 9's
+filter matches the DISPLAYED name, and Escape clears it before closing the
+modal.
+
+### 5. State derived during render, not in effects
+
+Three components synced state from a prop inside an effect, which commits the
+stale value first and re-renders. `GeometryFields` was the expensive one: it
+re-syncs on every pointer move of a canvas drag, so it paid the double render
+continuously rather than once per click.
+
+Verified live: X 1532 -> 1642, Y 550 -> 637 during a drag; typing not yanked;
+Enter commits; **Escape after typing 123 leaves 900**, so the `abandonRef` path
+still works.
+
+### 6. Dependencies — a minor bump, not a major one
+
+Earlier notes claimed this needed a Next major bump. Wrong: Next is vulnerable
+through `16.3.0-preview.10` and the project was on `16.1.6`, so `16.3.3` is a
+MINOR bump inside v16. `postcss` and `sharp` are transitive under next and clear
+with it. **0 vulnerabilities.**
+
+Bumped explicitly rather than `npm audit fix --force`, so the resolved version
+is a decision. Export was pixel-checked afterwards (3840x2160, 442 distinct
+colours) because `sharp` moved and sits in the image path.
+
+### Gotchas
+
+- **Radix Popovers also use `role="dialog"`.** Several browser tests matched the
+  More-actions menu instead of the modal. Target the modal by something it
+  alone has.
+- **Never give `Dialog.Title` a custom `id`.** See section 3.
+- `npm run lint` is trustworthy again. It reported 462 errors from
+  `.claude/worktrees/ux-notes/.next` because the `.next/**` ignore is anchored
+  to the repo ROOT and never matched a build nested one directory down.
+- The Playwright profile can lock; kill stray `mcp-chrome-*` Chrome processes.
+
+### File pointers
+
+- `src/components/TemplatesModal.tsx` — the Radix reference for this codebase:
+  nested-Escape guard, `onCloseAutoFocus` focus return, the filter.
+- `src/lib/panelRow.ts` — `ACTION_BTN`, the 24px hit-target constant.
+- `src/components/GeometryFields.tsx` — the render-time derivation pattern,
+  with the `lastRounded`-stays-stale-while-focused note.
+- `scripts/migrate-photos-to-blob.mjs` — already run on dev AND production.
 
 ---
 
