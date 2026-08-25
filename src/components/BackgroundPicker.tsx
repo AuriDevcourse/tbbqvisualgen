@@ -19,12 +19,15 @@ interface BackgroundPickerProps {
    * Show each group as a collapsible section, one open at a time, instead of
    * every group expanded at once.
    *
-   * OPT-IN, not the default, because this component has two callers: the
-   * editor's Canvas panel and the Simple Editor at `/simple`. The Canvas panel
-   * was measured at 1916px of content in a 622px column — 3.1 screens, of
-   * which 57 thumbnails across 8 groups were the bulk (PROGRESS.md handoff
-   * 36). `/simple` has NOT been measured, so it keeps the old behaviour until
-   * it has been.
+   * Both callers now opt in. The editor's Canvas panel was measured at 1916px
+   * of content in a 622px column — 3.1 screens, of which 57 thumbnails across
+   * 8 groups were the bulk (PROGRESS.md handoff 36). `/simple` was left out at
+   * the time with a note saying it had not been measured; it has been now
+   * (handoff 59) and had the same disease: 41 swatches rendering flat at 474px
+   * inside a panel already 2.86 screens long.
+   *
+   * The prop stays opt-in rather than becoming the default so a future third
+   * caller has to make the same measurement before inheriting the behaviour.
    */
   collapsible?: boolean;
 }

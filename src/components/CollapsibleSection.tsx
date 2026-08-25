@@ -16,7 +16,12 @@ export function CollapsibleSection({ label, defaultOpen = false, children }: Col
     <div>
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between text-xs font-medium text-white/50 uppercase tracking-wider py-1 hover:text-white/70 transition-colors"
+        // aria-expanded was missing. A chevron that rotates tells a sighted
+        // user the state and tells a screen reader nothing, which is the same
+        // fault as a tablist without arrow keys: the affordance is announced
+        // visually and not at all otherwise.
+        aria-expanded={open}
+        className="w-full flex h-6 items-center justify-between text-xs font-medium text-white/50 uppercase tracking-wider hover:text-white/70 transition-colors"
       >
         {label}
         <ChevronDown
