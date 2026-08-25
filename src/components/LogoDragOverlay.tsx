@@ -142,7 +142,7 @@ interface LogoDragOverlayRectProps extends LogoDragOverlayProps {
 }
 
 function LogoDragOverlayRect({
-  design, canvasWidth, canvasHeight, isPortrait, selected, snapEnabled,
+  design, canvasWidth, canvasHeight, selected, snapEnabled,
   onSelect, onChange, onGuidesChange, onEditStart, onEditEnd, otherBboxes, zIndex, scale = 1,
   onBeginDrag, onMoveBy, onEndDrag,
   rect, aspectRatio,

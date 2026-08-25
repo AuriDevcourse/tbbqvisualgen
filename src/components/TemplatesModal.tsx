@@ -7,7 +7,7 @@ import type { SavedTemplate } from "@/hooks/useTemplates";
 import type { Preset } from "@/data/presets";
 import type { PlatformFormat } from "@/types/template";
 import { Dialog } from "radix-ui";
-import { ACTION_BTN, ACTION_BTN_IDLE } from "@/lib/panelRow";
+import { ACTION_BTN } from "@/lib/panelRow";
 
 const FORMAT_BADGES: Record<PlatformFormat, string> = {
   square: "1:1",
