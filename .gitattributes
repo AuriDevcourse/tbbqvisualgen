@@ -1,0 +1,33 @@
+# SVGs are checked out with LF on every platform.
+#
+# Why this file exists: scripts/logo-manifest.mjs records each logo's
+# working-tree size as `bytes` in src/data/logoLibrary.json. With
+# core.autocrlf=true, Windows checks an SVG out with CRLF, so its size is
+# larger than on a machine that checks out LF — one measured example is
+# 8884 bytes on Windows against an 8834-byte blob, a 50-byte gap.
+#
+# That costs twice:
+#   1. logoLibrary.json shows ~1180 changed lines of nothing after any
+#      cross-machine checkout, which is enough noise to hide real work.
+#   2. `bytes` is the cache key for the measured `tone` field, so every
+#      entry misses and toneOf() re-measures the brightness of all 1106
+#      logos from scratch.
+#
+# Pinning LF makes the size identical everywhere, so both go away.
+*.svg text eol=lf
+
+# The manifest the script above writes. It is generated with LF on every
+# platform, so pinning the checkout to LF stops it round-tripping between
+# CRLF on disk and LF from the generator on each predev/prebuild run.
+src/data/logoLibrary.json text eol=lf
+
+# Raster and font assets are never line-ending converted. Git's auto-detection
+# already gets this right; stating it means a future *.xyz rule cannot widen
+# into them by accident.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
