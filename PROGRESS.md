@@ -6,53 +6,157 @@ not required reading.
 
 ---
 
-## STOPPED HERE · 2026-08-25 — every open item closed. One manual check left.
+## STOPPED HERE · 2026-08-25 — every audited surface closed. Nothing blocking.
 
-**Current state:** master is `823b689`, clean, in sync, everything merged and
-live. `tsc` clean · `vitest` 377/377 · `npm audit` **0 vulnerabilities** ·
-`npm run lint` **1 error** (down from 462).
+**Current state:** master clean and in sync. `tsc` clean · `vitest` 377/377 ·
+`npm audit` **0 vulnerabilities** · `npm run lint` **0 errors** / 32 warnings.
+Lint errors went 462 -> 0 across the day.
 
-### The one thing Claude could not test
+Handoff 36 named three surfaces as never measured: `/simple`, the top toolbar
+and the canvas context menu. **All three are now measured and fixed.**
 
-**Open a crop, drag a corner, press Escape — confirm it asks before
-discarding.** Playwright could not drive the resize handles, so the crop never
-became dirty and that branch went unexercised. Checked against master before
-concluding: master behaves identically, so it is a test limitation, not a
-regression. It is also the one path where a bug loses someone's work.
+### Deliberately NOT done
 
-### Shipped today
+- **`window.confirm` on six call sites**, three of them destructive and
+  team-wide ("Delete for everyone", "Overwrite for everyone"). Replacing them
+  means a `useConfirm()` hook over a Radix AlertDialog and rewriting every one
+  of those paths from synchronous to async. `window.confirm` is already
+  accessible and impossible to mis-click past; the gain is styling. Not worth
+  it the night before the summit — but it is now easy, since Radix is
+  established across all five dialogs.
+- **`spike/photo-blob-storage` stays unmerged.** No auth, no rate limit, writes
+  to the OS temp dir. It answered its question and breaks SECURITY.md r5.
+- **The Recolour block on `/simple`** — dropped on measurement, see handoff 59.
 
-| commit | what |
-|---|---|
-| `629c18f` | `.gitattributes` LF pin + first dialog work |
-| `2f1552c` | Neon egress fix (`data - 'thumbnail'::text` + 30s focus throttle) |
-| `1146b4d` | Neon branch per environment (dev) |
-| `b8f25fe` | eslint ignores build output at any depth · **462 errors -> 5** |
-| `788fae7` | `LogoDragOverlay` bail-out moved below its hooks |
-| `ed547ef` | photo backgrounds to Vercel Blob, CORS verified |
-| `2cfc611` | handoff 57 + the migration script |
-| `e01230a` | preview + production env isolation finished |
-| `8c29747` | CropDialog / FeedbackButton / TeamLibrary onto Radix Dialog |
-| `2e6a3de` | TemplatesModal onto Radix, **ModalShell deleted** |
-| `b4364f9` | Templates modal items 7-10 |
-| `ce9e33b` | state derived during render, not in effects |
-| `823b689` | Next 16.1.6 -> 16.3.3, **all advisories cleared** |
+### If picking this up fresh
 
-### Nothing is blocking. Candidate next areas
+There is no backlog. Candidates, in the order they would pay off:
 
-1. **`/simple` has never been audited.** Handoff 36 said so explicitly and it is
-   still true — the Panel Maker has its own left-hand form, and neither the top
-   toolbar nor the canvas context menu was ever measured either.
-2. **`LogoDragOverlay`'s last lint error** — "Existing memoization could not be
-   preserved". A lost optimisation, not a fault. Fixing it means splitting the
-   non-null rect into a child component.
-3. **The 37 lint warnings**, now readable for the first time. Mostly
-   `no-img-element` and exhaustive-deps.
-4. **Move the Templates modal's remaining `window.confirm` calls** to a real
-   dialog — handoff 45 item 4 noted `window.confirm` is the app's only native
-   modal, and it is still true.
-5. **Neon storage** is the only metered cost now (~1.5 cents/month). Watch it
-   rather than act on it.
+1. **32 lint warnings**, readable for the first time. 22 unused vars (several
+   are declared interface, not dead code), 8 `@next/next`, 7 exhaustive-deps.
+2. **`window.confirm`** — see above.
+3. Nothing else is known-broken.
+
+---
+
+## SESSION HANDOFF · 2026-08-25 (59): /simple audited and closed · toolbar + context menu · lint to zero
+
+### 1. `/simple` — the surface nobody had measured
+
+Left panel: 793px visible against **2271px of content, 2.86 screens**, 16
+sections stacked flat. Three of them were 55%: background gallery 474px, partner
+set browser 415px, logo library 368px.
+
+  panel content   2271px -> **1275px**
+  screens         2.86  -> **1.54**
+  swatches drawn  41 -> 15
+  headings        0 -> 15
+  under 24px      1 -> **0**
+
+**The largest fix was one word.** `BackgroundPicker` has taken a `collapsible`
+prop since the editor's left-panel item 2, and `/simple` never passed it. The
+prop's own docblock said `/simple` had not been measured and kept the old
+behaviour until it was — a good decision, recorded honestly. It now records the
+measurement instead of the intention.
+
+The partner browser and logo library went behind `CollapsibleSection`, which
+already existed **with zero callers** — and was missing `aria-expanded`, so its
+rotating chevron told sighted users the state and screen readers nothing.
+
+**Headings.** One `h1`, no `h2`/`h3`. 15 section labels became `h2`; the labels
+inside `Field` and "Video length" deliberately did NOT, because they name a
+control, not a region. The `<aside>` gained `aria-label="Design controls"`.
+
+That change silently broke the type and the first check missed it: `globals.css`
+styles `h1..h6` with Onest at `-0.02em`, so the new headings swapped BOTH
+typeface and tracking (Inter -> Onest, 1.6px -> -0.2px). The first pass compared
+only font-size and margins and reported clean. Caught by comparing an `<h2>`'s
+computed style against an untouched `<span>` with the same classes. A
+`.section-label` class next to the rule it opts out of fixes all 15 — a class
+beats a type selector, so no `!important`.
+
+**Two of the six audit findings should not have been built:**
+
+- **Recolour block — dropped.** The first pass counted 15 rows / 232px; properly
+  measured it is **5** controls / 160px (15 was the same five across template
+  states). The label sits INLINE with the swatch, so deleting the word saves no
+  vertical space; the only real saving means redesigning `LogoSlot`, whose own
+  comment records that drag-to-reorder "live-failed" twice.
+- **"No `aria-live`" — a FALSE finding.** Sonner already renders
+  `aria-live="polite"`; observed announcing "JPG exported". The original
+  measurement ran at page load with no toast mounted.
+
+### 2. Toolbar and canvas context menu
+
+Toolbar was nearly clean: 5 controls, all named, proper `<header>`. Only fault
+was the PNG/JPG/MP4 chips at 23px — one pixel under the floor.
+
+The context menu was the real find. Sizing was fine (7 items, all 150x29); the
+**keyboard** was not:
+
+| | before | after |
+|---|---|---|
+| Escape | nothing | closes |
+| focus on open | never entered | first item |
+| arrow keys | nothing | Up/Down, wraps |
+| `role="menu"` / `menuitem` | absent | present |
+
+A keyboard user who opened it with the context-menu key was stuck: no way to
+reach an item, no way to dismiss it. `role="menu"` and the arrow keys landed in
+the SAME commit on purpose — declaring the role without the keys is the fault
+this project already hit with the panel tablist (handoff 43).
+
+**Two bugs made and caught while building it:**
+
+- The blanket class replace tagged 8 items and **missed Delete**, which styles
+  itself red and carries a different class string. The most consequential item
+  would have been skipped by every arrow press.
+- Focusing the first item from an inline `ref` callback looked right and was
+  wrong: React re-runs it on EVERY render, so it kept yanking focus back and the
+  arrows appeared dead. Moved to one effect keyed on the menu opening. Caught
+  only because the test pressed arrows rather than assuming.
+
+### 3. Lint to zero, and the bug hiding behind the last error
+
+Splitting `LogoDragOverlay` (null-rect case in a parent, everything needing a
+rect in a child) did NOT clear the React Compiler error on its own. Chasing the
+remainder found a real bug: `startDrag` reads `otherBboxes` and the dependency
+array never listed it, so a drag begun after other elements moved would snap
+against their stale positions. **The compiler was refusing precisely because the
+declared inputs disagreed with what the body reads** — the error pointed at
+staleness, not style.
+
+Five dead imports removed; three were introduced by this same day's work, which
+is the argument for making lint readable before trusting it. Left alone: unused
+destructured props that are declared interface, and named constants in
+`scripts/` that document intent.
+
+### Gotchas
+
+- **Radix Popovers also use `role="dialog"`.** Several browser tests matched the
+  More-actions menu instead of the modal. Target the modal by something it alone
+  has.
+- **Never give `Dialog.Title` a custom `id`** — it overrides Radix's generated
+  one, which loses the accessible name and logs an error every open.
+- **`h2` inherits the global heading rule.** Any new heading in this codebase
+  gets Onest at -0.02em unless it opts out with `.section-label`.
+- **An inline `ref` callback runs on every render.** Use an effect for
+  focus-on-open.
+- The Next dev-tools overlay pollutes any DOM-wide measurement. Scope queries to
+  the app root and exclude `nextjs-portal`.
+- `next dev` regenerates `AGENTS.md` / `CLAUDE.md`; committing them with your
+  work is what the generated block itself recommends.
+
+### File pointers
+
+- `src/components/BackgroundPicker.tsx` — the `collapsible` prop and its
+  measurement note.
+- `src/components/CollapsibleSection.tsx` — now used, now has `aria-expanded`.
+- `src/app/globals.css` — `.section-label`, next to the rule it opts out of.
+- `src/app/editor/page.tsx` — the context menu (`role="menu"`, arrow keys,
+  focus effect keyed on `contextMenu`).
+- `src/components/LogoDragOverlay.tsx` — parent/child split, and the
+  `otherBboxes` dependency.
 
 ---
 
