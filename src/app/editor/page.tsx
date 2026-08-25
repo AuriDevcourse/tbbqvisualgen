@@ -248,6 +248,15 @@ export default function Home() {
   // mode. When set, the matching image renders with its full source visible
   // (dimmed outside the frame) and the user can pan to choose what's shown.
   const [cropEditingId, setCropEditingId] = useState<string | null>(null);
+  /**
+   * The More-actions trigger, handed to TemplatesModal as its focus-return
+   * target. The modal is opened from an item INSIDE this popover, and the
+   * popover closes on selection, so the button that was clicked is detached by
+   * the time the modal closes — restoring focus to it is a no-op that leaves
+   * focus on <body>. This button outlives the menu, so it is the honest place
+   * for focus to land.
+   */
+  const moreActionsRef = useRef<HTMLButtonElement>(null);
 
   // Right-click context menu coordinates (screen-space). When set the menu
   // is shown at this position; null hides it.
@@ -2190,6 +2199,7 @@ export default function Home() {
             <Popover.Root open={moreOpen} onOpenChange={setMoreOpen}>
               <Popover.Trigger asChild>
                 <button
+                  ref={moreActionsRef}
                   aria-label="More actions"
                   title="Simple Editor · Templates · New · Feedback"
                   className="relative flex items-center justify-center w-8 h-8 rounded-full border border-surface/40 bg-transparent text-foreground hover:border-surface hover:bg-white/5 transition-colors"
@@ -3569,6 +3579,7 @@ export default function Home() {
       <TemplatesModal
         open={templatesOpen}
         onClose={() => setTemplatesOpen(false)}
+        returnFocusRef={moreActionsRef}
         templates={templates}
         onSave={async (name) => {
           await saveTemplate({ name, doc, thumbnailNode: exportRef.current });

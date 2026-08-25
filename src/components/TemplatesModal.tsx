@@ -6,6 +6,10 @@ import { toast } from "sonner";
 import type { SavedTemplate } from "@/hooks/useTemplates";
 import type { Preset } from "@/data/presets";
 import type { PlatformFormat } from "@/types/template";
+import ModalShell from "./ModalShell";
+
+/** Ties the header's <h2> to the dialog's aria-labelledby. */
+const TITLE_ID = "templates-modal-title";
 
 const FORMAT_BADGES: Record<PlatformFormat, string> = {
   square: "1:1",
@@ -78,6 +82,8 @@ interface TemplatesModalProps {
   presetCustomVariants?: (preset: Preset) => Set<PlatformFormat>;
   /** Reset a single team-saved variant override for this preset/format. */
   onResetVariant?: (presetId: string, format: PlatformFormat) => void;
+  /** Passed straight to ModalShell — see its `returnFocusRef` docs. */
+  returnFocusRef?: React.RefObject<HTMLElement | null>;
 }
 
 export function TemplatesModal({
@@ -85,7 +91,7 @@ export function TemplatesModal({
   presets, currentFormat, onLoadPreset, onHidePreset, hiddenPresetCount, onRestoreHidden,
   onRenamePreset, presetDisplayName, onSaveAsPreset, isUserPreset,
   currentPresetId, onSaveVariant, presetCustomVariants, onResetVariant,
-  presetDisplayGroup, onMovePreset, onReorderFolders, folderOrder,
+  presetDisplayGroup, onMovePreset, onReorderFolders, folderOrder, returnFocusRef,
 }: TemplatesModalProps) {
   const [movingPresetId, setMovingPresetId] = useState<string | null>(null);
   const [newFolderDraft, setNewFolderDraft] = useState("");
@@ -131,8 +137,6 @@ export function TemplatesModal({
     setEditingId(null);
   };
 
-  if (!open) return null;
-
   const handleSave = async () => {
     if (saving) return;
     setSaving(true);
@@ -148,17 +152,18 @@ export function TemplatesModal({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-black/70 backdrop-blur-sm"
-      onClick={onClose}
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      // The header's own <h2> is the accessible name, so the two cannot drift.
+      titleId={TITLE_ID}
+      returnFocusRef={returnFocusRef}
+      className="flex flex-col max-h-[80vh] w-full max-w-2xl rounded-2xl border border-white/10 bg-[#15110e]/95 backdrop-blur-2xl shadow-2xl overflow-hidden"
     >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="relative flex flex-col max-h-[80vh] w-full max-w-2xl rounded-2xl border border-white/10 bg-[#15110e]/95 backdrop-blur-2xl shadow-2xl overflow-hidden"
-      >
+      <>
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-white/10">
-          <h2 className="text-sm font-medium text-white/85">
+          <h2 id={TITLE_ID} className="text-sm font-medium text-white/85">
             Templates
           </h2>
           <button
@@ -480,6 +485,12 @@ export function TemplatesModal({
                                           onMovePreset(p.id, newFolderDraft.trim());
                                           setMovingPresetId(null);
                                         } else if (e.key === "Escape") {
+                                          // Consume it: ModalShell closes the
+                                          // dialog on any Escape it still sees,
+                                          // so cancelling this draft must stop
+                                          // the key here. The other two inline
+                                          // editors already preventDefault.
+                                          e.preventDefault();
                                           setMovingPresetId(null);
                                         }
                                       }}
@@ -663,7 +674,7 @@ export function TemplatesModal({
             </button>
           )}
         </div>
-      </div>
-    </div>
+      </>
+    </ModalShell>
   );
 }

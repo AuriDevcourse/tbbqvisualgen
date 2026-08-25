@@ -6,74 +6,193 @@ not required reading.
 
 ---
 
-## ⏸ STOPPED HERE · 2026-08-23 — plan closed except item 5's Elements half (+ 9B rename)
+## STOPPED HERE · 2026-08-25 — branch `fix/gitattributes-and-dialog-shell`, UNCOMMITTED
 
-Items 1-4 of the left-panel plan are done. Item 5 is next.
-
-### Everything below is UNCOMMITTED. Do not `git checkout .`
-
-Last commit is `2fb6233` (the Layers panel work, already pushed to `master`
-and therefore live on Vercel). Items 1, 2 and 3 of the LEFT-panel plan are in
-the working tree only:
+**Current state:** `.gitattributes` added and the SVG working tree renormalised
+to LF; a shared `ModalShell` built and wired into TemplatesModal only. `tsc`
+clean, 377/377 tests, 0 lint errors in the touched files. Nothing committed.
 
 ```
- M src/app/editor/page.tsx
- M src/components/BackgroundPicker.tsx
- M src/components/LayersPanel.tsx
- M src/components/steps/StepCanvas.tsx
- M src/components/steps/StepElements.tsx
- M src/components/steps/StepText.tsx
- M PROGRESS.md                      (handoffs 36–44)
-?? src/lib/panelRow.ts              (NEW, untracked — easiest thing to lose)
-?? src/components/TextEditor.tsx    (NEW, untracked — same risk)
- M src/data/logoLibrary.json        (predev churn, not real work — see below)
+ M src/app/editor/page.tsx           (moreActionsRef + returnFocusRef prop)
+ M src/components/TemplatesModal.tsx (uses ModalShell, TITLE_ID, one preventDefault)
+ M src/data/logoLibrary.json         (585 `bytes` fields — one-time LF normalisation)
+?? .gitattributes                    (NEW, untracked)
+?? src/components/ModalShell.tsx     (NEW, untracked — easiest thing to lose)
 ```
 
-`tsc --noEmit` clean, `npx vitest run` 377/377 at the point of stopping. The
-two eslint errors in `StepText` / `StepElements` (setState in an effect) are
-pre-existing and predate all of this.
+### Two blockers found this session that outrank the panel work
 
-### Where the left-panel plan stands
+1. **Neon is out of quota.** `/api/editor-library` returns 500 because Neon
+   answers **HTTP 402 — "Your project has exceeded the data transfer quota."**
+   Those are the two console errors on `/editor`, and why the Templates modal
+   shows only one preset locally. Local `DATABASE_URL` points at
+   `ep-steep-rain-aswe9nwi`. Vercel's env was NOT checked, so whether prod
+   shares the project is **unconfirmed** — if it does, the Team Library is
+   broken live. Check this before anything else.
+2. **`npm run lint` is unusable.** It reports 462 errors and every one is in
+   `.claude/worktrees/ux-notes/.next/` — build output from an abandoned
+   worktree. Scoped to `src` the real count is **5 errors, all pre-existing**
+   (3 setState-in-effect, 2 rules-of-hooks in `LogoDragOverlay.tsx`, verified
+   identical to master ignoring EOL). This doc used to say 2, so 3 arrived with
+   the `new updates` commit. Fix: ignore the `.claude` tree in
+   `eslint.config.mjs`.
 
-Plan is handoff **36** (the audit: 3 root causes, 10 ranked fixes).
+### The left-panel plan is CLOSED — the old text here was wrong
 
-| item | state |
+Everything the previous handoff listed as open had already shipped in commits
+`d8860c4` / `367f02b`. Re-verified against source on 2026-08-25:
+
+| claimed open | actually |
 |---|---|
-| 1 · one row design across all three lists | **done** (handoff 37) |
-| 2 · background gallery collapses | **done** (handoff 38) |
-| 3 · one expanded row at a time | **done** (handoff 39) |
-| 4 · properties into their own pane | **done** (handoff 40) |
-| 5 · Canvas panel split | **done for Canvas** (handoff 41) · Elements half NOT done |
-| 6 · filter the backgrounds | **DROPPED** — no question it answered |
-| 7 · one truncation rule | **done** — via item 1 |
-| 8 · image cards need identity | **done** (handoff 42) |
-| 9 · tab semantics | **9A done** (handoff 43) · 9B rename deferred into item 5 |
-| 10 · left-panel header parity | **done** (handoff 44) |
+| item 5's Elements half | **done** — three-region split, `StepElements.tsx:78-215` |
+| the `GlassCard` currentStep wart | **gone** from `editor/page.tsx` |
+| handoff 51 item 3 (one replacement fn) | **done** — `replaceDocument`, `editor/page.tsx:329` |
+| handoff 51 item 4 (`selectedIds`/`cropEditingId`) | **done** — `:333-335` |
+| handoff 51 item 5 (`galleryDismissed`) | **done** — `:344` |
 
-### Item 5 is next, and it now covers TWO panels
-
-Canvas is six jobs in one column (1052px in a 566px body). Item 4 revealed the
-Elements panel has the same disease: its adders take a third of the column, so
-its list gets 87px and its properties 152px. Read item 5 as covering both.
-
-Also fold in the `GlassCard` conditional wart from handoff 40 — once Canvas owns
-its own scrolling, `currentStep === 2 || currentStep === 4` can go.
-
-### Demo artifact
-
-`https://claude.ai/code/artifact/7a454193-3e13-4af6-8d67-c9ba75db80ff`
-("Left Panel Rebuild") shows items 1-3 before/after. Republish by editing the
-same file path; passing a different path makes a SECOND artifact. There is also
-a throwaway "Render Probe" artifact from debugging that can be deleted.
-
-### The `logoLibrary.json` churn is not work
-
-`predev` / `prebuild` regenerate it and line endings differ between machines,
-so it shows as ~1180 changed lines of nothing. It was deliberately left out of
-the last commit. The real fix is the `.gitattributes` line still open from
-handoff 27: `*.svg text eol=lf`.
+Only the **9B steps to panels rename** survives, and it lost its reason: the
+panel split already deleted the conditional the rename was meant to remove. It
+is now pure renaming, so it ranks below everything above.
 
 ---
+
+## SESSION HANDOFF · 2026-08-25 (53): `.gitattributes` + a real dialog shell
+
+### 1. The `logoLibrary.json` churn was not what handoff 27 said
+
+Handoff 27 blamed SVG line endings in general. The chain is narrower and costs
+twice. `logo-manifest.mjs:124` records each logo's **working-tree size** as
+`bytes`, and `core.autocrlf=true` makes that size platform-dependent. Then
+`bytes` is the cache key for the measured `tone` field (written `:139`, read
+`:146`), so a shifted size invalidates every cached brightness measurement.
+
+The repo blobs were never wrong — `git add --renormalize .` staged **nothing**,
+because `autocrlf=true` already stores LF. Only the *checkout* was wrong. So the
+fix is `*.svg text eol=lf` plus one forced re-checkout, not a history rewrite:
+
+```
+git ls-files -z '*.svg' | xargs -0 rm -f && git checkout -- .
+node scripts/logo-manifest.mjs
+```
+
+**Proof:** `ABH Optics.svg` is 8834 bytes under `core.autocrlf` = true, false
+AND input (it was 8884). Second manifest run said **0 newly measured**, diff
+stable at 585 lines rather than growing.
+
+**The detail that justifies it:** of the 585 re-measured tones, **not one value
+changed**. The re-measurement was pure waste on every cross-machine checkout.
+
+`.gitattributes` also pins `src/data/logoLibrary.json` to LF (it round-tripped
+CRLF-on-disk against LF-from-generator) and marks raster/font types binary.
+
+### 2. `ModalShell.tsx` — and the framing that was wrong
+
+Earlier in the session this was called a port, "3 of 5 overlays already
+correct". That was wrong. Measured:
+
+| overlay | role=dialog | Escape | focus on open | focus trap |
+|---|---|---|---|---|
+| CropDialog | on **backdrop** | yes | no | **no** |
+| FeedbackButton | on **backdrop** | yes | yes | **no** |
+| TeamLibrary | on **backdrop** | **no** | no | **no** |
+| LogoLibraryPicker | **none** | **no** | no | **no** |
+| TemplatesModal | **none** | **no** | no | **no** |
+
+**None** trapped focus, yet three announced `aria-modal="true"` — 73 tabbable
+controls sat behind the Templates modal. All three also put `role="dialog"` on
+the full-screen backdrop, so the dialog's bounds were the whole viewport. There
+was no correct copy to port from, which is the argument for a shell.
+
+### 3. The design decision that was wrong, and how it surfaced
+
+Panel-level key handling was chosen so nested inline-rename Escapes would not
+also close the modal. **It is wrong.** In the browser: 1st Escape cancelled the
+rename, 2nd Escape did nothing. Cancelling unmounts the focused input, focus
+falls to `<body>`, and a panel-level handler never sees another key — the dialog
+became **un-closeable by keyboard**. `onBlur` cannot rescue it: browsers do not
+fire `focusout` for an element removed while focused.
+
+Fix: listen on **`window`**, gated on **`e.defaultPrevented`**. Safe because
+React attaches handlers at the root container, *below* window, so React's
+handler has already run. The contract is now explicit: **an inner handler that
+consumes a key calls `preventDefault()`.** Two of TemplatesModal's three Escape
+branches already did; the new-folder draft one did not and now does.
+
+Neither `tsc` nor 377 unit tests caught any of this. Drive the browser.
+
+### 4. `returnFocusRef`, and why it was needed
+
+Focus restore looked broken. It was not: Templates is opened from an item
+*inside* the More-actions popover, the popover closes on selection, so the
+remembered button is **detached** — and `.focus()` on a detached node silently
+does nothing, which reads as "restore worked" while focus sits on `<body>`.
+Hence the `isConnected` guard plus a `returnFocusRef` prop; `editor/page.tsx`
+passes `moreActionsRef`, because the More-actions button outlives the menu.
+
+### Verified in the running editor (localhost:3001)
+
+| behaviour | result |
+|---|---|
+| `role="dialog"` on panel | 672px panel, not the 2560px viewport |
+| `aria-labelledby` | resolves to the real `<h2>` → "Templates" |
+| Tab at last element | wraps to "Close", never reaches the 73 behind |
+| Shift+Tab at first | wraps back to "Hide preset" |
+| Escape while renaming | cancels rename, dialog survives |
+| Escape again | closes dialog |
+| focus on close | returns to "More actions" |
+| press inside, release on backdrop | stays open (old `onClick` would close) |
+| press starting on backdrop | closes |
+
+`tsc` clean · `vitest` 377/377 · 0 lint errors in the 3 touched files.
+
+### Numbered next steps
+
+1. **Check Neon prod.** `npx vercel env pull` (or the dashboard) and compare
+   `DATABASE_URL` against `ep-steep-rain-aswe9nwi`. If prod shares the project,
+   the Team Library is down live and that is the whole priority.
+2. **Ignore the `.claude` tree in `eslint.config.mjs`** so `npm run lint`
+   reports the 5 real `src` errors instead of 462 from a dead worktree.
+3. **Apply `ModalShell` to the remaining four overlays.** `LogoLibraryPicker` is
+   the simple one. `CropDialog`, `FeedbackButton` and `TeamLibrary` each carry a
+   quirk to preserve — Enter-to-save plus the dirty-crop `window.confirm` (use
+   `onRequestClose`), textarea autofocus (use `initialFocusRef`), and a
+   `<button>` backdrop respectively. Own commit, same browser verification.
+4. **Templates modal, rest of handoff 51.** Item 7 (13 targets under 24px,
+   smallest 19px) · item 10 (`FORMAT_BADGES` is already imported at
+   `TemplatesModal.tsx:14` and simply not rendered on template cards — nearly
+   free) · items 8 and 9 (use the 840px of unused width; add a filter) are real
+   layout work deserving their own pass.
+5. **9B steps to panels rename**, last. Pure renaming now.
+
+### Gotchas
+
+- **`window.confirm` is still the app's only native modal** (handoff 45 item 4).
+  A focus trap must not fight it. It did not in testing, but re-check when
+  converting CropDialog, whose backdrop path calls `confirm`.
+- **`ModalShell` deliberately does NOT use native `<dialog>`.** `showModal()`
+  gives trap and inertness free but promotes to the top layer, which ignores
+  z-index; TemplatesModal stacks a folder popover at `z-[310]`/`z-[311]` above
+  its own `z-[300]` and that ordering stops being expressible.
+- The one `eslint-disable` in `ModalShell` is deliberate and explained inline:
+  `returnFocusRef.current` is read at cleanup time on purpose.
+- Dev server ran on **3001**, not 3000 — the `airtable` project holds 3000. An
+  orphaned tbbqvisualgen server was squatting 3001 and had to be killed first.
+- **Artifacts updated** (same URLs): "Left Panel Rebuild" is now the canonical
+  page, with the plan closed and the Templates-modal audit added; "Panel Details
+  Pass" is a strict subset and now carries a superseded banner pointing at it.
+
+### File pointers
+
+- `src/components/ModalShell.tsx` — the shell. Its docblock carries the
+  measurement table and all three design decisions.
+- `src/components/TemplatesModal.tsx` — first consumer. `TITLE_ID`, `:14`
+  `FORMAT_BADGES` (unrendered), the three inline-Escape handlers.
+- `src/app/editor/page.tsx` — `moreActionsRef`, `replaceDocument` (`:329`).
+- `.gitattributes` — the reasoning, in comments.
+- `scripts/logo-manifest.mjs` — `:124` bytes, `:139`/`:146` the tone cache.
+
+---
+
 
 ## SESSION HANDOFF · 2026-08-23 (52): handoff 51 items 1 + 2 shipped · Start over actually starts over
 
